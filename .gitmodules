@@ -16,3 +16,6 @@
 [submodule "submodules/recastnavigation"]
 	path = submodules/recastnavigation
 	url = https://github.com/EQEmu/recastnavigation.git
+[submodule "submodules/vcpkg"]
+	path = submodules/vcpkg
+	url = https://github.com/microsoft/vcpkg.git
