@@ -24,8 +24,8 @@ SET(lb_headers
 
 )
 
-ADD_LIBRARY(luabind ${lb_sources} ${lb_headers})
-
+add_library(luabind ${lb_sources} ${lb_headers})
+target_link_libraries(luabind PRIVATE luajit)
 
 IF(UNIX)
     set_source_files_properties(${lb_sources} PROPERTY COMPILE_FLAGS -Wno-deprecated-declarations)
