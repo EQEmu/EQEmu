@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.7)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.17.0)
 
 project(perlbind LANGUAGES CXX)
 
