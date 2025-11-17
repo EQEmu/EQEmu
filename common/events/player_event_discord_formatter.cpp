@@ -3,6 +3,7 @@
 #include "../json/json_archive_single_line.h"
 #include <vector>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <cereal/archives/json.hpp>
 #include <cereal/types/vector.hpp>
 

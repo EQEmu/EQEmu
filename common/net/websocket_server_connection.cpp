@@ -4,6 +4,7 @@
 #include "../util/uuid.h"
 #include <sstream>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 struct EQ::Net::WebsocketServerConnection::Impl {
 	WebsocketServer *parent;

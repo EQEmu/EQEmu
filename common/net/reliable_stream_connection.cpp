@@ -4,6 +4,7 @@
 #include "crc32.h"
 #include <zlib.h>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 // observed client receive window is 300 packets, 140KB
 constexpr size_t MAX_CLIENT_RECV_PACKETS_PER_WINDOW = 300;

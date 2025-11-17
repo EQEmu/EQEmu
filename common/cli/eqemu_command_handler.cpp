@@ -19,6 +19,7 @@
  */
 
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 #include "eqemu_command_handler.h"
 #include "terminal_color.hpp"
 #include "../platform.h"

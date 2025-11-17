@@ -34,6 +34,7 @@
 #endif
 
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 #include "types.h"
 
 namespace Logs {

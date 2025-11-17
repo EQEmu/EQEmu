@@ -2,6 +2,7 @@
 
 #include <ios>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 #ifdef _WIN32
 #include <objbase.h>

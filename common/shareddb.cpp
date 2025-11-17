@@ -19,6 +19,7 @@
 #include <iostream>
 #include <cstring>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 #if defined(_MSC_VER) && _MSC_VER >= 1800
 	#include <algorithm>

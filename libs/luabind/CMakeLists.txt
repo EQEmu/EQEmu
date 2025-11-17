@@ -25,7 +25,7 @@ SET(lb_headers
 )
 
 add_library(luabind ${lb_sources} ${lb_headers})
-target_link_libraries(luabind PRIVATE luajit)
+target_link_libraries(luabind PRIVATE luajit Boost::dynamic_bitset Boost::tuple Boost::foreach)
 
 IF(UNIX)
     set_source_files_properties(${lb_sources} PROPERTY COMPILE_FLAGS -Wno-deprecated-declarations)

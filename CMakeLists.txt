@@ -90,8 +90,6 @@ find_package(zlib-ng CONFIG REQUIRED)
 pkg_check_modules(luajit REQUIRED luajit)
 find_package(PerlLibs)
 
-include_directories(SYSTEM "${Boost_INCLUDE_DIR}")
-
 MESSAGE(STATUS "**************************************************")
 MESSAGE(STATUS "* Library Detection                              *")
 MESSAGE(STATUS "**************************************************")
@@ -132,8 +130,11 @@ MESSAGE(STATUS "PERL_INCLUDE_DIR: ${PERL_INCLUDE_DIR}")
 MESSAGE(STATUS "PERL_INCLUDE_DIRS: ${PERL_INCLUDE_DIRS}")
 MESSAGE(STATUS "PERL_LIBRARIES: ${PERL_LIBRARIES}")
 MESSAGE(STATUS "PERL_VERSION: ${PERL_VERSION}")
-
 MESSAGE(STATUS "**************************************************")
+
+INCLUDE_DIRECTORIES(SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/submodules/websocketpp")
+
+ADD_DEFINITIONS(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 
 #options
 OPTION(EQEMU_COMMANDS_LOGGING "Enable GM Command logs" ON)

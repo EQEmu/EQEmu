@@ -2,6 +2,7 @@
 #include <memory>
 #include "process.h"
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 std::string Process::execute(const std::string &cmd)
 {

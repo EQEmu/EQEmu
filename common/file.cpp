@@ -36,6 +36,7 @@
 #endif
 
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <filesystem>
 #include <iostream>
 #include <sys/stat.h>

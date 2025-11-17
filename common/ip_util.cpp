@@ -20,6 +20,7 @@
 
 #include <cstring>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <csignal>
 #include <vector>
 #include "ip_util.h"

@@ -3,6 +3,7 @@
 #include "rulesys.h"
 #include "util/uuid.h"
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <cereal/types/chrono.hpp>
 
 DzLockout::DzLockout(std::string uuid, std::string expedition, std::string event, uint64_t expire_time, uint32_t duration)

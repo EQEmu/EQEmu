@@ -1,6 +1,7 @@
 #include "console_server.h"
 #include "../strings.h"
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 EQ::Net::ConsoleServer::ConsoleServer(const std::string &addr, int port)
 {

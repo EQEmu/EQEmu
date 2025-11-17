@@ -23,7 +23,7 @@
 #include <string>
 #include <list>
 #include <fmt/format.h>
-
+#include <fmt/ranges.h>
 
 class DBcore;
 

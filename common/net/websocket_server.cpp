@@ -2,6 +2,7 @@
 #include "../event/event_loop.h"
 #include "../event/timer.h"
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <map>
 #include <unordered_set>
 #include <array>

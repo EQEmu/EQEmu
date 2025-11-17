@@ -23,6 +23,7 @@
 #include "path_manager.h"
 #include <fstream>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 struct LoginConfig {
 	std::string LoginHost;

@@ -5,6 +5,7 @@
 #include "../servertalk.h"
 #include "../rulesys.h"
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 EQ::Net::ConsoleServerConnection::ConsoleServerConnection(ConsoleServer *parent, std::shared_ptr<TCPConnection> connection)
 {
