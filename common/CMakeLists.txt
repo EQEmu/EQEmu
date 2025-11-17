@@ -835,7 +835,7 @@ INCLUDE_DIRECTORIES(Patches SocketLib StackWalker)
 
 ADD_LIBRARY(common ${common_sources} ${common_headers} ${repositories})
 
-target_link_libraries(common PUBLIC cereal::cereal fmt::fmt unofficial::libmariadb $<IF:$<TARGET_EXISTS:libuv::uv_a>,libuv::uv_a,libuv::uv> zlib-ng::zlib OpenSSL::SSL OpenSSL::Crypto)
+target_link_libraries(common PUBLIC cereal::cereal fmt::fmt unofficial::libmariadb $<IF:$<TARGET_EXISTS:libuv::uv_a>,libuv::uv_a,libuv::uv> OpenSSL::SSL OpenSSL::Crypto ZLIB::ZLIB)
 
 IF (UNIX)
     SET_SOURCE_FILES_PROPERTIES("SocketLib/Mime.cpp" PROPERTY COMPILE_FLAGS -Wno-unused-result)

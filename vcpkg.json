@@ -6,7 +6,7 @@
 		"boost-foreach",
 		"boost-tuple",
 		"libmariadb",
-		"zlib-ng",
+		"zlib",
 		"openssl",
 		"luajit",
 		"cereal",

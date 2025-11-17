@@ -86,7 +86,7 @@ find_package(unofficial-libmariadb CONFIG REQUIRED)
 find_package(libuv CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(recastnavigation CONFIG REQUIRED)
-find_package(zlib-ng CONFIG REQUIRED)
+find_package(ZLIB REQUIRED)
 pkg_check_modules(luajit REQUIRED luajit)
 find_package(PerlLibs)
 
@@ -298,7 +298,7 @@ ENDIF(EQEMU_BUILD_SERVER OR EQEMU_BUILD_LOGIN OR EQEMU_BUILD_TESTS OR EQEMU_BUIL
 
 IF(EQEMU_BUILD_SERVER)
 	ADD_SUBDIRECTORY(shared_memory)
-#	ADD_SUBDIRECTORY(world)
+	ADD_SUBDIRECTORY(world)
 #	ADD_SUBDIRECTORY(zone)
 #	ADD_SUBDIRECTORY(ucs)
 #	ADD_SUBDIRECTORY(queryserv)
