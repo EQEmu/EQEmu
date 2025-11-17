@@ -2,7 +2,7 @@
 
 #include "pathfinder_interface.h"
 #include <string>
-#include <DetourNavMesh.h>
+#include <recastnavigation/DetourNavMesh.h>
 
 class PathfinderNavmesh : public IPathfinder
 {

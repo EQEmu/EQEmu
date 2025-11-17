@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <vector>
 #include "pathfinder_nav_mesh.h"
-#include <DetourCommon.h>
-#include <DetourNavMeshQuery.h>
+#include <recastnavigation/DetourCommon.h>
+#include <recastnavigation/DetourNavMeshQuery.h>
 
 #include "zone.h"
 #include "water_map.h"

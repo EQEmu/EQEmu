@@ -472,6 +472,7 @@ set(gm_command_sources
 )
 
 add_library(gm_commands_zone STATIC ${gm_command_sources})
+target_link_libraries(gm_commands_zone PRIVATE cereal::cereal fmt::fmt $<IF:$<TARGET_EXISTS:libuv::uv_a>,libuv::uv_a,libuv::uv> unofficial::libmariadb)
 set_target_properties(gm_commands_zone PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 32)
 
 # zone combine sources and headers
@@ -490,19 +491,23 @@ ENDIF()
 ADD_DEFINITIONS(-DZONE)
 
 # link lua_zone unity build against luabind
-target_link_libraries(lua_zone PRIVATE luabind)
+IF(MSVC)
+    target_compile_options(lua_zone PRIVATE /utf-8)
+ENDIF(MSVC)
+
+target_link_libraries(lua_zone PRIVATE luabind Boost::dynamic_bitset Boost::tuple Boost::foreach unofficial::libmariadb)
 if (EQEMU_BUILD_STATIC AND LUA_LIBRARY)
     target_link_libraries(zone PRIVATE ${LUA_LIBRARY})
 endif()
 
 # perl unity build links against perl_zone
-target_link_libraries(perl_zone PRIVATE perlbind)
+target_link_libraries(perl_zone PRIVATE perlbind fmt::fmt unofficial::libmariadb)
 if (EQEMU_BUILD_STATIC AND PERL_LIBRARY)
     target_link_libraries(zone PRIVATE ${PERL_LIBRARY})
 endif()
 
 # link zone against common libraries
-target_link_libraries(zone PRIVATE lua_zone perl_zone gm_commands_zone ${ZONE_LIBS})
+target_link_libraries(zone PRIVATE lua_zone perl_zone gm_commands_zone ${ZONE_LIBS} RecastNavigation::Detour)
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 
