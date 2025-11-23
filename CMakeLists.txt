@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.20.0)
 
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_MODULE_PATH})
+
 if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
 	message(STATUS "Using vcpkg env variable")
 	set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
@@ -77,7 +79,6 @@ add_definitions(-DGLM_FORCE_RADIANS)
 add_definitions(-DGLM_FORCE_CTOR_INIT)
 add_definitions(-DGLM_ENABLE_EXPERIMENTAL)
 
-find_package(PkgConfig)
 find_package(Boost REQUIRED COMPONENTS dynamic_bitset foreach tuple)
 find_package(cereal CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
@@ -87,7 +88,7 @@ find_package(libuv CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(recastnavigation CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
-pkg_check_modules(luajit REQUIRED IMPORTED_TARGET luajit)
+find_package(LuaJit REQUIRED)
 find_package(PerlLibs)
 
 message(STATUS "**************************************************")
@@ -218,8 +219,8 @@ option(EQEMU_BUILD_LUA "Build Lua parser." ON)
 
 if(EQEMU_BUILD_LUA)
 	add_definitions(-DLUA_EQEMU)
-	#set(ZONE_LIBS ${pkgcfg_lib_luajit_lua51})
-	include_directories(SYSTEM "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/include/luajit" "${CMAKE_CURRENT_SOURCE_DIR}/libs/luabind")
+
+	include_directories(SYSTEM "${LUAJIT_INCLUDE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/libs/luabind")
 
 	option(EQEMU_SANITIZE_LUA_LIBS "Sanitize Lua Libraries (Remove OS and IO standard libraries from being able to run)." ON)
 	if(EQEMU_SANITIZE_LUA_LIBS)

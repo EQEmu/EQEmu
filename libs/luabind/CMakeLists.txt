@@ -25,7 +25,7 @@ set(lb_headers
 )
 
 add_library(luabind ${lb_sources} ${lb_headers})
-target_link_libraries(luabind PRIVATE PkgConfig::luajit Boost::dynamic_bitset Boost::tuple Boost::foreach)
+target_link_libraries(luabind PRIVATE Boost::dynamic_bitset Boost::tuple Boost::foreach ${LUAJIT_LIBRARY})
 
 if(UNIX)
     set_source_files_properties(${lb_sources} PROPERTY COMPILE_FLAGS -Wno-deprecated-declarations)
