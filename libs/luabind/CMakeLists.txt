@@ -1,6 +1,6 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.17.0)
+cmake_minimum_required(VERSION 3.20.0)
 
-SET(lb_sources
+set(lb_sources
     src/class.cpp
 	src/class_info.cpp
 	src/class_registry.cpp
@@ -20,19 +20,19 @@ SET(lb_sources
 	src/wrapper_base.cpp
 )
 
-SET(lb_headers
+set(lb_headers
 
 )
 
 add_library(luabind ${lb_sources} ${lb_headers})
 target_link_libraries(luabind PRIVATE PkgConfig::luajit Boost::dynamic_bitset Boost::tuple Boost::foreach)
 
-IF(UNIX)
+if(UNIX)
     set_source_files_properties(${lb_sources} PROPERTY COMPILE_FLAGS -Wno-deprecated-declarations)
-ENDIF(UNIX)
+endif()
 
-IF(MSVC)
+if(MSVC)
 	set_source_files_properties(${lb_sources} PROPERTY COMPILE_FLAGS " /W0 " )
-ENDIF(MSVC)
+endif()
 
-SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)

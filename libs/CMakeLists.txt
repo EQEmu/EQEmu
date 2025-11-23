@@ -1,7 +1,7 @@
-IF(EQEMU_BUILD_LUA)
-    ADD_SUBDIRECTORY(luabind)
-ENDIF(EQEMU_BUILD_LUA)
+if(EQEMU_BUILD_LUA)
+    add_subdirectory(luabind)
+endif()
 
-IF(EQEMU_BUILD_PERL)
-    ADD_SUBDIRECTORY(perlbind)
-ENDIF(EQEMU_BUILD_PERL)
+if(EQEMU_BUILD_PERL)
+    add_subdirectory(perlbind)
+endif()

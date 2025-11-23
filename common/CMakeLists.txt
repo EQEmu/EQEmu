@@ -1,6 +1,6 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.17.0)
+cmake_minimum_required(VERSION 3.20.0)
 
-SET(common_sources
+set(common_sources
     base_packet.cpp
     bazaar.cpp
     bodytypes.cpp
@@ -132,7 +132,7 @@ SET(common_sources
     util/directory.cpp
     util/uuid.cpp)
 
-SET(repositories
+set(repositories
 
     # Criteria
     repositories/criteria/content_filter_criteria.h
@@ -531,10 +531,9 @@ SET(repositories
     repositories/veteran_reward_templates_repository.h
     repositories/zone_repository.h
     repositories/zone_points_repository.h
-
 )
 
-SET(common_headers
+set(common_headers
     additive_lagged_fibonacci_engine.h
     bazaar.h
     base_packet.h
@@ -723,19 +722,19 @@ SET(common_headers
     util/uuid.h
 )
 
-SOURCE_GROUP(Event FILES
+source_group(Event FILES
     event/event_loop.h
     event/timer.h
     event/task.h
 )
 
-SOURCE_GROUP(Json FILES
+source_group(Json FILES
     json/json.h
     json/jsoncpp.cpp
     json/json-forwards.h
 )
 
-SOURCE_GROUP(Net FILES
+source_group(Net FILES
     net/console_server.cpp
     net/console_server.h
     net/console_server_connection.cpp
@@ -774,7 +773,7 @@ SOURCE_GROUP(Net FILES
     net/websocket_server_connection.h
 )
 
-SOURCE_GROUP(Patches FILES
+source_group(Patches FILES
     patches/patches.h
     patches/sod.h
     patches/sod_limits.h
@@ -818,12 +817,12 @@ SOURCE_GROUP(Patches FILES
     patches/uf_limits.cpp
 )
 
-SOURCE_GROUP(StackWalker FILES
+source_group(StackWalker FILES
     StackWalker/StackWalker.h
     StackWalker/StackWalker.cpp
 )
 
-SOURCE_GROUP(Util FILES
+source_group(Util FILES
     util/memory_stream.h
     util/directory.cpp
     util/directory.h
@@ -831,24 +830,24 @@ SOURCE_GROUP(Util FILES
     util/uuid.h
 )
 
-INCLUDE_DIRECTORIES(Patches SocketLib StackWalker)
+include_directories(Patches SocketLib StackWalker)
 
-ADD_LIBRARY(common ${common_sources} ${common_headers} ${repositories})
+add_library(common ${common_sources} ${common_headers} ${repositories})
 
 target_link_libraries(common PUBLIC cereal::cereal fmt::fmt unofficial::libmariadb $<IF:$<TARGET_EXISTS:libuv::uv_a>,libuv::uv_a,libuv::uv> OpenSSL::SSL OpenSSL::Crypto ZLIB::ZLIB)
 
-IF (UNIX)
-    SET_SOURCE_FILES_PROPERTIES("SocketLib/Mime.cpp" PROPERTY COMPILE_FLAGS -Wno-unused-result)
-    SET_SOURCE_FILES_PROPERTIES("patches/sod.cpp" "patches/sof.cpp" "patches/rof.cpp" "patches/rof2.cpp" "patches/uf.cpp" PROPERTIES COMPILE_FLAGS -O0)
-ENDIF (UNIX)
+if(UNIX)
+    set_source_files_properties("SocketLib/Mime.cpp" PROPERTY COMPILE_FLAGS -Wno-unused-result)
+    set_source_files_properties("patches/sod.cpp" "patches/sof.cpp" "patches/rof.cpp" "patches/rof2.cpp" "patches/uf.cpp" PROPERTIES COMPILE_FLAGS -O0)
+endif()
 
-IF (EQEMU_BUILD_PCH)
+if(EQEMU_BUILD_PCH)
     TARGET_PRECOMPILE_HEADERS(common PRIVATE pch/std-pch.h)
     # Avoid PCH/__OPTIMIZE__ mismatch when compiling certain patch sources with -O0
     # These files are compiled with -O0 on UNIX (see COMPILE_FLAGS above), which
     # disables the __OPTIMIZE__ predefined macro. Disabling PCH for them prevents
     # Clang from erroring due to macro state differences between the PCH and TU.
-    SET_SOURCE_FILES_PROPERTIES("patches/sod.cpp" "patches/sof.cpp" "patches/rof.cpp" "patches/rof2.cpp" "patches/uf.cpp" PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
-ENDIF ()
+    set_source_files_properties("patches/sod.cpp" "patches/sof.cpp" "patches/rof.cpp" "patches/rof2.cpp" "patches/uf.cpp" PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+endif()
 
-SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
