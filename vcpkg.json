@@ -1,6 +1,7 @@
 {
     "name": "eqemu", 
     "version-string": "24.10.3",
+	"builtin-baseline": "d1ff36c6520ee43f1a656c03cd6425c2974a449e",
 	"dependencies": [
 		"boost-dynamic-bitset",
 		"boost-foreach",
