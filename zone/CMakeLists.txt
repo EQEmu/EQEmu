@@ -1,6 +1,6 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.12)
+cmake_minimum_required(VERSION 3.20)
 
-SET(zone_sources
+set(zone_sources
     aa.cpp
     aa_ability.cpp
     aggro.cpp
@@ -121,7 +121,7 @@ SET(zone_sources
     zoning.cpp
 )
 
-SET(zone_headers
+set(zone_headers
     aa.h
     aa_ability.h
     aggromanager.h
@@ -476,24 +476,24 @@ target_link_libraries(gm_commands_zone PRIVATE cereal::cereal fmt::fmt $<IF:$<TA
 set_target_properties(gm_commands_zone PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 32)
 
 # zone combine sources and headers
-ADD_EXECUTABLE(zone ${zone_sources} ${zone_headers})
+add_executable(zone ${zone_sources} ${zone_headers})
 
 # binary output directory
-INSTALL(TARGETS zone RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+install(TARGETS zone RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
 # precompiled headers
-IF (EQEMU_BUILD_PCH)
+if(EQEMU_BUILD_PCH)
     TARGET_PRECOMPILE_HEADERS(zone PRIVATE ../common/pch/app-pch.h)
     TARGET_PRECOMPILE_HEADERS(zone PRIVATE ../common/pch/std-pch.h)
     TARGET_PRECOMPILE_HEADERS(zone PRIVATE ./pch/pch.h)
-ENDIF()
+endif()
 
-ADD_DEFINITIONS(-DZONE)
+add_definitions(-DZONE)
 
 # link lua_zone unity build against luabind
-IF(MSVC)
+if(MSVC)
     target_compile_options(lua_zone PRIVATE /utf-8)
-ENDIF(MSVC)
+endif()
 
 target_link_libraries(lua_zone PRIVATE luabind Boost::dynamic_bitset Boost::tuple Boost::foreach unofficial::libmariadb)
 if (EQEMU_BUILD_STATIC AND LUA_LIBRARY)

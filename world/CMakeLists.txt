@@ -1,6 +1,6 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.12)
+cmake_minimum_required(VERSION 3.20)
 
-SET(world_sources
+set(world_sources
     adventure.cpp
     adventure_manager.cpp
     client.cpp
@@ -35,7 +35,7 @@ SET(world_sources
     zoneserver.cpp
     )
 
-SET(world_headers
+set(world_headers
     adventure.h
     adventure_manager.h
     adventure_template.h
@@ -72,16 +72,16 @@ SET(world_headers
     zoneserver.h
     )
 
-ADD_EXECUTABLE(world ${world_sources} ${world_headers})
+add_executable(world ${world_sources} ${world_headers})
 
-INSTALL(TARGETS world RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+install(TARGETS world RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
-IF (WIN32 AND EQEMU_BUILD_PCH)
+if(WIN32 AND EQEMU_BUILD_PCH)
     TARGET_PRECOMPILE_HEADERS(world PRIVATE ../common/pch/std-pch.h)
-ENDIF ()
+endif()
 
-ADD_DEFINITIONS(-DWORLD)
+add_definitions(-DWORLD)
 
-TARGET_LINK_LIBRARIES(world ${SERVER_LIBS})
+target_link_libraries(world ${SERVER_LIBS})
 
-SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)

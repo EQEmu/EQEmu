@@ -1,20 +1,20 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.12)
+cmake_minimum_required(VERSION 3.20)
 
-SET(eqlaunch_sources
+set(eqlaunch_sources
 	eqlaunch.cpp
 	worldserver.cpp
 	zone_launch.cpp
 )
 
-SET(eqlaunch_headers
+set(eqlaunch_headers
 	worldserver.h
 	zone_launch.h
 )
 
-ADD_EXECUTABLE(eqlaunch ${eqlaunch_sources} ${eqlaunch_headers})
+add_executable(eqlaunch ${eqlaunch_sources} ${eqlaunch_headers})
 
-INSTALL(TARGETS eqlaunch RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+install(TARGETS eqlaunch RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
-TARGET_LINK_LIBRARIES(eqlaunch ${SERVER_LIBS})
+target_link_libraries(eqlaunch ${SERVER_LIBS})
 
-SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)

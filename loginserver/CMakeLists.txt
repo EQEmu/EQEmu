@@ -1,6 +1,6 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.12)
+cmake_minimum_required(VERSION 3.20)
 
-SET(eqlogin_sources
+set(eqlogin_sources
 	account_management.cpp
 	client.cpp
 	client_manager.cpp
@@ -12,7 +12,7 @@ SET(eqlogin_sources
 	world_server.cpp
 )
 
-SET(eqlogin_headers
+set(eqlogin_headers
 	account_management.h
 	client.h
 	client_manager.h
@@ -26,10 +26,10 @@ SET(eqlogin_headers
 	world_server.h
 )
 
-ADD_EXECUTABLE(loginserver ${eqlogin_sources} ${eqlogin_headers})
+add_executable(loginserver ${eqlogin_sources} ${eqlogin_headers})
 
-INSTALL(TARGETS loginserver RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+install(TARGETS loginserver RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
-TARGET_LINK_LIBRARIES(loginserver ${SERVER_LIBS})
+target_link_libraries(loginserver ${SERVER_LIBS})
 
-SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)

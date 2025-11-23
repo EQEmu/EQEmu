@@ -1,12 +1,12 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.17.0)
+cmake_minimum_required(VERSION 3.20.0)
 
-ADD_SUBDIRECTORY(cppunit)
+add_subdirectory(cppunit)
 
-SET(tests_sources
+set(tests_sources
 	main.cpp
 )
 
-SET(tests_headers
+set(tests_headers
 	atobool_test.h
 	data_verification_test.h
 	fixed_memory_test.h
@@ -19,30 +19,30 @@ SET(tests_headers
 	task_state_test.h
 )
 
-ADD_EXECUTABLE(tests ${tests_sources} ${tests_headers})
+add_executable(tests ${tests_sources} ${tests_headers})
 
-TARGET_LINK_LIBRARIES(tests common cppunit ${SERVER_LIBS})
+target_link_libraries(tests common cppunit ${SERVER_LIBS})
 
-INSTALL(TARGETS tests RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+install(TARGETS tests RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
-IF(MSVC)
-	SET_TARGET_PROPERTIES(tests PROPERTIES LINK_FLAGS_RELEASE "/OPT:REF /OPT:ICF")
-	TARGET_LINK_LIBRARIES(tests "Ws2_32.lib")
-ENDIF(MSVC)
+if(MSVC)
+	set_target_properties(tests PROPERTIES LINK_FLAGS_RELEASE "/OPT:REF /OPT:ICF")
+	target_link_libraries(tests "Ws2_32.lib")
+endif()
 
-IF(MINGW)
-	TARGET_LINK_LIBRARIES(tests "WS2_32")
-ENDIF(MINGW)
+if(MINGW)
+	target_link_libraries(tests "WS2_32")
+endif()
 
-IF(UNIX)
-	TARGET_LINK_LIBRARIES(tests "${CMAKE_DL_LIBS}")
-	TARGET_LINK_LIBRARIES(tests "z")
-	TARGET_LINK_LIBRARIES(tests "m")
-	IF(NOT DARWIN)
-		TARGET_LINK_LIBRARIES(tests "rt")
-	ENDIF(NOT DARWIN)
-	TARGET_LINK_LIBRARIES(tests "pthread")
-	ADD_DEFINITIONS(-fPIC)
-ENDIF(UNIX)
+if(UNIX)
+	target_link_libraries(tests "${CMAKE_DL_LIBS}")
+	target_link_libraries(tests "z")
+	target_link_libraries(tests "m")
+	if(NOT DARWIN)
+		target_link_libraries(tests "rt")
+	endif()
+	target_link_libraries(tests "pthread")
+	add_definitions(-fPIC)
+endif()
 
-SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
