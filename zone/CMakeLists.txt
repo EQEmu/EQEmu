@@ -501,7 +501,7 @@ if (EQEMU_BUILD_STATIC AND LUA_LIBRARY)
 endif()
 
 # perl unity build links against perl_zone
-target_link_libraries(perl_zone PRIVATE perlbind fmt::fmt unofficial::libmariadb)
+target_link_libraries(perl_zone PRIVATE perlbind fmt::fmt unofficial::libmariadb ${PERL_LIBRARY_LIBS})
 if (EQEMU_BUILD_STATIC AND PERL_LIBRARY)
     target_link_libraries(zone PRIVATE ${PERL_LIBRARY})
 endif()
