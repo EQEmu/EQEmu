@@ -75,15 +75,15 @@ void Embperl::DoInit()
 		throw "Failed to init Perl (perl_alloc)";
 	}
 	PERL_SET_CONTEXT(my_perl);
-	PERL_SET_INTERP(my_perl);
+	PL_curinterp = (PerlInterpreter*)(my_perl);
 	PL_perl_destruct_level = 1;
 	perl_construct(my_perl);
 	perl_parse(my_perl, xs_init, argc, argv, nullptr);
 	perl_run(my_perl);
-
+	
 	//a little routine we use a lot.
 	eval_pv("sub my_eval { eval $_[0];}", TRUE);    //dies on error
-
+	
 	//ruin the perl exit and command:
 	eval_pv("sub my_exit {}", TRUE);
 	eval_pv("sub my_sleep {}", TRUE);
@@ -95,7 +95,7 @@ void Embperl::DoInit()
 		GvCV_set(sleepgp, perl_get_cv("my_sleep", TRUE));    //dies on error
 		GvIMPORTED_CV_on(sleepgp);
 	}
-
+	
 	//declare our file eval routine.
 	try {
 		init_eval_file();
@@ -181,7 +181,7 @@ Embperl::~Embperl()
 void Embperl::Reinit()
 {
 	PERL_SET_CONTEXT(my_perl);
-	PERL_SET_INTERP(my_perl);
+	PL_curinterp = (PerlInterpreter*)(my_perl);
 	PL_perl_destruct_level = 1;
 	perl_destruct(my_perl);
 	perl_free(my_perl);
