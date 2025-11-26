@@ -12,6 +12,11 @@ endif()
 
 project(EQEmu)
 
+#explicitly set CMP0167 for Find Boost
+if(POLICY CMP0167)
+  cmake_policy(SET CMP0167 NEW)
+endif()
+
 if(NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the type of build." FORCE)
 endif()
