@@ -23,9 +23,9 @@
 #include <string.h>
 #include <string>
 #include <time.h>
-#include "../cereal/include/cereal/archives/binary.hpp"
-#include "../cereal/include/cereal/types/string.hpp"
-#include "../cereal/include/cereal/types/vector.hpp"
+#include <cereal/archives/binary.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/types/vector.hpp>
 #include "../common/version.h"
 #include "emu_constants.h"
 #include "textures.h"

@@ -38,7 +38,7 @@
 #include "../raid.h"
 #include "../guilds.h"
 //#include "../repositories/trader_repository.h"
-#include "../cereal/include/cereal/types/vector.hpp"
+#include <cereal/types/vector.hpp>
 
 #include <iostream>
 #include <sstream>

@@ -7,8 +7,8 @@
 #include "items_repository.h"
 #include "../../common/item_data.h"
 #include "../../common/races.h"
-#include "../cereal/include/cereal/archives/binary.hpp"
-#include "../cereal/include/cereal/types/string.hpp"
+#include <cereal/archives/binary.hpp>
+#include <cereal/types/string.hpp>
 
 class TraderRepository : public BaseTraderRepository {
 public:
