@@ -2,23 +2,34 @@ cmake_minimum_required(VERSION 3.20.0)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_MODULE_PATH})
 
-if(DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-	message(STATUS "Using vcpkg env variable")
-	set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
-elseif(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-	message(STATUS "Using vcpkg submodule")
-	set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/submodules/vcpkg/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+if(NOT CMAKE_TOOLCHAIN_FILE)
+	if(DEFINED ENV{VCPKG_ROOT})
+		message(STATUS "Using vcpkg from VCPKG_ROOT")
+        set(CMAKE_TOOLCHAIN_FILE
+            "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+            CACHE FILEPATH "Vcpkg toolchain file"
+        )
+	else()
+        message(STATUS "Using vcpkg submodule")
+        set(CMAKE_TOOLCHAIN_FILE
+            "${CMAKE_CURRENT_SOURCE_DIR}/submodules/vcpkg/scripts/buildsystems/vcpkg.cmake"
+            CACHE FILEPATH "Vcpkg toolchain file"
+        )
+    endif()
 endif()
 
-project(EQEmu)
+project(EQEmu
+	VERSION 24.10.3
+	LANGUAGES CXX 
+)
 
 #explicitly set CMP0167 for Find Boost
 if(POLICY CMP0167)
   cmake_policy(SET CMP0167 NEW)
 endif()
 
-if(NOT CMAKE_BUILD_TYPE)
-	set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the type of build." FORCE)
+if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build type")
 endif()
 
 set(CMAKE_CXX_STANDARD 20)
@@ -26,6 +37,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(EQEMU_BUILD_PCH "Build with precompiled headers (Windows)" ON)
+option(EQEMU_ADD_PROFILER "Link with Google perftools profiler" OFF)
+option(USE_MAP_MMFS "Use memory-mapped files for maps" OFF)
 
 # Requires libgoogle-perftools-dev google-perftools packages for linux (debian)
 if(EQEMU_ADD_PROFILER)
@@ -38,18 +51,14 @@ endif()
 
 if(MSVC)
 	add_compile_options(/bigobj)
-	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-	add_definitions(-DNOMINMAX)
-	add_definitions(-DCRASH_LOGGING)
-	add_definitions(-D_HAS_AUTO_PTR_ETC) # for Luabind on C++17
-
+	add_definitions(-D_CRT_SECURE_NO_WARNINGS -DNOMINMAX -DCRASH_LOGGING -D_HAS_AUTO_PTR_ETC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 
 	option(EQEMU_DISABLE_MSVC_WARNINGS "Disable MSVC compile warnings." ON)
 	if(EQEMU_DISABLE_MSVC_WARNINGS)
-		add_definitions( "/W0 /D_CRT_SECURE_NO_WARNINGS /wd4005 /wd4996 /nologo /Os")
+		add_compile_options(/W0 /wd4005 /wd4996 /nologo /Os)
 	endif()
-else(MSVC)
+else()
 	add_definitions(-DHAS_UNION_SEMUN)
 endif()
 
@@ -182,7 +191,7 @@ if(EQEMU_COMMANDS_LOGGING)
 endif()
 
 if(${OPENSSL_VERSION} VERSION_GREATER_EQUAL "1.1.1")
-	add_definitions(-DCPPHTTPLIB_OPENSSL_SUPPORT)
+	add_compile_definitions(CPPHTTPLIB_OPENSSL_SUPPORT)
 endif()
 
 if(PerlLibs_FOUND)
@@ -219,6 +228,8 @@ if(EQEMU_BUILD_LUA)
 	endif()
 endif()
 
+set(SERVER_LIBS common)
+
 if(PERL_LIBRARY_ENABLED)
 	option(EQEMU_BUILD_PERL "Build Perl parser." ON)
 	if(EQEMU_BUILD_PERL)
@@ -230,7 +241,6 @@ if(PERL_LIBRARY_ENABLED)
 	endif()
 endif()
 
-set(SERVER_LIBS common)
 # silence obnoxious deprecation message
 add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 
