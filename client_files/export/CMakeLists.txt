@@ -11,6 +11,6 @@ add_executable(export_client_files ${export_sources} ${export_headers})
 
 install(TARGETS export_client_files RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
-target_link_libraries(export_client_files ${SERVER_LIBS})
+target_link_libraries(export_client_files common)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)

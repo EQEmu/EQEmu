@@ -30,6 +30,6 @@ add_executable(loginserver ${eqlogin_sources} ${eqlogin_headers})
 
 install(TARGETS loginserver RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
-target_link_libraries(loginserver ${SERVER_LIBS})
+target_link_libraries(loginserver common)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)

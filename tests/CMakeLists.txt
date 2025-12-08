@@ -21,7 +21,7 @@ set(tests_headers
 
 add_executable(tests ${tests_sources} ${tests_headers})
 
-target_link_libraries(tests common cppunit ${SERVER_LIBS})
+target_link_libraries(tests common cppunit)
 
 install(TARGETS tests RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 

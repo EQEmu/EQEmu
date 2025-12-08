@@ -166,14 +166,14 @@ if(EQEMU_BUILD_SERVER)
 	add_subdirectory(eqlaunch)
 endif()
 
-#if(EQEMU_BUILD_LOGIN)
-#	add_subdirectory(loginserver)
-#endif()
-#
-#if(EQEMU_BUILD_TESTS)
-#	add_subdirectory(tests)
-#endif()
-#
-#if(EQEMU_BUILD_CLIENT_FILES)
-#	add_subdirectory(client_files)
-#endif()
+if(EQEMU_BUILD_LOGIN)
+	add_subdirectory(loginserver)
+endif()
+
+if(EQEMU_BUILD_TESTS)
+	add_subdirectory(tests)
+endif()
+
+if(EQEMU_BUILD_CLIENT_FILES)
+	add_subdirectory(client_files)
+endif()
