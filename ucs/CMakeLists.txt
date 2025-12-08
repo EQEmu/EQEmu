@@ -23,6 +23,6 @@ install(TARGETS ucs RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
 add_definitions(-DUCS)
 
-target_link_libraries(ucs ${SERVER_LIBS})
+target_link_libraries(ucs common)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
