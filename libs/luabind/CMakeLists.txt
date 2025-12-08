@@ -20,12 +20,9 @@ set(lb_sources
 	src/wrapper_base.cpp
 )
 
-set(lb_headers
-
-)
-
-add_library(luabind ${lb_sources} ${lb_headers})
-target_link_libraries(luabind PRIVATE Boost::dynamic_bitset Boost::tuple Boost::foreach ${LUAJIT_LIBRARY})
+add_library(luabind ${lb_sources})
+target_include_directories(luabind PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${LUAJIT_INCLUDE_DIR})
+target_link_libraries(luabind PUBLIC Boost::dynamic_bitset Boost::tuple Boost::foreach ${LUAJIT_LIBRARY})
 
 if(UNIX)
     set_source_files_properties(${lb_sources} PROPERTY COMPILE_FLAGS -Wno-deprecated-declarations)

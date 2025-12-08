@@ -2,10 +2,6 @@ cmake_minimum_required(VERSION 3.20.0)
 
 project(perlbind LANGUAGES CXX)
 
-set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".so" ".a")
-
-find_package(PerlLibs)
-
 set(PERLBIND_HEADERS
   include/perlbind/array.h
   include/perlbind/forward.h
@@ -44,6 +40,8 @@ target_include_directories(perlbind PUBLIC
   ${PERL_INCLUDE_PATH}
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
+
+target_compile_definitions(perlbind PUBLIC EMBPERL EMBPERL_PLUGIN PERLBIND_NO_STRICT_SCALAR_TYPES)
 
 option(PERLBIND_BUILD_TESTS "Build tests" OFF)
 option(PERLBIND_ENABLE_ASAN "Build with address sanitizer" OFF)
