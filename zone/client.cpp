@@ -4840,7 +4840,7 @@ bool Client::IsNameChangeAllowed() {
 	auto k = GetScopedBucketKeys();
 	k.key = "name_change_allowed";
 
-	auto b = DataBucket::GetData(k);
+	auto b = DataBucket::GetData(&database, k);
 	if (!b.value.empty()) {
 		return true;
 	}
@@ -4856,7 +4856,7 @@ bool Client::ClearNameChange() {
 	auto k = GetScopedBucketKeys();
 	k.key = "name_change_allowed";
 
-	DataBucket::DeleteData(k);
+	DataBucket::DeleteData(&database, k);
 
 	return true;
 }
@@ -4878,7 +4878,7 @@ void Client::GrantNameChange() {
 	auto k = GetScopedBucketKeys();
 	k.key = "name_change_allowed";
 	k.value = "allowed"; // potentially put a timestamp here
-	DataBucket::SetData(k);
+	DataBucket::SetData(&database, k);
 
 	InvokeChangeNameWindow(true);
 }
@@ -4891,7 +4891,7 @@ bool Client::IsPetNameChangeAllowed() {
 	DataBucketKey k = GetScopedBucketKeys();
 	k.key = "PetNameChangesAllowed";
 
-	auto b = DataBucket::GetData(k);
+	auto b = DataBucket::GetData(&database, k);
 	if (!b.value.empty()) {
 		return true;
 	}
@@ -4915,7 +4915,7 @@ void Client::GrantPetNameChange() {
 	DataBucketKey k = GetScopedBucketKeys();
 	k.key = "PetNameChangesAllowed";
 	k.value = "true";
-	DataBucket::SetData(k);
+	DataBucket::SetData(&database, k);
 
 	InvokeChangePetName(true);
 }
@@ -4924,7 +4924,7 @@ void Client::ClearPetNameChange() {
 	DataBucketKey k = GetScopedBucketKeys();
 	k.key = "PetNameChangesAllowed";
 
-	DataBucket::DeleteData(k);
+	DataBucket::DeleteData(&database, k);
 }
 
 bool Client::ChangePetName(std::string new_name)
@@ -9671,9 +9671,9 @@ void Client::SetDevToolsEnabled(bool in_dev_tools_enabled)
 	const auto dev_tools_key = fmt::format("{}-dev-tools-disabled", AccountID());
 
 	if (in_dev_tools_enabled) {
-		DataBucket::DeleteData(dev_tools_key);
+		DataBucket::DeleteData(&database, dev_tools_key);
 	} else {
-		DataBucket::SetData(dev_tools_key, "true");
+		DataBucket::SetData(&database, dev_tools_key, "true");
 	}
 
 	Client::dev_tools_enabled = in_dev_tools_enabled;
@@ -9846,7 +9846,7 @@ void Client::SendToGuildHall()
 	uint32      expiration_time         = (RuleI(Instances, GuildHallExpirationDays) * 86400);
 	uint16      instance_id             = 0;
 	std::string guild_hall_instance_key = fmt::format("guild-hall-instance-{}", GuildID());
-	std::string instance_data           = DataBucket::GetData(guild_hall_instance_key);
+	std::string instance_data           = DataBucket::GetData(&database, guild_hall_instance_key);
 	if (!instance_data.empty() && Strings::ToInt(instance_data) > 0) {
 		instance_id = Strings::ToInt(instance_data);
 	}
@@ -9863,6 +9863,7 @@ void Client::SendToGuildHall()
 		}
 
 		DataBucket::SetData(
+			&database,
 			guild_hall_instance_key,
 			std::to_string(instance_id),
 			std::to_string(expiration_time)
@@ -10915,7 +10916,7 @@ void Client::SendToInstance(std::string instance_type, std::string zone_short_na
 		instance_identifier,
 		zone_short_name
 	);
-	std::string current_bucket_value = DataBucket::GetData(full_bucket_name);
+	std::string current_bucket_value = DataBucket::GetData(&database, full_bucket_name);
 	uint16 instance_id = 0;
 
 	if (current_bucket_value.length() > 0) {
@@ -10931,7 +10932,7 @@ void Client::SendToInstance(std::string instance_type, std::string zone_short_na
 			return;
 		}
 
-		DataBucket::SetData(full_bucket_name, itoa(instance_id), itoa(duration));
+		DataBucket::SetData(&database, full_bucket_name, itoa(instance_id), itoa(duration));
 	}
 
 	AssignToInstance(instance_id);
@@ -13149,7 +13150,7 @@ std::string Client::GetAccountBucket(std::string bucket_name)
 	k.account_id   = AccountID();
 	k.key          = bucket_name;
 
-	return DataBucket::GetData(k).value;
+	return DataBucket::GetData(&database, k).value;
 }
 
 void Client::SetAccountBucket(std::string bucket_name, std::string bucket_value, std::string expiration)
@@ -13160,7 +13161,7 @@ void Client::SetAccountBucket(std::string bucket_name, std::string bucket_value,
 	k.expires      = expiration;
 	k.value        = bucket_value;
 
-	DataBucket::SetData(k);
+	DataBucket::SetData(&database, k);
 }
 
 void Client::DeleteAccountBucket(std::string bucket_name)
@@ -13169,7 +13170,7 @@ void Client::DeleteAccountBucket(std::string bucket_name)
 	k.account_id   = AccountID();
 	k.key          = bucket_name;
 
-	DataBucket::DeleteData(k);
+	DataBucket::DeleteData(&database, k);
 }
 
 std::string Client::GetAccountBucketExpires(std::string bucket_name)
@@ -13178,7 +13179,7 @@ std::string Client::GetAccountBucketExpires(std::string bucket_name)
 	k.account_id   = AccountID();
 	k.key          = bucket_name;
 
-	return DataBucket::GetDataExpires(k);
+	return DataBucket::GetDataExpires(&database, k);
 }
 
 std::string Client::GetAccountBucketRemaining(std::string bucket_name)
@@ -13187,7 +13188,7 @@ std::string Client::GetAccountBucketRemaining(std::string bucket_name)
 	k.account_id   = AccountID();
 	k.key          = bucket_name;
 
-	return DataBucket::GetDataRemaining(k);
+	return DataBucket::GetDataRemaining(&database, k);
 }
 
 std::string Client::GetBandolierName(uint8 bandolier_slot)

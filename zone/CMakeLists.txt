@@ -23,7 +23,6 @@ set(zone_sources
     client_process.cpp
     combat_record.cpp
     corpse.cpp
-    ../common/data_bucket.cpp
     doors.cpp
     dialogue_window.cpp
     dynamic_zone.cpp
@@ -139,7 +138,6 @@ set(zone_headers
     command.h
     common.h
     corpse.h
-    ../common/data_bucket.h
     doors.h
     dialogue_window.h
     dynamic_zone.h
@@ -491,23 +489,32 @@ endif()
 add_definitions(-DZONE)
 
 # link lua_zone unity build against luabind
-if(MSVC)
-    target_compile_options(lua_zone PRIVATE /utf-8)
-endif()
-
-target_link_libraries(lua_zone PRIVATE luabind Boost::dynamic_bitset Boost::tuple Boost::foreach unofficial::libmariadb)
-if (EQEMU_BUILD_STATIC AND LUA_LIBRARY)
-    target_link_libraries(zone PRIVATE ${LUA_LIBRARY})
+if(EQEMU_BUILD_LUA)
+    target_compile_definitions(lua_zone PUBLIC LUA_EQEMU)
+    target_link_libraries(lua_zone PRIVATE luabind Boost::dynamic_bitset Boost::tuple Boost::foreach common)
+    if (EQEMU_BUILD_STATIC AND LUA_LIBRARY)
+        target_link_libraries(zone PRIVATE ${LUA_LIBRARY})
+    endif()
 endif()
 
 # perl unity build links against perl_zone
-target_link_libraries(perl_zone PRIVATE perlbind fmt::fmt unofficial::libmariadb ${PERL_LIBRARY_LIBS})
-if (EQEMU_BUILD_STATIC AND PERL_LIBRARY)
-    target_link_libraries(zone PRIVATE ${PERL_LIBRARY})
+if(EQEMU_BUILD_PERL)
+    target_link_libraries(perl_zone PRIVATE perlbind common ${PERL_LIBRARY_LIBS})
+    if (EQEMU_BUILD_STATIC AND PERL_LIBRARY)
+        target_link_libraries(zone PRIVATE ${PERL_LIBRARY})
+    endif()
 endif()
 
 # link zone against common libraries
-target_link_libraries(zone PRIVATE lua_zone perl_zone gm_commands_zone ${ZONE_LIBS} RecastNavigation::Detour)
+target_link_libraries(zone PRIVATE gm_commands_zone common RecastNavigation::Detour)
+
+if(EQEMU_BUILD_LUA)
+    target_link_libraries(zone PRIVATE lua_zone)
+endif()
+
+if(EQEMU_BUILD_PERL)
+    target_link_libraries(zone PRIVATE perl_zone)
+endif()
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 

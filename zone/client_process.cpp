@@ -874,7 +874,7 @@ void Client::BulkSendMerchantInventory(int merchant_id, int npcid) {
 			DataBucketKey k = GetScopedBucketKeys();
 			k.key = bucket_name;
 
-			auto b = DataBucket::GetData(k);
+			auto b = DataBucket::GetData(&database, k);
 			if (b.value.empty()) {
 				continue;
 			}

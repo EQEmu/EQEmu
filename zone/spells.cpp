@@ -6275,7 +6275,7 @@ bool Client::SpellBucketCheck(uint16 spell_id, uint32 character_id)
 
 	k.key = e.bucket_name;
 
-	const auto& b = DataBucket::GetData(k);
+	const auto& b = DataBucket::GetData(&database, k);
 
 	return zone->CompareDataBucket(e.bucket_comparison, e.bucket_value, b.value);
 }

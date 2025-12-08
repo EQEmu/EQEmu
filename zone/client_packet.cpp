@@ -1853,7 +1853,7 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	 */
 	if (Admin() >= EQ::DevTools::GM_ACCOUNT_STATUS_LEVEL) {
 		const auto dev_tools_key = fmt::format("{}-dev-tools-disabled", AccountID());
-		if (DataBucket::GetData(dev_tools_key) == "true") {
+		if (DataBucket::GetData(&database, dev_tools_key) == "true") {
 			dev_tools_enabled = false;
 		}
 	}

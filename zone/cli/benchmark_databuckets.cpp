@@ -116,7 +116,7 @@ void RunBenchmarkCycle(uint64_t target_rows)
 				break;
 		}
 
-		DataBucket::SetData(e);
+		DataBucket::SetData(&database, e);
 
 		inserted_keys.emplace_back(e);
 	}
@@ -129,7 +129,7 @@ void RunBenchmarkCycle(uint64_t target_rows)
 	auto      update_start = std::chrono::high_resolution_clock::now();
 	for (auto &key: inserted_keys) {
 		// 🔍 Retrieve existing bucket using scoped `GetData`
-		auto e = DataBucket::GetData(key);
+		auto e = DataBucket::GetData(&database, key);
 		if (e.id > 0) {
 			// create a new key object with the updated values
 			DataBucketKey bucket_entry_key{
@@ -145,7 +145,7 @@ void RunBenchmarkCycle(uint64_t target_rows)
 			};
 
 			// 🔄 Update using DataBucket class
-			DataBucket::SetData(bucket_entry_key);
+			DataBucket::SetData(&database, bucket_entry_key);
 		}
 	}
 	auto                          update_end  = std::chrono::high_resolution_clock::now();
@@ -188,7 +188,7 @@ void RunBenchmarkCycle(uint64_t target_rows)
 				k.instance_id = entity_choice;
 		}
 
-		DataBucket::GetData(key);
+		DataBucket::GetData(&database, key);
 	}
 	auto                          read_cached_end  = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> read_cached_time = read_cached_end - read_cached_start;
@@ -206,7 +206,7 @@ void RunBenchmarkCycle(uint64_t target_rows)
 			.character_id = 999999999, // use scoped value
 		};
 
-		DataBucket::GetData(k);
+		DataBucket::GetData(&database, k);
 	}
 	auto read_client_cache_miss_end = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> read_client_cache_miss_time = read_client_cache_miss_end - read_client_cache_miss_start;
@@ -260,7 +260,7 @@ void RunBenchmarkCycle(uint64_t target_rows)
 				k.instance_id = entity_choice;
 		}
 
-		DataBucket::DeleteData(k);
+		DataBucket::DeleteData(&database, k);
 	}
 	auto                          delete_end  = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> delete_time = delete_end - delete_start;

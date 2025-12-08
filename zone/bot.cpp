@@ -8224,13 +8224,13 @@ bool Bot::CheckDataBucket(std::string bucket_name, const std::string& bucket_val
 		DataBucketKey k = GetScopedBucketKeys();
 		k.key = bucket_name;
 
-		auto b = DataBucket::GetData(k);
+		auto b = DataBucket::GetData(&database, k);
 		if (b.value.empty() && GetBotOwner()) {
 			// fetch from owner
 			k = GetBotOwner()->GetScopedBucketKeys();
 			k.key = bucket_name;
 
-			b = DataBucket::GetData(k);
+			b = DataBucket::GetData(&database, k);
 			if (b.value.empty()) {
 				return false;
 			}

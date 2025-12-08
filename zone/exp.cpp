@@ -1299,7 +1299,7 @@ uint8 Client::GetCharMaxLevelFromBucket()
 	DataBucketKey k = GetScopedBucketKeys();
 	k.key = "CharMaxLevel";
 
-	auto b = DataBucket::GetData(k);
+	auto b = DataBucket::GetData(&database, k);
 	if (!b.value.empty()) {
 		if (Strings::IsNumber(b.value)) {
 			return static_cast<uint8>(Strings::ToUnsignedInt(b.value));

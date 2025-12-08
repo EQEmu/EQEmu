@@ -5901,7 +5901,7 @@ float Mob::CheckHeroicBonusesDataBuckets(std::string bucket_name)
 		DataBucketKey k = GetScopedBucketKeys();
 		k.key = bucket_name;
 		if (IsOfClientBot()) {
-			bucket_value = DataBucket::GetData(k).value;
+			bucket_value = DataBucket::GetData(&database, k).value;
 		}
 
 		if (bucket_value.empty() || !Strings::IsNumber(bucket_value)) {

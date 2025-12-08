@@ -170,7 +170,7 @@ bool Zone::Bootup(uint32 iZoneID, uint32 iInstanceID, bool is_static) {
 	zone->RequestUCSServerStatus();
 	zone->StartShutdownTimer();
 
-	DataBucket::LoadZoneCache(iZoneID, iInstanceID);
+	DataBucket::LoadZoneCache(&database, iZoneID, iInstanceID);
 
 	/*
 	 * Set Logging
@@ -3186,7 +3186,7 @@ std::string Zone::GetBucket(const std::string& bucket_name)
 	k.instance_id = instanceid;
 	k.key         = bucket_name;
 
-	return DataBucket::GetData(k).value;
+	return DataBucket::GetData(&database, k).value;
 }
 
 void Zone::SetBucket(const std::string& bucket_name, const std::string& bucket_value, const std::string& expiration)
@@ -3198,7 +3198,7 @@ void Zone::SetBucket(const std::string& bucket_name, const std::string& bucket_v
 	k.expires     = expiration;
 	k.value       = bucket_value;
 
-	DataBucket::SetData(k);
+	DataBucket::SetData(&database, k);
 }
 
 void Zone::DeleteBucket(const std::string& bucket_name)
@@ -3208,7 +3208,7 @@ void Zone::DeleteBucket(const std::string& bucket_name)
 	k.instance_id = instanceid;
 	k.key         = bucket_name;
 
-	DataBucket::DeleteData(k);
+	DataBucket::DeleteData(&database, k);
 }
 
 std::string Zone::GetBucketExpires(const std::string& bucket_name)
@@ -3218,7 +3218,7 @@ std::string Zone::GetBucketExpires(const std::string& bucket_name)
 	k.instance_id = instanceid;
 	k.key         = bucket_name;
 
-	return DataBucket::GetDataExpires(k);
+	return DataBucket::GetDataExpires(&database, k);
 }
 
 std::string Zone::GetBucketRemaining(const std::string& bucket_name)
@@ -3228,7 +3228,7 @@ std::string Zone::GetBucketRemaining(const std::string& bucket_name)
 	k.instance_id = instanceid;
 	k.key         = bucket_name;
 
-	return DataBucket::GetDataRemaining(k);
+	return DataBucket::GetDataRemaining(&database, k);
 }
 
 void Zone::DisableRespawnTimers()

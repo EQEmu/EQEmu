@@ -58,7 +58,7 @@ void command_gmzone(Client *c, const Seperator *sep)
 		zone_version
 	);
 
-	auto   existing_zone_instance = DataBucket::GetData(bucket_key);
+	auto   existing_zone_instance = DataBucket::GetData(&database, bucket_key);
 	uint16 instance_id            = 0;
 	uint32 duration               = 100000000;
 
@@ -99,6 +99,7 @@ void command_gmzone(Client *c, const Seperator *sep)
 		);
 
 		DataBucket::SetData(
+			&database,
 			bucket_key,
 			std::to_string(instance_id)
 		);

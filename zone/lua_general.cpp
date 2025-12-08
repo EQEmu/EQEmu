@@ -933,23 +933,23 @@ std::string lua_get_rule(std::string rule_name) {
 }
 
 std::string lua_get_data(std::string bucket_key) {
-	return DataBucket::GetData(bucket_key);
+	return DataBucket::GetData(&database, bucket_key);
 }
 
 std::string lua_get_data_expires(std::string bucket_key) {
-	return DataBucket::GetDataExpires(bucket_key);
+	return DataBucket::GetDataExpires(&database, bucket_key);
 }
 
 void lua_set_data(std::string bucket_key, std::string bucket_value) {
-	DataBucket::SetData(bucket_key, bucket_value);
+	DataBucket::SetData(&database, bucket_key, bucket_value);
 }
 
 void lua_set_data(std::string bucket_key, std::string bucket_value, std::string expires_at) {
-	DataBucket::SetData(bucket_key, bucket_value, expires_at);
+	DataBucket::SetData(&database, bucket_key, bucket_value, expires_at);
 }
 
 bool lua_delete_data(std::string bucket_key) {
-	return DataBucket::DeleteData(bucket_key);
+	return DataBucket::DeleteData(&database, bucket_key);
 }
 
 std::string lua_get_char_name_by_id(uint32 char_id) {
@@ -2030,7 +2030,7 @@ void lua_rename(std::string name) {
 }
 
 std::string lua_get_data_remaining(std::string bucket_name) {
-	return DataBucket::GetDataRemaining(bucket_name);
+	return DataBucket::GetDataRemaining(&database, bucket_name);
 }
 
 const int lua_get_item_stat(uint32 item_id, std::string identifier) {
