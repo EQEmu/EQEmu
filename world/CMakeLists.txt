@@ -7,7 +7,6 @@ set(world_sources
     cliententry.cpp
     clientlist.cpp
     console.cpp
-    ../common/data_bucket.cpp
     dynamic_zone.cpp
     dynamic_zone_manager.cpp
     eql_config.cpp
@@ -43,7 +42,6 @@ set(world_headers
     cliententry.h
     clientlist.h
     console.h
-    ../common/data_bucket.h
     dynamic_zone.h
     dynamic_zone_manager.h
     eql_config.h
@@ -82,6 +80,6 @@ endif()
 
 add_definitions(-DWORLD)
 
-target_link_libraries(world ${SERVER_LIBS})
+target_link_libraries(world common)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)

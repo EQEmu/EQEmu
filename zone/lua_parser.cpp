@@ -434,7 +434,6 @@ LuaParser::LuaParser() {
 	ZoneArgumentDispatch[EVENT_TIMER_RESUME]   = handle_zone_timer_pause_resume_start;
 	ZoneArgumentDispatch[EVENT_TIMER_START]    = handle_zone_timer_pause_resume_start;
 	ZoneArgumentDispatch[EVENT_TIMER_STOP]     = handle_zone_timer_stop;
-#endif
 
 	L = nullptr;
 }
@@ -2295,3 +2294,5 @@ void LuaParser::LoadZoneScript(std::string filename) {
 void LuaParser::LoadGlobalZoneScript(std::string filename) {
 	LoadScript(filename, "global_zone");
 }
+
+#endif

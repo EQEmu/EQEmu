@@ -20,6 +20,7 @@ set(common_sources
     database/database_update_manifest_custom.cpp
     database/database_update_manifest_bots.cpp
     database/database_update.cpp
+    data_bucket.cpp
     dbcore.cpp
     deity.cpp
     dynamic_zone_base.cpp
@@ -554,6 +555,7 @@ set(common_headers
     database.h
     database_schema.h
     database/database_update.h
+    data_bucket.cpp
     dbcore.h
     deity.h
     discord/discord.h

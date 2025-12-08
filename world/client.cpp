@@ -2530,9 +2530,9 @@ void Client::SendUnsupportedClientPacket(const std::string& message)
 
 void Client::LoadDataBucketsCache()
 {
-	DataBucket::BulkLoadEntitiesToCache(DataBucketLoadType::Account, {GetAccountID()});
+	DataBucket::BulkLoadEntitiesToCache(&database, DataBucketLoadType::Account, {GetAccountID()});
 	const auto ids = CharacterDataRepository::GetCharacterIDsByAccountID(database, GetAccountID());
-	DataBucket::BulkLoadEntitiesToCache(DataBucketLoadType::Client, ids);
+	DataBucket::BulkLoadEntitiesToCache(&database, DataBucketLoadType::Client, ids);
 }
 
 void Client::ClearDataBucketsCache()

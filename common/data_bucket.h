@@ -5,6 +5,7 @@
 #include "types.h"
 #include "repositories/data_buckets_repository.h"
 #include "json/json_archive_single_line.h"
+#include "shareddb.h"
 
 struct DataBucketKey {
 	std::string key;
@@ -38,26 +39,26 @@ namespace DataBucketLoadType {
 class DataBucket {
 public:
 	// non-scoped bucket methods (for global buckets)
-	static void SetData(const std::string &bucket_key, const std::string &bucket_value, std::string expires_time = "");
-	static bool DeleteData(const std::string &bucket_key);
-	static std::string GetData(const std::string &bucket_key);
-	static std::string GetDataExpires(const std::string &bucket_key);
-	static std::string GetDataRemaining(const std::string &bucket_key);
+	static void SetData(SharedDatabase *database, const std::string &bucket_key, const std::string &bucket_value, std::string expires_time = "");
+	static bool DeleteData(SharedDatabase *database, const std::string &bucket_key);
+	static std::string GetData(SharedDatabase *database, const std::string &bucket_key);
+	static std::string GetDataExpires(SharedDatabase *database, const std::string &bucket_key);
+	static std::string GetDataRemaining(SharedDatabase *database, const std::string &bucket_key);
 
 	// scoped bucket methods
-	static void SetData(const DataBucketKey &k_);
-	static bool DeleteData(const DataBucketKey &k);
-	static DataBucketsRepository::DataBuckets GetData(const DataBucketKey &k_, bool ignore_misses_cache = false);
-	static std::string GetDataExpires(const DataBucketKey &k);
-	static std::string GetDataRemaining(const DataBucketKey &k);
+	static void SetData(SharedDatabase *database, const DataBucketKey &k_);
+	static bool DeleteData(SharedDatabase *database, const DataBucketKey &k);
+	static DataBucketsRepository::DataBuckets GetData(SharedDatabase *database, const DataBucketKey &k_, bool ignore_misses_cache = false);
+	static std::string GetDataExpires(SharedDatabase *database, const DataBucketKey &k);
+	static std::string GetDataRemaining(SharedDatabase *database, const DataBucketKey &k);
 	static std::string GetScopedDbFilters(const DataBucketKey &k);
 
 	// bucket repository versus key matching
 	static bool CheckBucketMatch(const DataBucketsRepository::DataBuckets &dbe, const DataBucketKey &k);
 	static bool ExistsInCache(const DataBucketsRepository::DataBuckets &entry);
 
-	static void LoadZoneCache(uint16 zone_id, uint16 instance_id);
-	static void BulkLoadEntitiesToCache(DataBucketLoadType::Type t, std::vector<uint32> ids);
+	static void LoadZoneCache(SharedDatabase* database, uint16 zone_id, uint16 instance_id);
+	static void BulkLoadEntitiesToCache(SharedDatabase* database, DataBucketLoadType::Type t, std::vector<uint32> ids);
 	static void DeleteCachedBuckets(DataBucketLoadType::Type type, uint32 id, uint32 secondary_id = 0);
 
 	static void DeleteFromMissesCache(DataBucketsRepository::DataBuckets e);
