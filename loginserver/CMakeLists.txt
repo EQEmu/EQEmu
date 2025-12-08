@@ -26,6 +26,8 @@ set(eqlogin_headers
 	world_server.h
 )
 
+add_compile_definitions(EQEMU_USE_OPENSSL)
+
 add_executable(loginserver ${eqlogin_sources} ${eqlogin_headers})
 
 install(TARGETS loginserver RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)

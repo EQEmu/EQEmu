@@ -2,7 +2,7 @@
 #include "../../groups.h"
 #include "../../raids.h"
 #include "../../raids.h"
-#include "../../common/repositories/account_repository.h"
+#include "../../../common/repositories/account_repository.h"
 
 void SetAutoLogin(Client* c, const Seperator* sep)
 {

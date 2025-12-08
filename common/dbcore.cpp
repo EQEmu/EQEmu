@@ -258,8 +258,16 @@ bool DBcore::Open(uint32 *errnum, char *errbuf)
 	if (pCompress) {
 		flags |= CLIENT_COMPRESS;
 	}
+
+	//todo: we need to revisit this ssl handling later
+	//the whole connect code is ancient and tls is starting to come as a default requirement for many db setups
 	if (pSSL) {
 		flags |= CLIENT_SSL;
+	}
+	else {
+		int off = 0;
+		mysql_options(mysql, MYSQL_OPT_SSL_ENFORCE, &off);
+		mysql_options(mysql, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &off);
 	}
 	if (mysql_real_connect(mysql, pHost, pUser, pPassword, pDatabase, pPort, 0, flags)) {
 		pStatus = Connected;
