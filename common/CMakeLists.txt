@@ -1293,6 +1293,7 @@ if(${OPENSSL_VERSION} VERSION_GREATER_EQUAL "1.1.1")
 endif()
 
 if(UNIX)
+	target_link_libraries(common PUBLIC uuid)
     set_source_files_properties("SocketLib/Mime.cpp" PROPERTY COMPILE_FLAGS -Wno-unused-result)
     set_source_files_properties("patches/sod.cpp" "patches/sof.cpp" "patches/rof.cpp" "patches/rof2.cpp" "patches/uf.cpp" PROPERTIES COMPILE_FLAGS -O0)
 endif()
