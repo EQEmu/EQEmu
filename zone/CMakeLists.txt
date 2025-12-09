@@ -354,6 +354,31 @@ set(gm_command_sources
     gm_commands/evolving_items.cpp
     gm_commands/feature.cpp
     gm_commands/find.cpp
+	gm_commands/find/find_aa.cpp
+	gm_commands/find/find_account.cpp
+	gm_commands/find/find_body_type.cpp
+	gm_commands/find/find_bot.cpp
+	gm_commands/find/find_bug_category.cpp
+	gm_commands/find/find_character.cpp
+	gm_commands/find/find_class.cpp
+	gm_commands/find/find_comparison_type.cpp
+	gm_commands/find/find_currency.cpp
+	gm_commands/find/find_deity.cpp
+	gm_commands/find/find_emote.cpp
+	gm_commands/find/find_faction.cpp
+	gm_commands/find/find_item.cpp
+	gm_commands/find/find_language.cpp
+	gm_commands/find/find_ldon_theme.cpp
+	gm_commands/find/find_npctype.cpp
+	gm_commands/find/find_object_type.cpp
+	gm_commands/find/find_race.cpp
+	gm_commands/find/find_recipe.cpp
+	gm_commands/find/find_skill.cpp
+	gm_commands/find/find_special_ability.cpp
+	gm_commands/find/find_spell.cpp
+	gm_commands/find/find_stance.cpp
+	gm_commands/find/find_task.cpp
+	gm_commands/find/find_zone.cpp
     gm_commands/fish.cpp
     gm_commands/fixmob.cpp
     gm_commands/flagedit.cpp
@@ -575,6 +600,34 @@ set(gm_command_sources
     gm_commands/zone_instance.cpp
     gm_commands/zone_shard.cpp
     gm_commands/zsave.cpp
+)
+
+source_group(find FILES
+	gm_commands/find/find_aa.cpp
+	gm_commands/find/find_account.cpp
+	gm_commands/find/find_body_type.cpp
+	gm_commands/find/find_bot.cpp
+	gm_commands/find/find_bug_category.cpp
+	gm_commands/find/find_character.cpp
+	gm_commands/find/find_class.cpp
+	gm_commands/find/find_comparison_type.cpp
+	gm_commands/find/find_currency.cpp
+	gm_commands/find/find_deity.cpp
+	gm_commands/find/find_emote.cpp
+	gm_commands/find/find_faction.cpp
+	gm_commands/find/find_item.cpp
+	gm_commands/find/find_language.cpp
+	gm_commands/find/find_ldon_theme.cpp
+	gm_commands/find/find_npctype.cpp
+	gm_commands/find/find_object_type.cpp
+	gm_commands/find/find_race.cpp
+	gm_commands/find/find_recipe.cpp
+	gm_commands/find/find_skill.cpp
+	gm_commands/find/find_special_ability.cpp
+	gm_commands/find/find_spell.cpp
+	gm_commands/find/find_stance.cpp
+	gm_commands/find/find_task.cpp
+	gm_commands/find/find_zone.cpp
 )
 
 source_group(set FILES 
