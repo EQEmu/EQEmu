@@ -432,6 +432,62 @@ set(gm_command_sources
     gm_commands/sensetrap.cpp
     gm_commands/serverrules.cpp
     gm_commands/set.cpp
+	gm_commands/set/set_aa_exp.cpp
+    gm_commands/set/set_aa_points.cpp
+    gm_commands/set/set_adventure_points.cpp
+    gm_commands/set/set_alternate_currency.cpp
+    gm_commands/set/set_animation.cpp
+    gm_commands/set/set_anon.cpp
+    gm_commands/set/set_auto_login.cpp
+    gm_commands/set/set_bind_point.cpp
+    gm_commands/set/set_checksum.cpp
+    gm_commands/set/set_class_permanent.cpp
+    gm_commands/set/set_crystals.cpp
+    gm_commands/set/set_date.cpp
+    gm_commands/set/set_endurance.cpp
+    gm_commands/set/set_endurance_full.cpp
+    gm_commands/set/set_exp.cpp
+    gm_commands/set/set_flymode.cpp
+    gm_commands/set/set_frozen.cpp
+    gm_commands/set/set_gender.cpp
+    gm_commands/set/set_gender_permanent.cpp
+    gm_commands/set/set_gm.cpp
+    gm_commands/set/set_gm_speed.cpp
+    gm_commands/set/set_gm_status.cpp
+    gm_commands/set/set_god_mode.cpp
+    gm_commands/set/set_haste.cpp
+    gm_commands/set/set_hero_model.cpp
+    gm_commands/set/set_hide_me.cpp
+    gm_commands/set/set_hp.cpp
+    gm_commands/set/set_hp_full.cpp
+    gm_commands/set/set_invulnerable.cpp
+    gm_commands/set/set_language.cpp
+    gm_commands/set/set_last_name.cpp
+    gm_commands/set/set_level.cpp
+    gm_commands/set/set_loginserver_info.cpp
+    gm_commands/set/set_mana.cpp
+    gm_commands/set/set_mana_full.cpp
+    gm_commands/set/set_motd.cpp
+    gm_commands/set/set_name.cpp
+    gm_commands/set/set_ooc_mute.cpp
+    gm_commands/set/set_password.cpp
+    gm_commands/set/set_pvp.cpp
+    gm_commands/set/set_pvp_points.cpp
+    gm_commands/set/set_race.cpp
+    gm_commands/set/set_race_permanent.cpp
+    gm_commands/set/set_server_locked.cpp
+    gm_commands/set/set_skill.cpp
+    gm_commands/set/set_skill_all.cpp
+    gm_commands/set/set_skill_all_max.cpp
+    gm_commands/set/set_start_zone.cpp
+    gm_commands/set/set_temporary_name.cpp
+    gm_commands/set/set_texture.cpp
+    gm_commands/set/set_time.cpp
+    gm_commands/set/set_time_zone.cpp
+    gm_commands/set/set_title.cpp
+    gm_commands/set/set_title_suffix.cpp
+    gm_commands/set/set_weather.cpp
+    gm_commands/set/set_zone.cpp
     gm_commands/show.cpp
     gm_commands/shutdown.cpp
     gm_commands/spawn.cpp
@@ -468,6 +524,64 @@ set(gm_command_sources
     gm_commands/zone_shard.cpp
     gm_commands/zsave.cpp
 )
+
+source_group(set FILES 
+    gm_commands/set/set_aa_exp.cpp
+    gm_commands/set/set_aa_points.cpp
+    gm_commands/set/set_adventure_points.cpp
+    gm_commands/set/set_alternate_currency.cpp
+    gm_commands/set/set_animation.cpp
+    gm_commands/set/set_anon.cpp
+    gm_commands/set/set_auto_login.cpp
+    gm_commands/set/set_bind_point.cpp
+    gm_commands/set/set_checksum.cpp
+    gm_commands/set/set_class_permanent.cpp
+    gm_commands/set/set_crystals.cpp
+    gm_commands/set/set_date.cpp
+    gm_commands/set/set_endurance.cpp
+    gm_commands/set/set_endurance_full.cpp
+    gm_commands/set/set_exp.cpp
+    gm_commands/set/set_flymode.cpp
+    gm_commands/set/set_frozen.cpp
+    gm_commands/set/set_gender.cpp
+    gm_commands/set/set_gender_permanent.cpp
+    gm_commands/set/set_gm.cpp
+    gm_commands/set/set_gm_speed.cpp
+    gm_commands/set/set_gm_status.cpp
+    gm_commands/set/set_god_mode.cpp
+    gm_commands/set/set_haste.cpp
+    gm_commands/set/set_hero_model.cpp
+    gm_commands/set/set_hide_me.cpp
+    gm_commands/set/set_hp.cpp
+    gm_commands/set/set_hp_full.cpp
+    gm_commands/set/set_invulnerable.cpp
+    gm_commands/set/set_language.cpp
+    gm_commands/set/set_last_name.cpp
+    gm_commands/set/set_level.cpp
+    gm_commands/set/set_loginserver_info.cpp
+    gm_commands/set/set_mana.cpp
+    gm_commands/set/set_mana_full.cpp
+    gm_commands/set/set_motd.cpp
+    gm_commands/set/set_name.cpp
+    gm_commands/set/set_ooc_mute.cpp
+    gm_commands/set/set_password.cpp
+    gm_commands/set/set_pvp.cpp
+    gm_commands/set/set_pvp_points.cpp
+    gm_commands/set/set_race.cpp
+    gm_commands/set/set_race_permanent.cpp
+    gm_commands/set/set_server_locked.cpp
+    gm_commands/set/set_skill.cpp
+    gm_commands/set/set_skill_all.cpp
+    gm_commands/set/set_skill_all_max.cpp
+    gm_commands/set/set_start_zone.cpp
+    gm_commands/set/set_temporary_name.cpp
+    gm_commands/set/set_texture.cpp
+    gm_commands/set/set_time.cpp
+    gm_commands/set/set_time_zone.cpp
+    gm_commands/set/set_title.cpp
+    gm_commands/set/set_title_suffix.cpp
+    gm_commands/set/set_weather.cpp
+    gm_commands/set/set_zone.cpp)
 
 add_library(gm_commands_zone STATIC ${gm_command_sources})
 target_link_libraries(gm_commands_zone PRIVATE cereal::cereal fmt::fmt $<IF:$<TARGET_EXISTS:libuv::uv_a>,libuv::uv_a,libuv::uv> unofficial::libmariadb)

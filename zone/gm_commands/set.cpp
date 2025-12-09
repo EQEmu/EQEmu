@@ -1,60 +1,61 @@
 #include "../client.h"
-#include "set/aa_exp.cpp"
-#include "set/aa_points.cpp"
-#include "set/adventure_points.cpp"
-#include "set/alternate_currency.cpp"
-#include "set/animation.cpp"
-#include "set/anon.cpp"
-#include "set/auto_login.cpp"
-#include "set/bind_point.cpp"
-#include "set/checksum.cpp"
-#include "set/class_permanent.cpp"
-#include "set/crystals.cpp"
-#include "set/date.cpp"
-#include "set/endurance.cpp"
-#include "set/endurance_full.cpp"
-#include "set/exp.cpp"
-#include "set/flymode.cpp"
-#include "set/frozen.cpp"
-#include "set/gender.cpp"
-#include "set/gender_permanent.cpp"
-#include "set/gm.cpp"
-#include "set/gm_speed.cpp"
-#include "set/gm_status.cpp"
-#include "set/god_mode.cpp"
-#include "set/haste.cpp"
-#include "set/hero_model.cpp"
-#include "set/hide_me.cpp"
-#include "set/hp.cpp"
-#include "set/hp_full.cpp"
-#include "set/invulnerable.cpp"
-#include "set/language.cpp"
-#include "set/last_name.cpp"
-#include "set/level.cpp"
-#include "set/loginserver_info.cpp"
-#include "set/mana.cpp"
-#include "set/mana_full.cpp"
-#include "set/motd.cpp"
-#include "set/name.cpp"
-#include "set/ooc_mute.cpp"
-#include "set/password.cpp"
-#include "set/pvp.cpp"
-#include "set/pvp_points.cpp"
-#include "set/race.cpp"
-#include "set/race_permanent.cpp"
-#include "set/server_locked.cpp"
-#include "set/skill.cpp"
-#include "set/skill_all.cpp"
-#include "set/skill_all_max.cpp"
-#include "set/start_zone.cpp"
-#include "set/temporary_name.cpp"
-#include "set/texture.cpp"
-#include "set/time.cpp"
-#include "set/time_zone.cpp"
-#include "set/title.cpp"
-#include "set/title_suffix.cpp"
-#include "set/weather.cpp"
-#include "set/zone.cpp"
+
+void SetAAEXP(Client *c, const Seperator *sep);
+void SetAAPoints(Client *c, const Seperator *sep);
+void SetAdventurePoints(Client *c, const Seperator *sep);
+void SetAlternateCurrency(Client *c, const Seperator *sep);
+void SetAnimation(Client *c, const Seperator *sep);
+void SetAnon(Client *c, const Seperator *sep);
+void SetAutoLogin(Client *c, const Seperator *sep);
+void SetBindPoint(Client *c, const Seperator *sep);
+void SetChecksum(Client *c, const Seperator *sep);
+void SetClassPermanent(Client *c, const Seperator *sep);
+void SetCrystals(Client *c, const Seperator *sep);
+void SetDate(Client *c, const Seperator *sep);
+void SetEndurance(Client *c, const Seperator *sep);
+void SetEnduranceFull(Client *c, const Seperator *sep);
+void SetEXP(Client *c, const Seperator *sep);
+void SetFlymode(Client *c, const Seperator *sep);
+void SetFrozen(Client *c, const Seperator *sep);
+void SetGender(Client *c, const Seperator *sep);
+void SetGenderPermanent(Client *c, const Seperator *sep);
+void SetGM(Client *c, const Seperator *sep);
+void SetGMSpeed(Client *c, const Seperator *sep);
+void SetGMStatus(Client *c, const Seperator *sep);
+void SetGodMode(Client *c, const Seperator *sep);
+void SetHaste(Client *c, const Seperator *sep);
+void SetHideMe(Client *c, const Seperator *sep);
+void SetHeroModel(Client *c, const Seperator *sep);
+void SetHP(Client *c, const Seperator *sep);
+void SetHPFull(Client *c, const Seperator *sep);
+void SetInvulnerable(Client *c, const Seperator *sep);
+void SetLanguage(Client *c, const Seperator *sep);
+void SetLastName(Client *c, const Seperator *sep);
+void SetLevel(Client *c, const Seperator *sep);
+void SetLoginserverInfo(Client *c, const Seperator *sep);
+void SetMana(Client *c, const Seperator *sep);
+void SetManaFull(Client *c, const Seperator *sep);
+void SetMOTD(Client *c, const Seperator *sep);
+void SetName(Client *c, const Seperator *sep);
+void SetOOCMute(Client *c, const Seperator *sep);
+void SetPassword(Client *c, const Seperator *sep);
+void SetPVP(Client *c, const Seperator *sep);
+void SetPVPPoints(Client *c, const Seperator *sep);
+void SetRace(Client *c, const Seperator *sep);
+void SetRacePermanent(Client *c, const Seperator *sep);
+void SetServerLocked(Client *c, const Seperator *sep);
+void SetSkill(Client *c, const Seperator *sep);
+void SetSkillAll(Client *c, const Seperator *sep);
+void SetSkillAllMax(Client *c, const Seperator *sep);
+void SetStartZone(Client *c, const Seperator *sep);
+void SetTemporaryName(Client *c, const Seperator *sep);
+void SetTexture(Client *c, const Seperator *sep);
+void SetTime(Client *c, const Seperator *sep);
+void SetTimeZone(Client *c, const Seperator *sep);
+void SetTitle(Client *c, const Seperator *sep);
+void SetTitleSuffix(Client *c, const Seperator *sep);
+void SetWeather(Client *c, const Seperator *sep);
+void SetZoneData(Client *c, const Seperator *sep);
 
 void command_set(Client *c, const Seperator *sep)
 {
