@@ -489,6 +489,58 @@ set(gm_command_sources
     gm_commands/set/set_weather.cpp
     gm_commands/set/set_zone.cpp
     gm_commands/show.cpp
+	gm_commands/show/show_aas.cpp
+    gm_commands/show/show_aa_points.cpp
+    gm_commands/show/show_aggro.cpp
+    gm_commands/show/show_auto_login.cpp
+    gm_commands/show/show_buffs.cpp
+    gm_commands/show/show_buried_corpse_count.cpp
+    gm_commands/show/show_client_version_summary.cpp
+    gm_commands/show/show_content_flags.cpp
+    gm_commands/show/show_currencies.cpp
+    gm_commands/show/show_distance.cpp
+    gm_commands/show/show_emotes.cpp
+    gm_commands/show/show_field_of_view.cpp
+    gm_commands/show/show_flags.cpp
+    gm_commands/show/show_group_info.cpp
+    gm_commands/show/show_hatelist.cpp
+    gm_commands/show/show_inventory.cpp
+    gm_commands/show/show_ip_lookup.cpp
+    gm_commands/show/show_keyring.cpp
+    gm_commands/show/show_line_of_sight.cpp
+    gm_commands/show/show_network.cpp
+    gm_commands/show/show_network_stats.cpp
+    gm_commands/show/show_npc_global_loot.cpp
+    gm_commands/show/show_npc_stats.cpp
+    gm_commands/show/show_npc_type.cpp
+    gm_commands/show/show_peqzone_flags.cpp
+    gm_commands/show/show_petition.cpp
+    gm_commands/show/show_petition_info.cpp
+    gm_commands/show/show_proximity.cpp
+    gm_commands/show/show_quest_errors.cpp
+    gm_commands/show/show_quest_globals.cpp
+    gm_commands/show/show_recipe.cpp
+    gm_commands/show/show_server_info.cpp
+    gm_commands/show/show_skills.cpp
+    gm_commands/show/show_spawn_status.cpp
+    gm_commands/show/show_special_abilities.cpp
+    gm_commands/show/show_spells.cpp
+    gm_commands/show/show_spells_list.cpp
+    gm_commands/show/show_stats.cpp
+    gm_commands/show/show_timers.cpp
+    gm_commands/show/show_traps.cpp
+    gm_commands/show/show_uptime.cpp
+    gm_commands/show/show_variable.cpp
+    gm_commands/show/show_version.cpp
+    gm_commands/show/show_waypoints.cpp
+    gm_commands/show/show_who.cpp
+    gm_commands/show/show_xtargets.cpp
+    gm_commands/show/show_zone_data.cpp
+    gm_commands/show/show_zone_global_loot.cpp
+    gm_commands/show/show_zone_loot.cpp
+    gm_commands/show/show_zone_points.cpp
+    gm_commands/show/show_zone_status.cpp
+    gm_commands/show/show_zone_variables.cpp
     gm_commands/shutdown.cpp
     gm_commands/spawn.cpp
     gm_commands/spawneditmass.cpp
@@ -582,6 +634,60 @@ source_group(set FILES
     gm_commands/set/set_title_suffix.cpp
     gm_commands/set/set_weather.cpp
     gm_commands/set/set_zone.cpp)
+
+source_group(show FILES
+    gm_commands/show/show_aas.cpp
+    gm_commands/show/show_aa_points.cpp
+    gm_commands/show/show_aggro.cpp
+    gm_commands/show/show_auto_login.cpp
+    gm_commands/show/show_buffs.cpp
+    gm_commands/show/show_buried_corpse_count.cpp
+    gm_commands/show/show_client_version_summary.cpp
+    gm_commands/show/show_content_flags.cpp
+    gm_commands/show/show_currencies.cpp
+    gm_commands/show/show_distance.cpp
+    gm_commands/show/show_emotes.cpp
+    gm_commands/show/show_field_of_view.cpp
+    gm_commands/show/show_flags.cpp
+    gm_commands/show/show_group_info.cpp
+    gm_commands/show/show_hatelist.cpp
+    gm_commands/show/show_inventory.cpp
+    gm_commands/show/show_ip_lookup.cpp
+    gm_commands/show/show_keyring.cpp
+    gm_commands/show/show_line_of_sight.cpp
+    gm_commands/show/show_network.cpp
+    gm_commands/show/show_network_stats.cpp
+    gm_commands/show/show_npc_global_loot.cpp
+    gm_commands/show/show_npc_stats.cpp
+    gm_commands/show/show_npc_type.cpp
+    gm_commands/show/show_peqzone_flags.cpp
+    gm_commands/show/show_petition.cpp
+    gm_commands/show/show_petition_info.cpp
+    gm_commands/show/show_proximity.cpp
+    gm_commands/show/show_quest_errors.cpp
+    gm_commands/show/show_quest_globals.cpp
+    gm_commands/show/show_recipe.cpp
+    gm_commands/show/show_server_info.cpp
+    gm_commands/show/show_skills.cpp
+    gm_commands/show/show_spawn_status.cpp
+    gm_commands/show/show_special_abilities.cpp
+    gm_commands/show/show_spells.cpp
+    gm_commands/show/show_spells_list.cpp
+    gm_commands/show/show_stats.cpp
+    gm_commands/show/show_timers.cpp
+    gm_commands/show/show_traps.cpp
+    gm_commands/show/show_uptime.cpp
+    gm_commands/show/show_variable.cpp
+    gm_commands/show/show_version.cpp
+    gm_commands/show/show_waypoints.cpp
+    gm_commands/show/show_who.cpp
+    gm_commands/show/show_xtargets.cpp
+    gm_commands/show/show_zone_data.cpp
+    gm_commands/show/show_zone_global_loot.cpp
+    gm_commands/show/show_zone_loot.cpp
+    gm_commands/show/show_zone_points.cpp
+    gm_commands/show/show_zone_status.cpp
+    gm_commands/show/show_zone_variables.cpp)
 
 add_library(gm_commands_zone STATIC ${gm_command_sources})
 target_link_libraries(gm_commands_zone PRIVATE cereal::cereal fmt::fmt $<IF:$<TARGET_EXISTS:libuv::uv_a>,libuv::uv_a,libuv::uv> unofficial::libmariadb)

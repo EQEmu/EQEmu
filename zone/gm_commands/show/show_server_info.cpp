@@ -1,6 +1,6 @@
 #include "../../client.h"
 #include "../../dialogue_window.h"
-#include "../../common/serverinfo.h"
+#include "../../../common/serverinfo.h"
 
 void ShowServerInfo(Client *c, const Seperator *sep)
 {

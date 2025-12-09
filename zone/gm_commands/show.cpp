@@ -1,56 +1,57 @@
 #include "../client.h"
-#include "show/aas.cpp"
-#include "show/aa_points.cpp"
-#include "show/aggro.cpp"
-#include "show/auto_login.cpp"
-#include "show/buffs.cpp"
-#include "show/buried_corpse_count.cpp"
-#include "show/client_version_summary.cpp"
-#include "show/content_flags.cpp"
-#include "show/currencies.cpp"
-#include "show/distance.cpp"
-#include "show/emotes.cpp"
-#include "show/field_of_view.cpp"
-#include "show/flags.cpp"
-#include "show/group_info.cpp"
-#include "show/hatelist.cpp"
-#include "show/inventory.cpp"
-#include "show/keyring.cpp"
-#include "show/ip_lookup.cpp"
-#include "show/line_of_sight.cpp"
-#include "show/network.cpp"
-#include "show/network_stats.cpp"
-#include "show/npc_global_loot.cpp"
-#include "show/npc_stats.cpp"
-#include "show/npc_type.cpp"
-#include "show/peqzone_flags.cpp"
-#include "show/petition.cpp"
-#include "show/petition_info.cpp"
-#include "show/proximity.cpp"
-#include "show/quest_errors.cpp"
-#include "show/quest_globals.cpp"
-#include "show/recipe.cpp"
-#include "show/server_info.cpp"
-#include "show/skills.cpp"
-#include "show/spawn_status.cpp"
-#include "show/special_abilities.cpp"
-#include "show/spells.cpp"
-#include "show/spells_list.cpp"
-#include "show/stats.cpp"
-#include "show/timers.cpp"
-#include "show/traps.cpp"
-#include "show/uptime.cpp"
-#include "show/variable.cpp"
-#include "show/version.cpp"
-#include "show/waypoints.cpp"
-#include "show/who.cpp"
-#include "show/xtargets.cpp"
-#include "show/zone_data.cpp"
-#include "show/zone_global_loot.cpp"
-#include "show/zone_loot.cpp"
-#include "show/zone_points.cpp"
-#include "show/zone_status.cpp"
-#include "show/zone_variables.cpp"
+
+void ShowAAs(Client* c, const Seperator* sep);
+void ShowAAPoints(Client* c, const Seperator* sep);
+void ShowAggro(Client* c, const Seperator* sep);
+void ShowAutoLogin(Client* c, const Seperator* sep);
+void ShowBuffs(Client* c, const Seperator* sep);
+void ShowBuriedCorpseCount(Client* c, const Seperator* sep);
+void ShowClientVersionSummary(Client* c, const Seperator* sep);
+void ShowContentFlags(Client* c, const Seperator* sep);
+void ShowCurrencies(Client* c, const Seperator* sep);
+void ShowDistance(Client* c, const Seperator* sep);
+void ShowEmotes(Client* c, const Seperator* sep);
+void ShowFieldOfView(Client* c, const Seperator* sep);
+void ShowFlags(Client* c, const Seperator* sep);
+void ShowGroupInfo(Client* c, const Seperator* sep);
+void ShowHateList(Client* c, const Seperator* sep);
+void ShowInventory(Client* c, const Seperator* sep);
+void ShowIPLookup(Client* c, const Seperator* sep);
+void ShowKeyring(Client* c, const Seperator* sep);
+void ShowLineOfSight(Client* c, const Seperator* sep);
+void ShowNetwork(Client* c, const Seperator* sep);
+void ShowNetworkStats(Client* c, const Seperator* sep);
+void ShowNPCGlobalLoot(Client* c, const Seperator* sep);
+void ShowNPCStats(Client* c, const Seperator* sep);
+void ShowNPCType(Client* c, const Seperator* sep);
+void ShowPEQZoneFlags(Client* c, const Seperator* sep);
+void ShowPetition(Client* c, const Seperator* sep);
+void ShowPetitionInfo(Client* c, const Seperator* sep);
+void ShowProximity(Client* c, const Seperator* sep);
+void ShowQuestErrors(Client* c, const Seperator* sep);
+void ShowQuestGlobals(Client* c, const Seperator* sep);
+void ShowRecipe(Client* c, const Seperator* sep);
+void ShowServerInfo(Client* c, const Seperator* sep);
+void ShowSkills(Client* c, const Seperator* sep);
+void ShowSpawnStatus(Client* c, const Seperator* sep);
+void ShowSpecialAbilities(Client* c, const Seperator* sep);
+void ShowSpells(Client* c, const Seperator* sep);
+void ShowSpellsList(Client* c, const Seperator* sep);
+void ShowStats(Client* c, const Seperator* sep);
+void ShowTimers(Client* c, const Seperator* sep);
+void ShowTraps(Client* c, const Seperator* sep);
+void ShowUptime(Client* c, const Seperator* sep);
+void ShowVariable(Client* c, const Seperator* sep);
+void ShowVersion(Client* c, const Seperator* sep);
+void ShowWaypoints(Client* c, const Seperator* sep);
+void ShowWho(Client* c, const Seperator* sep);
+void ShowXTargets(Client* c, const Seperator* sep);
+void ShowZoneData(Client* c, const Seperator* sep);
+void ShowZoneGlobalLoot(Client* c, const Seperator* sep);
+void ShowZoneLoot(Client* c, const Seperator* sep);
+void ShowZonePoints(Client* c, const Seperator* sep);
+void ShowZoneStatus(Client* c, const Seperator* sep);
+void ShowZoneVariables(Client* c, const Seperator* sep);
 
 void command_show(Client *c, const Seperator *sep)
 {
