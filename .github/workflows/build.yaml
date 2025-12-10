@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential ninja-build ccache
+          sudo apt-get install -y build-essential ninja-build ccache uuid-dev
 
       - name: Configure
         run: |
@@ -74,7 +74,7 @@ jobs:
 
       - name: Build
         shell: pwsh
-        run: cmake --build build --parallel --config RelWithDebInfo --target ALL_BUILD -- /m
+        run: cmake --build build --config RelWithDebInfo --target ALL_BUILD -- /m
 
       - name: Test
         working-directory: build
