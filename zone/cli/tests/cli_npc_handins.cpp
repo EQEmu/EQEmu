@@ -1,3 +1,5 @@
+#include "../../zone_cli.h"
+#include "../../common/cli/eqemu_command_handler.h"
 #include "../../common/http/httplib.h"
 #include "../../common/eqemu_logsys.h"
 #include "../../common/platform.h"
@@ -8,6 +10,10 @@
 
 extern Zone *zone;
 using json = nlohmann::json;
+
+void RunTest(const std::string& test_name, const std::string& expected, const std::string& actual);
+void RunTest(const std::string& test_name, bool expected, bool actual);
+void RunTest(const std::string& test_name, int expected, int actual);
 
 struct HandinEntry {
 	std::string            item_id            = "0";

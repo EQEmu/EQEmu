@@ -1,3 +1,5 @@
+#include "../zone_cli.h"
+#include "../../common/cli/eqemu_command_handler.h"
 #include "../../common/http/httplib.h"
 #include "../../common/eqemu_logsys.h"
 #include "../sidecar_api/sidecar_api.h"

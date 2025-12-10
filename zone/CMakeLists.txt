@@ -21,6 +21,13 @@ set(zone_sources
     client_mods.cpp
     client_packet.cpp
     client_process.cpp
+    cli/cli_benchmark_databuckets.cpp
+    cli/cli_sidecar_serve_http.cpp
+    cli/tests/cli_test_util.cpp
+    cli/tests/cli_databuckets.cpp
+    cli/tests/cli_npc_handins.cpp
+    cli/tests/cli_npc_handins_multiquest.cpp
+    cli/tests/cli_zone_state.cpp
     combat_record.cpp
     corpse.cpp
     doors.cpp

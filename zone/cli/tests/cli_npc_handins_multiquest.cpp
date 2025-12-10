@@ -1,3 +1,5 @@
+#include "../../zone_cli.h"
+#include "../../common/cli/eqemu_command_handler.h"
 #include "../../common/eqemu_logsys.h"
 #include "../../common/platform.h"
 #include "../../zone.h"
@@ -5,6 +7,10 @@
 #include "../../common/net/eqstream.h"
 
 extern Zone *zone;
+
+void RunTest(const std::string& test_name, const std::string& expected, const std::string& actual);
+void RunTest(const std::string& test_name, bool expected, bool actual);
+void RunTest(const std::string& test_name, int expected, int actual);
 
 void ZoneCLI::TestNpcHandinsMultiQuest(int argc, char **argv, argh::parser &cmd, std::string &description)
 {

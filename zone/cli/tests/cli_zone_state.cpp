@@ -1,10 +1,17 @@
-extern Zone *zone;
-
+#include "../../zone_cli.h"
+#include "../../common/cli/eqemu_command_handler.h"
 #include <cereal/archives/json.hpp>
 #include <cereal/types/map.hpp>
 #include "../../common/repositories/npc_types_repository.h"
 #include "../../corpse.h"
 #include "../../../common/repositories/respawn_times_repository.h"
+
+extern Zone* zone;
+
+void RunTest(const std::string& test_name, const std::string& expected, const std::string& actual);
+void RunTest(const std::string& test_name, bool expected, bool actual);
+void RunTest(const std::string& test_name, int expected, int actual);
+void SetupZone(std::string zone_short_name, uint32 instance_id = 0);
 
 inline void ClearState()
 {

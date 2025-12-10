@@ -1,6 +1,6 @@
 #include "../../zone.h"
 
-inline void RunTest(const std::string &test_name, const std::string &expected, const std::string &actual)
+void RunTest(const std::string &test_name, const std::string &expected, const std::string &actual)
 {
 	if (expected == actual) {
 		std::cout << "[✅] " << test_name << " PASSED\n";
@@ -12,7 +12,7 @@ inline void RunTest(const std::string &test_name, const std::string &expected, c
 	}
 }
 
-inline void RunTest(const std::string &test_name, bool expected, bool actual)
+void RunTest(const std::string &test_name, bool expected, bool actual)
 {
 	if (expected == actual) {
 		std::cout << "[✅] " << test_name << " PASSED\n";
@@ -25,7 +25,7 @@ inline void RunTest(const std::string &test_name, bool expected, bool actual)
 	}
 }
 
-inline void RunTest(const std::string &test_name, int expected, int actual)
+void RunTest(const std::string &test_name, int expected, int actual)
 {
 	if (expected == actual) {
 		std::cout << "[✅] " << test_name << " PASSED\n";
@@ -40,7 +40,7 @@ inline void RunTest(const std::string &test_name, int expected, int actual)
 
 extern Zone *zone;
 
-inline void SetupZone(std::string zone_short_name, uint32 instance_id = 0) {
+void SetupZone(std::string zone_short_name, uint32 instance_id = 0) {
 	EQEmuLogSys::Instance()->SilenceConsoleLogging();
 
 	EQEmuLogSys::Instance()->log_settings[Logs::ZoneState].log_to_console = std::getenv("DEBUG") ? 3 : 0;

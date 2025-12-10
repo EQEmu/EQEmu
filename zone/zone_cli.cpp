@@ -39,13 +39,3 @@ void ZoneCLI::CommandHandler(int argc, char **argv)
 	EQEmuCommand::HandleMenu(function_map, cmd, argc, argv);
 }
 
-// cli
-#include "cli/benchmark_databuckets.cpp"
-#include "cli/sidecar_serve_http.cpp"
-
-// tests
-#include "cli/tests/_test_util.cpp"
-#include "cli/tests/databuckets.cpp"
-#include "cli/tests/npc_handins.cpp"
-#include "cli/tests/npc_handins_multiquest.cpp"
-#include "cli/tests/zone_state.cpp"
