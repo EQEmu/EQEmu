@@ -16,9 +16,39 @@ void CatchSidecarSignal(int sig_num)
 	std::exit(0);
 }
 
-#include "log_handler.cpp"
-#include "test_controller.cpp"
-#include "map_best_z_controller.cpp"
+void SidecarApi::RequestLogHandler(const httplib::Request& req, const httplib::Response& res)
+{
+	if (!req.path.empty()) {
+		std::vector<std::string> params;
+		for (auto& p : req.params) {
+			params.emplace_back(fmt::format("{}={}", p.first, p.second));
+		}
+
+		LogInfo(
+			"[API] Request [{}] [{}{}] via [{}:{}]",
+			res.status,
+			req.path,
+			(!params.empty() ? "?" + Strings::Join(params, "&") : ""),
+			req.remote_addr,
+			req.remote_port
+		);
+	}
+}
+
+void SidecarApi::TestController(const httplib::Request& req, httplib::Response& res)
+{
+	nlohmann::json j;
+
+	j["data"]["test"] = "test";
+
+	res.set_content(j.dump(), "application/json");
+}
+
+void SidecarApi::MapBestZController(const httplib::Request& req, httplib::Response& res)
+{
+
+}
+
 #include "../../common/file.h"
 
 constexpr static int HTTP_RESPONSE_OK           = 200;
