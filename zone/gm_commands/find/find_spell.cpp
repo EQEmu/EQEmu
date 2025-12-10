@@ -1,5 +1,7 @@
 #include "../../client.h"
 
+uint8 GetCommandStatus(std::string command_name);
+
 void FindSpell(Client *c, const Seperator *sep)
 {
 	if (SPDAT_RECORDS <= 0) {

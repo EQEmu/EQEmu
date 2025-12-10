@@ -311,6 +311,68 @@ set_target_properties(perl_zone PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE
 set(gm_command_sources
     command.cpp
     bot_command.cpp
+    bot_commands/bot_actionable.cpp
+    bot_commands/bot_appearance.cpp
+    bot_commands/bot_apply_poison.cpp
+    bot_commands/bot_apply_potion.cpp
+    bot_commands/bot_attack.cpp
+    bot_commands/bot_behind_mob.cpp
+    bot_commands/bot_blocked_buffs.cpp
+    bot_commands/bot_bot.cpp
+    bot_commands/bot_bot_settings.cpp
+    bot_commands/bot_cast.cpp
+    bot_commands/bot_class_race_list.cpp
+    bot_commands/bot_click_item.cpp
+    bot_commands/bot_copy_settings.cpp
+    bot_commands/bot_default_settings.cpp
+    bot_commands/bot_depart.cpp
+    bot_commands/bot_discipline.cpp
+    bot_commands/bot_distance_ranged.cpp
+    bot_commands/bot_find_aliases.cpp
+    bot_commands/bot_follow.cpp
+    bot_commands/bot_guard.cpp
+    bot_commands/bot_heal_rotation.cpp
+    bot_commands/bot_help.cpp
+    bot_commands/bot_hold.cpp
+    bot_commands/bot_illusion_block.cpp
+    bot_commands/bot_inventory.cpp
+    bot_commands/bot_item_use.cpp
+    bot_commands/bot_max_melee_range.cpp
+    bot_commands/bot_name.cpp
+    bot_commands/bot_owner_option.cpp
+    bot_commands/bot_pet.cpp
+    bot_commands/bot_pick_lock.cpp
+    bot_commands/bot_pickpocket.cpp
+    bot_commands/bot_precombat.cpp
+    bot_commands/bot_pull.cpp
+    bot_commands/bot_release.cpp
+    bot_commands/bot_set_assistee.cpp
+    bot_commands/bot_sit_hp_percent.cpp
+    bot_commands/bot_sit_in_combat.cpp
+    bot_commands/bot_sit_mana_percent.cpp
+    bot_commands/bot_spell.cpp
+    bot_commands/bot_spell_aggro_checks.cpp
+    bot_commands/bot_spell_announce_cast.cpp
+    bot_commands/bot_spell_delays.cpp
+    bot_commands/bot_spell_engaged_priority.cpp
+    bot_commands/bot_spell_holds.cpp
+    bot_commands/bot_spell_idle_priority.cpp
+    bot_commands/bot_spell_max_hp_pct.cpp
+    bot_commands/bot_spell_max_mana_pct.cpp
+    bot_commands/bot_spell_max_thresholds.cpp
+    bot_commands/bot_spell_min_hp_pct.cpp
+    bot_commands/bot_spell_min_mana_pct.cpp
+    bot_commands/bot_spell_min_thresholds.cpp
+    bot_commands/bot_spell_pursue_priority.cpp
+    bot_commands/bot_spell_resist_limits.cpp
+    bot_commands/bot_spell_target_count.cpp
+    bot_commands/bot_spelltypes.cpp
+    bot_commands/bot_summon.cpp
+    bot_commands/bot_suspend.cpp
+    bot_commands/bot_taunt.cpp
+    bot_commands/bot_timer.cpp
+    bot_commands/bot_track.cpp
+    bot_commands/bot_view_combos.cpp
     gm_commands/acceptrules.cpp
     gm_commands/advnpcspawn.cpp
     gm_commands/aggrozone.cpp

@@ -1,4 +1,7 @@
 #include "../../client.h"
+#include "../../worldserver.h"
+
+extern WorldServer worldserver;
 
 void SetZoneData(Client *c, const Seperator *sep)
 {

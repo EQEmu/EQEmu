@@ -1,5 +1,7 @@
 #include "../../client.h"
 
+uint8 GetCommandStatus(std::string command_name);
+
 void FindTask(Client *c, const Seperator *sep)
 {
 	if (!RuleB(TaskSystem, EnableTaskSystem)) {

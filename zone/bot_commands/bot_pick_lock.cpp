@@ -1,4 +1,5 @@
 #include "../bot_command.h"
+#include "../doors.h"
 
 void bot_command_pick_lock(Client *c, const Seperator *sep)
 {
