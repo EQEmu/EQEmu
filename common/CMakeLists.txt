@@ -93,6 +93,8 @@ set(common_sources
     spdat.cpp
     spdat_bot.cpp
     strings.cpp
+    strings_legacy.cpp
+    strings_misc.cpp
     struct_strategy.cpp
     textures.cpp
     timer.cpp

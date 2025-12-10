@@ -3584,5 +3584,3 @@ std::vector<std::string> Zone::GetTimers()
 
 	return v;
 }
-
-#include "zone_loot.cpp"

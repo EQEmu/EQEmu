@@ -111,6 +111,7 @@ set(zone_sources
     xtargetautohaters.cpp
     zone.cpp
     zone_config.cpp
+    zone_loot.cpp
     zonedb.cpp
     zone_base_data.cpp
     zone_event_scheduler.cpp
