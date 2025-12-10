@@ -5,11 +5,10 @@
 #include "../strings.h"
 #include "../rulesys.h"
 #include "../http/httplib.h"
-
-#include "database_update_manifest.cpp"
-#include "database_update_manifest_custom.cpp"
-#include "database_update_manifest_bots.cpp"
 #include "database_dump_service.h"
+#include "database_update_manifest.h"
+#include "database_update_manifest_custom.h"
+#include "database_update_manifest_bots.h"
 
 constexpr int BREAK_LENGTH = 70;
 

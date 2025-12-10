@@ -16,9 +16,6 @@ set(common_sources
     database/database_dump_service.cpp
     database.cpp
     database_instances.cpp
-    database/database_update_manifest.cpp
-    database/database_update_manifest_custom.cpp
-    database/database_update_manifest_bots.cpp
     database/database_update.cpp
     data_bucket.cpp
     dbcore.cpp
@@ -557,6 +554,9 @@ set(common_headers
     database.h
     database_schema.h
     database/database_update.h
+    database/database_update_manifest.h
+    database/database_update_manifest_custom.h
+    database/database_update_manifest_bots.h
     data_bucket.cpp
     dbcore.h
     deity.h

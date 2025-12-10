@@ -1,4 +1,4 @@
-#include "database_update.h"
+#pragma once
 
 std::vector<ManifestEntry> manifest_entries = {
 	ManifestEntry{

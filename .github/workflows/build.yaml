@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential ninja-build ccache libmariadb-dev libmariadb-dev-compat libboost-all-dev libperl-dev liblua5.1-0-dev libluajit-5.1-dev zlib1g-dev uuid-dev libssl-dev libsodium-dev libmbedtls-dev
+          sudo apt-get install -y build-essential ninja-build ccache
 
       - name: Configure
         run: |
@@ -74,7 +74,7 @@ jobs:
 
       - name: Build
         shell: pwsh
-        run: cmake --build build --config RelWithDebInfo --target ALL_BUILD -- /m
+        run: cmake --build build --parallel --config RelWithDebInfo --target ALL_BUILD -- /m
 
       - name: Test
         working-directory: build
