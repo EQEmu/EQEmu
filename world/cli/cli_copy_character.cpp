@@ -1,3 +1,5 @@
+#include "../world_server_cli.h"
+#include "../../common/eqemu_logsys.h"
 #include "../../common/eqemu_logsys_log_aliases.h"
 #include "../worlddb.h"
 

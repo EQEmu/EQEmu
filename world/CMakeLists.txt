@@ -6,6 +6,25 @@ set(world_sources
     client.cpp
     cliententry.cpp
     clientlist.cpp
+    cli/cli_database_concurrency.cpp
+    cli/cli_bots_enable.cpp
+    cli/cli_bots_disable.cpp
+    cli/cli_mercs_enable.cpp
+    cli/cli_mercs_disable.cpp
+    cli/cli_copy_character.cpp
+    cli/cli_database_updates.cpp
+    cli/cli_database_dump.cpp
+    cli/cli_database_get_schema.cpp
+    cli/cli_database_set_account_status.cpp
+    cli/cli_database_version.cpp
+    cli/cli_test.cpp
+    cli/cli_test_colors.cpp
+    cli/cli_test_expansion.cpp
+    cli/cli_test_repository.cpp
+    cli/cli_test_repository_2.cpp
+    cli/cli_test_string_benchmark.cpp
+    cli/cli_version.cpp
+    cli/cli_etl_get_settings.cpp
     console.cpp
     dynamic_zone.cpp
     dynamic_zone_manager.cpp
@@ -68,7 +87,29 @@ set(world_headers
     world_event_scheduler.h
     zonelist.h
     zoneserver.h
-    )
+)
+
+source_group(cli FILES
+    cli/cli_database_concurrency.cpp
+    cli/cli_bots_enable.cpp
+    cli/cli_bots_disable.cpp
+    cli/cli_mercs_enable.cpp
+    cli/cli_mercs_disable.cpp
+    cli/cli_copy_character.cpp
+    cli/cli_database_updates.cpp
+    cli/cli_database_dump.cpp
+    cli/cli_database_get_schema.cpp
+    cli/cli_database_set_account_status.cpp
+    cli/cli_database_version.cpp
+    cli/cli_test.cpp
+    cli/cli_test_colors.cpp
+    cli/cli_test_expansion.cpp
+    cli/cli_test_repository.cpp
+    cli/cli_test_repository_2.cpp
+    cli/cli_test_string_benchmark.cpp
+    cli/cli_version.cpp
+    cli/cli_etl_get_settings.cpp
+)
 
 add_executable(world ${world_sources} ${world_headers})
 

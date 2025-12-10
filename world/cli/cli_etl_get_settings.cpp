@@ -1,3 +1,5 @@
+#include "../world_server_cli.h"
+#include "../worlddb.h"
 #include "../../common/events/player_event_logs.h"
 #include "../../common/json/json.h"
 

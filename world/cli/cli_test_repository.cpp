@@ -1,3 +1,4 @@
+#include "../world_server_cli.h"
 #include "../../common/repositories/instance_list_repository.h"
 #include "../worlddb.h"
 

@@ -1,3 +1,4 @@
+#include "../world_server_cli.h"
 #include "../../common/rulesys.h"
 #include "../../common/repositories/content_flags_repository.h"
 #include "../../common/content/world_content_service.h"

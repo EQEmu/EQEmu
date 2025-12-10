@@ -1,3 +1,4 @@
+#include "../world_server_cli.h"
 #include "../../common/version.h"
 #include "../../common/json/json.h"
 #include "../../common/rulesys.h"

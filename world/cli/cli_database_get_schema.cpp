@@ -1,3 +1,4 @@
+#include "../world_server_cli.h"
 #include "../../common/database_schema.h"
 #include "../../common/json/json.h"
 

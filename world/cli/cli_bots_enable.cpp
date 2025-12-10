@@ -1,3 +1,4 @@
+#include "../world_server_cli.h"
 #include "../worlddb.h"
 #include "../../common/rulesys.h"
 

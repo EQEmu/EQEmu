@@ -1,3 +1,5 @@
+#include "../world_server_cli.h"
+#include "../worlddb.h"
 #include "../../common/database/database_update.h"
 
 void WorldserverCLI::DatabaseUpdates(int argc, char **argv, argh::parser &cmd, std::string &description)

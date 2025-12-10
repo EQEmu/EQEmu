@@ -1,3 +1,4 @@
+#include "../world_server_cli.h"
 #include "../worlddb.h"
 
 void WorldserverCLI::DatabaseSetAccountStatus(int argc, char **argv, argh::parser &cmd, std::string &description)

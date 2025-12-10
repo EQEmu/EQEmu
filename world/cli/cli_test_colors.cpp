@@ -1,3 +1,4 @@
+#include "../world_server_cli.h"
 #include "../../common/zone_store.h"
 #include "../../common/termcolor/rang.hpp"
 

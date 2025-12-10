@@ -1,3 +1,4 @@
+#include "../world_server_cli.h"
 #include "../../common/database/database_dump_service.h"
 
 void WorldserverCLI::DatabaseDump(int argc, char **argv, argh::parser &cmd, std::string &description)
