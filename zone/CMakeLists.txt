@@ -660,7 +660,7 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Header Files" FILES ${zo
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${gm_command_sources})
 
 add_library(gm_commands_zone STATIC ${gm_command_sources})
-target_link_libraries(gm_commands_zone PRIVATE cereal::cereal fmt::fmt $<IF:$<TARGET_EXISTS:libuv::uv_a>,libuv::uv_a,libuv::uv> unofficial::libmariadb)
+target_link_libraries(gm_commands_zone PRIVATE common)
 set_target_properties(gm_commands_zone PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 32)
 
 add_executable(zone ${zone_sources} ${zone_headers})
@@ -677,14 +677,15 @@ add_definitions(-DZONE)
 
 if(EQEMU_BUILD_LUA)
     target_compile_definitions(lua_zone PUBLIC LUA_EQEMU)
-    target_link_libraries(lua_zone PRIVATE luabind Boost::dynamic_bitset Boost::tuple Boost::foreach common)
+    target_link_libraries(lua_zone PUBLIC luabind Boost::dynamic_bitset Boost::tuple Boost::foreach common)
     if (EQEMU_BUILD_STATIC AND LUA_LIBRARY)
         target_link_libraries(zone PRIVATE ${LUA_LIBRARY})
     endif()
 endif()
 
 if(EQEMU_BUILD_PERL)
-    target_link_libraries(perl_zone PRIVATE perlbind common ${PERL_LIBRARY_LIBS})
+	target_compile_definitions(perl_zone PUBLIC EMBPERL EMBPERL_PLUGIN PERLBIND_NO_STRICT_SCALAR_TYPES)
+    target_link_libraries(perl_zone PUBLIC perlbind common ${PERL_LIBRARY})
     if (EQEMU_BUILD_STATIC AND PERL_LIBRARY)
         target_link_libraries(zone PRIVATE ${PERL_LIBRARY})
     endif()

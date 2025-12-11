@@ -2485,27 +2485,27 @@ std::string Perl__get_rule(const char* rule_name)
 
 std::string Perl__get_data(std::string bucket_key)
 {
-	return DataBucket::GetData(bucket_key);
+	return DataBucket::GetData(&database, bucket_key);
 }
 
 std::string Perl__get_data_expires(std::string bucket_key)
 {
-	return DataBucket::GetDataExpires(bucket_key);
+	return DataBucket::GetDataExpires(&database, bucket_key);
 }
 
 void Perl__set_data(std::string key, std::string value)
 {
-	DataBucket::SetData(key, value);
+	DataBucket::SetData(&database, key, value);
 }
 
 void Perl__set_data(std::string key, std::string value, std::string expires_at)
 {
-	DataBucket::SetData(key, value, expires_at);
+	DataBucket::SetData(&database, key, value, expires_at);
 }
 
 bool Perl__delete_data(std::string bucket_key)
 {
-	return DataBucket::DeleteData(bucket_key);
+	return DataBucket::DeleteData(&database, bucket_key);
 }
 
 bool Perl__IsClassicEnabled()
@@ -3045,7 +3045,7 @@ void Perl__rename(std::string name)
 
 std::string Perl__get_data_remaining(std::string bucket_name)
 {
-	return DataBucket::GetDataRemaining(bucket_name);
+	return DataBucket::GetDataRemaining(&database, bucket_name);
 }
 
 const int Perl__getitemstat(uint32 item_id, std::string identifier)

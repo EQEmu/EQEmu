@@ -14,6 +14,7 @@
 		"fmt",
 		"glm",
 		"libuv",
-		"recastnavigation"
+		"recastnavigation",
+		"libsodium"
 	]
 }

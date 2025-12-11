@@ -74,6 +74,7 @@ find_package(OpenSSL REQUIRED)
 find_package(recastnavigation CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(LuaJit REQUIRED)
+find_package(unofficial-sodium CONFIG REQUIRED)
 find_package(PerlLibs)
 
 message(STATUS "**************************************************")

@@ -41,8 +41,6 @@ target_include_directories(perlbind PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 
-target_compile_definitions(perlbind PUBLIC EMBPERL EMBPERL_PLUGIN PERLBIND_NO_STRICT_SCALAR_TYPES)
-
 option(PERLBIND_BUILD_TESTS "Build tests" OFF)
 option(PERLBIND_ENABLE_ASAN "Build with address sanitizer" OFF)
 
