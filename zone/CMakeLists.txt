@@ -11,27 +11,27 @@ set(zone_sources
     beacon.cpp
     bonuses.cpp
     bot.cpp
-    bot_raid.cpp
     bot_database.cpp
+    bot_raid.cpp
     botspellsai.cpp
     cheat_manager.cpp
-    client.cpp
-    client_evolving_items.cpp
-    client_bot.cpp
-    client_mods.cpp
-    client_packet.cpp
-    client_process.cpp
     cli/cli_benchmark_databuckets.cpp
     cli/cli_sidecar_serve_http.cpp
-    cli/tests/cli_test_util.cpp
     cli/tests/cli_databuckets.cpp
     cli/tests/cli_npc_handins.cpp
     cli/tests/cli_npc_handins_multiquest.cpp
+    cli/tests/cli_test_util.cpp
     cli/tests/cli_zone_state.cpp
+    client.cpp
+    client_bot.cpp
+    client_evolving_items.cpp
+    client_mods.cpp
+    client_packet.cpp
+    client_process.cpp
     combat_record.cpp
     corpse.cpp
-    doors.cpp
     dialogue_window.cpp
+    doors.cpp
     dynamic_zone.cpp
     effects.cpp
     embparser.cpp
@@ -44,24 +44,12 @@ set(zone_sources
     fastmath.cpp
     fearpath.cpp
     forage.cpp
-    groups.cpp
-    guild.cpp
-    guild_mgr.cpp
-    hate_list.cpp
-    heal_rotation.cpp
-    horse.cpp
-    inventory.cpp
-    loot.cpp
-    embperl.cpp
-    entity.cpp
-    exp.cpp
-    fearpath.cpp
-    forage.cpp
     global_loot_manager.cpp
     groups.cpp
     guild.cpp
     guild_mgr.cpp
     hate_list.cpp
+    heal_rotation.cpp
     horse.cpp
     inventory.cpp
     loot.cpp
@@ -71,8 +59,8 @@ set(zone_sources
     mob.cpp
     mob_ai.cpp
     mob_appearance.cpp
-    mob_movement_manager.cpp
     mob_info.cpp
+    mob_movement_manager.cpp
     npc.cpp
     npc_scale_manager.cpp
     object.cpp
@@ -87,16 +75,15 @@ set(zone_sources
     position.cpp
     qglobals.cpp
     queryserv.cpp
-    questmgr.cpp
     quest_db.cpp
     quest_parser_collection.cpp
+    questmgr.cpp
     raids.cpp
     raycast_mesh.cpp
-    sidecar_api/sidecar_api.cpp
-    sidecar_api/loot_simulator_controller.cpp
     shared_task_zone_messaging.cpp
+    sidecar_api/loot_simulator_controller.cpp
+    sidecar_api/sidecar_api.cpp
     spawn2.cpp
-    spawn2.h
     spawngroup.cpp
     special_attacks.cpp
     spell_effects.cpp
@@ -117,14 +104,15 @@ set(zone_sources
     worldserver.cpp
     xtargetautohaters.cpp
     zone.cpp
-    zone_config.cpp
-    zone_loot.cpp
-    zonedb.cpp
     zone_base_data.cpp
+    zone_cli.cpp
+    zone_config.cpp
     zone_event_scheduler.cpp
+    zone_loot.cpp
     zone_npc_factions.cpp
     zone_reload.cpp
     zone_save_state.cpp
+    zonedb.cpp
     zoning.cpp
 )
 
@@ -146,8 +134,8 @@ set(zone_headers
     command.h
     common.h
     corpse.h
-    doors.h
     dialogue_window.h
+    doors.h
     dynamic_zone.h
     embparser.h
     embperl.h
@@ -163,8 +151,8 @@ set(zone_headers
     hate_list.h
     heal_rotation.h
     horse.h
-    lua_bot.h
     lua_bit.h
+    lua_bot.h
     lua_buff.h
     lua_client.h
     lua_corpse.h
@@ -212,17 +200,15 @@ set(zone_headers
     pets.h
     position.h
     qglobals.h
-    quest_interface.h
     queryserv.h
-    quest_interface.h
-    questmgr.h
     quest_db.h
+    quest_interface.h
     quest_parser_collection.h
+    questmgr.h
     raids.h
     raycast_mesh.h
-    sidecar_api/sidecar_api.h
     shared_task_zone_messaging.h
-    spawn2.cpp
+    sidecar_api/sidecar_api.h
     spawn2.h
     spawngroup.h
     string_ids.h
@@ -237,22 +223,21 @@ set(zone_headers
     worldserver.h
     xtargetautohaters.h
     zone.h
-    zone_event_scheduler.h
-    zone_config.h
-    zonedb.h
-    zonedump.h
     zone_cli.h
+    zone_config.h
+    zone_event_scheduler.h
     zone_reload.h
     zone_save_state.h
-    zone_cli.cpp)
+    zonedb.h
+    zonedump.h
+)
 
-# lua unity build
 set(lua_sources
-    lua_bot.cpp
     lua_bit.cpp
+    lua_bot.cpp
     lua_buff.cpp
-    lua_corpse.cpp
     lua_client.cpp
+    lua_corpse.cpp
     lua_database.cpp
     lua_door.cpp
     lua_encounter.cpp
@@ -283,7 +268,6 @@ set(lua_sources
 add_library(lua_zone STATIC ${lua_sources})
 set_target_properties(lua_zone PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 8)
 
-# perl unity build
 set(perl_sources
     perl_bot.cpp
     perl_buff.cpp
@@ -314,9 +298,7 @@ set(perl_sources
 add_library(perl_zone STATIC ${perl_sources})
 set_target_properties(perl_zone PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 8)
 
-# gm commands
 set(gm_command_sources
-    command.cpp
     bot_command.cpp
     bot_commands/bot_actionable.cpp
     bot_commands/bot_appearance.cpp
@@ -380,6 +362,7 @@ set(gm_command_sources
     bot_commands/bot_timer.cpp
     bot_commands/bot_track.cpp
     bot_commands/bot_view_combos.cpp
+    command.cpp
     gm_commands/acceptrules.cpp
     gm_commands/advnpcspawn.cpp
     gm_commands/aggrozone.cpp
@@ -419,36 +402,37 @@ set(gm_command_sources
     gm_commands/emptyinventory.cpp
     gm_commands/enablerecipe.cpp
     gm_commands/entityvariable.cpp
+    gm_commands/evolving_items.cpp
     gm_commands/exptoggle.cpp
     gm_commands/faction.cpp
-    gm_commands/evolving_items.cpp
+    gm_commands/faction_association.cpp
     gm_commands/feature.cpp
     gm_commands/find.cpp
-	gm_commands/find/find_aa.cpp
-	gm_commands/find/find_account.cpp
-	gm_commands/find/find_body_type.cpp
-	gm_commands/find/find_bot.cpp
-	gm_commands/find/find_bug_category.cpp
-	gm_commands/find/find_character.cpp
-	gm_commands/find/find_class.cpp
-	gm_commands/find/find_comparison_type.cpp
-	gm_commands/find/find_currency.cpp
-	gm_commands/find/find_deity.cpp
-	gm_commands/find/find_emote.cpp
-	gm_commands/find/find_faction.cpp
-	gm_commands/find/find_item.cpp
-	gm_commands/find/find_language.cpp
-	gm_commands/find/find_ldon_theme.cpp
-	gm_commands/find/find_npctype.cpp
-	gm_commands/find/find_object_type.cpp
-	gm_commands/find/find_race.cpp
-	gm_commands/find/find_recipe.cpp
-	gm_commands/find/find_skill.cpp
-	gm_commands/find/find_special_ability.cpp
-	gm_commands/find/find_spell.cpp
-	gm_commands/find/find_stance.cpp
-	gm_commands/find/find_task.cpp
-	gm_commands/find/find_zone.cpp
+    gm_commands/find/find_aa.cpp
+    gm_commands/find/find_account.cpp
+    gm_commands/find/find_body_type.cpp
+    gm_commands/find/find_bot.cpp
+    gm_commands/find/find_bug_category.cpp
+    gm_commands/find/find_character.cpp
+    gm_commands/find/find_class.cpp
+    gm_commands/find/find_comparison_type.cpp
+    gm_commands/find/find_currency.cpp
+    gm_commands/find/find_deity.cpp
+    gm_commands/find/find_emote.cpp
+    gm_commands/find/find_faction.cpp
+    gm_commands/find/find_item.cpp
+    gm_commands/find/find_language.cpp
+    gm_commands/find/find_ldon_theme.cpp
+    gm_commands/find/find_npctype.cpp
+    gm_commands/find/find_object_type.cpp
+    gm_commands/find/find_race.cpp
+    gm_commands/find/find_recipe.cpp
+    gm_commands/find/find_skill.cpp
+    gm_commands/find/find_special_ability.cpp
+    gm_commands/find/find_spell.cpp
+    gm_commands/find/find_stance.cpp
+    gm_commands/find/find_task.cpp
+    gm_commands/find/find_zone.cpp
     gm_commands/fish.cpp
     gm_commands/fixmob.cpp
     gm_commands/flagedit.cpp
@@ -473,9 +457,9 @@ set(gm_command_sources
     gm_commands/kill.cpp
     gm_commands/killallnpcs.cpp
     gm_commands/list.cpp
-    gm_commands/lootsim.cpp
     gm_commands/loc.cpp
     gm_commands/logs.cpp
+    gm_commands/lootsim.cpp
     gm_commands/makepet.cpp
     gm_commands/memspell.cpp
     gm_commands/merchantshop.cpp
@@ -527,7 +511,7 @@ set(gm_command_sources
     gm_commands/sensetrap.cpp
     gm_commands/serverrules.cpp
     gm_commands/set.cpp
-	gm_commands/set/set_aa_exp.cpp
+    gm_commands/set/set_aa_exp.cpp
     gm_commands/set/set_aa_points.cpp
     gm_commands/set/set_adventure_points.cpp
     gm_commands/set/set_alternate_currency.cpp
@@ -584,8 +568,8 @@ set(gm_command_sources
     gm_commands/set/set_weather.cpp
     gm_commands/set/set_zone.cpp
     gm_commands/show.cpp
-	gm_commands/show/show_aas.cpp
     gm_commands/show/show_aa_points.cpp
+    gm_commands/show/show_aas.cpp
     gm_commands/show/show_aggro.cpp
     gm_commands/show/show_auto_login.cpp
     gm_commands/show/show_buffs.cpp
@@ -640,7 +624,6 @@ set(gm_command_sources
     gm_commands/spawn.cpp
     gm_commands/spawneditmass.cpp
     gm_commands/spawnfix.cpp
-    gm_commands/faction_association.cpp
     gm_commands/stun.cpp
     gm_commands/summon.cpp
     gm_commands/summonburiedplayercorpse.cpp
@@ -664,165 +647,26 @@ set(gm_command_sources
     gm_commands/wp.cpp
     gm_commands/wpadd.cpp
     gm_commands/zone.cpp
+    gm_commands/zone_instance.cpp
+    gm_commands/zone_shard.cpp
     gm_commands/zonebootup.cpp
     gm_commands/zoneshutdown.cpp
     gm_commands/zonevariable.cpp
-    gm_commands/zone_instance.cpp
-    gm_commands/zone_shard.cpp
     gm_commands/zsave.cpp
 )
 
-source_group(find FILES
-	gm_commands/find/find_aa.cpp
-	gm_commands/find/find_account.cpp
-	gm_commands/find/find_body_type.cpp
-	gm_commands/find/find_bot.cpp
-	gm_commands/find/find_bug_category.cpp
-	gm_commands/find/find_character.cpp
-	gm_commands/find/find_class.cpp
-	gm_commands/find/find_comparison_type.cpp
-	gm_commands/find/find_currency.cpp
-	gm_commands/find/find_deity.cpp
-	gm_commands/find/find_emote.cpp
-	gm_commands/find/find_faction.cpp
-	gm_commands/find/find_item.cpp
-	gm_commands/find/find_language.cpp
-	gm_commands/find/find_ldon_theme.cpp
-	gm_commands/find/find_npctype.cpp
-	gm_commands/find/find_object_type.cpp
-	gm_commands/find/find_race.cpp
-	gm_commands/find/find_recipe.cpp
-	gm_commands/find/find_skill.cpp
-	gm_commands/find/find_special_ability.cpp
-	gm_commands/find/find_spell.cpp
-	gm_commands/find/find_stance.cpp
-	gm_commands/find/find_task.cpp
-	gm_commands/find/find_zone.cpp
-)
-
-source_group(set FILES 
-    gm_commands/set/set_aa_exp.cpp
-    gm_commands/set/set_aa_points.cpp
-    gm_commands/set/set_adventure_points.cpp
-    gm_commands/set/set_alternate_currency.cpp
-    gm_commands/set/set_animation.cpp
-    gm_commands/set/set_anon.cpp
-    gm_commands/set/set_auto_login.cpp
-    gm_commands/set/set_bind_point.cpp
-    gm_commands/set/set_checksum.cpp
-    gm_commands/set/set_class_permanent.cpp
-    gm_commands/set/set_crystals.cpp
-    gm_commands/set/set_date.cpp
-    gm_commands/set/set_endurance.cpp
-    gm_commands/set/set_endurance_full.cpp
-    gm_commands/set/set_exp.cpp
-    gm_commands/set/set_flymode.cpp
-    gm_commands/set/set_frozen.cpp
-    gm_commands/set/set_gender.cpp
-    gm_commands/set/set_gender_permanent.cpp
-    gm_commands/set/set_gm.cpp
-    gm_commands/set/set_gm_speed.cpp
-    gm_commands/set/set_gm_status.cpp
-    gm_commands/set/set_god_mode.cpp
-    gm_commands/set/set_haste.cpp
-    gm_commands/set/set_hero_model.cpp
-    gm_commands/set/set_hide_me.cpp
-    gm_commands/set/set_hp.cpp
-    gm_commands/set/set_hp_full.cpp
-    gm_commands/set/set_invulnerable.cpp
-    gm_commands/set/set_language.cpp
-    gm_commands/set/set_last_name.cpp
-    gm_commands/set/set_level.cpp
-    gm_commands/set/set_loginserver_info.cpp
-    gm_commands/set/set_mana.cpp
-    gm_commands/set/set_mana_full.cpp
-    gm_commands/set/set_motd.cpp
-    gm_commands/set/set_name.cpp
-    gm_commands/set/set_ooc_mute.cpp
-    gm_commands/set/set_password.cpp
-    gm_commands/set/set_pvp.cpp
-    gm_commands/set/set_pvp_points.cpp
-    gm_commands/set/set_race.cpp
-    gm_commands/set/set_race_permanent.cpp
-    gm_commands/set/set_server_locked.cpp
-    gm_commands/set/set_skill.cpp
-    gm_commands/set/set_skill_all.cpp
-    gm_commands/set/set_skill_all_max.cpp
-    gm_commands/set/set_start_zone.cpp
-    gm_commands/set/set_temporary_name.cpp
-    gm_commands/set/set_texture.cpp
-    gm_commands/set/set_time.cpp
-    gm_commands/set/set_time_zone.cpp
-    gm_commands/set/set_title.cpp
-    gm_commands/set/set_title_suffix.cpp
-    gm_commands/set/set_weather.cpp
-    gm_commands/set/set_zone.cpp)
-
-source_group(show FILES
-    gm_commands/show/show_aas.cpp
-    gm_commands/show/show_aa_points.cpp
-    gm_commands/show/show_aggro.cpp
-    gm_commands/show/show_auto_login.cpp
-    gm_commands/show/show_buffs.cpp
-    gm_commands/show/show_buried_corpse_count.cpp
-    gm_commands/show/show_client_version_summary.cpp
-    gm_commands/show/show_content_flags.cpp
-    gm_commands/show/show_currencies.cpp
-    gm_commands/show/show_distance.cpp
-    gm_commands/show/show_emotes.cpp
-    gm_commands/show/show_field_of_view.cpp
-    gm_commands/show/show_flags.cpp
-    gm_commands/show/show_group_info.cpp
-    gm_commands/show/show_hatelist.cpp
-    gm_commands/show/show_inventory.cpp
-    gm_commands/show/show_ip_lookup.cpp
-    gm_commands/show/show_keyring.cpp
-    gm_commands/show/show_line_of_sight.cpp
-    gm_commands/show/show_network.cpp
-    gm_commands/show/show_network_stats.cpp
-    gm_commands/show/show_npc_global_loot.cpp
-    gm_commands/show/show_npc_stats.cpp
-    gm_commands/show/show_npc_type.cpp
-    gm_commands/show/show_peqzone_flags.cpp
-    gm_commands/show/show_petition.cpp
-    gm_commands/show/show_petition_info.cpp
-    gm_commands/show/show_proximity.cpp
-    gm_commands/show/show_quest_errors.cpp
-    gm_commands/show/show_quest_globals.cpp
-    gm_commands/show/show_recipe.cpp
-    gm_commands/show/show_server_info.cpp
-    gm_commands/show/show_skills.cpp
-    gm_commands/show/show_spawn_status.cpp
-    gm_commands/show/show_special_abilities.cpp
-    gm_commands/show/show_spells.cpp
-    gm_commands/show/show_spells_list.cpp
-    gm_commands/show/show_stats.cpp
-    gm_commands/show/show_timers.cpp
-    gm_commands/show/show_traps.cpp
-    gm_commands/show/show_uptime.cpp
-    gm_commands/show/show_variable.cpp
-    gm_commands/show/show_version.cpp
-    gm_commands/show/show_waypoints.cpp
-    gm_commands/show/show_who.cpp
-    gm_commands/show/show_xtargets.cpp
-    gm_commands/show/show_zone_data.cpp
-    gm_commands/show/show_zone_global_loot.cpp
-    gm_commands/show/show_zone_loot.cpp
-    gm_commands/show/show_zone_points.cpp
-    gm_commands/show/show_zone_status.cpp
-    gm_commands/show/show_zone_variables.cpp)
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${zone_sources})
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Header Files" FILES ${zone_headers})
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${gm_command_sources})
 
 add_library(gm_commands_zone STATIC ${gm_command_sources})
 target_link_libraries(gm_commands_zone PRIVATE cereal::cereal fmt::fmt $<IF:$<TARGET_EXISTS:libuv::uv_a>,libuv::uv_a,libuv::uv> unofficial::libmariadb)
 set_target_properties(gm_commands_zone PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 32)
 
-# zone combine sources and headers
 add_executable(zone ${zone_sources} ${zone_headers})
 
-# binary output directory
 install(TARGETS zone RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
-# precompiled headers
 if(EQEMU_BUILD_PCH)
     TARGET_PRECOMPILE_HEADERS(zone PRIVATE ../common/pch/app-pch.h)
     TARGET_PRECOMPILE_HEADERS(zone PRIVATE ../common/pch/std-pch.h)
@@ -831,7 +675,6 @@ endif()
 
 add_definitions(-DZONE)
 
-# link lua_zone unity build against luabind
 if(EQEMU_BUILD_LUA)
     target_compile_definitions(lua_zone PUBLIC LUA_EQEMU)
     target_link_libraries(lua_zone PRIVATE luabind Boost::dynamic_bitset Boost::tuple Boost::foreach common)
@@ -840,7 +683,6 @@ if(EQEMU_BUILD_LUA)
     endif()
 endif()
 
-# perl unity build links against perl_zone
 if(EQEMU_BUILD_PERL)
     target_link_libraries(perl_zone PRIVATE perlbind common ${PERL_LIBRARY_LIBS})
     if (EQEMU_BUILD_STATIC AND PERL_LIBRARY)
@@ -848,7 +690,6 @@ if(EQEMU_BUILD_PERL)
     endif()
 endif()
 
-# link zone against common libraries
 target_link_libraries(zone PRIVATE gm_commands_zone common RecastNavigation::Detour)
 
 if(EQEMU_BUILD_LUA)
@@ -860,4 +701,3 @@ if(EQEMU_BUILD_PERL)
 endif()
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
-
