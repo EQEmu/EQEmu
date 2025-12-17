@@ -1,10 +1,10 @@
-#ifndef EQEMU_DYNAMIC_ZONE_LOCKOUTS_REPOSITORY_H
-#define EQEMU_DYNAMIC_ZONE_LOCKOUTS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "../dynamic_zone_lockout.h"
-#include "base/base_dynamic_zone_lockouts_repository.h"
+#include "common/repositories/base/base_dynamic_zone_lockouts_repository.h"
+
+#include "common/database.h"
+#include "common/dynamic_zone_lockout.h"
+#include "common/strings.h"
 
 class DynamicZoneLockoutsRepository: public BaseDynamicZoneLockoutsRepository {
 public:
@@ -80,5 +80,3 @@ public:
 	}
 
 };
-
-#endif //EQEMU_DYNAMIC_ZONE_LOCKOUTS_REPOSITORY_H

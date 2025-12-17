@@ -1,9 +1,9 @@
-#ifndef EQEMU_START_ZONES_REPOSITORY_H
-#define EQEMU_START_ZONES_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_start_zones_repository.h"
+#include "common/repositories/base/base_start_zones_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class StartZonesRepository: public BaseStartZonesRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_START_ZONES_REPOSITORY_H

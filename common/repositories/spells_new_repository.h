@@ -1,9 +1,9 @@
-#ifndef EQEMU_SPELLS_NEW_REPOSITORY_H
-#define EQEMU_SPELLS_NEW_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_spells_new_repository.h"
+#include "common/repositories/base/base_spells_new_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class SpellsNewRepository: public BaseSpellsNewRepository {
 public:
@@ -64,5 +64,3 @@ public:
 		return lines;
 	}
 };
-
-#endif //EQEMU_SPELLS_NEW_REPOSITORY_H

@@ -6,16 +6,16 @@
  * Any modifications to base repositories are to be made by the generator only
  *
  * @generator ./utils/scripts/generators/repository-generator.pl
- * @docs https://docs.eqemu.io/developer/repositories
+ * @docs https://docs.eqemu.dev/developer/repositories
  */
 
-#ifndef EQEMU_BASE_{{TABLE_NAME_UPPER}}_REPOSITORY_H
-#define EQEMU_BASE_{{TABLE_NAME_UPPER}}_REPOSITORY_H
+#pragma once
 
-#include "../../database.h"
-#include "../../strings.h"
-#include <ctime>
+#include "common/database.h"
+#include "common/strings.h"
+
 {{ADDITIONAL_INCLUDES}}
+#include <ctime>
 
 class Base{{TABLE_NAME_CLASS}}Repository {
 public:
@@ -376,5 +376,3 @@ public:
 		return (results.Success() ? results.RowsAffected() : 0);
 	}
 };
-
-#endif //EQEMU_BASE_{{TABLE_NAME_UPPER}}_REPOSITORY_H

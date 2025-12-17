@@ -1,9 +1,9 @@
-#ifndef EQEMU_GUILD_RANKS_REPOSITORY_H
-#define EQEMU_GUILD_RANKS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_guild_ranks_repository.h"
+#include "common/repositories/base/base_guild_ranks_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class GuildRanksRepository: public BaseGuildRanksRepository {
 public:
@@ -85,5 +85,3 @@ public:
 		return all_entries;
 	}
 };
-
-#endif //EQEMU_GUILD_RANKS_REPOSITORY_H

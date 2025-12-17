@@ -1,9 +1,9 @@
-#ifndef EQEMU_SPAWN_CONDITION_VALUES_REPOSITORY_H
-#define EQEMU_SPAWN_CONDITION_VALUES_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_spawn_condition_values_repository.h"
+#include "common/repositories/base/base_spawn_condition_values_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class SpawnConditionValuesRepository: public BaseSpawnConditionValuesRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_SPAWN_CONDITION_VALUES_REPOSITORY_H

@@ -1,9 +1,9 @@
-#ifndef EQEMU_INSTANCE_LIST_REPOSITORY_H
-#define EQEMU_INSTANCE_LIST_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_instance_list_repository.h"
+#include "common/repositories/base/base_instance_list_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class InstanceListRepository: public BaseInstanceListRepository {
 public:
@@ -44,5 +44,3 @@ public:
 		return Strings::ToUnsignedInt(row[0]);
 	}
 };
-
-#endif //EQEMU_INSTANCE_LIST_REPOSITORY_H

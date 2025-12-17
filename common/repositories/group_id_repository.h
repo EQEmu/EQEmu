@@ -1,9 +1,9 @@
-#ifndef EQEMU_GROUP_ID_REPOSITORY_H
-#define EQEMU_GROUP_ID_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_group_id_repository.h"
+#include "common/repositories/base/base_group_id_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class GroupIdRepository: public BaseGroupIdRepository {
 public:
@@ -54,5 +54,3 @@ public:
 		);
 	}
 };
-
-#endif //EQEMU_GROUP_ID_REPOSITORY_H

@@ -1,9 +1,9 @@
-#ifndef EQEMU_CHARACTER_CORPSE_ITEMS_REPOSITORY_H
-#define EQEMU_CHARACTER_CORPSE_ITEMS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_character_corpse_items_repository.h"
+#include "common/repositories/base/base_character_corpse_items_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class CharacterCorpseItemsRepository: public BaseCharacterCorpseItemsRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_CHARACTER_CORPSE_ITEMS_REPOSITORY_H

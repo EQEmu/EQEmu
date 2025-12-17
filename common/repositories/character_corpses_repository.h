@@ -1,10 +1,12 @@
-#ifndef EQEMU_CHARACTER_CORPSES_REPOSITORY_H
-#define EQEMU_CHARACTER_CORPSES_REPOSITORY_H
+#pragma once
 
-#include <glm/vec4.hpp>
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_character_corpses_repository.h"
+#include "common/repositories/base/base_character_corpses_repository.h"
+#include "common/rulesys.h"
+
+#include "common/database.h"
+#include "common/strings.h"
+
+#include "glm/vec4.hpp"
 
 class CharacterCorpsesRepository: public BaseCharacterCorpsesRepository {
 public:
@@ -247,5 +249,3 @@ public:
 		return results.Success() ? results.RowsAffected() : 0;
 	}
 };
-
-#endif //EQEMU_CHARACTER_CORPSES_REPOSITORY_H

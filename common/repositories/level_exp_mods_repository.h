@@ -1,9 +1,9 @@
-#ifndef EQEMU_LEVEL_EXP_MODS_REPOSITORY_H
-#define EQEMU_LEVEL_EXP_MODS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_level_exp_mods_repository.h"
+#include "common/repositories/base/base_level_exp_mods_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class LevelExpModsRepository: public BaseLevelExpModsRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_LEVEL_EXP_MODS_REPOSITORY_H

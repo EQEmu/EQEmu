@@ -1,9 +1,9 @@
-#ifndef EQEMU_MERC_WEAPONINFO_REPOSITORY_H
-#define EQEMU_MERC_WEAPONINFO_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_merc_weaponinfo_repository.h"
+#include "common/repositories/base/base_merc_weaponinfo_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class MercWeaponinfoRepository: public BaseMercWeaponinfoRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_MERC_WEAPONINFO_REPOSITORY_H

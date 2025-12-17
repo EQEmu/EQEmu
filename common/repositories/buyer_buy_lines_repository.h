@@ -1,14 +1,13 @@
-#ifndef EQEMU_BUYER_BUY_LINES_REPOSITORY_H
-#define EQEMU_BUYER_BUY_LINES_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_buyer_buy_lines_repository.h"
-#include "buyer_trade_items_repository.h"
-#include "character_data_repository.h"
-#include "buyer_repository.h"
+#include "common/repositories/base/base_buyer_buy_lines_repository.h"
 
-#include "../eq_packet_structs.h"
+#include "common/database.h"
+#include "common/eq_packet_structs.h"
+#include "common/repositories/buyer_repository.h"
+#include "common/repositories/buyer_trade_items_repository.h"
+#include "common/repositories/character_data_repository.h"
+#include "common/strings.h"
 
 class BuyerBuyLinesRepository: public BaseBuyerBuyLinesRepository {
 public:
@@ -356,5 +355,3 @@ public:
 	}
 
 };
-
-#endif //EQEMU_BUYER_BUY_LINES_REPOSITORY_H

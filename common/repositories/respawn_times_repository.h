@@ -1,9 +1,9 @@
-#ifndef EQEMU_RESPAWN_TIMES_REPOSITORY_H
-#define EQEMU_RESPAWN_TIMES_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_respawn_times_repository.h"
+#include "common/repositories/base/base_respawn_times_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class RespawnTimesRepository: public BaseRespawnTimesRepository {
 public:
@@ -47,5 +47,3 @@ public:
 		RespawnTimesRepository::DeleteWhere(db, fmt::format("`instance_id` = {}", id));
 	}
 };
-
-#endif //EQEMU_RESPAWN_TIMES_REPOSITORY_H

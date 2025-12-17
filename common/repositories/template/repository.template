@@ -1,9 +1,9 @@
-#ifndef EQEMU_{{TABLE_NAME_UPPER}}_REPOSITORY_H
-#define EQEMU_{{TABLE_NAME_UPPER}}_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_{{TABLE_NAME_VAR}}_repository.h"
+#include "common/repositories/base/base_{{TABLE_NAME_VAR}}_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class {{TABLE_NAME_CLASS}}Repository: public Base{{TABLE_NAME_CLASS}}Repository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_{{TABLE_NAME_UPPER}}_REPOSITORY_H

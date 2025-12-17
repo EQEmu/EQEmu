@@ -1,9 +1,9 @@
-#ifndef EQEMU_NPC_TYPES_TINT_REPOSITORY_H
-#define EQEMU_NPC_TYPES_TINT_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_npc_types_tint_repository.h"
+#include "common/repositories/base/base_npc_types_tint_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class NpcTypesTintRepository: public BaseNpcTypesTintRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_NPC_TYPES_TINT_REPOSITORY_H

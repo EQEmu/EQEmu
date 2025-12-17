@@ -1,11 +1,11 @@
-#ifndef EQEMU_LOGIN_ACCOUNTS_REPOSITORY_H
-#define EQEMU_LOGIN_ACCOUNTS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_login_accounts_repository.h"
-#include "../../loginserver/encryption.h"
-#include "../../loginserver/login_types.h"
+#include "common/repositories/base/base_login_accounts_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
+#include "loginserver/encryption.h"
+#include "loginserver/login_types.h"
 
 class LoginAccountsRepository : public BaseLoginAccountsRepository {
 public:
@@ -93,5 +93,3 @@ public:
 		return success ? a : NewEntity();
 	}
 };
-
-#endif //EQEMU_LOGIN_ACCOUNTS_REPOSITORY_H

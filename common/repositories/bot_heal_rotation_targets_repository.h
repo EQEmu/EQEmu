@@ -1,9 +1,9 @@
-#ifndef EQEMU_BOT_HEAL_ROTATION_TARGETS_REPOSITORY_H
-#define EQEMU_BOT_HEAL_ROTATION_TARGETS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_bot_heal_rotation_targets_repository.h"
+#include "common/repositories/base/base_bot_heal_rotation_targets_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class BotHealRotationTargetsRepository: public BaseBotHealRotationTargetsRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_BOT_HEAL_ROTATION_TARGETS_REPOSITORY_H

@@ -1,9 +1,9 @@
-#ifndef EQEMU_CHARACTER_PARCELS_REPOSITORY_H
-#define EQEMU_CHARACTER_PARCELS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_character_parcels_repository.h"
+#include "common/repositories/base/base_character_parcels_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class CharacterParcelsRepository: public BaseCharacterParcelsRepository {
 public:
@@ -110,5 +110,3 @@ public:
 		return INVALID_INDEX;
 	}
 };
-
-#endif //EQEMU_CHARACTER_PARCELS_REPOSITORY_H

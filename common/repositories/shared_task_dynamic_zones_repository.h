@@ -1,9 +1,9 @@
-#ifndef EQEMU_SHARED_TASK_DYNAMIC_ZONES_REPOSITORY_H
-#define EQEMU_SHARED_TASK_DYNAMIC_ZONES_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_shared_task_dynamic_zones_repository.h"
+#include "common/repositories/base/base_shared_task_dynamic_zones_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class SharedTaskDynamicZonesRepository: public BaseSharedTaskDynamicZonesRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_SHARED_TASK_DYNAMIC_ZONES_REPOSITORY_H

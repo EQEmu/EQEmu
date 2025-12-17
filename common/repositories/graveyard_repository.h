@@ -1,9 +1,9 @@
-#ifndef EQEMU_GRAVEYARD_REPOSITORY_H
-#define EQEMU_GRAVEYARD_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_graveyard_repository.h"
+#include "common/repositories/base/base_graveyard_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class GraveyardRepository: public BaseGraveyardRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_GRAVEYARD_REPOSITORY_H

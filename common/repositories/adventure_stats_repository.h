@@ -1,9 +1,9 @@
-#ifndef EQEMU_ADVENTURE_STATS_REPOSITORY_H
-#define EQEMU_ADVENTURE_STATS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_adventure_stats_repository.h"
+#include "common/repositories/base/base_adventure_stats_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class AdventureStatsRepository: public BaseAdventureStatsRepository {
 public:
@@ -104,5 +104,3 @@ public:
 		db.QueryDatabase(query);
 	}
 };
-
-#endif //EQEMU_ADVENTURE_STATS_REPOSITORY_H

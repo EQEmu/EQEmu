@@ -1,9 +1,9 @@
-#ifndef EQEMU_LOGSYS_CATEGORIES_REPOSITORY_H
-#define EQEMU_LOGSYS_CATEGORIES_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_logsys_categories_repository.h"
+#include "common/repositories/base/base_logsys_categories_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class LogsysCategoriesRepository: public BaseLogsysCategoriesRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_LOGSYS_CATEGORIES_REPOSITORY_H

@@ -1,9 +1,10 @@
-#ifndef EQEMU_ZONE_STATE_SPAWNS_REPOSITORY_H
-#define EQEMU_ZONE_STATE_SPAWNS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_zone_state_spawns_repository.h"
+#include "common/repositories/base/base_zone_state_spawns_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
+#include "fmt/ranges.h"
 
 class ZoneStateSpawnsRepository : public BaseZoneStateSpawnsRepository {
 public:
@@ -78,5 +79,3 @@ public:
 	}
 
 };
-
-#endif //EQEMU_ZONE_STATE_SPAWNS_REPOSITORY_H

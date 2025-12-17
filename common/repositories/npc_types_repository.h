@@ -1,9 +1,9 @@
-#ifndef EQEMU_NPC_TYPES_REPOSITORY_H
-#define EQEMU_NPC_TYPES_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_npc_types_repository.h"
+#include "common/repositories/base/base_npc_types_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class NpcTypesRepository: public BaseNpcTypesRepository {
 public:
@@ -71,5 +71,3 @@ public:
 		return npc_id < max_id ? npc_id : 0;
 	}
 };
-
-#endif //EQEMU_NPC_TYPES_REPOSITORY_H

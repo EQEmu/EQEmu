@@ -1,9 +1,9 @@
-#ifndef EQEMU_CHARACTER_INSTANCE_SAFERETURNS_REPOSITORY_H
-#define EQEMU_CHARACTER_INSTANCE_SAFERETURNS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_character_instance_safereturns_repository.h"
+#include "common/repositories/base/base_character_instance_safereturns_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class CharacterInstanceSafereturnsRepository: public BaseCharacterInstanceSafereturnsRepository {
 public:
@@ -84,5 +84,3 @@ public:
 		return NewEntity();
 	}
 };
-
-#endif //EQEMU_CHARACTER_INSTANCE_SAFERETURNS_REPOSITORY_H

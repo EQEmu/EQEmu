@@ -9,11 +9,11 @@
  * @docs https://eqemu.gitbook.io/server/in-development/developer-area/repositories
  */
 
-#ifndef EQEMU_BASE_TOOL_GAME_OBJECTS_REPOSITORY_H
-#define EQEMU_BASE_TOOL_GAME_OBJECTS_REPOSITORY_H
+#pragma once
 
-#include "../../database.h"
-#include "../../strings.h"
+#include "common/database.h"
+#include "common/strings.h"
+
 #include <ctime>
 
 class BaseToolGameObjectsRepository {
@@ -342,5 +342,3 @@ public:
 	}
 
 };
-
-#endif //EQEMU_BASE_TOOL_GAME_OBJECTS_REPOSITORY_H

@@ -1,9 +1,9 @@
-#ifndef EQEMU_STARTING_ITEMS_REPOSITORY_H
-#define EQEMU_STARTING_ITEMS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_starting_items_repository.h"
+#include "common/repositories/base/base_starting_items_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class StartingItemsRepository: public BaseStartingItemsRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_STARTING_ITEMS_REPOSITORY_H

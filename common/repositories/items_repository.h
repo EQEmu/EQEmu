@@ -1,9 +1,9 @@
-#ifndef EQEMU_ITEMS_REPOSITORY_H
-#define EQEMU_ITEMS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_items_repository.h"
+#include "common/repositories/base/base_items_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class ItemsRepository: public BaseItemsRepository {
 public:
@@ -92,5 +92,3 @@ public:
 	}
 
 };
-
-#endif //EQEMU_ITEMS_REPOSITORY_H

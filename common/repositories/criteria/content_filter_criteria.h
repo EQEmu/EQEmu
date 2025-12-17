@@ -1,9 +1,9 @@
-#ifndef EQEMU_CONTENT_FILTER_CRITERIA_H
-#define EQEMU_CONTENT_FILTER_CRITERIA_H
+#pragma once
+
+#include "common/content/world_content_service.h"
+#include "common/strings.h"
 
 #include <string>
-#include "../../content/world_content_service.h"
-#include "../../strings.h"
 
 namespace ContentFilterCriteria {
 	static std::string apply(std::string table_prefix = "")
@@ -69,5 +69,3 @@ namespace ContentFilterCriteria {
 		return std::string(criteria);
 	};
 }
-
-#endif //EQEMU_CONTENT_FILTER_CRITERIA_H

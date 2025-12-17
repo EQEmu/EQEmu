@@ -1,9 +1,9 @@
-#ifndef EQEMU_ADVENTURE_DETAILS_REPOSITORY_H
-#define EQEMU_ADVENTURE_DETAILS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_adventure_details_repository.h"
+#include "common/repositories/base/base_adventure_details_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class AdventureDetailsRepository: public BaseAdventureDetailsRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_ADVENTURE_DETAILS_REPOSITORY_H

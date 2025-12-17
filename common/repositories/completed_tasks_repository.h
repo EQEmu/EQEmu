@@ -1,9 +1,9 @@
-#ifndef EQEMU_COMPLETED_TASKS_REPOSITORY_H
-#define EQEMU_COMPLETED_TASKS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_completed_tasks_repository.h"
+#include "common/repositories/base/base_completed_tasks_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class CompletedTasksRepository: public BaseCompletedTasksRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_COMPLETED_TASKS_REPOSITORY_H

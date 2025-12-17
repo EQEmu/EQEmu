@@ -1,9 +1,10 @@
-#ifndef EQEMU_INSTANCE_LIST_PLAYER_REPOSITORY_H
-#define EQEMU_INSTANCE_LIST_PLAYER_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_instance_list_player_repository.h"
+#include "common/repositories/base/base_instance_list_player_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
+#include "fmt/ranges.h"
 
 class InstanceListPlayerRepository: public BaseInstanceListPlayerRepository {
 public:
@@ -88,5 +89,3 @@ public:
 		return false;
 	}
 };
-
-#endif //EQEMU_INSTANCE_LIST_PLAYER_REPOSITORY_H

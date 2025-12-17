@@ -1,9 +1,9 @@
-#ifndef EQEMU_GRID_REPOSITORY_H
-#define EQEMU_GRID_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_grid_repository.h"
+#include "common/repositories/base/base_grid_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class GridRepository: public BaseGridRepository {
 public:
@@ -93,5 +93,3 @@ public:
 		return Strings::ToInt(row[0]);
 	}
 };
-
-#endif //EQEMU_GRID_REPOSITORY_H

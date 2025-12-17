@@ -1,9 +1,9 @@
-#ifndef EQEMU_SPAWN2_REPOSITORY_H
-#define EQEMU_SPAWN2_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_spawn2_repository.h"
+#include "common/repositories/base/base_spawn2_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class Spawn2Repository: public BaseSpawn2Repository {
 public:
@@ -74,5 +74,3 @@ public:
 		);
 	}
 };
-
-#endif //EQEMU_SPAWN2_REPOSITORY_H

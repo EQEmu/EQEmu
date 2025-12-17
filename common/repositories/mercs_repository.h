@@ -1,9 +1,9 @@
-#ifndef EQEMU_MERCS_REPOSITORY_H
-#define EQEMU_MERCS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_mercs_repository.h"
+#include "common/repositories/base/base_mercs_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class MercsRepository: public BaseMercsRepository {
 public:
@@ -62,5 +62,3 @@ public:
 		return l[0];
 	}
 };
-
-#endif //EQEMU_MERCS_REPOSITORY_H

@@ -1,9 +1,9 @@
-#ifndef EQEMU_BUYER_REPOSITORY_H
-#define EQEMU_BUYER_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_buyer_repository.h"
+#include "common/repositories/base/base_buyer_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 #include "base/base_buyer_trade_items_repository.h"
 #include "base/base_buyer_buy_lines_repository.h"
 
@@ -176,5 +176,3 @@ public:
 		return true;
 	}
 };
-
-#endif //EQEMU_BUYER_REPOSITORY_H

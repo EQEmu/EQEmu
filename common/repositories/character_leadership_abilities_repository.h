@@ -1,9 +1,9 @@
-#ifndef EQEMU_CHARACTER_LEADERSHIP_ABILITIES_REPOSITORY_H
-#define EQEMU_CHARACTER_LEADERSHIP_ABILITIES_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_character_leadership_abilities_repository.h"
+#include "common/repositories/base/base_character_leadership_abilities_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class CharacterLeadershipAbilitiesRepository: public BaseCharacterLeadershipAbilitiesRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_CHARACTER_LEADERSHIP_ABILITIES_REPOSITORY_H

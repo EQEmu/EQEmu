@@ -1,9 +1,9 @@
-#ifndef EQEMU_MERC_STANCE_ENTRIES_REPOSITORY_H
-#define EQEMU_MERC_STANCE_ENTRIES_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_merc_stance_entries_repository.h"
+#include "common/repositories/base/base_merc_stance_entries_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class MercStanceEntriesRepository: public BaseMercStanceEntriesRepository {
 public:
@@ -77,5 +77,3 @@ public:
 		return v;
 	}
 };
-
-#endif //EQEMU_MERC_STANCE_ENTRIES_REPOSITORY_H

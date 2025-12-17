@@ -1,9 +1,9 @@
-#ifndef EQEMU_VARIABLES_REPOSITORY_H
-#define EQEMU_VARIABLES_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_variables_repository.h"
+#include "common/repositories/base/base_variables_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class VariablesRepository: public BaseVariablesRepository {
 public:
@@ -44,5 +44,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_VARIABLES_REPOSITORY_H

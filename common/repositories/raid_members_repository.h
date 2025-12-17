@@ -1,9 +1,9 @@
-#ifndef EQEMU_RAID_MEMBERS_REPOSITORY_H
-#define EQEMU_RAID_MEMBERS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_raid_members_repository.h"
+#include "common/repositories/base/base_raid_members_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class RaidMembersRepository: public BaseRaidMembersRepository {
 public:
@@ -109,4 +109,3 @@ public:
 		);
 	}
 };
-#endif //EQEMU_RAID_MEMBERS_REPOSITORY_H

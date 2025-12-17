@@ -1,9 +1,9 @@
-#ifndef EQEMU_MERC_SPELL_LIST_ENTRIES_REPOSITORY_H
-#define EQEMU_MERC_SPELL_LIST_ENTRIES_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_merc_spell_list_entries_repository.h"
+#include "common/repositories/base/base_merc_spell_list_entries_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class MercSpellListEntriesRepository: public BaseMercSpellListEntriesRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_MERC_SPELL_LIST_ENTRIES_REPOSITORY_H

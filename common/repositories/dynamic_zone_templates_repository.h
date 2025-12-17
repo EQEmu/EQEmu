@@ -1,9 +1,9 @@
-#ifndef EQEMU_DYNAMIC_ZONE_TEMPLATES_REPOSITORY_H
-#define EQEMU_DYNAMIC_ZONE_TEMPLATES_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_dynamic_zone_templates_repository.h"
+#include "common/repositories/base/base_dynamic_zone_templates_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class DynamicZoneTemplatesRepository: public BaseDynamicZoneTemplatesRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_DYNAMIC_ZONE_TEMPLATES_REPOSITORY_H

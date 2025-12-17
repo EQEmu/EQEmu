@@ -1,9 +1,9 @@
-#ifndef EQEMU_CHARACTER_LANGUAGES_REPOSITORY_H
-#define EQEMU_CHARACTER_LANGUAGES_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_character_languages_repository.h"
+#include "common/repositories/base/base_character_languages_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class CharacterLanguagesRepository: public BaseCharacterLanguagesRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_CHARACTER_LANGUAGES_REPOSITORY_H

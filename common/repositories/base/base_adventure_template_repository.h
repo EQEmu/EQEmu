@@ -9,11 +9,11 @@
  * @docs https://docs.eqemu.io/developer/repositories
  */
 
-#ifndef EQEMU_BASE_ADVENTURE_TEMPLATE_REPOSITORY_H
-#define EQEMU_BASE_ADVENTURE_TEMPLATE_REPOSITORY_H
+#pragma once
 
-#include "../../database.h"
-#include "../../strings.h"
+#include "common/database.h"
+#include "common/strings.h"
+
 #include <ctime>
 
 class BaseAdventureTemplateRepository {
@@ -757,5 +757,3 @@ public:
 		return (results.Success() ? results.RowsAffected() : 0);
 	}
 };
-
-#endif //EQEMU_BASE_ADVENTURE_TEMPLATE_REPOSITORY_H

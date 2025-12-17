@@ -1,9 +1,9 @@
-#ifndef EQEMU_FACTION_BASE_DATA_REPOSITORY_H
-#define EQEMU_FACTION_BASE_DATA_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_faction_base_data_repository.h"
+#include "common/repositories/base/base_faction_base_data_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class FactionBaseDataRepository: public BaseFactionBaseDataRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_FACTION_BASE_DATA_REPOSITORY_H

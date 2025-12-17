@@ -1,9 +1,9 @@
-#ifndef EQEMU_ZONE_POINTS_REPOSITORY_H
-#define EQEMU_ZONE_POINTS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_zone_points_repository.h"
+#include "common/repositories/base/base_zone_points_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class ZonePointsRepository: public BaseZonePointsRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_ZONE_POINTS_REPOSITORY_H

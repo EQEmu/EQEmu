@@ -1,9 +1,9 @@
-#ifndef EQEMU_INVENTORY_SNAPSHOTS_REPOSITORY_H
-#define EQEMU_INVENTORY_SNAPSHOTS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_inventory_snapshots_repository.h"
+#include "common/repositories/base/base_inventory_snapshots_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class InventorySnapshotsRepository: public BaseInventorySnapshotsRepository {
 public:
@@ -69,5 +69,3 @@ public:
 		return count;
 	}
 };
-
-#endif //EQEMU_INVENTORY_SNAPSHOTS_REPOSITORY_H

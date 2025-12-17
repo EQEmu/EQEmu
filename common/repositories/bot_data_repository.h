@@ -1,9 +1,9 @@
-#ifndef EQEMU_BOT_DATA_REPOSITORY_H
-#define EQEMU_BOT_DATA_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_bot_data_repository.h"
+#include "common/repositories/base/base_bot_data_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class BotDataRepository: public BaseBotDataRepository {
 public:
@@ -45,5 +45,3 @@ public:
 
 	// Custom extended repository methods here
 };
-
-#endif //EQEMU_BOT_DATA_REPOSITORY_H

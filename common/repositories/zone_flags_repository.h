@@ -1,9 +1,9 @@
-#ifndef EQEMU_ZONE_FLAGS_REPOSITORY_H
-#define EQEMU_ZONE_FLAGS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_zone_flags_repository.h"
+#include "common/repositories/base/base_zone_flags_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class ZoneFlagsRepository: public BaseZoneFlagsRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_ZONE_FLAGS_REPOSITORY_H

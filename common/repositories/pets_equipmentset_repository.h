@@ -1,9 +1,9 @@
-#ifndef EQEMU_PETS_EQUIPMENTSET_REPOSITORY_H
-#define EQEMU_PETS_EQUIPMENTSET_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_pets_equipmentset_repository.h"
+#include "common/repositories/base/base_pets_equipmentset_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class PetsEquipmentsetRepository: public BasePetsEquipmentsetRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_PETS_EQUIPMENTSET_REPOSITORY_H

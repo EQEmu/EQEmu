@@ -1,9 +1,9 @@
-#ifndef EQEMU_ZONE_REPOSITORY_H
-#define EQEMU_ZONE_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_zone_repository.h"
+#include "common/repositories/base/base_zone_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class ZoneRepository: public BaseZoneRepository {
 public:
@@ -59,5 +59,3 @@ public:
 		return results.Success();
 	}
 };
-
-#endif //EQEMU_ZONE_REPOSITORY_H

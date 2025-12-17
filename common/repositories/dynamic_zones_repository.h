@@ -1,9 +1,9 @@
-#ifndef EQEMU_DYNAMIC_ZONES_REPOSITORY_H
-#define EQEMU_DYNAMIC_ZONES_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_dynamic_zones_repository.h"
+#include "common/repositories/base/base_dynamic_zones_repository.h"
+
+#include "common/database.h"
+#include "fmt/ranges.h"
 
 class DynamicZonesRepository: public BaseDynamicZonesRepository {
 public:
@@ -427,5 +427,3 @@ public:
 		return entries;
 	}
 };
-
-#endif //EQEMU_DYNAMIC_ZONES_REPOSITORY_H

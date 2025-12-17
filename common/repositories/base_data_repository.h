@@ -1,9 +1,9 @@
-#ifndef EQEMU_BASE_DATA_REPOSITORY_H
-#define EQEMU_BASE_DATA_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_base_data_repository.h"
+#include "common/repositories/base/base_base_data_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class BaseDataRepository: public BaseBaseDataRepository {
 public:
@@ -63,5 +63,3 @@ public:
 		return lines;
 	}
 };
-
-#endif //EQEMU_BASE_DATA_REPOSITORY_H

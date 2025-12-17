@@ -1,9 +1,9 @@
-#ifndef EQEMU_AA_RANK_EFFECTS_REPOSITORY_H
-#define EQEMU_AA_RANK_EFFECTS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_aa_rank_effects_repository.h"
+#include "common/repositories/base/base_aa_rank_effects_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class AaRankEffectsRepository: public BaseAaRankEffectsRepository {
 public:
@@ -46,5 +46,3 @@ public:
 	// Custom extended repository methods here
 
 };
-
-#endif //EQEMU_AA_RANK_EFFECTS_REPOSITORY_H

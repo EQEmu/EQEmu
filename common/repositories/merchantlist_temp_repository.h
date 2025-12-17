@@ -1,9 +1,9 @@
-#ifndef EQEMU_MERCHANTLIST_TEMP_REPOSITORY_H
-#define EQEMU_MERCHANTLIST_TEMP_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_merchantlist_temp_repository.h"
+#include "common/repositories/base/base_merchantlist_temp_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class MerchantlistTempRepository: public BaseMerchantlistTempRepository {
 public:
@@ -54,5 +54,3 @@ public:
 		);
 	}
 };
-
-#endif //EQEMU_MERCHANTLIST_TEMP_REPOSITORY_H

@@ -1,9 +1,9 @@
-#ifndef EQEMU_GUILD_MEMBERS_REPOSITORY_H
-#define EQEMU_GUILD_MEMBERS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_guild_members_repository.h"
+#include "common/repositories/base/base_guild_members_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class GuildMembersRepository : public BaseGuildMembersRepository {
 public:
@@ -202,5 +202,3 @@ public:
 		);
 	}
 };
-
-#endif //EQEMU_GUILD_MEMBERS_REPOSITORY_H

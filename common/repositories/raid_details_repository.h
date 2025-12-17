@@ -1,9 +1,9 @@
-#ifndef EQEMU_RAID_DETAILS_REPOSITORY_H
-#define EQEMU_RAID_DETAILS_REPOSITORY_H
+#pragma once
 
-#include "../database.h"
-#include "../strings.h"
-#include "base/base_raid_details_repository.h"
+#include "common/repositories/base/base_raid_details_repository.h"
+
+#include "common/database.h"
+#include "common/strings.h"
 
 class RaidDetailsRepository: public BaseRaidDetailsRepository {
 public:
@@ -77,5 +77,3 @@ public:
 		);
 	}
 };
-
-#endif //EQEMU_RAID_DETAILS_REPOSITORY_H
