@@ -820,3 +820,4 @@ if(EQEMU_BUILD_PCH)
 endif()
 
 set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+set_property(TARGET common PROPERTY FOLDER libraries)

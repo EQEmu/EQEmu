@@ -33,3 +33,4 @@ if(MSVC)
 endif()
 
 set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+set_property(TARGET luabind PROPERTY FOLDER contrib)

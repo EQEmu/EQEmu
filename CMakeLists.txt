@@ -23,6 +23,8 @@ project(EQEmu
 	LANGUAGES CXX 
 )
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 #explicitly set CMP0167 for Find Boost
 if(POLICY CMP0167)
   cmake_policy(SET CMP0167 NEW)

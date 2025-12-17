@@ -26,3 +26,4 @@ add_definitions(-DUCS)
 target_link_libraries(ucs common)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+set_property(TARGET ucs PROPERTY FOLDER executables/servers)

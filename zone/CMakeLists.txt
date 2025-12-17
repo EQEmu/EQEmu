@@ -266,6 +266,8 @@ set(lua_sources
 )
 
 add_library(lua_zone STATIC ${lua_sources})
+
+set_property(TARGET lua_zone PROPERTY FOLDER libraries)
 set_target_properties(lua_zone PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 8)
 
 set(perl_sources
@@ -296,6 +298,7 @@ set(perl_sources
 )
 
 add_library(perl_zone STATIC ${perl_sources})
+set_property(TARGET perl_zone PROPERTY FOLDER libraries)
 set_target_properties(perl_zone PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 8)
 
 set(gm_command_sources
@@ -662,6 +665,7 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${gm
 add_library(gm_commands_zone STATIC ${gm_command_sources})
 target_link_libraries(gm_commands_zone PRIVATE common)
 set_target_properties(gm_commands_zone PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 32)
+set_property(TARGET gm_commands_zone PROPERTY FOLDER libraries)
 
 add_executable(zone ${zone_sources} ${zone_headers})
 
@@ -702,3 +706,4 @@ if(EQEMU_BUILD_PERL)
 endif()
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+set_property(TARGET zone PROPERTY FOLDER executables/servers)

@@ -18,3 +18,4 @@ install(TARGETS shared_memory RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 target_link_libraries(shared_memory common)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+set_property(TARGET shared_memory PROPERTY FOLDER executables/servers)

@@ -104,3 +104,4 @@ endif()
 install(TARGETS world RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+set_property(TARGET world PROPERTY FOLDER executables/servers)

@@ -14,3 +14,4 @@ install(TARGETS export_client_files RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/
 target_link_libraries(export_client_files common)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+set_property(TARGET export_client_files PROPERTY FOLDER executables/tools)

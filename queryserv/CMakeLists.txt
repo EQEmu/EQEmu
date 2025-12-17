@@ -28,3 +28,4 @@ add_definitions(-DQSERV)
 target_link_libraries(queryserv common)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+set_property(TARGET queryserv PROPERTY FOLDER executables/servers)
