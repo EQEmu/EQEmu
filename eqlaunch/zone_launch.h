@@ -15,11 +15,12 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef ZONELAUNCH_H_
-#define ZONELAUNCH_H_
 
-#include "../common/proc_launcher.h"
-#include "../common/timer.h"
+#pragma once
+
+#include "common/proc_launcher.h"
+#include "common/timer.h"
+
 #include <string>
 
 class WorldServer;
@@ -71,5 +72,3 @@ private:
 	static int s_running;
 	static Timer s_startTimer;
 };
-
-#endif /*ZONELAUNCH_H_*/

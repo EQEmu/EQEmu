@@ -16,6 +16,7 @@ add_executable(eqlaunch ${eqlaunch_sources} ${eqlaunch_headers})
 install(TARGETS eqlaunch RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
 target_link_libraries(eqlaunch common)
+target_include_directories(eqlaunch PRIVATE ..)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 set_property(TARGET eqlaunch PROPERTY FOLDER executables/tools)
