@@ -16,13 +16,11 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#ifndef __EQEMU_SHARED_MEMORY_SPELLS_H
-#define __EQEMU_SHARED_MEMORY_SPELLS_H
+#pragma once
+
+#include "common/eqemu_config.h"
 
 #include <string>
-#include "../common/eqemu_config.h"
 
 class SharedDatabase;
 void LoadSpells(SharedDatabase *database, const std::string &prefix);
-
-#endif

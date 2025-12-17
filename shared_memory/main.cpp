@@ -16,33 +16,29 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include <stdio.h>
+#include "shared_memory/items.h"
+#include "shared_memory/spells.h"
+#include "common/content/world_content_service.h"
+#include "common/crash.h"
+#include "common/eqemu_config.h"
+#include "common/eqemu_exception.h"
+#include "common/eqemu_logsys.h"
+#include "common/events/player_event_logs.h"
+#include "common/evolving_items.h"
+#include "common/global_define.h"
+#include "common/path_manager.h"
+#include "common/platform.h"
+#include "common/rulesys.h"
+#include "common/shareddb.h"
+#include "common/strings.h"
+#include "common/zone_store.h"
 
-#include "../common/eqemu_logsys.h"
-#include "../common/global_define.h"
-#include "../common/shareddb.h"
-#include "../common/eqemu_config.h"
-#include "../common/platform.h"
-#include "../common/crash.h"
-#include "../common/rulesys.h"
-#include "../common/eqemu_exception.h"
-#include "../common/strings.h"
-#include "items.h"
-#include "spells.h"
-#include "../common/content/world_content_service.h"
-#include "../common/zone_store.h"
-#include "../common/path_manager.h"
-#include "../common/events/player_event_logs.h"
-#include "../common/evolving_items.h"
-
+#include <cstdio>
 #ifdef _WINDOWS
 #include <direct.h>
 #else
-
 #include <unistd.h>
-
 #endif
-
 #include <sys/stat.h>
 
 inline bool MakeDirectory(const std::string &directory_name)
