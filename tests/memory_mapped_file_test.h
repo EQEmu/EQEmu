@@ -16,11 +16,10 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#ifndef __EQEMU_TESTS_MEMORY_MAPPED_FILE_H
-#define __EQEMU_TESTS_MEMORY_MAPPED_FILE_H
+#pragma once
 
+#include "common/memory_mapped_file.h"
 #include "cppunit/cpptest.h"
-#include "../common/memory_mapped_file.h"
 
 class MemoryMappedFileTest : public Test::Suite {
 	typedef void(MemoryMappedFileTest::*TestFunction)(void);
@@ -56,5 +55,3 @@ public:
 		TEST_ASSERT(val == 562);
 	}
 };
-
-#endif

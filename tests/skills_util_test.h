@@ -16,11 +16,10 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#ifndef __EQEMU_TESTS_SKILLS_UTILS_H
-#define __EQEMU_TESTS_SKILLS_UTILS_H
+#pragma once
 
+#include "common/skills.h"
 #include "cppunit/cpptest.h"
-#include "../common/skills.h"
 
 class SkillsUtilsTest: public Test::Suite {
 	typedef void(SkillsUtilsTest::*TestFunction)(void);
@@ -44,5 +43,3 @@ public:
 		TEST_ASSERT(!EQ::skills::IsSpecializedSkill(EQ::skills::SkillConjuration))
 	}
 };
-
-#endif

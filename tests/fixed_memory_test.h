@@ -16,12 +16,11 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#ifndef __EQEMU_TESTS_FIXED_MEMORY_H
-#define __EQEMU_TESTS_FIXED_MEMORY_H
+#pragma once
 
+#include "common/fixed_memory_hash_set.h"
+#include "common/item_instance.h"
 #include "cppunit/cpptest.h"
-#include "../common/fixed_memory_hash_set.h"
-#include "../common/item_instance.h"
 
 class FixedMemoryHashTest : public Test::Suite {
 	typedef void(FixedMemoryHashTest::*TestFunction)(void);
@@ -233,5 +232,3 @@ private:
 	uint8 *data_;
 	size_t size_;
 };
-
-#endif

@@ -36,3 +36,4 @@ if(UNIX)
 endif()
 
 set(LIBRARY_OUTPUT_PATH ../../bin)
+set_property(TARGET cppunit PROPERTY FOLDER contrib)

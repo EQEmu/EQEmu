@@ -16,11 +16,10 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#ifndef __EQEMU_TESTS_STRING_UTIL_H
-#define __EQEMU_TESTS_STRING_UTIL_H
+#pragma once
 
+#include "common/strings.h"
 #include "cppunit/cpptest.h"
-#include "../common/strings.h"
 
 class StringUtilTest : public Test::Suite {
 	typedef void(StringUtilTest::*TestFunction)(void);
@@ -135,5 +134,3 @@ public:
 		TEST_ASSERT_EQUALS(Strings::IsNumber("18446744073709551616.0f"), false); // 64
 	}
 };
-
-#endif

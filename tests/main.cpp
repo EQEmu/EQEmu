@@ -16,22 +16,23 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
+#include "tests/atobool_test.h"
+#include "tests/data_verification_test.h"
+#include "tests/fixed_memory_test.h"
+#include "tests/fixed_memory_variable_test.h"
+#include "tests/hextoi_32_64_test.h"
+#include "tests/ipc_mutex_test.h"
+#include "tests/memory_mapped_file_test.h"
+#include "tests/skills_util_test.h"
+#include "tests/string_util_test.h"
+#include "tests/task_state_test.h"
+
+#include "common/path_manager.h"
+#include "common/platform.h"
 
 #include <iostream>
 #include <fstream>
 #include <memory>
-#include "../common/platform.h"
-#include "../common/path_manager.h"
-#include "memory_mapped_file_test.h"
-#include "ipc_mutex_test.h"
-#include "fixed_memory_test.h"
-#include "fixed_memory_variable_test.h"
-#include "atobool_test.h"
-#include "hextoi_32_64_test.h"
-#include "string_util_test.h"
-#include "data_verification_test.h"
-#include "skills_util_test.h"
-#include "task_state_test.h"
 
 const EQEmuConfig *Config;
 

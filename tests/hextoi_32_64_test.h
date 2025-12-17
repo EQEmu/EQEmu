@@ -16,11 +16,10 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#ifndef __EQEMU_TESTS_HEXTOI_32_64_H
-#define __EQEMU_TESTS_HEXTOI_32_64_H
+#pragma once
 
+#include "common/strings.h"
 #include "cppunit/cpptest.h"
-#include "../common/strings.h"
 
 class hextoi_32_64_Test : public Test::Suite {
 	typedef void(hextoi_32_64_Test::*TestFunction)(void);
@@ -209,5 +208,3 @@ public:
 	}
 
 };
-
-#endif

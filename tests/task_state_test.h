@@ -1,9 +1,9 @@
 #pragma once
 
+#include "common/eqemu_logsys.h"
+#include "common/shared_tasks.h"
+#include "common/tasks.h"
 #include "cppunit/cpptest.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/tasks.h"
-#include "../common/shared_tasks.h"
 
 class TaskStateTest: public Test::Suite
 {

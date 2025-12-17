@@ -16,12 +16,11 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#ifndef __EQEMU_TESTS_IPC_MUTEX_H
-#define __EQEMU_TESTS_IPC_MUTEX_H
+#pragma once
 
+#include "common/eqemu_config.h"
+#include "common/ipc_mutex.h"
 #include "cppunit/cpptest.h"
-#include "../common/ipc_mutex.h"
-#include "../common/eqemu_config.h"
 
 extern const EQEmuConfig *Config;
 
@@ -63,5 +62,3 @@ public:
 		TEST_ASSERT(!mutex.Unlock());
 	}
 };
-
-#endif
