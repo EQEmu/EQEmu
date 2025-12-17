@@ -12,6 +12,7 @@ add_executable(import_client_files ${import_sources} ${import_headers})
 install(TARGETS import_client_files RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
 target_link_libraries(import_client_files common)
+target_include_directories(import_client_files PRIVATE ../..)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 set_property(TARGET import_client_files PROPERTY FOLDER executables/tools)
