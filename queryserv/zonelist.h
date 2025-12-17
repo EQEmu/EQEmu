@@ -1,12 +1,12 @@
-#ifndef ZONELIST_H_
-#define ZONELIST_H_
+#pragma once
 
-#include "../common/types.h"
+#include "common/types.h"
+#include "queryserv/zoneserver.h"
+
+#include <list>
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
-#include <list>
-#include "zoneserver.h"
 
 class WorldTCPConnection;
 
@@ -26,5 +26,3 @@ public:
 private:
 	std::list<std::unique_ptr<ZoneServer>> zone_server_list;
 };
-
-#endif /*ZONELIST_H_*/

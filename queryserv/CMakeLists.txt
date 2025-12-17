@@ -26,6 +26,7 @@ install(TARGETS queryserv RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 add_definitions(-DQSERV)
 
 target_link_libraries(queryserv common)
+target_include_directories(queryserv PRIVATE ..)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 set_property(TARGET queryserv PROPERTY FOLDER executables/servers)

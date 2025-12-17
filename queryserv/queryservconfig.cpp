@@ -17,8 +17,9 @@
 
 */
 
-#include "../common/global_define.h"
 #include "queryservconfig.h"
+
+#include "common/global_define.h"
 
 queryservconfig *queryservconfig::_chat_config = nullptr;
 

@@ -1,8 +1,9 @@
 #include "lfguild.h"
-#include "database.h"
-#include "worldserver.h"
-#include "../common/strings.h"
-#include "../common/rulesys.h"
+
+#include "common/rulesys.h"
+#include "common/strings.h"
+#include "queryserv/database.h"
+#include "queryserv/worldserver.h"
 
 extern WorldServer *worldserver;
 extern QSDatabase  qs_database;

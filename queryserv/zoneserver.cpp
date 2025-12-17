@@ -1,9 +1,10 @@
 #include "zoneserver.h"
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/repositories/player_event_logs_repository.h"
-#include "../common/events/player_event_logs.h"
-#include "../common/discord/discord_manager.h"
+
+#include "common/discord/discord_manager.h"
+#include "common/eqemu_logsys.h"
+#include "common/events/player_event_logs.h"
+#include "common/global_define.h"
+#include "common/repositories/player_event_logs_repository.h"
 
 ZoneServer::ZoneServer(
 	std::shared_ptr<EQ::Net::ServertalkServerConnection> in_connection,

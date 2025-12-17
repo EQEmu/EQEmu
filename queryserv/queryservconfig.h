@@ -17,10 +17,9 @@
 
 */
 
-#ifndef __queryservconfig_H
-#define __queryservconfig_H
+#pragma once
 
-#include "../common/eqemu_config.h"
+#include "common/eqemu_config.h"
 
 class queryservconfig : public EQEmuConfig {
 public:
@@ -50,6 +49,3 @@ public:
 	}
 
 };
-
-#endif
-

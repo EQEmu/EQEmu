@@ -1,27 +1,25 @@
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/md5.h"
-#include "../common/packet_dump.h"
-#include "../common/packet_functions.h"
-#include "../common/servertalk.h"
-#include "../common/net/packet.h"
-
-#include "database.h"
-#include "lfguild.h"
-#include "queryservconfig.h"
 #include "worldserver.h"
-#include "../common/events/player_events.h"
-#include "../common/events/player_event_logs.h"
-#include "../common/server_reload_types.h"
-#include <iomanip>
-#include <iostream>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
 
-#include "zonelist.h"
+#include "common/eqemu_logsys.h"
+#include "common/events/player_event_logs.h"
+#include "common/events/player_events.h"
+#include "common/global_define.h"
+#include "common/md5.h"
+#include "common/net/packet.h"
+#include "common/packet_dump.h"
+#include "common/packet_functions.h"
+#include "common/server_reload_types.h"
+#include "common/servertalk.h"
+#include "queryserv/database.h"
+#include "queryserv/lfguild.h"
+#include "queryserv/queryservconfig.h"
+#include "queryserv/zonelist.h"
+
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
 
 extern WorldServer           worldserver;
 extern const queryservconfig *Config;

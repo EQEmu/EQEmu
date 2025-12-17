@@ -1,25 +1,27 @@
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/opcodemgr.h"
-#include "../common/rulesys.h"
-#include "../common/platform.h"
-#include "../common/crash.h"
-#include "../common/strings.h"
-#include "../common/event/event_loop.h"
-#include "../common/timer.h"
-#include "database.h"
+
+#include "common/crash.h"
+#include "common/eqemu_logsys.h"
+#include "common/event/event_loop.h"
+#include "common/events/player_event_logs.h"
+#include "common/global_define.h"
+#include "common/net/console_server.h"
+#include "common/net/servertalk_server.h"
+#include "common/opcodemgr.h"
+#include "common/platform.h"
+#include "common/rulesys.h"
+#include "common/strings.h"
+#include "common/timer.h"
+#include "common/zone_store.h"
+#include "queryserv/database.h"
+#include "queryserv/lfguild.h"
+#include "queryserv/worldserver.h"
+#include "queryserv/zonelist.h"
+#include "queryserv/zoneserver.h"
 #include "queryservconfig.h"
-#include "lfguild.h"
-#include "worldserver.h"
-#include "../common/zone_store.h"
-#include "../common/events/player_event_logs.h"
+
 #include <list>
 #include <signal.h>
 #include <thread>
-#include "../common/net/servertalk_server.h"
-#include "../common/net/console_server.h"
-#include "../queryserv/zonelist.h"
-#include "../queryserv/zoneserver.h"
 
 volatile bool RunLoops = true;
 

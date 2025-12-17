@@ -1,12 +1,12 @@
-#ifndef ZONESERVER_H
-#define ZONESERVER_H
+#pragma once
 
-#include "../world/world_tcp_connection.h"
-#include "../common/net/servertalk_server.h"
-#include "../common/event/timer.h"
-#include "../common/timer.h"
-#include "../common/emu_constants.h"
-#include "../world/console.h"
+#include "common/emu_constants.h"
+#include "common/event/timer.h"
+#include "common/net/servertalk_server.h"
+#include "common/timer.h"
+#include "world/console.h"
+#include "world/world_tcp_connection.h"
+
 #include <string>
 
 class Client;
@@ -28,6 +28,3 @@ private:
 	bool                                                 m_is_zone_connected = false;
 	EQ::Net::ConsoleServer                               *m_console;
 };
-
-#endif
-

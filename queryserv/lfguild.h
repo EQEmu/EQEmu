@@ -1,14 +1,13 @@
-#ifndef LFGUILD_H
-#define LFGUILD_H
+#pragma once
+
+#include "common/servertalk.h"
+#include "common/types.h"
 
 #include <list>
 #include <string>
-#include "../common/types.h"
-#include "../common/servertalk.h"
 
 class PlayerLookingForGuild
 {
-
 public:
 	PlayerLookingForGuild(char *Name, char *Comments, uint32 Level, uint32 Class, uint32 AACount, uint32 Timezone, uint32 TimePosted);
 
@@ -60,4 +59,3 @@ private:
 	std::list<PlayerLookingForGuild> Players;
 	std::list<GuildLookingForPlayers> Guilds;
 };
-#endif /* LFGUILD_H */
