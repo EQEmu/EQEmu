@@ -18,9 +18,9 @@
  *
 */
 
-#ifndef EQEMU_DATABASE_DUMP_SERVICE_H
-#define EQEMU_DATABASE_DUMP_SERVICE_H
+#pragma once
 
+#include <string>
 
 class DatabaseDumpService {
 public:
@@ -97,6 +97,3 @@ private:
 	void BuildCredentialsFile();
 	void RemoveCredentialsFile();
 };
-
-
-#endif //EQEMU_DATABASE_DUMP_SERVICE_H

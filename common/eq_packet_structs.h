@@ -16,20 +16,20 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#ifndef EQ_PACKET_STRUCTS_H
-#define EQ_PACKET_STRUCTS_H
+#pragma once
 
+#include "common/emu_constants.h"
+#include "common/textures.h"
+#include "common/types.h"
+#include "common/version.h"
+
+#include "cereal/archives/binary.hpp"
+#include "cereal/types/string.hpp"
+#include "cereal/types/vector.hpp"
 #include <list>
-#include <string.h>
+#include <cstring>
 #include <string>
-#include <time.h>
-#include <cereal/archives/binary.hpp>
-#include <cereal/types/string.hpp>
-#include <cereal/types/vector.hpp>
-#include "../common/version.h"
-#include "emu_constants.h"
-#include "textures.h"
-#include "types.h"
+#include <ctime>
 
 static const uint32 BUFF_COUNT = 42;
 static const uint32 PET_BUFF_COUNT = 30;
@@ -45,6 +45,7 @@ static const uint32 ADVANCED_LORE_LENGTH = 8192;
 ** Compiler override to ensure
 ** byte aligned structures
 */
+#pragma pack(push)
 #pragma pack(1)
 
 struct LoginInfo {
@@ -6562,7 +6563,4 @@ struct EvolveGetNextItem {
 };
 
 // Restore structure packing to default
-#pragma pack()
-
-#endif
-
+#pragma pack(pop)

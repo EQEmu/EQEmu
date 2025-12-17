@@ -15,17 +15,18 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef TIMER_H
-#define TIMER_H
 
-#include "types.h"
-#include <chrono>
+#pragma once
+
+#include "common/types.h"
 
 // Disgrace: for windows compile
 #ifdef _WINDOWS
 	#include "global_define.h"
 	int gettimeofday (timeval *tp, ...);
 #endif
+
+#include <chrono>
 
 class Timer
 {
@@ -93,5 +94,3 @@ struct BenchTimer
 private:
 	std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
 };
-
-#endif

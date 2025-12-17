@@ -1,11 +1,11 @@
-#ifndef EQEMU_DATABUCKET_H
-#define EQEMU_DATABUCKET_H
+#pragma once
+
+#include "common/json/json_archive_single_line.h"
+#include "common/repositories/data_buckets_repository.h"
+#include "common/shareddb.h"
+#include "common/types.h"
 
 #include <string>
-#include "types.h"
-#include "repositories/data_buckets_repository.h"
-#include "json/json_archive_single_line.h"
-#include "shareddb.h"
 
 struct DataBucketKey {
 	std::string key;
@@ -69,5 +69,3 @@ public:
 	static DataBucketsRepository::DataBuckets
 	ExtractNestedValue(const DataBucketsRepository::DataBuckets &bucket, const std::string &full_key);
 };
-
-#endif //EQEMU_DATABUCKET_H

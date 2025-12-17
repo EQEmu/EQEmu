@@ -18,8 +18,9 @@
  *
 */
 
-#ifndef EQEMU_EQEMU_LOGSYS_LOG_ALIASES_H
-#define EQEMU_EQEMU_LOGSYS_LOG_ALIASES_H
+#pragma once
+
+#include "common/eqemu_logsys.h"
 
 inline auto logsys = EQEmuLogSys::Instance();
 
@@ -935,6 +936,3 @@ inline auto logsys = EQEmuLogSys::Instance();
     if (logsys->IsLogEnabled(debug_level, log_category))\
         OutF(logsys, debug_level, log_category, __FILE__, __func__, __LINE__, message, ##__VA_ARGS__);\
 } while (0)
-
-
-#endif //EQEMU_EQEMU_LOGSYS_LOG_ALIASES_H

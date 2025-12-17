@@ -15,13 +15,14 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef CLASSES_CH
-#define CLASSES_CH
 
-#include "../common/types.h"
-#include "../common/rulesys.h"
-#include <string>
+#pragma once
+
+#include "common/rulesys.h"
+#include "common/types.h"
+
 #include <map>
+#include <string>
 
 namespace Class {
 	constexpr uint8 None                      = 0;
@@ -156,5 +157,3 @@ bool IsChainClass(uint8 class_id);
 bool IsLeatherClass(uint8 class_id);
 bool IsClothClass(uint8 class_id);
 uint8 ClassArmorType(uint8 class_id);
-
-#endif

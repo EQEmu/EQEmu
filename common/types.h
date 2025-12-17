@@ -15,10 +15,10 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef TYPES_H
-#define TYPES_H
 
-#include <stdint.h>
+#pragma once
+
+#include <cstdint>
 typedef uint8_t byte;
 typedef uint8_t uint8;
 typedef uint16_t uint16;
@@ -96,6 +96,4 @@ typedef const char Const_char;	//for perl XS
 #	endif
 #	define htonll(x) htobe64(x)
 #	define ntohll(x) be64toh(x)
-#endif
-
 #endif

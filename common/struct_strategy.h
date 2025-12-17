@@ -1,13 +1,14 @@
-#ifndef STRUCTSTRATEGY_H_
-#define STRUCTSTRATEGY_H_
+#pragma once
+
+#include "common/emu_opcodes.h"
+#include "common/emu_versions.h"
+
+#include <memory>
+#include <string>
+
 
 class EQApplicationPacket;
 class EQStreamInterface;
-#include "emu_opcodes.h"
-#include "emu_versions.h"
-
-#include <string>
-#include <memory>
 
 class StructStrategy {
 public:
@@ -44,30 +45,3 @@ protected:
 namespace StructStrategyFactory {
 	void RegisterPatch(EmuOpcode first_opcode, const StructStrategy *structs);
 };
-
-
-#endif /*STRUCTSTRATEGY_H_*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

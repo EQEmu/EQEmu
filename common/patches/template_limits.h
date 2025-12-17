@@ -17,8 +17,7 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef COMMON_TEMPLATE_LIMITS_H
-#define COMMON_TEMPLATE_LIMITS_H
+#pragma once
 
 
 namespace TEMPLATE
@@ -27,5 +26,3 @@ namespace TEMPLATE
 	// put constants here and #include appropriately
 	
 }; /* TEMPLATE */
-
-#endif /*COMMON_TEMPLATE_LIMITS_H*/

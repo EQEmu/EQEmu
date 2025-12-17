@@ -18,8 +18,7 @@
  *
 */
 
-#ifndef EQEMU_FILE_H
-#define EQEMU_FILE_H
+#pragma once
 
 #include <filesystem>
 
@@ -40,5 +39,3 @@ public:
 };
 
 bool Exists(const std::string& name);
-
-#endif //EQEMU_FILE_H

@@ -17,16 +17,16 @@
 */
 
 #include "rulesys.h"
-#include "eqemu_logsys.h"
-#include "database.h"
-#include "strings.h"
+
+#include "common/database.h"
+#include "common/eqemu_logsys.h"
+#include "common/repositories/rule_sets_repository.h"
+#include "common/repositories/rule_values_repository.h"
+#include "common/strings.h"
+
+#include "fmt/format.h"
 #include <cstdlib>
 #include <cstring>
-#include <fmt/format.h>
-#include <fmt/ranges.h>
-
-#include "../common/repositories/rule_sets_repository.h"
-#include "../common/repositories/rule_values_repository.h"
 
 const char *RuleManager::s_categoryNames[_CatCount + 1] = {
 	#define RULE_CATEGORY(category_name) \

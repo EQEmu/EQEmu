@@ -17,10 +17,9 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef COMMON_INVENTORY_SLOT
-#define COMMON_INVENTORY_SLOT
+#pragma once
 
-#include "emu_constants.h"
+#include "common/emu_constants.h"
 
 
 namespace EQ
@@ -129,5 +128,3 @@ namespace EQ
 	bool operator!=(const InventorySlot& lhs, const InventorySlot& rhs) { return (!(lhs == rhs)); }
 
 } /*EQEmu*/
-
-#endif /*COMMON_INVENTORY_SLOT*/

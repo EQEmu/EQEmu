@@ -15,12 +15,12 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef SPDAT_H
-#define SPDAT_H
 
-#include "classes.h"
-#include "skills.h"
-#include "item_data.h"
+#pragma once
+
+#include "common/classes.h"
+#include "common/item_data.h"
+#include "common/skills.h"
 
 #define SPELL_UNKNOWN 0xFFFF
 #define POISON_PROC 0xFFFE
@@ -1917,5 +1917,3 @@ bool IsDamageShieldOnlySpell(uint16 spell_id);
 bool IsDamageShieldAndResistSpell(uint16 spell_id);
 bool IsHateSpell(uint16 spell_id);
 bool IsDisciplineTome(const EQ::ItemData* item);
-
-#endif

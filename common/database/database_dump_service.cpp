@@ -18,27 +18,26 @@
  *
 */
 
-#include <string>
-#include <cstdio>
-#include <iterator>
 #include "database_dump_service.h"
-#include "../eqemu_logsys.h"
-#include "../strings.h"
-#include "../eqemu_config.h"
-#include "../database_schema.h"
-#include "../file.h"
-#include "../process/process.h"
-#include "../termcolor/rang.hpp"
 
+#include "common/database_schema.h"
+#include "common/eqemu_config.h"
+#include "common/eqemu_logsys.h"
+#include "common/file.h"
+#include "common/process/process.h"
+#include "common/strings.h"
+#include "common/termcolor/rang.hpp"
+
+#include <cstdio>
 #include <ctime>
+#include <iterator>
+#include <string>
 
 #if _WIN32
 #include <windows.h>
 #else
-
 #include <sys/time.h>
 #include <thread>
-
 #endif
 
 #define DATABASE_DUMP_PATH "backups/"

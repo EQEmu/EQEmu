@@ -15,8 +15,8 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef FEATURES_H
-#define FEATURES_H
+
+#pragma once
 
 /*
 
@@ -257,8 +257,3 @@ Developer configuration
 
 #define PROFILE_DUMP_TIME 180
 #endif	//EQPROFILE
-
-
-
-#endif
-

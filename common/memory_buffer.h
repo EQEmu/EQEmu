@@ -17,15 +17,14 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef COMMON_MEMORY_BUFFER
-#define COMMON_MEMORY_BUFFER
+#pragma once
 
-#include "types.h"
+#include "common/types.h"
 
-#include <type_traits>
+#include <sstream>
 #include <string.h>
 #include <string>
-#include <sstream>
+#include <type_traits>
 
 
 namespace EQ
@@ -130,5 +129,3 @@ namespace EQ
 	};
 
 } /*EQEmu*/
-
-#endif /*COMMON_MEMORY_BUFFER*/

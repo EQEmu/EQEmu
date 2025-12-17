@@ -1,7 +1,5 @@
 #pragma once
 
-#include <stdint.h>
-
 namespace EQ
 {
 	int Crc32(const void *data, int size);

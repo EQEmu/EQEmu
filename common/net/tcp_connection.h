@@ -1,10 +1,11 @@
 #pragma once
 
-#include "tcp_connection_pooling.h"
+#include "common/net/tcp_connection_pooling.h"
+
+#include "uv.h"
 #include <functional>
-#include <string>
 #include <memory>
-#include <uv.h>
+#include <string>
 
 namespace EQ
 {

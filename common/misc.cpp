@@ -1,24 +1,20 @@
-#ifdef _WINDOWS
-	// VS6 doesn't like the length of STL generated names: disabling
-	#pragma warning(disable:4786)
-#endif
-#include "global_define.h"
-#include <string>
+#include "misc.h"
+
+#include "common/global_define.h"
+#include "common/strings.h"
+#include "common/types.h"
+
+#include "zlib.h"
+#include <cstring>
+#include <iostream>
+#include <map>
 #include <stdio.h>
 #include <stdlib.h>
-#include <map>
-#include <iostream>
-#include <zlib.h>
-
+#include <string>
+#include <time.h>
 #ifndef WIN32
 #include <sys/time.h>
 #endif
-
-#include <time.h>
-#include "misc.h"
-#include "types.h"
-#include <cstring>
-#include "strings.h"
 
 std::map<int,std::string> DBFieldNames;
 

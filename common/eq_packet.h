@@ -15,18 +15,17 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef _EQPACKET_H
-#define _EQPACKET_H
 
-#include "base_packet.h"
-#include "platform.h"
-#include <iostream>
+#pragma once
+
+#include "common/base_packet.h"
+#include "common/platform.h"
 
 #ifdef STATIC_OPCODE
 	typedef unsigned short EmuOpcode;
 	static const EmuOpcode OP_Unknown = 0;
 #else
-#include "emu_opcodes.h"
+#include "common/emu_opcodes.h"
 #endif
 
 class EQPacket : public BasePacket {
@@ -152,5 +151,3 @@ protected:
 
 extern void DumpPacket(const EQApplicationPacket* app, bool iShowInfo = false);
 extern std::string DumpPacketToString(const EQApplicationPacket* app);
-
-#endif

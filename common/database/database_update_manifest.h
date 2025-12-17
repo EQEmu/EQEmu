@@ -1,5 +1,9 @@
 #pragma once
 
+#include "common/database/database_update.h"
+
+#include <vector>
+
 std::vector<ManifestEntry> manifest_entries = {
 	ManifestEntry{
 		.version = 9000,

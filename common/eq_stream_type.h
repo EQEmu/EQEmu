@@ -1,5 +1,4 @@
-#ifndef _EQSTREAMTYPE_H
-#define _EQSTREAMTYPE_H
+#pragma once
 
 typedef enum {
 	UnknownStream=0,
@@ -11,5 +10,3 @@ typedef enum {
 	MailStream
 } EQStreamType;
 
-
-#endif

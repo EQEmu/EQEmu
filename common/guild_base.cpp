@@ -17,23 +17,21 @@
 */
 
 #include "guild_base.h"
-#include "database.h"
-#include "../common/rulesys.h"
-#include "../common/repositories/guilds_repository.h"
-#include "../common/repositories/guild_ranks_repository.h"
-#include "../common/repositories/guild_permissions_repository.h"
-#include "../common/repositories/guild_members_repository.h"
-#include "../common/repositories/guild_bank_repository.h"
-#include "../common/repositories/guild_tributes_repository.h"
 
+#include "common/database.h"
+#include "common/eq_packet_structs.h"
+#include "common/repositories/guild_bank_repository.h"
+#include "common/repositories/guild_members_repository.h"
+#include "common/repositories/guild_permissions_repository.h"
+#include "common/repositories/guild_ranks_repository.h"
+#include "common/repositories/guild_tributes_repository.h"
+#include "common/repositories/guilds_repository.h"
+#include "common/rulesys.h"
+#include "common/strings.h"
 
-//#include "misc_functions.h"
-#include "strings.h"
 #include <cstdlib>
 #include <cstring>
 
-//until we move MAX_NUMBER_GUILDS
-#include "eq_packet_structs.h"
 
 std::vector<DefaultPermissionStruct> default_permissions = {
 	{GUILD_ACTION_BANK_CHANGE_ITEM_PERMISSIONS,         128},

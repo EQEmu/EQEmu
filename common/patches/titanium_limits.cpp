@@ -19,7 +19,7 @@
 
 #include "titanium_limits.h"
 
-#include "../strings.h"
+#include "common/strings.h"
 
 
 int16 Titanium::invtype::GetInvTypeSize(int16 inv_type)

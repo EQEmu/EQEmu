@@ -15,12 +15,12 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef PACKET_DUMP_FILE_H
-#define PACKET_DUMP_FILE_H
+
+#pragma once
+
+#include "common/types.h"
 
 #include <iostream>
-
-#include "../common/types.h"
 
 class EQApplicationPacket;
 
@@ -32,5 +32,3 @@ void FileDumpPacket(const char* filename, const uchar* buf, uint32 size);
 void FileDumpPacket(const char* filename, const EQApplicationPacket* app);
 void FilePrintLine(const char* filename, bool prefix_timestamp = false, const char* text = 0, ...);
 void FilePrint(const char* filename, bool newline = true, bool prefix_timestamp = false, const char* text = 0, ...);
-#endif
-

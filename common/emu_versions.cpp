@@ -17,8 +17,8 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include "emu_versions.h"
-#include "emu_constants.h"
+#include "common/emu_versions.h"
+#include "common/emu_constants.h"
 
 
 bool EQ::versions::IsValidClientVersion(ClientVersion client_version)

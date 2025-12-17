@@ -16,46 +16,35 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include <iostream>
-#include <cstring>
-#include <fmt/format.h>
-#include <fmt/ranges.h>
-
-#if defined(_MSC_VER) && _MSC_VER >= 1800
-	#include <algorithm>
-#endif
-
-#include "classes.h"
-#include "eq_packet_structs.h"
-#include "faction.h"
-#include "features.h"
-#include "ipc_mutex.h"
-#include "inventory_profile.h"
-#include "memory_mapped_file.h"
-#include "mysql.h"
-#include "rulesys.h"
 #include "shareddb.h"
-#include "strings.h"
-#include "eqemu_config.h"
-#include "data_verification.h"
-#include "evolving_items.h"
-#include "repositories/criteria/content_filter_criteria.h"
-#include "repositories/account_repository.h"
-#include "repositories/faction_association_repository.h"
-#include "repositories/starting_items_repository.h"
-#include "path_manager.h"
-#include "../zone/client.h"
-#include "repositories/loottable_repository.h"
-#include "repositories/character_item_recast_repository.h"
-#include "repositories/character_corpses_repository.h"
-#include "repositories/skill_caps_repository.h"
-#include "repositories/inventory_repository.h"
-#include "repositories/books_repository.h"
-#include "repositories/sharedbank_repository.h"
-#include "repositories/character_inspect_messages_repository.h"
-#include "repositories/spells_new_repository.h"
-#include "repositories/damageshieldtypes_repository.h"
-#include "repositories/items_repository.h"
+
+#include "common/classes.h"
+#include "common/data_verification.h"
+#include "common/eq_packet_structs.h"
+#include "common/eqemu_config.h"
+#include "common/evolving_items.h"
+#include "common/faction.h"
+#include "common/inventory_profile.h"
+#include "common/ipc_mutex.h"
+#include "common/memory_mapped_file.h"
+#include "common/path_manager.h"
+#include "common/repositories/account_repository.h"
+#include "common/repositories/books_repository.h"
+#include "common/repositories/character_corpses_repository.h"
+#include "common/repositories/character_inspect_messages_repository.h"
+#include "common/repositories/character_item_recast_repository.h"
+#include "common/repositories/criteria/content_filter_criteria.h"
+#include "common/repositories/damageshieldtypes_repository.h"
+#include "common/repositories/inventory_repository.h"
+#include "common/repositories/items_repository.h"
+#include "common/repositories/sharedbank_repository.h"
+#include "common/repositories/starting_items_repository.h"
+#include "common/rulesys.h"
+#include "common/strings.h"
+#include "zone/client.h"
+
+#include "fmt/format.h"
+#include <algorithm>
 
 SharedDatabase::SharedDatabase()
 : Database()

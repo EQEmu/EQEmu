@@ -1,16 +1,18 @@
 #pragma once
 
-#include "../random.h"
-#include "packet.h"
-#include "reliable_stream_structs.h"
-#include "reliable_stream_pooling.h"
-#include <uv.h>
+#include "common/random.h"
+#include "common/net/packet.h"
+#include "common/net/reliable_stream_structs.h"
+#include "common/net/reliable_stream_pooling.h"
+
+#include "uv.h"
+
 #include <chrono>
 #include <functional>
-#include <memory>
-#include <map>
-#include <queue>
 #include <list>
+#include <map>
+#include <memory>
+#include <queue>
 
 namespace EQ
 {

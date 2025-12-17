@@ -1,13 +1,14 @@
 #include "dynamic_zone_base.h"
-#include "database.h"
-#include "eqemu_logsys.h"
-#include "rulesys.h"
-#include "servertalk.h"
-#include "util/uuid.h"
-#include "repositories/character_expedition_lockouts_repository.h"
-#include "repositories/dynamic_zone_lockouts_repository.h"
-#include "repositories/instance_list_repository.h"
-#include "repositories/instance_list_player_repository.h"
+
+#include "common/database.h"
+#include "common/eqemu_logsys.h"
+#include "common/repositories/character_expedition_lockouts_repository.h"
+#include "common/repositories/dynamic_zone_lockouts_repository.h"
+#include "common/repositories/instance_list_player_repository.h"
+#include "common/repositories/instance_list_repository.h"
+#include "common/rulesys.h"
+#include "common/servertalk.h"
+#include "common/util/uuid.h"
 
 DynamicZoneBase::DynamicZoneBase(DynamicZonesRepository::DynamicZoneInstance&& entry)
 {

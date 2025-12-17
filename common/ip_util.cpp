@@ -18,18 +18,19 @@
  *
  */
 
+#include "ip_util.h"
+
+#include "common/eqemu_logsys.h"
+#include "common/event/event_loop.h"
+#include "common/event/task_scheduler.h"
+#include "common/http/httplib.h"
+#include "common/http/uri.h"
+#include "common/net/dns.h"
+
+#include "fmt/format.h"
 #include <cstring>
-#include <fmt/format.h>
-#include <fmt/ranges.h>
 #include <csignal>
 #include <vector>
-#include "ip_util.h"
-#include "http/httplib.h"
-#include "http/uri.h"
-#include "eqemu_logsys.h"
-#include "event/event_loop.h"
-#include "net/dns.h"
-#include "event/task_scheduler.h"
 
 /**
  * @param ip

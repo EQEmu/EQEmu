@@ -1,8 +1,6 @@
-#ifndef TEMPLATE_H_
-#define TEMPLATE_H_
+#pragma once
 
-#include "../struct_strategy.h"
-#include "../eqemu_config_extern.h"
+#include "common/struct_strategy.h"
 
 class EQStreamIdentifier;
 
@@ -32,7 +30,3 @@ namespace TEMPLATE {
 	};
 
 };
-
-
-
-#endif /*TEMPLATE_H_*/

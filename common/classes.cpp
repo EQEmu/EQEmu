@@ -15,11 +15,13 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 	*/
-#include <fmt/format.h>
-#include <fmt/ranges.h>
-#include "../common/global_define.h"
-#include "../common/classes.h"
-#include "data_verification.h"
+
+#include "classes.h"
+
+#include "common/data_verification.h"
+#include "common/global_define.h"
+
+#include "fmt/format.h"
 
 const char *GetClassIDName(uint8 class_id, uint8 level)
 {

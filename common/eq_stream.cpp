@@ -16,31 +16,32 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "global_define.h"
-#include "eqemu_logsys.h"
-#include "eq_packet.h"
 #include "eq_stream.h"
-#include "op_codes.h"
-#include "crc16.h"
-#include "platform.h"
-#include "strings.h"
 
-#include <string>
-#include <iomanip>
-#include <vector>
+#include "common/crc16.h"
+#include "common/eq_packet.h"
+#include "common/eqemu_logsys.h"
+#include "common/global_define.h"
+#include "common/op_codes.h"
+#include "common/platform.h"
+#include "common/strings.h"
+
 #include <algorithm>
+#include <iomanip>
+#include <string>
+#include <vector>
 
 #ifdef _WINDOWS
-	#include <time.h>
+#include <time.h>
 #else
-	#include <sys/types.h>
-	#include <sys/socket.h>
-	#include <netinet/in.h>
-	#include <sys/time.h>
-	#include <sys/socket.h>
-	#include <netdb.h>
-	#include <fcntl.h>
-	#include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/time.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <fcntl.h>
+#include <arpa/inet.h>
 #endif
 
 //for logsys
@@ -1437,4 +1438,3 @@ EQStream::MatchState EQStream::CheckSignature(const Signature *sig) {
 
 	return(res);
 }
-

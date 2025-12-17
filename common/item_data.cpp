@@ -18,9 +18,9 @@
 */
 
 #include "item_data.h"
-#include "classes.h"
-#include "races.h"
-//#include "deity.h"
+
+#include "common/classes.h"
+#include "common/races.h"
 
 
 uint32 EQ::item::ConvertAugTypeToAugTypeBit(uint8 aug_type)

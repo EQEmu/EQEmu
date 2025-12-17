@@ -17,11 +17,10 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef COMMON_EQ_CONSTANTS_H
-#define COMMON_EQ_CONSTANTS_H
+#pragma once
 
-#include "skills.h"
-#include "types.h"
+#include "common/skills.h"
+#include "common/types.h"
 
 namespace AppearanceType {
 	constexpr uint32 Die                   = 0; // Causes the client to keel over and zone to bind point (default action)
@@ -1096,5 +1095,3 @@ enum ExpSource
 namespace DoorType {
 	constexpr uint32 BuyerStall = 155;
 }
-
-#endif /*COMMON_EQ_CONSTANTS_H*/

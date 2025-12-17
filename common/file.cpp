@@ -18,8 +18,15 @@
  *
 */
 
-#include <fstream>
 #include "file.h"
+
+#include "fmt/format.h"
+
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <sys/stat.h>
+#include <vector>
 
 #ifdef _WINDOWS
 #include <direct.h>
@@ -29,18 +36,10 @@
 #include <windows.h>
 #include <process.h>
 #else
-
 #include <unistd.h>
 #include <sys/stat.h>
-
 #endif
 
-#include <fmt/format.h>
-#include <fmt/ranges.h>
-#include <filesystem>
-#include <iostream>
-#include <sys/stat.h>
-#include <vector>
 
 namespace fs = std::filesystem;
 

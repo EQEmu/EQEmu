@@ -17,21 +17,14 @@
 */
 
 #include "inventory_profile.h"
-#include "../common/data_verification.h"
-//#include "classes.h"
-//#include "global_define.h"
-//#include "item_instance.h"
-//#include "races.h"
-#include "rulesys.h"
-#include "shareddb.h"
-#include "strings.h"
-#include "evolving_items.h"
 
-//#include "../common/light_source.h"
+#include "common/data_verification.h"
+#include "common/evolving_items.h"
+#include "common/rulesys.h"
+#include "common/shareddb.h"
+#include "common/strings.h"
 
 #include <limits.h>
-
-//#include <iostream>
 
 int32 next_item_serial_number = 1;
 std::unordered_set<uint64> guids{};

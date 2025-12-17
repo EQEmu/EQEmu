@@ -1,7 +1,7 @@
-#ifndef EQEMU_SERVER_EVENT_SCHEDULER_H
-#define EQEMU_SERVER_EVENT_SCHEDULER_H
+#pragma once
 
-#include "../common/repositories/server_scheduled_events_repository.h"
+#include "common/repositories/server_scheduled_events_repository.h"
+
 #include <time.h>
 #include <chrono>
 
@@ -53,5 +53,3 @@ protected:
 	Database *m_database;
 	bool ValidateDatabaseConnection();
 };
-
-#endif //EQEMU_SERVER_EVENT_SCHEDULER_H

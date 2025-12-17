@@ -1,6 +1,6 @@
-#ifndef CRC32_H
-#define CRC32_H
-#include "types.h"
+#pragma once
+
+#include "common/types.h"
 
 class CRC32 {
 public:
@@ -17,4 +17,3 @@ public:
 private:
 	static inline void		Calc(const uint8 byte, uint32& crc32);
 };
-#endif

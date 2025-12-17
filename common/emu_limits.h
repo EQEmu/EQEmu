@@ -17,12 +17,11 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef COMMON_EMU_LIMITS_H
-#define COMMON_EMU_LIMITS_H
+#pragma once
 
-#include "types.h"
+#include "common/types.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 
 
 namespace EntityLimits
@@ -124,5 +123,3 @@ namespace EntityLimits
 	} /*Pet*/
 
 }; /*EntityLimits*/
-
-#endif /*COMMON_EMU_LIMITS_H*/

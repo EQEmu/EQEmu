@@ -1,11 +1,14 @@
 #include "player_event_discord_formatter.h"
-#include "../repositories/character_data_repository.h"
-#include "../json/json_archive_single_line.h"
+
+#include "common/json/json_archive_single_line.h"
+#include "common/repositories/character_data_repository.h"
+
+#include "cereal/archives/json.hpp"
+#include "cereal/types/vector.hpp"
+#include "fmt/format.h"
+#include "fmt/ranges.h"
+
 #include <vector>
-#include <fmt/format.h>
-#include <fmt/ranges.h>
-#include <cereal/archives/json.hpp>
-#include <cereal/types/vector.hpp>
 
 std::string PlayerEventDiscordFormatter::GetCurrentTimestamp()
 {

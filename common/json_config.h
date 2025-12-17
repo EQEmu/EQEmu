@@ -2,6 +2,8 @@
 
 #include "json/json.h"
 
+#include <string>
+
 namespace EQ
 {
 	class JsonConfigFile

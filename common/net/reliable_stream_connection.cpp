@@ -1,10 +1,11 @@
 #include "reliable_stream_connection.h"
-#include "../event/event_loop.h"
-#include "../data_verification.h"
-#include "crc32.h"
-#include <zlib.h>
-#include <fmt/format.h>
-#include <fmt/ranges.h>
+
+#include "common/event/event_loop.h"
+#include "common/data_verification.h"
+#include "common/net/crc32.h"
+
+#include "zlib.h"
+#include "fmt/format.h"
 
 // observed client receive window is 300 packets, 140KB
 constexpr size_t MAX_CLIENT_RECV_PACKETS_PER_WINDOW = 300;

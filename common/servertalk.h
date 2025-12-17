@@ -1,17 +1,17 @@
-#ifndef EQ_SOPCODES_H
-#define EQ_SOPCODES_H
+#pragma once
 
-#include "../common/types.h"
-#include "../common/packet_functions.h"
-#include "../common/eq_packet_structs.h"
-#include "../common/net/packet.h"
-#include "../common/guilds.h"
-#include <cereal/cereal.hpp>
-#include <cereal/archives/binary.hpp>
-#include <cereal/types/chrono.hpp>
-#include <cereal/types/string.hpp>
-#include <cereal/types/vector.hpp>
-#include <glm/vec4.hpp>
+#include "common/eq_packet_structs.h"
+#include "common/guilds.h"
+#include "common/net/packet.h"
+#include "common/packet_functions.h"
+#include "common/types.h"
+
+#include "cereal/cereal.hpp"
+#include "cereal/archives/binary.hpp"
+#include "cereal/types/chrono.hpp"
+#include "cereal/types/string.hpp"
+#include "cereal/types/vector.hpp"
+#include "glm/vec4.hpp"
 
 #define SERVER_TIMEOUT	45000	// how often keepalive gets sent
 #define INTERSERVER_TIMER					10000
@@ -1779,7 +1779,4 @@ struct BazaarPurchaseMessaging_Struct {
 	uint32           id;
 };
 
-
-#pragma pack()
-
-#endif
+#pragma pack(pop)

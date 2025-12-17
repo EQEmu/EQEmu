@@ -1,14 +1,15 @@
 #pragma once
 
-#include "../eqemu_logsys.h"
-#include <vector>
+#include "common/eqemu_logsys.h"
+
+#include "uv.h"
 #include <array>
 #include <atomic>
-#include <memory>
-#include <optional>
-#include <mutex>
-#include <uv.h>
 #include <iostream>
+#include <memory>
+#include <mutex>
+#include <optional>
+#include <vector>
 
 namespace EQ { namespace Net { class TCPConnection; } }
 

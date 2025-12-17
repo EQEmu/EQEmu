@@ -1,11 +1,11 @@
 
 #include "TEMPLATE.h"
-#include "../opcodemgr.h"
-#include "../logsys.h"
-#include "../eq_stream_ident.h"
-
-#include "../eq_packet_structs.h"
 #include "TEMPLATE_structs.h"
+
+#include "common/eq_packet_structs.h"
+#include "common/eq_stream_ident.h"
+#include "common/logsys.h"
+#include "common/opcodemgr.h"
 
 namespace TEMPLATE {
 
@@ -146,30 +146,4 @@ DECODE(OP_SetServerFilter) {
 	FINISH_DIRECT_DECODE();
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-} //end namespace TEMPLATE
-
-
-
-
-
-
+} // namespace TEMPLATE

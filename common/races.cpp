@@ -16,8 +16,9 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/races.h"
-#include "data_verification.h"
+#include "races.h"
+
+#include "common/data_verification.h"
 
 const char* GetRaceIDName(uint16 race_id)
 {

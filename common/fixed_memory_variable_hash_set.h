@@ -16,12 +16,12 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#ifndef _EQEMU_FIXED_MEMORY_VARIABLE_HASHSET_H
-#define _EQEMU_FIXED_MEMORY_VARIABLE_HASHSET_H
+#pragma once
+
+#include "common/eqemu_exception.h"
+#include "common/types.h"
 
 #include <string.h>
-#include "eqemu_exception.h"
-#include "types.h"
 
 namespace EQ {
 
@@ -237,5 +237,3 @@ namespace EQ {
 		byte *elements_;
 	};
 } // EQEmu
-
-#endif

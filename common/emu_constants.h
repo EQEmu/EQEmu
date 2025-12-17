@@ -17,14 +17,13 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef COMMON_EMU_CONSTANTS_H
-#define COMMON_EMU_CONSTANTS_H
+#pragma once
 
-#include "eq_limits.h"
-#include "emu_versions.h"
-#include "bodytypes.h"
+#include "common/bodytypes.h"
+#include "common/emu_versions.h"
+#include "common/eq_limits.h"
 
-#include <string.h>
+#include <cstring>
 
 namespace AccountStatus {
 	constexpr uint8 Player          = 0;
@@ -918,5 +917,3 @@ namespace PetType {
 	std::string GetName(uint8 pet_type);
 	bool IsValid(uint8 pet_type);
 }
-
-#endif /*COMMON_EMU_CONSTANTS_H*/

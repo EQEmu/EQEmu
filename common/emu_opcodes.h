@@ -15,8 +15,8 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 04111-1307 USA
 */
-#ifndef EMU_OPCODES_H
-#define EMU_OPCODES_H
+
+#pragma once
 
 //this is the highest opcode possibly used in the regular EQ protocol
 #define MAX_EQ_OPCODE 0xFFFF
@@ -47,6 +47,3 @@ typedef enum { //EQEmu internal opcodes list
 
 constexpr int format_as(EmuOpcode opcode) { return static_cast<int>(opcode); }
 extern const char *OpcodeNames[_maxEmuOpcode+1];
-
-#endif
-

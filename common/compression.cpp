@@ -1,7 +1,10 @@
-#include "global_define.h"
-#include "types.h"
-#include <string.h>
-#include <zlib.h>
+#include "compression.h"
+
+#include "common/global_define.h"
+#include "common/types.h"
+
+#include "zlib.h"
+#include <cstring>
 
 namespace EQ
 {

@@ -15,15 +15,15 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef __EQEmuConfig_H
-#define __EQEmuConfig_H
 
-#include "json/json.h"
-#include "linked_list.h"
-#include "path_manager.h"
+#pragma once
+
+#include "common/json/json.h"
+#include "common/linked_list.h"
+#include "common/path_manager.h"
+
+#include "fmt/format.h"
 #include <fstream>
-#include <fmt/format.h>
-#include <fmt/ranges.h>
 
 struct LoginConfig {
 	std::string LoginHost;
@@ -211,5 +211,3 @@ class EQEmuConfig
 		void Dump() const;
 		void CheckUcsConfigConversion();
 };
-
-#endif

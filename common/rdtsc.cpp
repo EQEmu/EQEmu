@@ -17,14 +17,15 @@
 */
 
 #include "rdtsc.h"
-#include "types.h"
+
+#include "common/types.h"
 
 #ifdef _WINDOWS
-	#include <sys/timeb.h>
-	#include "../common/timer.h"
+#include <sys/timeb.h>
+#include "common/timer.h"
 #else
-	#include <unistd.h>
-	#include <sys/time.h>
+#include <unistd.h>
+#include <sys/time.h>
 #endif
 
 #ifdef i386

@@ -17,18 +17,19 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef COMMON_ROF_STRUCTS_H
-#define COMMON_ROF_STRUCTS_H
+#pragma once
 
+#include "common/patches/rof_limits.h"
+#include "common/textures.h"
+#include "common/types.h"
 
-namespace RoF
-{
-	namespace structs {
+namespace RoF { namespace structs {
 
 /*
 ** Compiler override to ensure
 ** byte aligned structures
 */
+#pragma pack(push)
 #pragma pack(1)
 
 struct LoginInfo_Struct {
@@ -5139,8 +5140,7 @@ struct SayLinkBodyFrame_Struct {
 /*055*/
 };
 
-	}; /*structs*/
+#pragma pack(pop)
 
-}; /*RoF*/
-
-#endif /*COMMON_ROF_STRUCTS_H*/
+} /*structs*/
+} /*RoF*/

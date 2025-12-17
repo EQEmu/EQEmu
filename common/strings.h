@@ -32,22 +32,19 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef _STRINGUTIL_H_
-#define _STRINGUTIL_H_
 
+#pragma once
+
+#include "common/types.h"
+
+#include <cctype>
 #include <charconv>
+#include <cstdarg>
 #include <cstring>
 #include <string_view>
 #include <string>
-#include <vector>
-#include <cstdarg>
 #include <type_traits>
-
-#ifdef _WIN32
-#include <ctype.h>
-#endif
-
-#include "types.h"
+#include <vector>
 
 class Strings {
 public:
@@ -133,5 +130,3 @@ void RemoveApostrophes(std::string &s);
 std::string FormatName(const std::string &char_name);
 bool IsAllowedWorldServerCharacterList(char c);
 void SanitizeWorldServerName(char *name);
-
-#endif

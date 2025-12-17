@@ -15,15 +15,16 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef EQDB_H_
-#define EQDB_H_
 
+#pragma once
+
+#include "common/eqdb_res.h"
+#include "common/types.h"
+
+#include "mysql.h"
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
-#include "types.h"
-#include "eqdb_res.h"
-#include <mysql.h>
 
 //this is the main object exported to perl.
 class EQDB {
@@ -50,5 +51,3 @@ private:
 	static EQDB s_EQDB;
 	MYSQL *mysql_ref;
 };
-
-#endif /*EQDB_H_*/

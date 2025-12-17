@@ -1,11 +1,11 @@
-#ifndef EQSTREAMIDENT_H_
-#define EQSTREAMIDENT_H_
+#pragma once
 
-#include "eq_stream_intf.h"
-#include "timer.h"
-#include <vector>
-#include <queue>
+#include "common/eq_stream_intf.h"
+#include "common/timer.h"
+
 #include <memory>
+#include <queue>
+#include <vector>
 
 #define STREAM_IDENT_WAIT_MS 30000
 
@@ -47,5 +47,3 @@ protected:
 	std::vector<Record> m_streams;	//we own these objects, and the streams contained in them.
 	std::queue<EQStreamInterface *> m_identified;	//we own these objects
 };
-
-#endif /*EQSTREAMIDENT_H_*/

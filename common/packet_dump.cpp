@@ -16,13 +16,14 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
+#include "packet_dump.h"
+
+#include "common/servertalk.h"
+
 #include <iostream>
 #include <sstream>
 #include <iomanip>
 #include <stdio.h>
-
-#include "packet_dump.h"
-#include "../common/servertalk.h"
 
 void DumpPacketAscii(const uchar* buf, uint32 size, uint32 cols, uint32 skip) {
 	// Output as ASCII
@@ -248,4 +249,3 @@ void DumpPacketBin(const void* iData, uint32 len) {
 		std::cout << " " << std::hex << std::setw(2) << std::setfill('0') << (int) data[k-1] << std::dec;
 	std::cout << std::endl;
 }
-

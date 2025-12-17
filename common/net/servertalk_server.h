@@ -1,9 +1,10 @@
 #pragma once
 
-#include "tcp_server.h"
-#include "servertalk_server_connection.h"
-#include <vector>
+#include "common/net/servertalk_server_connection.h"
+#include "common/net/tcp_server.h"
+
 #include <map>
+#include <vector>
 
 namespace EQ
 {

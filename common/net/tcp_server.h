@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tcp_connection.h"
+#include "common/net/tcp_connection.h"
 
 namespace EQ
 {

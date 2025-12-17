@@ -1,7 +1,8 @@
 #include "servertalk_server_connection.h"
-#include "servertalk_server.h"
-#include "../eqemu_logsys.h"
-#include "../util/uuid.h"
+
+#include "common/eqemu_logsys.h"
+#include "common/net/servertalk_server.h"
+#include "common/util/uuid.h"
 
 EQ::Net::ServertalkServerConnection::ServertalkServerConnection(std::shared_ptr<EQ::Net::TCPConnection> c, EQ::Net::ServertalkServer *parent)
 {

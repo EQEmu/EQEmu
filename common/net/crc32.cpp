@@ -1,5 +1,4 @@
 #include "crc32.h"
-#include <memory.h>
 
 unsigned int CRC32EncodeTable[256] =
 {

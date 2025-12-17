@@ -15,18 +15,18 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef TIMEOUT_MANAGER_H
-#define TIMEOUT_MANAGER_H
+
+#pragma once
+
+#include "common/timer.h"
+#include "common/types.h"
+
+#include <vector>
 
 //ms between checking all timeouts
 //timeouts are generally somewhat large, so its safe to use a
 //value on the order of seconds here.
 #define TIMEOUT_GRANULARITY 1000
-
-#include "types.h"
-#include "timer.h"
-
-#include <vector>
 
 //timeoutable objects automatically register themselves
 //with the global TimeoutManager object
@@ -62,5 +62,3 @@ protected:
 };
 
 extern TimeoutManager timeout_manager;
-
-#endif

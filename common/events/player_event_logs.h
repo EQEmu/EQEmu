@@ -1,28 +1,26 @@
-#ifndef EQEMU_PLAYER_EVENT_LOGS_H
-#define EQEMU_PLAYER_EVENT_LOGS_H
+#pragma once
 
-#include <cereal/archives/json.hpp>
+#include "common/eqemu_config.h"
+#include "common/json/json_archive_single_line.h"
+#include "common/repositories/player_event_aa_purchase_repository.h"
+#include "common/repositories/player_event_killed_named_npc_repository.h"
+#include "common/repositories/player_event_killed_npc_repository.h"
+#include "common/repositories/player_event_killed_raid_npc_repository.h"
+#include "common/repositories/player_event_log_settings_repository.h"
+#include "common/repositories/player_event_logs_repository.h"
+#include "common/repositories/player_event_loot_items_repository.h"
+#include "common/repositories/player_event_merchant_purchase_repository.h"
+#include "common/repositories/player_event_merchant_sell_repository.h"
+#include "common/repositories/player_event_npc_handin_entries_repository.h"
+#include "common/repositories/player_event_npc_handin_repository.h"
+#include "common/repositories/player_event_speech_repository.h"
+#include "common/repositories/player_event_trade_entries_repository.h"
+#include "common/repositories/player_event_trade_repository.h"
+#include "common/servertalk.h"
+#include "common/timer.h"
+
+#include "cereal/archives/json.hpp"
 #include <mutex>
-#include "../json/json_archive_single_line.h"
-#include "../servertalk.h"
-#include "../timer.h"
-#include "../eqemu_config.h"
-
-#include "../repositories/player_event_log_settings_repository.h"
-#include "../repositories/player_event_logs_repository.h"
-#include "../repositories/player_event_loot_items_repository.h"
-#include "../repositories/player_event_merchant_purchase_repository.h"
-#include "../repositories/player_event_merchant_sell_repository.h"
-#include "../repositories/player_event_npc_handin_repository.h"
-#include "../repositories/player_event_npc_handin_entries_repository.h"
-#include "../repositories/player_event_trade_repository.h"
-#include "../repositories/player_event_trade_entries_repository.h"
-#include "../repositories/player_event_speech_repository.h"
-#include "../repositories/player_event_killed_npc_repository.h"
-#include "../repositories/player_event_killed_named_npc_repository.h"
-#include "../repositories/player_event_killed_raid_npc_repository.h"
-#include "../repositories/player_event_aa_purchase_repository.h"
-
 
 
 class PlayerEventLogs {
@@ -134,5 +132,3 @@ private:
 public:
 	std::map<PlayerEvent::EventType, EtlSettings> &GetEtlSettings() { return m_etl_settings;}
 };
-
-#endif //EQEMU_PLAYER_EVENT_LOGS_H

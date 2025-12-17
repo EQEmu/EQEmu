@@ -15,9 +15,11 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "global_define.h"
+
 #include "eqdb_res.h"
-#include <mysql.h>
+
+#include "common/global_define.h"
+#include "mysql.h"
 
 std::vector<std::string> EQDBRes::fetch_row_array() {
 	std::vector<std::string> array;
@@ -49,4 +51,3 @@ std::map<std::string,std::string> EQDBRes::fetch_row_hash() {
 
 	return rowhash;
 }
-

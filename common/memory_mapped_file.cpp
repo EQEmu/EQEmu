@@ -17,6 +17,11 @@
 */
 
 #include "memory_mapped_file.h"
+
+#include "common/eqemu_exception.h"
+
+#include <filesystem>
+
 #ifdef _WINDOWS
 #include <windows.h>
 #else
@@ -28,12 +33,10 @@
 #include <string.h>
 #include <stdio.h>
 #endif
-#include "eqemu_exception.h"
 #ifdef FREEBSD
 #include <sys/stat.h>
 #endif
 
-#include <filesystem>
 namespace fs = std::filesystem;
 
 namespace EQ {

@@ -34,24 +34,18 @@
 */
 
 #include "strings.h"
-#include <cereal/external/rapidjson/document.h>
-#include <fmt/format.h>
-#include <fmt/ranges.h>
+
+#include "cereal/external/rapidjson/document.h"
+#include "fmt/format.h"
 #include <algorithm>
 #include <cctype>
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <iostream>
-#include <sstream>
-
-#include <random>
-#include <string>
-
-#ifdef _WINDOWS
-#include <ctype.h>
+#include <cstdio>
+#include <cstdlib>
 #include <functional>
-#endif
+#include <iostream>
+#include <random>
+#include <sstream>
+#include <string>
 
 std::string Strings::Random(size_t length)
 {

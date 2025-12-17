@@ -7,10 +7,13 @@
 * MD5Update as needed on buffers full of bytes, and then call MD5Final, which
 * will fill a supplied 16-byte array with the digest.
 */
+
+#include "md5.h"
+
+#include "common/strings.h"
+#include "common/seperator.h"
+
 #include <string.h> /* for memcpy() */
-#include "../common/md5.h"
-#include "../common/strings.h"
-#include "../common/seperator.h"
 
 MD5::MD5() {
 	memset(pMD5, 0, 16);

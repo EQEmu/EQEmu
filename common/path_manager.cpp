@@ -1,8 +1,9 @@
 #include "path_manager.h"
-#include "file.h"
-#include "eqemu_logsys.h"
-#include "eqemu_config.h"
-#include "strings.h"
+
+#include "common/eqemu_config.h"
+#include "common/eqemu_logsys.h"
+#include "common/file.h"
+#include "common/strings.h"
 
 #include <filesystem>
 

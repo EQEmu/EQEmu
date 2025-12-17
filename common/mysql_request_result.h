@@ -1,21 +1,10 @@
-#ifndef MYSQL_REQUEST_RESULT_H
-#define MYSQL_REQUEST_RESULT_H
+#pragma once
 
-#ifdef _WINDOWS
-	#include <winsock2.h>
-	#include <windows.h>
-#endif
+#include "common/mysql_request_row.h"
+#include "common/types.h"
 
+#include "mysql.h"
 #include <string>
-#include <mysql.h>
-#include "types.h"
-#include "mysql_request_row.h"
-
-#ifdef __FreeBSD__
-	#include <string>
-	#include <sstream>
-	#include <iostream>
-#endif
 
 class MySQLRequestResult {
 private:
@@ -73,7 +62,3 @@ private:
 	void FreeInternals();
 	void ZeroOut();
 };
-
-
-#endif
-

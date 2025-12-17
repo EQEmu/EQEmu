@@ -16,45 +16,41 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-
-#include "../common/global_define.h"
 #include "misc_functions.h"
+
+#include "common/global_define.h"
+#include "common/seperator.h"
+#include "common/strings.h"
+#include "common/timer.h"
+
+#include <iomanip>
+#include <iostream>
 #include <string.h>
 #include <time.h>
-#include "strings.h"
 
-#ifndef WIN32
+#ifdef _WINDOWS
+#include <io.h>
+#include <windows.h>
+
+#define snprintf      _snprintf
+#define strncasecmp   _strnicmp
+#define strcasecmp    _stricmp
+#else
 #include <netinet/in.h>
 #include <sys/socket.h>
-#endif
-#include <iostream>
-#include <iomanip>
-#ifdef _WINDOWS
-	#include <io.h>
-#endif
-#include "../common/timer.h"
-#include "../common/seperator.h"
-
-#ifdef _WINDOWS
-	#include <windows.h>
-
-	#define snprintf	_snprintf
-	#define strncasecmp	_strnicmp
-	#define strcasecmp	_stricmp
-#else
-	#include <stdlib.h>
-	#include <ctype.h>
-	#include <stdarg.h>
-	#include <sys/types.h>
-	#include <sys/time.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <stdarg.h>
+#include <sys/types.h>
+#include <sys/time.h>
 #ifdef FREEBSD //Timothy Whitman - January 7, 2003
-	#include <sys/socket.h>
-	#include <netinet/in.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 #endif
-	#include <sys/stat.h>
-	#include <unistd.h>
-	#include <netdb.h>
-	#include <errno.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <errno.h>
 #endif
 
 void CoutTimestamp(bool ms) {

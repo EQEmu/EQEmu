@@ -17,15 +17,15 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include "../global_define.h"
 #include "patches.h"
 
-#include "titanium.h"
-#include "uf.h"
-#include "sof.h"
-#include "sod.h"
-#include "rof.h"
-#include "rof2.h"
+#include "common/global_define.h"
+#include "common/patches/rof.h"
+#include "common/patches/rof2.h"
+#include "common/patches/sod.h"
+#include "common/patches/sof.h"
+#include "common/patches/titanium.h"
+#include "common/patches/uf.h"
 
 
 void RegisterAllPatches(EQStreamIdentifier &into)

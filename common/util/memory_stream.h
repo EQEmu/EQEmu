@@ -1,8 +1,8 @@
 #pragma once
 
-#include <streambuf>
 #include <istream>
 #include <ostream>
+#include <streambuf>
 
 namespace EQ
 {

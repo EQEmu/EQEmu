@@ -16,42 +16,56 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/rulesys.h"
+#include "common/data_verification.h"
+#include "common/database_schema.h"
+#include "common/database.h"
+#include "common/eq_packet_structs.h"
+#include "common/events/player_event_logs.h"
+#include "common/extprofile.h"
+#include "common/global_define.h"
+#include "common/http/httplib.h"
+#include "common/http/uri.h"
+#include "common/repositories/account_repository.h"
+#include "common/repositories/adventure_stats_repository.h"
+#include "common/repositories/bot_data_repository.h"
+#include "common/repositories/buyer_repository.h"
+#include "common/repositories/character_bind_repository.h"
+#include "common/repositories/character_data_repository.h"
+#include "common/repositories/character_languages_repository.h"
+#include "common/repositories/character_leadership_abilities_repository.h"
+#include "common/repositories/character_parcels_repository.h"
+#include "common/repositories/character_pet_name_repository.h"
+#include "common/repositories/character_skills_repository.h"
+#include "common/repositories/data_buckets_repository.h"
+#include "common/repositories/group_id_repository.h"
+#include "common/repositories/group_leaders_repository.h"
+#include "common/repositories/guild_members_repository.h"
+#include "common/repositories/instance_list_repository.h"
+#include "common/repositories/inventory_snapshots_repository.h"
+#include "common/repositories/ip_exemptions_repository.h"
+#include "common/repositories/merchantlist_temp_repository.h"
+#include "common/repositories/name_filter_repository.h"
+#include "common/repositories/npc_types_repository.h"
+#include "common/repositories/raid_details_repository.h"
+#include "common/repositories/raid_members_repository.h"
+#include "common/repositories/reports_repository.h"
+#include "common/repositories/trader_repository.h"
+#include "common/repositories/variables_repository.h"
+#include "common/repositories/zone_repository.h"
+#include "common/rulesys.h"
+#include "common/strings.h"
+#include "common/zone_store.h"
+
+#include "mysqld_error.h"
 
 #include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <iomanip>
 #include <iostream>
 #include <map>
 #include <algorithm>
-#include <mysqld_error.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "../common/repositories/account_repository.h"
-#include "../common/repositories/adventure_stats_repository.h"
-#include "../common/repositories/character_bind_repository.h"
-#include "../common/repositories/character_data_repository.h"
-#include "../common/repositories/character_languages_repository.h"
-#include "../common/repositories/character_leadership_abilities_repository.h"
-#include "../common/repositories/character_parcels_repository.h"
-#include "../common/repositories/character_skills_repository.h"
-#include "../common/repositories/data_buckets_repository.h"
-#include "../common/repositories/group_id_repository.h"
-#include "../common/repositories/group_leaders_repository.h"
-#include "../common/repositories/guild_members_repository.h"
-#include "../common/repositories/instance_list_repository.h"
-#include "../common/repositories/inventory_snapshots_repository.h"
-#include "../common/repositories/ip_exemptions_repository.h"
-#include "../common/repositories/name_filter_repository.h"
-#include "../common/repositories/npc_types_repository.h"
-#include "../common/repositories/raid_details_repository.h"
-#include "../common/repositories/raid_members_repository.h"
-#include "../common/repositories/reports_repository.h"
-#include "../common/repositories/variables_repository.h"
-#include "../common/repositories/character_pet_name_repository.h"
-#include "../common/events/player_event_logs.h"
 
 // Disgrace: for windows compile
 #ifdef _WINDOWS
@@ -63,24 +77,7 @@
 #include "unix.h"
 #include <netinet/in.h>
 #include <sys/time.h>
-
 #endif
-
-#include "database.h"
-#include "data_verification.h"
-#include "eq_packet_structs.h"
-#include "extprofile.h"
-#include "strings.h"
-#include "database_schema.h"
-#include "http/httplib.h"
-#include "http/uri.h"
-
-#include "repositories/zone_repository.h"
-#include "zone_store.h"
-#include "repositories/merchantlist_temp_repository.h"
-#include "repositories/bot_data_repository.h"
-#include "repositories/trader_repository.h"
-#include "repositories/buyer_repository.h"
 
 extern Client client;
 

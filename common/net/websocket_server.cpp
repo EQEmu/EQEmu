@@ -1,12 +1,13 @@
 #include "websocket_server.h"
-#include "../event/event_loop.h"
-#include "../event/timer.h"
-#include <fmt/format.h>
-#include <fmt/ranges.h>
+
+#include "common/emu_constants.h"
+#include "common/event/event_loop.h"
+#include "common/event/timer.h"
+
+#include "fmt/format.h"
+#include <array>
 #include <map>
 #include <unordered_set>
-#include <array>
-#include "../emu_constants.h"
 
 struct MethodHandlerEntry
 {

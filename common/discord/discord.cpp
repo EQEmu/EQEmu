@@ -1,11 +1,13 @@
-#include <cereal/archives/json.hpp>
-#include <cereal/archives/binary.hpp>
 #include "discord.h"
-#include "../http/httplib.h"
-#include "../json/json.h"
-#include "../strings.h"
-#include "../eqemu_logsys.h"
-#include "../events/player_event_logs.h"
+
+#include "common/eqemu_logsys.h"
+#include "common/events/player_event_logs.h"
+#include "common/http/httplib.h"
+#include "common/json/json.h"
+#include "common/strings.h"
+
+#include "cereal/archives/binary.hpp"
+#include "cereal/archives/json.hpp"
 
 constexpr int MAX_RETRIES = 10;
 

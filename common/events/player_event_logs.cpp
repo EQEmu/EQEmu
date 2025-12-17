@@ -1,14 +1,16 @@
 #include "player_event_logs.h"
-#include <cereal/archives/json.hpp>
 
-#include "../platform.h"
-#include "../rulesys.h"
-#include "player_event_discord_formatter.h"
-#include "../repositories/player_event_loot_items_repository.h"
-#include "../repositories/player_event_merchant_sell_repository.h"
-#include "../repositories/player_event_merchant_purchase_repository.h"
-#include "../repositories/player_event_npc_handin_repository.h"
-#include "../repositories/player_event_npc_handin_entries_repository.h"
+#include "common/events/player_event_discord_formatter.h"
+#include "common/platform.h"
+#include "common/repositories/player_event_loot_items_repository.h"
+#include "common/repositories/player_event_merchant_purchase_repository.h"
+#include "common/repositories/player_event_merchant_sell_repository.h"
+#include "common/repositories/player_event_npc_handin_entries_repository.h"
+#include "common/repositories/player_event_npc_handin_repository.h"
+#include "common/rulesys.h"
+
+#include "cereal/archives/json.hpp"
+#include "fmt/ranges.h"
 
 const uint32 PROCESS_RETENTION_TRUNCATION_TIMER_INTERVAL = 60 * 60 * 1000; // 1 hour
 

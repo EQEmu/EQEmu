@@ -1,8 +1,9 @@
 #pragma once
 
-#include "tcp_connection.h"
-#include "servertalk_common.h"
-#include "packet.h"
+#include "common/net/packet.h"
+#include "common/net/servertalk_common.h"
+#include "common/net/tcp_connection.h"
+
 #include <vector>
 
 namespace EQ

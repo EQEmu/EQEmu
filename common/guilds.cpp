@@ -16,12 +16,12 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "misc_functions.h"
 #include "guilds.h"
-#include "database.h"
-#include "eq_packet_structs.h"
 
+#include "common/database.h"
+#include "common/eq_packet_structs.h"
+#include "common/global_define.h"
+#include "common/misc_functions.h"
 
 #ifndef WIN32
 #include <netinet/in.h>	//for htonl

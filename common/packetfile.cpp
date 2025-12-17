@@ -1,16 +1,12 @@
-#ifndef WIN32
-#include <unistd.h>
-#else
-#include <winsock2.h>
-#endif
+#include "packetfile.h"
+
+#include "common/eq_opcodes.h"
+#include "common/eq_packet_structs.h"
+#include "common/misc.h"
 
 #include <errno.h>
 #include <string.h>
 #include <time.h>
-#include "packetfile.h"
-#include "../common/eq_opcodes.h"
-#include "../common/eq_packet_structs.h"
-#include "../common/misc.h"
 #include <map>
 
 PacketFileWriter::PacketFileWriter(bool _force_flush) {

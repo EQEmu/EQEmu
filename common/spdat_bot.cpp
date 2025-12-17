@@ -1,5 +1,6 @@
 #include "spdat.h"
-#include "../zone/bot.h"
+
+#include "zone/bot.h"
 
 bool IsBotSpellTypeDetrimental(uint16 spell_type) {
 	switch (spell_type) {

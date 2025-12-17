@@ -16,6 +16,7 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 #ifndef _WINDOWS
+
 #ifndef __UNIX_H__
 #define __UNIX_H__
 #include <unistd.h>
@@ -28,5 +29,5 @@ char* strupr(char* tmp);
 char* strlwr(char* tmp);
 #endif
 #endif
-#endif
 
+#endif

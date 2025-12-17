@@ -1,8 +1,10 @@
 #pragma once
-#include <any>
-#include <functional>
-#include <exception>
+
 #include "event_loop.h"
+
+#include <any>
+#include <exception>
+#include <functional>
 
 namespace EQ {
 	class Task

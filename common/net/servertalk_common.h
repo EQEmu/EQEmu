@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../servertalk.h"
+#include "common/servertalk.h"
 
 namespace EQ
 {

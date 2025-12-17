@@ -17,11 +17,9 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef COMMON_TEXTURES_H
-#define COMMON_TEXTURES_H
+#pragma once
 
-#include "types.h"
-
+#include "common/types.h"
 
 namespace EQ
 {
@@ -160,5 +158,3 @@ namespace EQ
 	};
 
 } /*EQEmu*/
-
-#endif /*COMMON_TEXTURES_H*/

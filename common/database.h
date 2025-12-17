@@ -15,25 +15,23 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef EQEMU_DATABASE_H
-#define EQEMU_DATABASE_H
 
-#define AUTHENTICATION_TIMEOUT    60
-#define INVALID_ID                0xFFFFFFFF
+#pragma once
 
-#include "global_define.h"
-#include "eqemu_logsys.h"
-
-#include "types.h"
-#include "dbcore.h"
-#include "linked_list.h"
-#include "eq_packet_structs.h"
+#include "common/dbcore.h"
+#include "common/eq_packet_structs.h"
+#include "common/eqemu_logsys.h"
+#include "common/global_define.h"
+#include "common/linked_list.h"
+#include "common/types.h"
 
 #include <cmath>
 #include <string>
 #include <vector>
 #include <map>
 
+#define AUTHENTICATION_TIMEOUT    60
+#define INVALID_ID                0xFFFFFFFF
 
 class MySQLRequestResult;
 class Client;
@@ -292,5 +290,3 @@ private:
 	void ClearAllRaidDetails();
 	void ClearAllRaidLeaders();
 };
-
-#endif

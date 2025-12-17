@@ -1,5 +1,6 @@
 #include "skill_caps.h"
-#include "timer.h"
+
+#include "common/timer.h"
 
 // cache the skill cap max level in the database
 std::map<uint8_t, int32_t> skill_max_level = {};

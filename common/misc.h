@@ -1,9 +1,8 @@
-#ifndef _MISC_H
+#pragma once
 
-#define _MISC_H
+#include <map>
 #include <stdio.h>
 #include <string>
-#include <map>
 
 #define ITEMFIELDCOUNT 116
 
@@ -28,6 +27,3 @@ int EQsprintf(char *buffer, const char *pattern, const char *arg1, const char *a
 std::string generate_key(int length);
 void build_hex_line(const char *buffer, unsigned long length, unsigned long offset, char *out_buffer, unsigned char padding=4);
 void print_hex(const char *buffer, unsigned long length);
-
-#endif
-

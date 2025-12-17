@@ -18,8 +18,7 @@
  *
  */
 
-#ifndef EQEMU_DATABASE_SCHEMA_H
-#define EQEMU_DATABASE_SCHEMA_H
+#pragma once
 
 #include <vector>
 #include <map>
@@ -438,5 +437,3 @@ namespace DatabaseSchema {
 	}
 
 }
-
-#endif //EQEMU_DATABASE_SCHEMA_H

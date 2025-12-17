@@ -15,15 +15,16 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef EQDBRes_H_
-#define EQDBRes_H_
 
+#pragma once
+
+#include "common/database.h"
+#include "common/types.h"
+
+#include "mysql.h"
 #include <string>
 #include <vector>
 #include <map>
-#include "types.h"
-#include "database.h"
-#include <mysql.h>
 
 //this is the main object exported to perl.
 class EQDBRes {
@@ -44,5 +45,3 @@ public:
 private:
 	MYSQL_RES *res;
 };
-
-#endif /*EQDBRes_H_*/

@@ -18,12 +18,13 @@
 */
 
 #include "say_link.h"
-#include "emu_constants.h"
 
-#include "strings.h"
-#include "item_instance.h"
-#include "item_data.h"
-#include "../zone/zonedb.h"
+#include "common/emu_constants.h"
+#include "common/strings.h"
+#include "common/item_instance.h"
+#include "common/item_data.h"
+#include "zone/zonedb.h"
+
 #include <algorithm>
 
 // static bucket global

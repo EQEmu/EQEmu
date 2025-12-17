@@ -1,10 +1,11 @@
-#include <utility>
 
-#include "global_define.h"
-#include "eqemu_logsys.h"
-#include "eq_stream_ident.h"
-#include "eq_stream_proxy.h"
-#include "misc.h"
+#include "common/eq_stream_ident.h"
+#include "common/eq_stream_proxy.h"
+#include "common/eqemu_logsys.h"
+#include "common/global_define.h"
+#include "common/misc.h"
+
+#include <utility>
 
 EQStreamIdentifier::~EQStreamIdentifier() {
 	while(!m_identified.empty()) {
@@ -162,4 +163,3 @@ EQStreamIdentifier::Record::Record(std::shared_ptr<EQStreamInterface> s)
 	expire(STREAM_IDENT_WAIT_MS)
 {
 }
-

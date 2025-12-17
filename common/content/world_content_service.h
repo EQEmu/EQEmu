@@ -1,11 +1,12 @@
-#ifndef EQEMU_WORLD_CONTENT_SERVICE_H
-#define EQEMU_WORLD_CONTENT_SERVICE_H
+
+#pragma once
+
+#include "common/repositories/content_flags_repository.h"
+#include "common/repositories/instance_list_repository.h"
+#include "common/repositories/zone_repository.h"
 
 #include <string>
 #include <vector>
-#include "../repositories/content_flags_repository.h"
-#include "../repositories/zone_repository.h"
-#include "../repositories/instance_list_repository.h"
 
 class Database;
 
@@ -199,5 +200,3 @@ private:
 	WorldContentService *LoadStaticGlobalZoneInstances();
 	std::vector<InstanceListRepository::InstanceList> m_zone_static_instances;
 };
-
-#endif //EQEMU_WORLD_CONTENT_SERVICE_H

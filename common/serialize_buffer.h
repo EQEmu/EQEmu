@@ -1,10 +1,10 @@
-#ifndef SERIALIZE_BUFFER_H
-#define SERIALIZE_BUFFER_H
 
-#include <cstring>
+#pragma once
+
 #include <cassert>
 #include <cstdint>
 #include <string>
+#include <utility>
 
 class SerializeBuffer
 {
@@ -195,5 +195,3 @@ private:
 	size_t m_capacity;
 	size_t m_pos;
 };
-
-#endif /* !SERIALIZE_BUFFER_H */

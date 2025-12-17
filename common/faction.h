@@ -15,11 +15,12 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef _EQEMU_FACTION_H
-#define _EQEMU_FACTION_H
 
-#include "types.h"
-#include "features.h"
+#pragma once
+
+#include "common/features.h"
+#include "common/types.h"
+
 #include <map>
 #include <string>
 
@@ -75,4 +76,3 @@ struct NPCFaction
 
 const char *FactionValueToString(FACTION_VALUE faction_value);
 FACTION_VALUE CalculateFaction(FactionMods* fm, int32 tmpCharacter_value);
-#endif

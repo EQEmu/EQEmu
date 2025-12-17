@@ -18,11 +18,11 @@
  *
  */
 
-#include <fmt/format.h>
-#include <fmt/ranges.h>
-#include "eqemu_command_handler.h"
-#include "terminal_color.hpp"
-#include "../platform.h"
+#include "common/cli/eqemu_command_handler.h"
+#include "common/cli/terminal_color.hpp"
+#include "common/platform.h"
+
+#include "fmt/format.h"
 
 namespace EQEmuCommand {
 

@@ -16,8 +16,9 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "global_define.h"
 #include "extprofile.h"
+
+#include "common/global_define.h"
 
 //Set defaults in the extended profile...
 void InitExtendedProfile(ExtendedProfile_Struct *p) {
@@ -49,4 +50,3 @@ bool SetExtendedProfile(ExtendedProfile_Struct *to, char *old, unsigned int len)
 
 	return(false);
 }
-

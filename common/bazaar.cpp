@@ -1,7 +1,8 @@
 #include "bazaar.h"
 
-#include "../../common/item_instance.h"
-#include "repositories/trader_repository.h"
+#include "common/item_instance.h"
+#include "common/repositories/trader_repository.h"
+
 #include <memory>
 
 std::vector<BazaarSearchResultsFromDB_Struct>

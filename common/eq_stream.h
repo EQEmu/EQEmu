@@ -1,23 +1,21 @@
-#ifndef _EQSTREAM_H
-#define _EQSTREAM_H
+#pragma once
 
-#include <vector>
+#include "common/eq_packet.h"
+#include "common/eq_stream_intf.h"
+#include "common/eq_stream_type.h"
+#include "common/misc.h"
+#include "common/mutex.h"
+#include "common/opcodemgr.h"
+#include "common/timer.h"
+
+#include <deque>
 #include <map>
 #include <queue>
-#include <deque>
+#include <vector>
 
 #ifndef WIN32
 #include <netinet/in.h>
 #endif
-
-#include "../common/misc.h"
-#include "../common/opcodemgr.h"
-#include "../common/timer.h"
-
-#include "eq_packet.h"
-#include "eq_stream_intf.h"
-#include "eq_stream_type.h"
-#include "mutex.h"
 
 class EQApplicationPacket;
 class EQProtocolPacket;
@@ -314,6 +312,3 @@ class EQStream : public EQStreamInterface {
 		virtual MatchState CheckSignature(const Signature *sig);
 
 };
-
-#endif
-

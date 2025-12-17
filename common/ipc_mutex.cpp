@@ -17,20 +17,23 @@
 */
 
 #include "ipc_mutex.h"
+
+#include "common/eqemu_config.h"
+#include "common/eqemu_exception.h"
+#include "common/path_manager.h"
+#include "common/types.h"
+
 #ifdef _WINDOWS
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include <Windows.h>
-#undef WIN32_LEAN_AND_MEAN
 #else
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #endif
-#include "types.h"
-#include "eqemu_exception.h"
-#include "eqemu_config.h"
-#include "path_manager.h"
 
 namespace EQ {
 	struct IPCMutex::Implementation {

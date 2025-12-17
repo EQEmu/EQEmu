@@ -16,16 +16,17 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
 #include "eqemu_config.h"
-#include "misc_functions.h"
-#include "strings.h"
-#include "eqemu_logsys.h"
-#include "json/json.hpp"
 
+#include "common/eqemu_logsys.h"
+#include "common/global_define.h"
+#include "common/json/json.hpp"
+#include "common/misc_functions.h"
+#include "common/strings.h"
+
+#include <filesystem>
 #include <iostream>
 #include <sstream>
-#include <filesystem>
 
 std::string EQEmuConfig::ConfigFile = "eqemu_config.json";
 EQEmuConfig *EQEmuConfig::_config = nullptr;

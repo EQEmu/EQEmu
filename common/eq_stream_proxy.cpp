@@ -1,9 +1,10 @@
 
-#include "global_define.h"
 #include "eq_stream_proxy.h"
-#include "struct_strategy.h"
-#include "eqemu_logsys.h"
-#include "opcodemgr.h"
+
+#include "common/eqemu_logsys.h"
+#include "common/global_define.h"
+#include "common/opcodemgr.h"
+#include "common/struct_strategy.h"
 
 
 EQStreamProxy::EQStreamProxy(std::shared_ptr<EQStreamInterface> &stream, const StructStrategy *structs, OpcodeManager **opcodes)

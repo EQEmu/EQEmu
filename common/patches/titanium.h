@@ -17,10 +17,9 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef COMMON_TITANIUM_H
-#define COMMON_TITANIUM_H
+#pragma once
 
-#include "../struct_strategy.h"
+#include "common/struct_strategy.h"
 
 class EQStreamIdentifier;
 
@@ -50,6 +49,4 @@ namespace Titanium
 		#include "titanium_ops.h"
 	};
 
-}; /*Titanium*/
-
-#endif /*COMMON_TITANIUM_H*/
+} /*Titanium*/

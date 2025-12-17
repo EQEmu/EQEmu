@@ -1,9 +1,9 @@
 #pragma once
 
-#include "tcp_connection.h"
-#include "../event/timer.h"
-#include "servertalk_common.h"
-#include "packet.h"
+#include "common/event/timer.h"
+#include "common/net/tcp_connection.h"
+#include "common/net/packet.h"
+#include "common/net/servertalk_common.h"
 
 namespace EQ
 {

@@ -1,7 +1,8 @@
 #include "evolving_items.h"
-#include "item_instance.h"
-#include "events/player_event_logs.h"
-#include "repositories/character_evolving_items_repository.h"
+
+#include "common/events/player_event_logs.h"
+#include "common/item_instance.h"
+#include "common/repositories/character_evolving_items_repository.h"
 
 EvolvingItemsManager::EvolvingItemsManager()
 {

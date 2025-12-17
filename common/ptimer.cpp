@@ -16,23 +16,23 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "global_define.h"
-
-#include "timer.h"
 #include "ptimer.h"
-#include "database.h"
-#include "strings.h"
+
+#include "common/database.h"
+#include "common/global_define.h"
+#include "common/strings.h"
+#include "common/timer.h"
 
 #ifdef _WINDOWS
-	#include <winsock2.h>
-	#include <windows.h>
-	int gettimeofday (timeval *tp, ...);
+#include <winsock2.h>
+#include <windows.h>
+int gettimeofday (timeval *tp, ...);
 #else
-	#include <sys/time.h>
+#include <sys/time.h>
 #endif
 
 #if EQDEBUG > 10
-	#define DEBUG_PTIMERS
+#define DEBUG_PTIMERS
 #endif
 
 

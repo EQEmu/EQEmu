@@ -16,12 +16,11 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#ifndef OPCODE_MANAGER_H
-#define OPCODE_MANAGER_H
+#pragma once
 
-#include "types.h"
-#include "mutex.h"
-#include "emu_opcodes.h"
+#include "common/emu_opcodes.h"
+#include "common/mutex.h"
+#include "common/types.h"
 
 #include <map>
 
@@ -158,6 +157,3 @@ protected:
 	std::map<EmuOpcode, uint16> emu_to_eq;
 	std::map<uint16, EmuOpcode> eq_to_emu;
 };
-
-#endif
-

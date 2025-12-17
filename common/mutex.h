@@ -15,16 +15,18 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef MYMUTEX_H
-#define MYMUTEX_H
+
+#pragma once
+
+#include "common/types.h"
+
 #ifdef _WINDOWS
-	#include <winsock2.h>
-	#include <windows.h>
+#include <winsock2.h>
+#include <windows.h>
 #else
-	#include <pthread.h>
-	#include "../common/unix.h"
+#include "common/unix.h"
+#include <pthread.h>
 #endif
-#include "../common/types.h"
 
 class Mutex {
 public:
@@ -78,6 +80,3 @@ private:
 	int32	wl;	// write locks in effect (should never be more than 1)
 	Mutex	MCounters;
 };
-
-#endif
-

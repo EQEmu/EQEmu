@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../types.h"
-#include "../database.h"
-#include "../strings.h"
-#include "../eqemu_logsys.h"
-#include "../eqemu_logsys_log_aliases.h"
-#include "../features.h"
-#include "../global_define.h"
+#include "common/types.h"
+#include "common/database.h"
+#include "common/strings.h"
+#include "common/eqemu_logsys.h"
+#include "common/eqemu_logsys_log_aliases.h"
+#include "common/features.h"
+#include "common/global_define.h"

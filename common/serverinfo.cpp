@@ -17,7 +17,8 @@
 */
 
 #include "serverinfo.h"
-#include <uv.h>
+
+#include "uv.h"
 
 size_t EQ::GetRSS()
 {

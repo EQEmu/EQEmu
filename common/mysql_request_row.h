@@ -1,14 +1,9 @@
-#ifndef MYSQL_REQUEST_ROW_H
-#define MYSQL_REQUEST_ROW_H
+#pragma once
 
-#ifdef _WINDOWS
-	#include <winsock2.h>
-	#include <windows.h>
-#endif
+#include "common/types.h"
 
-#include <mysql.h>
+#include "mysql.h"
 #include <iterator>
-#include "types.h"
 
 class MySQLRequestRow
 {
@@ -36,9 +31,4 @@ public:
 	bool operator!=(const MySQLRequestRow& rhs);
 	MySQLRequestRow operator*();
 	char* operator[](int index);
-
 };
-
-
-
-#endif

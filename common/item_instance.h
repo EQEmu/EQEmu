@@ -21,23 +21,21 @@
 // These classes could be optimized with database reads/writes by storing
 // a status flag indicating how object needs to interact with database
 
-#ifndef COMMON_ITEM_INSTANCE_H
-#define COMMON_ITEM_INSTANCE_H
-#include "evolving_items.h"
+#pragma once
 
+#include "common/bodytypes.h"
+#include "common/deity.h"
+#include "common/eq_constants.h"
+#include "common/evolving_items.h"
+#include "common/item_data.h"
+#include "common/memory_buffer.h"
+#include "common/repositories/character_evolving_items_repository.h"
+#include "common/timer.h"
+
+#include <map>
 
 class ItemParse;			// Parses item packets
 class EvolveInfo;			// Stores information about an evolving item family
-
-#include "../common/eq_constants.h"
-#include "../common/item_data.h"
-#include "../common/timer.h"
-#include "../common/bodytypes.h"
-#include "../common/deity.h"
-#include "../common/memory_buffer.h"
-#include "../common/repositories/character_evolving_items_repository.h"
-
-#include <map>
 
 
 // Specifies usage type for item inside EQ::ItemInstance
@@ -376,4 +374,3 @@ namespace EQ
 		mutable std::map<std::string, ::Timer> m_timers {};
 	};
 }
-#endif /*COMMON_ITEM_INSTANCE_H*/

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "websocket_server_connection.h"
+#include "common/json/json.h"
+#include "common/net/websocket_server_connection.h"
 
-#include "../json/json.h"
-#include <memory>
-#include <functional>
 #include <exception>
+#include <functional>
+#include <memory>
 
 namespace EQ
 {

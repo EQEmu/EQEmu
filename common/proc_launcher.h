@@ -15,14 +15,14 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef PROCLAUNCHER_H_
-#define PROCLAUNCHER_H_
 
-#include "global_define.h"
+#pragma once
 
+#include "common/global_define.h"
+
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
 
 #ifdef __FreeBSD__
 #include <unistd.h>
@@ -92,6 +92,3 @@ private:
 	static void HandleSigChild(int signum);
 #endif
 };
-
-#endif /*PROCLAUNCHER_H_*/
-

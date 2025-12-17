@@ -21,13 +21,11 @@
 // These classes could be optimized with database reads/writes by storing
 // a status flag indicating how object needs to interact with database
 
-#ifndef COMMON_INVENTORY_PROFILE_H
-#define COMMON_INVENTORY_PROFILE_H
+#pragma once
 
-
-#include "item_instance.h"
-#include "classes.h"
-#include "races.h"
+#include "common/classes.h"
+#include "common/item_instance.h"
+#include "common/races.h"
 
 #include <list>
 #include <vector>
@@ -253,5 +251,3 @@ namespace EQ
 		const inventory::LookupEntry* m_lookup;
 	};
 }
-
-#endif /*COMMON_INVENTORY_PROFILE_H*/

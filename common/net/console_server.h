@@ -1,6 +1,7 @@
 #pragma once
 
 #include "console_server_connection.h"
+
 #include <functional>
 #include <vector>
 

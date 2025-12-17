@@ -18,11 +18,11 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
+#include <iostream>
 #include <limits>
 #include <type_traits>
-#include <algorithm>
-#include <iostream>
 
 /*
  * This is an additive lagged fibonacci generator as seen in The Art of Computer Programming, Vol. 2

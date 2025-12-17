@@ -17,20 +17,12 @@
 */
 
 #include "inventory_profile.h"
-#include "textures.h"
-#include "eqemu_logsys.h"
-//#include "classes.h"
-//#include "global_define.h"
-//#include "item_instance.h"
-//#include "races.h"
-//#include "rulesys.h"
-//#include "shareddb.h"
-#include "strings.h"
 
-#include "../common/light_source.h"
-#include "data_verification.h"
-
-//#include <limits.h>
+#include "common/data_verification.h"
+#include "common/eqemu_logsys.h"
+#include "common/light_source.h"
+#include "common/strings.h"
+#include "common/textures.h"
 
 #include <iostream>
 

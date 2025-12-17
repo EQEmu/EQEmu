@@ -1,11 +1,12 @@
-#include "console_server.h"
-#include "../util/uuid.h"
-#include "../net/packet.h"
-#include "../eqemu_logsys.h"
-#include "../servertalk.h"
-#include "../rulesys.h"
-#include <fmt/format.h>
-#include <fmt/ranges.h>
+#include "console_server_connection.h"
+
+#include "common/util/uuid.h"
+#include "common/net/console_server.h"
+#include "common/net/packet.h"
+#include "common/servertalk.h"
+#include "common/rulesys.h"
+
+#include "fmt/format.h"
 
 EQ::Net::ConsoleServerConnection::ConsoleServerConnection(ConsoleServer *parent, std::shared_ptr<TCPConnection> connection)
 {

@@ -1,8 +1,10 @@
-#ifndef EQEMU_TASKS_H
-#define EQEMU_TASKS_H
+#pragma once
 
-#include "../common/strings.h"
-#include "serialize_buffer.h"
+#include "common/emu_versions.h"
+#include "common/eqemu_logsys.h"
+#include "common/serialize_buffer.h"
+#include "common/strings.h"
+
 #include <algorithm>
 #include <array>
 
@@ -564,5 +566,3 @@ namespace TaskStr {
 		return "Unknown EQStr";
 	}
 }
-
-#endif //EQEMU_TASKS_H

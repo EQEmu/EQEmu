@@ -1,12 +1,13 @@
 #pragma once
 
-#include "../eq_packet.h"
-#include "../eq_stream_intf.h"
-#include "../opcodemgr.h"
-#include "reliable_stream_connection.h"
-#include <vector>
+#include "common/eq_packet.h"
+#include "common/eq_stream_intf.h"
+#include "common/net/reliable_stream_connection.h"
+#include "common/opcodemgr.h"
+
 #include <deque>
 #include <unordered_map>
+#include <vector>
 
 namespace EQ
 {

@@ -15,14 +15,15 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/global_define.h"
-#include "../common/mutex.h"
+
+#include "mutex.h"
+
+#include "common/global_define.h"
 
 #include <iostream>
 
 #define DEBUG_MUTEX_CLASS 0
 #if DEBUG_MUTEX_CLASS >= 1
-
 #endif
 
 #ifdef _WINDOWS

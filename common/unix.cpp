@@ -18,6 +18,7 @@
 #ifndef _WINDOWS
 
 #include "unix.h"
+
 #include <string.h>
 #include <ctype.h>
 
@@ -42,7 +43,5 @@ char* strlwr(char* tmp) {
 	return tmp;
 }
 
-#else
-	int joe = 1;
 #endif /* !WIN32 */
 

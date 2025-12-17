@@ -16,6 +16,8 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
+#pragma once
+
 // WHY IS THIS UP HERE
 #if defined(_DEBUG) && defined(WIN32)
 	#ifndef _CRTDBG_MAP_ALLOC
@@ -24,12 +26,8 @@
 	#endif
 #endif
 
-#ifndef EQDEBUG_H
-#define EQDEBUG_H
 
 #ifdef _WINDOWS
 	#include <winsock2.h>
 	#include <windows.h>
-#endif
-
 #endif

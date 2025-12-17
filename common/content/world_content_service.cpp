@@ -1,13 +1,13 @@
 #include "world_content_service.h"
 
-#include <utility>
-#include <glm/vec3.hpp>
-#include "../database.h"
-#include "../rulesys.h"
-#include "../eqemu_logsys.h"
-#include "../repositories/instance_list_repository.h"
-#include "../zone_store.h"
+#include "common/database.h"
+#include "common/eqemu_logsys.h"
+#include "common/repositories/instance_list_repository.h"
+#include "common/rulesys.h"
+#include "common/zone_store.h"
 
+#include "glm/vec3.hpp"
+#include <utility>
 
 WorldContentService::WorldContentService()
 {

@@ -1,7 +1,9 @@
-#include "../common/database.h"
-#include "../common/strings.h"
 #include "server_event_scheduler.h"
-#include "../common/cron/croncpp.h"
+
+#include "common/cron/croncpp.h"
+#include "common/database.h"
+#include "common/strings.h"
+
 #include <chrono>
 #include <iostream>
 #include <time.h>

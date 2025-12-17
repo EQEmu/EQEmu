@@ -1,13 +1,13 @@
-#ifndef GUILD_BASE_H_
-#define GUILD_BASE_H_
+#pragma once
 
-#include "guilds.h"
+#include "common/guilds.h"
+#include "common/repositories/guild_members_repository.h"
+#include "common/repositories/guilds_repository.h"
+#include "common/timer.h"
+
 #include <map>
 #include <string>
 #include <vector>
-#include "timer.h"
-#include "../common/repositories/guild_members_repository.h"
-#include "../common/repositories/guilds_repository.h"
 
 struct DefaultPermissionStruct {
 	GuildAction id;
@@ -210,6 +210,3 @@ class BaseGuildManager
 		GuildInfo* _CreateGuild(uint32 guild_id, std::string guild_name, uint32 leader_char_id, uint8 minstatus, std::string guild_motd, std::string motd_setter, std::string Channel, std::string URL, uint32 favour);
         GuildsRepository::Guilds CreateGuildRepoFromGuildInfo(uint32 guild_id, BaseGuildManager::GuildInfo& in);
 };
-#endif /*GUILD_BASE_H_*/
-
-

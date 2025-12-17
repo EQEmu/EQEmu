@@ -15,16 +15,18 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/global_define.h"
-#include <iostream>
-#include <iomanip>
-#include <string.h>
-#include <zlib.h>
-#include "packet_dump.h"
+
 #include "packet_functions.h"
 
+#include "common/global_define.h"
+#include "common/packet_dump.h"
+
+#include "zlib.h"
+#include <iomanip>
+#include <iostream>
+#include <string.h>
 #ifndef WIN32
-	#include <netinet/in.h>
+#include <netinet/in.h>
 #endif
 
 void EncryptProfilePacket(EQApplicationPacket* app) {

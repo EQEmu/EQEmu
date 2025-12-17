@@ -15,11 +15,11 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef PACKET_DUMP_H
-#define PACKET_DUMP_H
 
-#include "types.h"
-#include "net/packet.h"
+#pragma once
+
+#include "common/types.h"
+#include "common/net/packet.h"
 
 class ServerPacket;
 
@@ -34,6 +34,3 @@ void DumpPacketBin(const ServerPacket* pack);
 void DumpPacketBin(uint32 data);
 void DumpPacketBin(uint16 data);
 void DumpPacketBin(uint8 data);
-
-#endif
-

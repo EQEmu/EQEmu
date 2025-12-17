@@ -17,13 +17,14 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef COMMON_SOF_STRUCTS_H
-#define COMMON_SOF_STRUCTS_H
+#pragma once
 
+#include "common/eq_packet_structs.h"
+#include "common/patches/sof_limits.h"
+#include "common/textures.h"
+#include "common/types.h"
 
-namespace SoF
-{
-	namespace structs {
+namespace SoF { namespace structs {
 
 
 static const uint32 BUFF_COUNT = 25;
@@ -32,6 +33,7 @@ static const uint32 BUFF_COUNT = 25;
 ** Compiler override to ensure
 ** byte aligned structures
 */
+#pragma pack(push)
 #pragma pack(1)
 
 struct LoginInfo_Struct {
@@ -4298,8 +4300,7 @@ struct SayLinkBodyFrame_Struct {
 /*050*/
 };
 
-	}; /*structs*/
+#pragma pack(pop)
 
-}; /*SoF*/
-
-#endif /*COMMON_SOF_STRUCTS_H*/
+} /*structs*/
+} /*SoF*/

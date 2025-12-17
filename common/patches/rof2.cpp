@@ -17,31 +17,30 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include "../global_define.h"
-#include "../eqemu_config.h"
-#include "../eqemu_logsys.h"
 #include "rof2.h"
-#include "../opcodemgr.h"
-
-#include "../eq_stream_ident.h"
-#include "../crc32.h"
-
-#include "../eq_packet_structs.h"
-#include "../misc_functions.h"
-#include "../strings.h"
-#include "../inventory_profile.h"
 #include "rof2_structs.h"
-#include "../rulesys.h"
-#include "../path_manager.h"
-#include "../classes.h"
-#include "../races.h"
-#include "../raid.h"
 
-#include <iostream>
-#include <sstream>
-#include <numeric>
+#include "common/classes.h"
+#include "common/crc32.h"
+#include "common/eq_packet_structs.h"
+#include "common/eq_stream_ident.h"
+#include "common/eqemu_config.h"
+#include "common/eqemu_logsys.h"
+#include "common/global_define.h"
+#include "common/inventory_profile.h"
+#include "common/misc_functions.h"
+#include "common/opcodemgr.h"
+#include "common/path_manager.h"
+#include "common/races.h"
+#include "common/raid.h"
+#include "common/rulesys.h"
+#include "common/strings.h"
+
 #include <cassert>
 #include <cinttypes>
+#include <iostream>
+#include <numeric>
+#include <sstream>
 
 
 namespace RoF2

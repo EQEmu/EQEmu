@@ -21,7 +21,6 @@
 
 #include <string.h>
 
-
 uint8 EQ::lightsource::TypeToLevel(uint8 light_type)
 {
 	switch (light_type) {

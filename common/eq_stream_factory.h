@@ -1,14 +1,12 @@
-#ifndef _EQSTREAMFACTORY_H
+#pragma once
 
-#define _EQSTREAMFACTORY_H
+#include "common/condition.h"
+#include "common/eq_stream.h"
+#include "common/timeoutmgr.h"
 
+#include <map>
 #include <memory>
 #include <queue>
-#include <map>
-
-#include "../common/eq_stream.h"
-#include "../common/condition.h"
-#include "../common/timeoutmgr.h"
 
 class EQStream;
 class Timer;
@@ -57,5 +55,3 @@ class EQStreamFactory : private Timeoutable {
 		void StopWriter() { MWriterRunning.lock(); WriterRunning=false; MWriterRunning.unlock(); WriterWork.Signal(); }
 		void SignalWriter() { WriterWork.Signal(); }
 };
-
-#endif

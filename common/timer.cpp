@@ -16,14 +16,14 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
+#include "timer.h"
+
 // Disgrace: for windows compile
 #ifndef WIN32
 	#include <sys/time.h>
 #else
 	#include <sys/timeb.h>
 #endif
-
-#include "timer.h"
 
 uint32 current_time = 0;
 uint32 last_time = 0;

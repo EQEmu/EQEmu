@@ -1,11 +1,12 @@
-#ifndef EQEMU_PLAYER_EVENTS_H
-#define EQEMU_PLAYER_EVENTS_H
+#pragma once
+
+#include "common/repositories/player_event_logs_repository.h"
+#include "common/rulesys.h"
+#include "common/types.h"
+
+#include "cereal/cereal.hpp"
 
 #include <string>
-#include <cereal/cereal.hpp>
-#include "../types.h"
-#include "../rulesys.h"
-#include "../repositories/player_event_logs_repository.h"
 
 #define CEREAL_NVP_IF_NONZERO(ar, name) \
 if ((name) != 0) ar(cereal::make_nvp(#name, name))
@@ -1752,8 +1753,6 @@ namespace PlayerEvent {
 		}
 	};
 }
-
-#endif //EQEMU_PLAYER_EVENTS_H
 
 #define RecordPlayerEventLog(event_type, event_data) do {\
     if (PlayerEventLogs::Instance()->IsEventEnabled(event_type)) {\

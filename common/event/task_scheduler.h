@@ -1,11 +1,12 @@
 #pragma once
-#include <vector>
-#include <thread>
-#include <mutex>
+
 #include <condition_variable>
 #include <functional>
-#include <queue>
 #include <future>
+#include <mutex>
+#include <queue>
+#include <thread>
+#include <vector>
 
 namespace EQ
 {

@@ -1,17 +1,16 @@
-#ifndef EQEMU_SHARED_TASKS_H
-#define EQEMU_SHARED_TASKS_H
+#pragma once
 
-#include "database.h"
-#include "timer.h"
-#include "tasks.h"
-#include "types.h"
-#include "repositories/character_data_repository.h"
-#include "repositories/tasks_repository.h"
-#include "repositories/task_activities_repository.h"
-#include "repositories/shared_tasks_repository.h"
-#include <vector>
+#include "common/database.h"
+#include "common/repositories/character_data_repository.h"
+#include "common/repositories/shared_tasks_repository.h"
+#include "common/repositories/task_activities_repository.h"
+#include "common/repositories/tasks_repository.h"
+#include "common/tasks.h"
+#include "common/timer.h"
+#include "common/types.h"
+
 #include <string>
-#include <iostream>
+#include <vector>
 
 // ops
 #define ServerOP_SharedTaskRequest                  0x0300 // zone -> world. Player trying to get task. Relayed world -> zone on confirmation
@@ -232,5 +231,3 @@ protected:
 	TasksRepository::Tasks                                m_task_data;
 	std::vector<TaskActivitiesRepository::TaskActivities> m_task_activity_data;
 };
-
-#endif //EQEMU_SHARED_TASKS_H

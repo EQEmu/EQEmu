@@ -1,8 +1,11 @@
-#include "../common/data_bucket.h"
-#include "database.h"
-#include <ctime>
+#include "data_bucket.h"
+
+#include "common/data_bucket.h"
+#include "common/database.h"
+#include "common/json/json.hpp"
+
 #include <cctype>
-#include "../common/json/json.hpp"
+#include <ctime>
 
 using json = nlohmann::json;
 

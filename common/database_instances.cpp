@@ -16,23 +16,24 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/rulesys.h"
-#include "../common/strings.h"
-#include "../common/timer.h"
-#include "../common/repositories/character_corpses_repository.h"
-#include "../common/repositories/dynamic_zone_members_repository.h"
-#include "../common/repositories/dynamic_zones_repository.h"
-#include "../common/repositories/group_id_repository.h"
-#include "../common/repositories/instance_list_repository.h"
-#include "../common/repositories/instance_list_player_repository.h"
-#include "../common/repositories/raid_members_repository.h"
-#include "../common/repositories/respawn_times_repository.h"
-#include "../common/repositories/spawn_condition_values_repository.h"
-#include "repositories/spawn2_disabled_repository.h"
-#include "repositories/data_buckets_repository.h"
-#include "repositories/zone_state_spawns_repository.h"
 #include "database.h"
+
+#include "common/global_define.h"
+#include "common/repositories/character_corpses_repository.h"
+#include "common/repositories/data_buckets_repository.h"
+#include "common/repositories/dynamic_zone_members_repository.h"
+#include "common/repositories/dynamic_zones_repository.h"
+#include "common/repositories/group_id_repository.h"
+#include "common/repositories/instance_list_player_repository.h"
+#include "common/repositories/instance_list_repository.h"
+#include "common/repositories/raid_members_repository.h"
+#include "common/repositories/respawn_times_repository.h"
+#include "common/repositories/spawn_condition_values_repository.h"
+#include "common/repositories/spawn2_disabled_repository.h"
+#include "common/repositories/zone_state_spawns_repository.h"
+#include "common/rulesys.h"
+#include "common/strings.h"
+#include "common/timer.h"
 
 #include <iomanip>
 #include <iostream>
@@ -44,8 +45,8 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #define strncasecmp	_strnicmp
 #define strcasecmp	_stricmp
 #else
-#include "unix.h"
-#include "../zone/zonedb.h"
+#include "common/unix.h"
+#include "zone/zonedb.h"
 #include <netinet/in.h>
 #include <sys/time.h>
 #endif

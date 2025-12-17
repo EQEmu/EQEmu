@@ -17,9 +17,9 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include "emu_constants.h"
-#include "emu_limits.h"
-#include "rulesys.h"
+#include "common/emu_constants.h"
+#include "common/emu_limits.h"
+#include "common/rulesys.h"
 
 #include <memory>
 

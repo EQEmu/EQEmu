@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstdint>
 #include <algorithm>
+#include <cstdint>
 #include <type_traits>
 
 namespace EQ

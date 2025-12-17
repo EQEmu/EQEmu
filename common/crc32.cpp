@@ -1,5 +1,6 @@
 #include "crc32.h"
-#include <assert.h>
+
+#include <cassert>
 #include <memory.h>
 
 uint32 CRC32Table[256] =

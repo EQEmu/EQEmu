@@ -1,10 +1,11 @@
 #pragma once
 
-#include "tcp_server.h"
-#include "../types.h"
-#include "../json/json-forwards.h"
-#include <websocketpp/config/core.hpp>
-#include <websocketpp/server.hpp>
+#include "common/json/json-forwards.h"
+#include "common/net/tcp_server.h"
+#include "common/types.h"
+
+#include "websocketpp/config/core.hpp"
+#include "websocketpp/server.hpp"
 
 namespace EQ
 {

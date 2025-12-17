@@ -1,30 +1,26 @@
-#ifdef _WINDOWS
-#include <winsock2.h>
-#endif
-
-#include "misc_functions.h"
-#include "eqemu_logsys.h"
-#include "timer.h"
-
 #include "dbcore.h"
-#include "mysql_stmt.h"
+
+#include "common/eqemu_logsys.h"
+#include "common/misc_functions.h"
+#include "common/mysql_stmt.h"
+#include "common/strings.h"
+#include "common/timer.h"
+
+#include "mysqld_error.h"
 
 #include <fstream>
 #include <iostream>
-#include <mysqld_error.h>
 #include <string.h>
-#include "strings.h"
 
 #ifdef _WINDOWS
 #define snprintf	_snprintf
 #define strncasecmp	_strnicmp
 #define strcasecmp	_stricmp
 #include <process.h>
+#include <winsock2.h>
 #else
-
-#include "unix.h"
+#include "common/unix.h"
 #include <pthread.h>
-
 #endif
 
 #ifdef _EQDEBUG

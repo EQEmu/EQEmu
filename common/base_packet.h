@@ -15,13 +15,14 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef BASEPACKET_H_
-#define BASEPACKET_H_
 
-#include "types.h"
-#include "serialize_buffer.h"
-#include <stdio.h>
-#include <string.h>
+#pragma once
+
+#include "common/serialize_buffer.h"
+#include "common/types.h"
+
+#include <cstdio>
+#include <cstring>
 
 #ifdef _WINDOWS
 	#include <time.h>
@@ -93,6 +94,3 @@ protected:
 extern void DumpPacketHex(const BasePacket* app);
 extern void DumpPacketAscii(const BasePacket* app);
 extern void DumpPacketBin(const BasePacket* app);
-
-#endif /*BASEPACKET_H_*/
-

@@ -1,8 +1,9 @@
 #pragma once
 
+#include "repositories/base/base_dynamic_zone_lockouts_repository.h"
+
 #include <chrono>
 #include <string>
-#include "repositories/base/base_dynamic_zone_lockouts_repository.h"
 
 class DzLockout
 {

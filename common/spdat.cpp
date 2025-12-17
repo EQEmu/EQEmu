@@ -16,6 +16,17 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
+#include "spdat.h"
+
+#include "common/classes.h"
+#include "common/eqemu_logsys.h"
+#include "common/rulesys.h"
+#include "common/strings.h"
+
+#ifndef WIN32
+#include "common/unix.h"
+#endif
+#include <cstdlib>
 
 /*
 
@@ -70,19 +81,6 @@
 
 */
 
-
-
-#include "../common/eqemu_logsys.h"
-
-#include "classes.h"
-#include "spdat.h"
-#include "../common/rulesys.h"
-#include "../common/strings.h"
-
-#ifndef WIN32
-#include <stdlib.h>
-#include "unix.h"
-#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 // spell property testing functions

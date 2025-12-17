@@ -17,10 +17,9 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef COMMON_ROF_H
-#define COMMON_ROF_H
+#pragma once
 
-#include "../struct_strategy.h"
+#include "common/struct_strategy.h"
 
 class EQStreamIdentifier;
 
@@ -50,6 +49,4 @@ namespace RoF
 		#include "rof_ops.h"
 	};
 
-}; /*RoF*/
-
-#endif /*COMMON_ROF_H*/
+} /*RoF*/

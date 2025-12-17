@@ -765,6 +765,7 @@ add_library(common ${common_sources} ${common_headers} ${repositories})
 
 target_compile_definitions(common PUBLIC BOOST_BIND_GLOBAL_PLACEHOLDERS GLM_FORCE_RADIANS GLM_FORCE_CTOR_INIT GLM_ENABLE_EXPERIMENTAL ENABLE_SECURITY)
 target_include_directories(common PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/../submodules/websocketpp")
+target_include_directories(common PRIVATE ..)
 target_link_libraries(common PUBLIC cereal::cereal fmt::fmt unofficial::libmariadb $<IF:$<TARGET_EXISTS:libuv::uv_a>,libuv::uv_a,libuv::uv> OpenSSL::SSL OpenSSL::Crypto ZLIB::ZLIB unofficial-sodium::sodium)
 
 # Requires libgoogle-perftools-dev google-perftools packages for linux (debian)

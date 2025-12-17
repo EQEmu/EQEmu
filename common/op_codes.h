@@ -1,6 +1,5 @@
-#ifndef _OP_CODES_H
+#pragma once
 
-#define _OP_CODES_H
 
 static const char OP_SessionRequest	=	0x01;
 static const char OP_SessionResponse	=	0x02;
@@ -15,5 +14,3 @@ static const char OP_OutOfOrderAck	=	0x11;
 static const char OP_Ack		=	0x15;
 static const char OP_AppCombined	=	0x19;
 static const char OP_OutOfSession	=	0x1d;
-
-#endif

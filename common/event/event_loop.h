@@ -1,7 +1,8 @@
 #pragma once
+
+#include "uv.h"
+
 #include <functional>
-#include <uv.h>
-#include <cstring>
 
 namespace EQ
 {
