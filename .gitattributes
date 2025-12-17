@@ -20,7 +20,3 @@
 *.css text
 *.js text
 *.types text
-
-*.vcproj text merge=union
-*.csproj text merge=union
-*.sln text merge=union eol=crlf
