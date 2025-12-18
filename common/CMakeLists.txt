@@ -101,6 +101,12 @@ set(common_sources
     perl_eqdb.cpp
     perl_eqdb_res.cpp
     platform.cpp
+    platform/inet.h
+    platform/platform.h
+    platform/posix/include_inet.h
+    platform/posix/include_pthreads.h
+    platform/win/include_windows.h
+    platform/win/include_winsock2.h
     proc_launcher.cpp
     process.cpp
     process/process.cpp
