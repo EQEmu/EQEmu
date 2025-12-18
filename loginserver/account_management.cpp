@@ -1,7 +1,10 @@
 #include "account_management.h"
 
+#include "common/event/event_loop.h"
 #include "common/event/task_scheduler.h"
+#include "common/net/dns.h"
 #include "common/repositories/login_accounts_repository.h"
+#include "common/types.h"
 #include "loginserver/login_server.h"
 
 EQ::Event::TaskScheduler task_runner;

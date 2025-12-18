@@ -2,24 +2,19 @@
 #include "common/database.h"
 #include "common/eqemu_logsys.h"
 #include "common/event/event_loop.h"
+#include "common/event/timer.h"
 #include "common/events/player_event_logs.h"
 #include "common/http/httplib.h"
-#include "common/opcodemgr.h"
 #include "common/path_manager.h"
 #include "common/platform.h"
-#include "common/strings.h"
 #include "common/timer.h"
 #include "common/types.h"
-#include "common/zone_store.h"
 #include "loginserver/login_server.h"
 #include "loginserver/loginserver_command_handler.h"
 #include "loginserver/loginserver_webserver.h"
 
-#include <sstream>
-#include <stdlib.h>
 #include <string>
 #include <thread>
-#include <time.h>
 
 LoginServer     server;
 bool            run_server = true;

@@ -2,7 +2,6 @@
 
 #include "common/net/servertalk_server.h"
 #include "common/packet_dump.h"
-#include "common/servertalk.h"
 #include "loginserver/client.h"
 #include "loginserver/world_server.h"
 

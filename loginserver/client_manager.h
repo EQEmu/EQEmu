@@ -1,7 +1,6 @@
 #pragma once
 
 #include "common/net/eqstream.h"
-#include "common/opcodemgr.h"
 #include "loginserver/client.h"
 
 #include <list>

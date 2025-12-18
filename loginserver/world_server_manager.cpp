@@ -3,9 +3,8 @@
 #include "common/eqemu_logsys.h"
 #include "common/ip_util.h"
 #include "loginserver/login_server.h"
-#include "loginserver/login_types.h"
 
-#include <cstdlib>
+#include <utility>
 
 extern LoginServer server;
 extern bool        run_server;

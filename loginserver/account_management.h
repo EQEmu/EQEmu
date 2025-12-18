@@ -2,8 +2,9 @@
 
 #include "common/types.h"
 #include "loginserver/login_types.h"
-#include "loginserver/encryption.h"
 #include "loginserver/login_server.h"
+
+#include <string>
 
 extern LoginServer server;
 extern Database database;

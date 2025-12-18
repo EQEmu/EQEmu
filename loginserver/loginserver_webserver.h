@@ -2,7 +2,6 @@
 
 #include "common/http/httplib.h"
 #include "common/json/json.h"
-#include "common/types.h"
 
 namespace LoginserverWebserver {
 

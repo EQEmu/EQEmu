@@ -41,7 +41,7 @@ struct EncryptionResult {
 	std::string mode_name;
 };
 
-static EncryptionResult EncryptPasswordFromContext(LoginAccountContext c, int mode = EncryptionModeSCrypt)
+inline EncryptionResult EncryptPasswordFromContext(LoginAccountContext c, int mode = EncryptionModeSCrypt)
 {
 	if (mode == 0) {
 		LogError("Encryption mode not set!");

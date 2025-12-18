@@ -1,13 +1,12 @@
-#ifndef EQEMU_CLIENT_H
-#define EQEMU_CLIENT_H
+#pragma once
 
-#include "../common/opcodemgr.h"
-#include "../common/random.h"
-#include "../common/eq_stream_intf.h"
-#include "../common/net/dns.h"
-#include "../common/net/reliable_stream_connection.h"
-#include "login_types.h"
-#include "../common/repositories/login_accounts_repository.h"
+#include "common/eq_stream_intf.h"
+#include "common/net/reliable_stream_connection.h"
+#include "common/opcodemgr.h"
+#include "common/random.h"
+#include "common/repositories/login_accounts_repository.h"
+#include "loginserver/login_types.h"
+
 #include <memory>
 
 class Client {
@@ -62,6 +61,3 @@ private:
 		return username == "healthcheckuser";
 	}
 };
-
-#endif
-
