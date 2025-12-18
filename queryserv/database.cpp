@@ -2,10 +2,8 @@
 #include "database.h"
 
 #include "common/eqemu_logsys.h"
-#include "common/global_define.h"
 #include "common/strings.h"
 
-#include <iostream>
 #include <map>
 
 // this function does not delete the ServerPacket, so it must be handled at call site

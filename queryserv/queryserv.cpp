@@ -3,7 +3,6 @@
 #include "common/eqemu_logsys.h"
 #include "common/event/event_loop.h"
 #include "common/events/player_event_logs.h"
-#include "common/global_define.h"
 #include "common/net/console_server.h"
 #include "common/net/servertalk_server.h"
 #include "common/opcodemgr.h"

@@ -3,7 +3,6 @@
 #include "common/eqemu_logsys.h"
 #include "common/events/player_event_logs.h"
 #include "common/events/player_events.h"
-#include "common/global_define.h"
 #include "common/md5.h"
 #include "common/net/packet.h"
 #include "common/packet_dump.h"

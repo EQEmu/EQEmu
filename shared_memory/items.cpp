@@ -19,7 +19,6 @@
 #include "items.h"
 
 #include "common/eqemu_exception.h"
-#include "common/global_define.h"
 #include "common/ipc_mutex.h"
 #include "common/item_data.h"
 #include "common/memory_mapped_file.h"

@@ -2,7 +2,6 @@
 
 #include "common/database.h"
 #include "common/eqemu_logsys.h"
-#include "common/global_define.h"
 #include "common/linked_list.h"
 #include "common/servertalk.h"
 #include "common/types.h"
