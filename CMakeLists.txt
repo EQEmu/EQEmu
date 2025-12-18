@@ -5,17 +5,17 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/" ${CMAKE_MODULE_PATH})
 if(NOT CMAKE_TOOLCHAIN_FILE)
 	if(DEFINED ENV{VCPKG_ROOT})
 		message(STATUS "Using vcpkg from VCPKG_ROOT")
-        set(CMAKE_TOOLCHAIN_FILE
-            "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-            CACHE FILEPATH "Vcpkg toolchain file"
-        )
+		set(CMAKE_TOOLCHAIN_FILE
+			"$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+			CACHE FILEPATH "Vcpkg toolchain file"
+		)
 	else()
-        message(STATUS "Using vcpkg submodule")
-        set(CMAKE_TOOLCHAIN_FILE
-            "${CMAKE_CURRENT_SOURCE_DIR}/submodules/vcpkg/scripts/buildsystems/vcpkg.cmake"
-            CACHE FILEPATH "Vcpkg toolchain file"
-        )
-    endif()
+		message(STATUS "Using vcpkg submodule")
+		set(CMAKE_TOOLCHAIN_FILE
+			"${CMAKE_CURRENT_SOURCE_DIR}/submodules/vcpkg/scripts/buildsystems/vcpkg.cmake"
+			CACHE FILEPATH "Vcpkg toolchain file"
+		)
+	endif()
 endif()
 
 project(EQEmu
@@ -48,6 +48,11 @@ if(MSVC)
 	option(EQEMU_DISABLE_MSVC_WARNINGS "Disable MSVC compile warnings." ON)
 	if(EQEMU_DISABLE_MSVC_WARNINGS)
 		add_compile_options(/W0 /wd4005 /wd4996 /nologo /Os)
+	endif()
+
+	option(EQEMU_MSVC_DEBUG_CRT "Use the debug CRT on MSVC debug builds" OFF)
+	if(EQEMU_MSVC_DEBUG_CRT)
+		add_compile_definitions(_CRT_DBG_MAP_ALLOC)
 	endif()
 else()
 	add_compile_definitions(HAS_UNION_SEMUN)
@@ -129,7 +134,7 @@ option(EQEMU_BUILD_CLIENT_FILES "Build Client Import/Export Data Programs." ON)
 
 if(PerlLibs_FOUND)
 	option(EQEMU_BUILD_PERL "Build Perl parser." ON)
-	
+
 	if(EQEMU_BUILD_PERL)
 		set(PERL_LIBRARY_TYPE "    Perl")
 	else()
