@@ -2714,7 +2714,7 @@ namespace UF
 
 		buf.WriteString(new_message);
 
-		auto outapp = new EQApplicationPacket(OP_SpecialMesg, std::move(buf));
+		auto outapp = new EQApplicationPacket(OP_SpecialMesg, buf);
 
 		dest->FastQueuePacket(&outapp, ack_req);
 		delete in;
