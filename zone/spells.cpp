@@ -66,46 +66,34 @@ Copyright (C) 2001-2002 EQEMu Development Team (http://eqemu.org)
 	and not SpellFinished().
 */
 
-#include "../common/bodytypes.h"
-#include "../common/classes.h"
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/item_instance.h"
-#include "../common/rulesys.h"
-#include "../common/spdat.h"
-#include "../common/strings.h"
-#include "../common/data_verification.h"
-#include "../common/misc_functions.h"
-#include "../common/events/player_event_logs.h"
-#include "../common/repositories/character_corpses_repository.h"
-#include "../common/repositories/spell_buckets_repository.h"
-
-#include "../common/data_bucket.h"
-#include "quest_parser_collection.h"
-#include "string_ids.h"
-#include "worldserver.h"
-#include "fastmath.h"
-#include "lua_parser.h"
-
-#include <assert.h>
-#include <algorithm>
-#include "queryserv.h"
-
-#ifndef WIN32
-	#include <stdlib.h>
-	#include "../common/unix.h"
-#endif
-
-#ifdef _GOTFRAGS
-	#include "../common/packet_dump_file.h"
-#endif
-
-#include "bot.h"
-
-#include "mob_movement_manager.h"
-#include "client.h"
 #include "mob.h"
-#include "water_map.h"
+
+#include "common/bodytypes.h"
+#include "common/classes.h"
+#include "common/data_bucket.h"
+#include "common/data_verification.h"
+#include "common/eqemu_logsys.h"
+#include "common/events/player_event_logs.h"
+#include "common/item_instance.h"
+#include "common/misc_functions.h"
+#include "common/repositories/character_corpses_repository.h"
+#include "common/repositories/spell_buckets_repository.h"
+#include "common/rulesys.h"
+#include "common/spdat.h"
+#include "common/strings.h"
+#include "zone/bot.h"
+#include "zone/client.h"
+#include "zone/fastmath.h"
+#include "zone/lua_parser.h"
+#include "zone/mob_movement_manager.h"
+#include "zone/queryserv.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/string_ids.h"
+#include "zone/water_map.h"
+#include "zone/worldserver.h"
+
+#include <algorithm>
+#include <cassert>
 
 extern Zone         *zone;
 extern volatile bool is_zone_loaded;

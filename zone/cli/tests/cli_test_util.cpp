@@ -1,4 +1,4 @@
-#include "../../zone.h"
+#include "zone/zone.h"
 
 void RunTest(const std::string &test_name, const std::string &expected, const std::string &actual)
 {

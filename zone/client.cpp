@@ -15,70 +15,57 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/global_define.h"
-#include <iostream>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
 
-// for windows compile
-#ifndef _WINDOWS
-	#include <stdarg.h>
-	#include <sys/socket.h>
-	#include <netinet/in.h>
-	#include "../common/unix.h"
-#endif
+#include "client.h"
 
-extern volatile bool RunLoops;
+#include "common/data_bucket.h"
+#include "common/data_verification.h"
+#include "common/eqemu_logsys.h"
+#include "common/events/player_event_logs.h"
+#include "common/events/player_events.h"
+#include "common/features.h"
+#include "common/guilds.h"
+#include "common/profanity_manager.h"
+#include "common/repositories/account_flags_repository.h"
+#include "common/repositories/bug_reports_repository.h"
+#include "common/repositories/char_recipe_list_repository.h"
+#include "common/repositories/character_alternate_abilities_repository.h"
+#include "common/repositories/character_data_repository.h"
+#include "common/repositories/character_disciplines_repository.h"
+#include "common/repositories/character_expedition_lockouts_repository.h"
+#include "common/repositories/character_pet_name_repository.h"
+#include "common/repositories/character_spells_repository.h"
+#include "common/repositories/completed_tasks_repository.h"
+#include "common/repositories/discovered_items_repository.h"
+#include "common/repositories/inventory_repository.h"
+#include "common/repositories/keyring_repository.h"
+#include "common/repositories/tradeskill_recipe_repository.h"
+#include "common/rulesys.h"
+#include "common/skill_caps.h"
+#include "common/spdat.h"
+#include "common/strings.h"
+#include "common/zone_store.h"
+#include "zone/bot_command.h"
+#include "zone/cheat_manager.h"
+#include "zone/command.h"
+#include "zone/dialogue_window.h"
+#include "zone/dynamic_zone.h"
+#include "zone/expedition_request.h"
+#include "zone/guild_mgr.h"
+#include "zone/lua_parser.h"
+#include "zone/mob_movement_manager.h"
+#include "zone/petitions.h"
+#include "zone/position.h"
+#include "zone/queryserv.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/string_ids.h"
+#include "zone/water_map.h"
+#include "zone/worldserver.h"
+#include "zone/zonedb.h"
 
-#include "../common/eqemu_logsys.h"
-#include "../common/features.h"
-#include "../common/spdat.h"
-#include "../common/guilds.h"
-#include "../common/rulesys.h"
-#include "../common/strings.h"
-#include "../common/data_verification.h"
-#include "../common/profanity_manager.h"
-#include "../common/data_bucket.h"
-#include "dynamic_zone.h"
-#include "expedition_request.h"
-#include "position.h"
-#include "worldserver.h"
-#include "zonedb.h"
-#include "petitions.h"
-#include "command.h"
-#include "water_map.h"
-#include "bot_command.h"
-#include "string_ids.h"
-#include "dialogue_window.h"
-
-#include "guild_mgr.h"
-#include "quest_parser_collection.h"
-#include "queryserv.h"
-#include "mob_movement_manager.h"
-#include "cheat_manager.h"
-#include "lua_parser.h"
-
-#include "../common/repositories/character_alternate_abilities_repository.h"
-#include "../common/repositories/character_expedition_lockouts_repository.h"
-#include "../common/repositories/account_flags_repository.h"
-#include "../common/repositories/bug_reports_repository.h"
-#include "../common/repositories/char_recipe_list_repository.h"
-#include "../common/repositories/character_spells_repository.h"
-#include "../common/repositories/character_disciplines_repository.h"
-#include "../common/repositories/character_data_repository.h"
-#include "../common/repositories/character_pet_name_repository.h"
-#include "../common/repositories/completed_tasks_repository.h"
-#include "../common/repositories/discovered_items_repository.h"
-#include "../common/repositories/inventory_repository.h"
-#include "../common/repositories/keyring_repository.h"
-#include "../common/repositories/tradeskill_recipe_repository.h"
-#include "../common/events/player_events.h"
-#include "../common/events/player_event_logs.h"
-#include "dialogue_window.h"
-#include "../common/zone_store.h"
-#include "../common/skill_caps.h"
-
+#include <cstdlib>
+#include <cstdio>
+#include <cstdarg>
 
 extern QueryServ* QServ;
 extern EntityList entity_list;
@@ -86,6 +73,7 @@ extern Zone* zone;
 extern volatile bool is_zone_loaded;
 extern WorldServer worldserver;
 extern uint32 numclients;
+extern volatile bool RunLoops;
 
 void UpdateWindowTitle(char* iNewTitle);
 

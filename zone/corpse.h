@@ -1,10 +1,10 @@
-#ifndef CORPSE_H
-#define CORPSE_H
 
-#include "mob.h"
-#include "client.h"
-#include "../common/loot.h"
-#include "../common/repositories/character_corpses_repository.h"
+#pragma once
+
+#include "common/loot.h"
+#include "common/repositories/character_corpses_repository.h"
+#include "zone/client.h"
+#include "zone/mob.h"
 
 class EQApplicationPacket;
 class Group;
@@ -288,5 +288,3 @@ private:
 	LootRequestType          m_loot_request_type;
 	uint32                   m_account_id;
 };
-
-#endif

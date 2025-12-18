@@ -1,11 +1,12 @@
 #ifdef LUA_EQEMU
 
-#include <luabind/luabind.hpp>
-#include <luabind/object.hpp>
-
-#include "masterentity.h"
 #include "lua_iteminst.h"
-#include "lua_item.h"
+
+#include "zone/lua_item.h"
+#include "zone/masterentity.h"
+
+#include "luabind/luabind.hpp"
+#include "luabind/object.hpp"
 
 Lua_ItemInst::Lua_ItemInst(int item_id) {
 	SetLuaPtrData(database.CreateItem(item_id));

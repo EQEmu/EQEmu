@@ -1,12 +1,14 @@
-#include "../../zone_cli.h"
-#include "../../common/cli/eqemu_command_handler.h"
-#include "../../common/http/httplib.h"
-#include "../../common/eqemu_logsys.h"
-#include "../../common/platform.h"
-#include "../../zone.h"
-#include "../../client.h"
-#include "../../common/net/eqstream.h"
-#include "../../common/json/json.hpp"
+
+#include "zone/zone_cli.h"
+
+#include "zone/client.h"
+#include "zone/zone.h"
+#include "common/cli/eqemu_command_handler.h"
+#include "common/eqemu_logsys.h"
+#include "common/http/httplib.h"
+#include "common/json/json.hpp"
+#include "common/net/eqstream.h"
+#include "common/platform.h"
 
 extern Zone *zone;
 using json = nlohmann::json;

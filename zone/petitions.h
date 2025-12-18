@@ -15,17 +15,16 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef PETITIONS_H
-#define PETITIONS_H
 
-#include "../common/linked_list.h"
-#include "../common/misc_functions.h"
-#include "../common/mutex.h"
-#include "../common/types.h"
+#pragma once
 
-#include "client.h"
-#include "zonedb.h"
-#include "../common/zone_store.h"
+#include "common/linked_list.h"
+#include "common/misc_functions.h"
+#include "common/mutex.h"
+#include "common/types.h"
+#include "common/zone_store.h"
+#include "zone/client.h"
+#include "zone/zonedb.h"
 
 class Client;
 
@@ -122,5 +121,3 @@ private:
 	LinkedList<Petition*> list;
 	Mutex PList_Mutex;
 };
-
-#endif

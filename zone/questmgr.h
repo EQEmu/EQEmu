@@ -15,11 +15,11 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
-#ifndef __QUEST_MANAGER_H__
-#define __QUEST_MANAGER_H__
 
-#include "../common/timer.h"
-#include "tasks.h"
+#pragma once
+
+#include "common/timer.h"
+#include "zone/tasks.h"
 
 #include <list>
 #include <stack>
@@ -414,6 +414,3 @@ private:
 };
 
 extern QuestManager quest_manager;
-
-#endif
-

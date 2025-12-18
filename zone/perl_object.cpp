@@ -1,10 +1,9 @@
-#include "../common/features.h"
+#include "common/features.h"
 
 #ifdef EMBPERL_XS_CLASSES
 
-#include "../common/global_define.h"
-#include "embperl.h"
-#include "object.h"
+#include "zone/embperl.h"
+#include "zone/object.h"
 
 bool Perl_Object_IsGroundSpawn(Object* self) // @categories Objects
 {

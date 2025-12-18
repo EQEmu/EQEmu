@@ -1,12 +1,14 @@
 #ifdef LUA_EQEMU
 
-#include "lua.hpp"
-#include <luabind/luabind.hpp>
-
-#include "masterentity.h"
 #include "lua_inventory.h"
-#include "lua_iteminst.h"
-#include "lua_item.h"
+
+#include "zone/lua_item.h"
+#include "zone/lua_iteminst.h"
+#include "zone/masterentity.h"
+
+#include "lua.hpp"
+#include "luabind/luabind.hpp"
+
 
 Lua_ItemInst Lua_Inventory::GetItem(int slot_id) {
 	Lua_Safe_Call_Class(Lua_ItemInst);
@@ -237,4 +239,4 @@ luabind::scope lua_register_inventory() {
 	.def("SwapItem", (bool(Lua_Inventory::*)(int,int))&Lua_Inventory::SwapItem);
 }
 
-#endif
+#endif // LUA_EQEMU

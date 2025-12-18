@@ -16,22 +16,20 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/strings.h"
-
-#include "client.h"
-#include "entity.h"
-#include "mob.h"
 #include "object.h"
 
-#include "quest_parser_collection.h"
-#include "worldserver.h"
-#include "zonedb.h"
-#include "../common/repositories/criteria/content_filter_criteria.h"
-#include "../common/events/player_event_logs.h"
-#include "../common/repositories/ground_spawns_repository.h"
-#include "../common/repositories/object_repository.h"
-#include "queryserv.h"
+#include "common/events/player_event_logs.h"
+#include "common/repositories/criteria/content_filter_criteria.h"
+#include "common/repositories/ground_spawns_repository.h"
+#include "common/repositories/object_repository.h"
+#include "common/strings.h"
+#include "zone/client.h"
+#include "zone/entity.h"
+#include "zone/mob.h"
+#include "zone/queryserv.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/worldserver.h"
+#include "zone/zonedb.h"
 
 
 const char DEFAULT_OBJECT_NAME[] = "IT63_ACTORDEF";

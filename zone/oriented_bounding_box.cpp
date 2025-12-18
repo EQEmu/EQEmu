@@ -1,6 +1,8 @@
+
 #include "oriented_bounding_box.h"
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/transform.hpp>
+
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtx/transform.hpp"
 
 glm::mat4 CreateRotateMatrix(float rx, float ry, float rz) {
 	glm::mat4 rot_x(1.0f);

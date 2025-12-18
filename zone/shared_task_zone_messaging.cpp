@@ -1,7 +1,8 @@
 #include "shared_task_zone_messaging.h"
-#include "../common/shared_tasks.h"
-#include "../common/servertalk.h"
-#include "client.h"
+
+#include "common/servertalk.h"
+#include "common/shared_tasks.h"
+#include "zone/client.h"
 
 #include <memory>
 #include <vector>

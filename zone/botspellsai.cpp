@@ -17,9 +17,10 @@
 */
 
 #include "bot.h"
-#include "../common/data_verification.h"
-#include "../common/repositories/bot_spells_entries_repository.h"
-#include "../common/repositories/npc_spells_repository.h"
+
+#include "common/data_verification.h"
+#include "common/repositories/bot_spells_entries_repository.h"
+#include "common/repositories/npc_spells_repository.h"
 
 bool Bot::AICastSpell(Mob* tar, uint8 chance, uint16 spell_type, uint16 sub_target_type, uint16 sub_type) {
 	if (!tar) {

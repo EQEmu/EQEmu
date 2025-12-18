@@ -17,15 +17,16 @@
 */
 
 #include "guild_mgr.h"
-#include "../common/emu_versions.h"
-#include "../common/repositories/guild_bank_repository.h"
-#include "../common/repositories/guild_ranks_repository.h"
-#include "../common/servertalk.h"
-#include "../common/strings.h"
-#include "client.h"
-#include "string_ids.h"
-#include "worldserver.h"
-#include "zonedb.h"
+
+#include "common/emu_versions.h"
+#include "common/repositories/guild_bank_repository.h"
+#include "common/repositories/guild_ranks_repository.h"
+#include "common/servertalk.h"
+#include "common/strings.h"
+#include "zone/client.h"
+#include "zone/string_ids.h"
+#include "zone/worldserver.h"
+#include "zone/zonedb.h"
 
 
 ZoneGuildManager guild_mgr;

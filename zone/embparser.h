@@ -16,16 +16,17 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef EQEMU_EMBPARSER_H
-#define EQEMU_EMBPARSER_H
+#pragma once
+
 #ifdef EMBPERL
 
-#include "quest_parser_collection.h"
-#include "quest_interface.h"
-#include <string>
-#include <queue>
+#include "zone/embperl.h"
+#include "zone/quest_interface.h"
+#include "zone/quest_parser_collection.h"
+
 #include <map>
-#include "embperl.h"
+#include <queue>
+#include <string>
 
 class Mob;
 class Client;
@@ -309,6 +310,4 @@ private:
 	std::map<std::string, int>         clear_vars_;
 };
 
-#endif
-#endif
-
+#endif // EMBPERL

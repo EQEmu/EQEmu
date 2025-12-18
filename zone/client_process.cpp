@@ -19,39 +19,29 @@
 	Handles client login sequence and packets sent from client to zone
 */
 
-#include "../common/eqemu_logsys.h"
-#include "../common/global_define.h"
+#include "client.h"
+
+#include "common/data_verification.h"
+#include "common/eqemu_logsys.h"
+#include "common/events/player_event_logs.h"
+#include "common/rulesys.h"
+#include "common/skills.h"
+#include "common/spdat.h"
+#include "common/strings.h"
+#include "zone/dynamic_zone.h"
+#include "zone/event_codes.h"
+#include "zone/guild_mgr.h"
+#include "zone/map.h"
+#include "zone/petitions.h"
+#include "zone/queryserv.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/string_ids.h"
+#include "zone/water_map.h"
+#include "zone/worldserver.h"
+#include "zone/zone.h"
+#include "zone/zonedb.h"
+
 #include <iostream>
-
-#ifdef _WINDOWS
-	#define snprintf	_snprintf
-	#define strncasecmp	_strnicmp
-	#define strcasecmp	_stricmp
-#else
-	#include <pthread.h>
-	#include <sys/socket.h>
-	#include <netinet/in.h>
-	#include <unistd.h>
-#endif
-
-#include "../common/data_verification.h"
-#include "../common/rulesys.h"
-#include "../common/skills.h"
-#include "../common/spdat.h"
-#include "../common/strings.h"
-#include "dynamic_zone.h"
-#include "event_codes.h"
-#include "guild_mgr.h"
-#include "map.h"
-#include "petitions.h"
-#include "queryserv.h"
-#include "quest_parser_collection.h"
-#include "string_ids.h"
-#include "worldserver.h"
-#include "zone.h"
-#include "zonedb.h"
-#include "../common/events/player_event_logs.h"
-#include "water_map.h"
 
 extern QueryServ* QServ;
 extern Zone* zone;

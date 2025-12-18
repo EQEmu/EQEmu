@@ -1,9 +1,10 @@
 #ifdef LUA_EQEMU
 
-#include <luabind/luabind.hpp>
-
-#include "masterentity.h"
 #include "lua_item.h"
+
+#include "zone/masterentity.h"
+
+#include "luabind/luabind.hpp"
 
 Lua_Item::Lua_Item(uint32 item_id) {
 	const EQ::ItemData *t = database.GetItem(item_id);
@@ -1089,4 +1090,4 @@ luabind::scope lua_register_item() {
 	.def("Worn_Type", &Lua_Item::GetWorn_Type);
 }
 
-#endif
+#endif // LUA_EQEMU

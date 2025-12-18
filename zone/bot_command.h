@@ -16,16 +16,15 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
+#pragma once
 
-#ifndef BOT_COMMAND_H
-#define BOT_COMMAND_H
+#include "common/types.h"
+#include "bot.h"
+#include "dialogue_window.h"
 
 class Client;
 class Seperator;
 
-#include "../common/types.h"
-#include "bot.h"
-#include "dialogue_window.h"
 
 namespace
 {
@@ -1189,5 +1188,3 @@ bool helper_no_available_bots(Client *bot_owner, Bot *my_bot = nullptr);
 void helper_send_available_subcommands(Client *bot_owner, const char* command_simile, std::vector<const char*> subcommand_list);
 void helper_send_usage_required_bots(Client *bot_owner, uint16 spell_type);
 void SendSpellTypeWindow(Client* c, const Seperator* sep);
-
-#endif

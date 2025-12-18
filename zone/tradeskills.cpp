@@ -16,28 +16,23 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/events/player_event_logs.h"
+#include "client.h"
+
+#include "common/events/player_event_logs.h"
+#include "common/repositories/char_recipe_list_repository.h"
+#include "common/repositories/criteria/content_filter_criteria.h"
+#include "common/repositories/tradeskill_recipe_entries_repository.h"
+#include "common/repositories/tradeskill_recipe_repository.h"
+#include "common/rulesys.h"
+#include "zone/queryserv.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/string_ids.h"
+#include "zone/titles.h"
+#include "zone/worldserver.h"
+#include "zone/zonedb.h"
 
 #include <algorithm>
 #include <list>
-
-#ifndef WIN32
-#include <netinet/in.h>	//for htonl
-#endif
-
-#include "../common/rulesys.h"
-
-#include "queryserv.h"
-#include "quest_parser_collection.h"
-#include "string_ids.h"
-#include "titles.h"
-#include "zonedb.h"
-#include "worldserver.h"
-#include "../common/repositories/char_recipe_list_repository.h"
-#include "../common/repositories/criteria/content_filter_criteria.h"
-#include "../common/repositories/tradeskill_recipe_repository.h"
-#include "../common/repositories/tradeskill_recipe_entries_repository.h"
 
 extern QueryServ* QServ;
 extern WorldServer worldserver;

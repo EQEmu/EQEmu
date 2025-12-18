@@ -1,49 +1,48 @@
 #ifdef LUA_EQEMU
 
-#include "lua.hpp"
-#include <luabind/luabind.hpp>
-#include <luabind/object.hpp>
+#include "lua_parser.h"
 
-#include <ctype.h>
-#include <stdio.h>
+#include "common/spdat.h"
+#include "zone/lua_bit.h"
+#include "zone/lua_bot.h"
+#include "zone/lua_buff.h"
+#include "zone/lua_client.h"
+#include "zone/lua_corpse.h"
+#include "zone/lua_database.h"
+#include "zone/lua_door.h"
+#include "zone/lua_encounter.h"
+#include "zone/lua_entity_list.h"
+#include "zone/lua_entity.h"
+#include "zone/lua_expedition.h"
+#include "zone/lua_general.h"
+#include "zone/lua_group.h"
+#include "zone/lua_hate_list.h"
+#include "zone/lua_inventory.h"
+#include "zone/lua_item.h"
+#include "zone/lua_iteminst.h"
+#include "zone/lua_merc.h"
+#include "zone/lua_mob.h"
+#include "zone/lua_npc.h"
+#include "zone/lua_object.h"
+#include "zone/lua_packet.h"
+#include "zone/lua_raid.h"
+#include "zone/lua_spawn.h"
+#include "zone/lua_spell.h"
+#include "zone/lua_stat_bonuses.h"
+#include "zone/lua_zone.h"
+#include "zone/masterentity.h"
+#include "zone/questmgr.h"
+#include "zone/zone_config.h"
+#include "zone/zone.h"
+
+#include "lua.hpp"
+#include "luabind/luabind.hpp"
+#include "luabind/object.hpp"
+#include <algorithm>
+#include <cctype>
+#include <cstdio>
 #include <string>
 #include <vector>
-#include <algorithm>
-
-#include "../common/spdat.h"
-#include "masterentity.h"
-#include "questmgr.h"
-#include "zone.h"
-#include "zone_config.h"
-
-#include "lua_bit.h"
-#include "lua_bot.h"
-#include "lua_buff.h"
-#include "lua_client.h"
-#include "lua_corpse.h"
-#include "lua_door.h"
-#include "lua_encounter.h"
-#include "lua_entity.h"
-#include "lua_entity_list.h"
-#include "lua_expedition.h"
-#include "lua_general.h"
-#include "lua_group.h"
-#include "lua_hate_list.h"
-#include "lua_inventory.h"
-#include "lua_item.h"
-#include "lua_iteminst.h"
-#include "lua_merc.h"
-#include "lua_mob.h"
-#include "lua_npc.h"
-#include "lua_object.h"
-#include "lua_packet.h"
-#include "lua_parser.h"
-#include "lua_raid.h"
-#include "lua_spawn.h"
-#include "lua_spell.h"
-#include "lua_stat_bonuses.h"
-#include "lua_database.h"
-#include "lua_zone.h"
 
 const char *LuaEvents[_LargestEventID] = {
 	"event_say",
@@ -2295,4 +2294,4 @@ void LuaParser::LoadGlobalZoneScript(std::string filename) {
 	LoadScript(filename, "global_zone");
 }
 
-#endif
+#endif // LUA_EQEMU

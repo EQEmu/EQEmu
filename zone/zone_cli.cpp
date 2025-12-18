@@ -1,6 +1,8 @@
 #include "zone_cli.h"
-#include "../common/cli/eqemu_command_handler.h"
-#include <string.h>
+
+#include "common/cli/eqemu_command_handler.h"
+
+#include <cstring>
 
 bool ZoneCLI::RanConsoleCommand(int argc, char **argv)
 {

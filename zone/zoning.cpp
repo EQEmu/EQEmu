@@ -16,28 +16,25 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/rulesys.h"
-#include "../common/strings.h"
+#include "client.h"
 
-#include "dynamic_zone.h"
-#include "queryserv.h"
-#include "quest_parser_collection.h"
-#include "string_ids.h"
-#include "worldserver.h"
-#include "zone.h"
-
-#include "bot.h"
+#include "common/eqemu_logsys.h"
+#include "common/events/player_event_logs.h"
+#include "common/repositories/character_peqzone_flags_repository.h"
+#include "common/repositories/zone_flags_repository.h"
+#include "common/rulesys.h"
+#include "common/strings.h"
+#include "zone/bot.h"
+#include "zone/dynamic_zone.h"
+#include "zone/queryserv.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/string_ids.h"
+#include "zone/worldserver.h"
+#include "zone/zone.h"
 
 extern QueryServ* QServ;
 extern WorldServer worldserver;
 extern Zone* zone;
-
-#include "../common/repositories/character_peqzone_flags_repository.h"
-#include "../common/repositories/zone_flags_repository.h"
-#include "../common/events/player_event_logs.h"
-
 
 void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 	if (RuleB(Bots, Enabled)) {

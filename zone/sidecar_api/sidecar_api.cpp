@@ -1,12 +1,15 @@
 #include "sidecar_api.h"
-#include "../../common/http/httplib.h"
-#include "../../common/eqemu_logsys.h"
-#include "../zonedb.h"
-#include "../../common/process.h"
-#include "../common.h"
-#include "../zone.h"
-#include "../client.h"
-#include "../../common/json/json.hpp"
+
+#include "common/eqemu_logsys.h"
+#include "common/file.h"
+#include "common/http/httplib.h"
+#include "common/json/json.hpp"
+#include "common/process.h"
+#include "zone/client.h"
+#include "zone/common.h"
+#include "zone/zone.h"
+#include "zone/zonedb.h"
+
 #include <csignal>
 
 void CatchSidecarSignal(int sig_num)
@@ -48,8 +51,6 @@ void SidecarApi::MapBestZController(const httplib::Request& req, httplib::Respon
 {
 
 }
-
-#include "../../common/file.h"
 
 constexpr static int HTTP_RESPONSE_OK           = 200;
 constexpr static int HTTP_RESPONSE_BAD_REQUEST  = 400;

@@ -1,8 +1,11 @@
 #pragma once
 
 #include "pathfinder_interface.h"
+
+#include "glm/vec3.hpp"
+#include "recastnavigation/DetourNavMesh.h"
+#include <memory>
 #include <string>
-#include <recastnavigation/DetourNavMesh.h>
 
 class PathfinderNavmesh : public IPathfinder
 {

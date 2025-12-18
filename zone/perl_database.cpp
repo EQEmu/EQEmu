@@ -1,10 +1,10 @@
-#include "../common/features.h"
+#include "common/features.h"
 
 #ifdef EMBPERL_XS_CLASSES
 
-#include "embperl.h"
-#include "perl_database.h"
-#include "zonedb.h"
+#include "zone/embperl.h"
+#include "zone/perl_database.h"
+#include "zone/zonedb.h"
 
 // Perl takes ownership of returned objects allocated with new and deletes
 // them via the DESTROY method when the last perl reference goes out of scope

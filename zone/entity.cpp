@@ -15,41 +15,28 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/data_verification.h"
-#include "../common/global_define.h"
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
-#include <iostream>
-
-#ifdef _WINDOWS
-#else
-#include <pthread.h>
-#include "../common/unix.h"
-#endif
-
-#include "../common/features.h"
-#include "../common/guilds.h"
 
 #include "entity.h"
-#include "dynamic_zone.h"
-#include "guild_mgr.h"
-#include "petitions.h"
-#include "quest_parser_collection.h"
-#include "raids.h"
-#include "string_ids.h"
-#include "worldserver.h"
-#include "water_map.h"
-#include "npc_scale_manager.h"
-#include "dialogue_window.h"
 
-#ifdef _WINDOWS
-	#define snprintf	_snprintf
-	#define strncasecmp	_strnicmp
-	#define strcasecmp	_stricmp
-#endif
+#include "common/data_verification.h"
+#include "common/features.h"
+#include "common/guilds.h"
+#include "zone/bot.h"
+#include "zone/dialogue_window.h"
+#include "zone/dynamic_zone.h"
+#include "zone/guild_mgr.h"
+#include "zone/npc_scale_manager.h"
+#include "zone/petitions.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/raids.h"
+#include "zone/string_ids.h"
+#include "zone/water_map.h"
+#include "zone/worldserver.h"
 
-#include "bot.h"
+#include <cstdarg>
+#include <cstdio>
+#include <cstring>
+#include <iostream>
 
 extern Zone *zone;
 extern volatile bool is_zone_loaded;

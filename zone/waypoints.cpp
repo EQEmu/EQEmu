@@ -15,28 +15,24 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/global_define.h"
-#ifdef _EQDEBUG
-#include <iostream>
-#endif
 
-#include "../common/rulesys.h"
-#include "../common/strings.h"
-#include "../common/misc_functions.h"
-#include "../common/eqemu_logsys.h"
-
-#include "map.h"
 #include "npc.h"
-#include "quest_parser_collection.h"
-#include "water_map.h"
-#include "fastmath.h"
-#include "mob_movement_manager.h"
 
-#include "../common/repositories/grid_repository.h"
-#include "../common/repositories/grid_entries_repository.h"
-#include "../common/repositories/spawn2_repository.h"
+#include "common/eqemu_logsys.h"
+#include "common/misc_functions.h"
+#include "common/repositories/grid_entries_repository.h"
+#include "common/repositories/grid_repository.h"
+#include "common/repositories/spawn2_repository.h"
+#include "common/rulesys.h"
+#include "common/strings.h"
+#include "zone/bot.h"
+#include "zone/fastmath.h"
+#include "zone/map.h"
+#include "zone/mob_movement_manager.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/water_map.h"
 
-#include <math.h>
+#include <cmath>
 
 extern FastMath g_Math;
 
@@ -1266,7 +1262,6 @@ void NPC::RestoreGuardSpotCharm()
 /******************
 * Bot-specific overloads to make them play nice with the new movement system
 */
-#include "bot.h"
 
 void Bot::WalkTo(float x, float y, float z)
 {

@@ -16,12 +16,11 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#ifndef ENCOUNTER_H
-#define ENCOUNTER_H
+#pragma once
 
-#include "mob.h"
-#include "../common/types.h"
-#include "../common/timer.h"
+#include "common/timer.h"
+#include "common/types.h"
+#include "zone/mob.h"
 
 class Group;
 class Raid;
@@ -58,5 +57,3 @@ protected:
 
 private:
 };
-
-#endif

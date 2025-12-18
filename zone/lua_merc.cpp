@@ -1,15 +1,16 @@
 #ifdef LUA_EQEMU
 
-#include "lua.hpp"
-#include <luabind/luabind.hpp>
-
-#include "merc.h"
-#include "lua_client.h"
 #include "lua_merc.h"
-#include "lua_group.h"
-#include "lua_item.h"
-#include "lua_iteminst.h"
-#include "lua_mob.h"
+
+#include "zone/lua_client.h"
+#include "zone/lua_group.h"
+#include "zone/lua_item.h"
+#include "zone/lua_iteminst.h"
+#include "zone/lua_mob.h"
+#include "zone/merc.h"
+
+#include "lua.hpp"
+#include "luabind/luabind.hpp"
 
 uint32 Lua_Merc::GetCostFormula()
 {

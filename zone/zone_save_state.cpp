@@ -1,12 +1,14 @@
-#include <string>
-#include <cereal/archives/json.hpp>
-#include <cereal/types/map.hpp>
-#include "npc.h"
-#include "corpse.h"
-#include "zone.h"
 #include "zone_save_state.h"
-#include "../common/repositories/spawn2_repository.h"
-#include "../common/repositories/criteria/content_filter_criteria.h"
+
+#include "common/repositories/criteria/content_filter_criteria.h"
+#include "common/repositories/spawn2_repository.h"
+#include "zone/corpse.h"
+#include "zone/npc.h"
+#include "zone/zone.h"
+
+#include "cereal/archives/json.hpp"
+#include "cereal/types/map.hpp"
+#include <string>
 
 // IsZoneStateValid checks if the zone state is valid
 // if these fields are all empty or zero value for an entire zone state, it's considered invalid

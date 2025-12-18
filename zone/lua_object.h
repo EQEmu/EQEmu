@@ -1,8 +1,8 @@
-#ifndef EQEMU_LUA_OBJECT_H
-#define EQEMU_LUA_OBJECT_H
+#pragma once
+
 #ifdef LUA_EQEMU
 
-#include "lua_entity.h"
+#include "zone/lua_entity.h"
 
 class Object;
 
@@ -68,5 +68,4 @@ public:
 	bool EntityVariableExists(std::string variable_name);
 };
 
-#endif
-#endif
+#endif // LUA_EQEMU

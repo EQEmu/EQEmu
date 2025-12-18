@@ -1,9 +1,11 @@
 #ifdef LUA_EQEMU
 
 #include "lua_database.h"
-#include "zonedb.h"
-#include <luabind/luabind.hpp>
-#include <luabind/adopt_policy.hpp>
+
+#include "zone/zonedb.h"
+
+#include "luabind/adopt_policy.hpp"
+#include "luabind/luabind.hpp"
 
 // Luabind adopts the PreparedStmt wrapper object allocated with new and deletes it via GC
 // Lua GC is non-deterministic so handles should be closed explicitly to free db resources

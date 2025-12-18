@@ -1,8 +1,9 @@
 #include "xtargetautohaters.h"
-#include "mob.h"
-#include "client.h"
-#include "raids.h"
-#include "groups.h"
+
+#include "zone/client.h"
+#include "zone/groups.h"
+#include "zone/mob.h"
+#include "zone/raids.h"
 
 #include <algorithm>
 
@@ -109,4 +110,3 @@ bool XTargetAutoHaters::contains_mob(int spawn_id)
 			       [spawn_id](const HatersCount &c) { return c.spawn_id == spawn_id; });
 	return it != m_haters.end();
 }
-

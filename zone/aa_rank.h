@@ -16,11 +16,14 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#ifndef EQEMU_ZONE_AA_RANK_H
-#define EQEMU_ZONE_AA_RANK_H
+#pragma once
 
-namespace AA
-{
+#include "common/types.h"
+
+#include <map>
+#include <vector>
+
+namespace AA {
 
 class Ability;
 class Rank
@@ -51,6 +54,4 @@ public:
 	std::map<int, int> prereqs;
 };
 
-}
-
-#endif
+} // namespace AA

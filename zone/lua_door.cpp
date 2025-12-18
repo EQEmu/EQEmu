@@ -1,11 +1,13 @@
 #ifdef LUA_EQEMU
 
-#include <luabind/luabind.hpp>
-#include <luabind/object.hpp>
-
-#include "doors.h"
-#include "lua_mob.h"
 #include "lua_door.h"
+
+#include "zone/doors.h"
+#include "zone/lua_mob.h"
+
+#include "luabind/luabind.hpp"
+#include "luabind/object.hpp"
+
 
 void Lua_Door::SetDoorName(const char *name) {
 	Lua_Safe_Call_Void();

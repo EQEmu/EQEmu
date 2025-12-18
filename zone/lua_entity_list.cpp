@@ -1,22 +1,22 @@
 #ifdef LUA_EQEMU
 
-#include <luabind/luabind.hpp>
-#include <luabind/iterator_policy.hpp>
-
-#include "masterentity.h"
 #include "lua_entity_list.h"
-#include "lua_mob.h"
-#include "lua_client.h"
-#include "lua_npc.h"
-#include "lua_object.h"
-#include "lua_door.h"
-#include "lua_corpse.h"
-#include "lua_group.h"
-#include "lua_raid.h"
-#include "lua_spawn.h"
 
-#include "lua_bot.h"
-#include "lua_merc.h"
+#include "zone/lua_bot.h"
+#include "zone/lua_client.h"
+#include "zone/lua_corpse.h"
+#include "zone/lua_door.h"
+#include "zone/lua_group.h"
+#include "zone/lua_merc.h"
+#include "zone/lua_mob.h"
+#include "zone/lua_npc.h"
+#include "zone/lua_object.h"
+#include "zone/lua_raid.h"
+#include "zone/lua_spawn.h"
+#include "zone/masterentity.h"
+
+#include "luabind/luabind.hpp"
+#include "luabind/iterator_policy.hpp"
 
 struct Lua_Mob_List {
 	std::vector<Lua_Mob> entries;

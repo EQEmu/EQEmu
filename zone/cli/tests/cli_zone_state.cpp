@@ -1,10 +1,12 @@
-#include "../../zone_cli.h"
-#include "../../common/cli/eqemu_command_handler.h"
-#include <cereal/archives/json.hpp>
-#include <cereal/types/map.hpp>
-#include "../../common/repositories/npc_types_repository.h"
-#include "../../corpse.h"
-#include "../../../common/repositories/respawn_times_repository.h"
+#include "zone/zone_cli.h"
+#include "zone/corpse.h"
+
+#include "common/cli/eqemu_command_handler.h"
+#include "common/repositories/npc_types_repository.h"
+#include "common/repositories/respawn_times_repository.h"
+
+#include "cereal/archives/json.hpp"
+#include "cereal/types/map.hpp"
 
 extern Zone* zone;
 

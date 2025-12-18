@@ -1,20 +1,15 @@
-#include "../common/global_define.h"
-#include "../common/data_verification.h"
-
-#include "../common/loot.h"
-#include "client.h"
-#include "entity.h"
-#include "mob.h"
 #include "npc.h"
-#include "zonedb.h"
-#include "global_loot_manager.h"
-#include "../common/repositories/criteria/content_filter_criteria.h"
-#include "../common/repositories/global_loot_repository.h"
-#include "quest_parser_collection.h"
 
-#ifdef _WINDOWS
-#define snprintf	_snprintf
-#endif
+#include "common/data_verification.h"
+#include "common/loot.h"
+#include "common/repositories/criteria/content_filter_criteria.h"
+#include "common/repositories/global_loot_repository.h"
+#include "zone/client.h"
+#include "zone/entity.h"
+#include "zone/global_loot_manager.h"
+#include "zone/mob.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/zonedb.h"
 
 void NPC::AddLootTable(uint32 loottable_id, bool is_global)
 {

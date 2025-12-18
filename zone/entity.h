@@ -15,22 +15,21 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef ENTITY_H
-#define ENTITY_H
 
-#include <unordered_map>
+#pragma once
+
+#include "common/bodytypes.h"
+#include "common/emu_constants.h"
+#include "common/eq_constants.h"
+#include "common/linked_list.h"
+#include "common/servertalk.h"
+#include "common/types.h"
+#include "zone/common.h"
+#include "zone/position.h"
+#include "zone/zonedump.h"
+
 #include <queue>
-
-#include "../common/types.h"
-#include "../common/linked_list.h"
-#include "../common/servertalk.h"
-#include "../common/bodytypes.h"
-#include "../common/eq_constants.h"
-#include "../common/emu_constants.h"
-
-#include "position.h"
-#include "zonedump.h"
-#include "common.h"
+#include <unordered_map>
 
 class Encounter;
 class Beacon;
@@ -653,6 +652,3 @@ private:
 	NewSpawn_Struct* data;
 	Client* pSendTo;
 };
-
-#endif
-

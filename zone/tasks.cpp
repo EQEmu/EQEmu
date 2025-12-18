@@ -1,14 +1,14 @@
-#include "../common/global_define.h"
-#include "../common/misc_functions.h"
-#include "../common/rulesys.h"
-#include "../common/strings.h"
-#include "client.h"
-#include "queryserv.h"
-#include "quest_parser_collection.h"
-#include "string_ids.h"
 #include "tasks.h"
-#include "zonedb.h"
-#include "../common/repositories/character_task_timers_repository.h"
+
+#include "common/misc_functions.h"
+#include "common/repositories/character_task_timers_repository.h"
+#include "common/rulesys.h"
+#include "common/strings.h"
+#include "zone/client.h"
+#include "zone/queryserv.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/string_ids.h"
+#include "zone/zonedb.h"
 
 extern QueryServ *QServ;
 

@@ -16,10 +16,9 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/types.h"
-#include "masterentity.h"
-#include "aa_ability.h"
+#include "common/types.h"
+#include "zone/masterentity.h"
+#include "zone/aa_ability.h"
 
 AA::Rank *AA::Ability::GetRankByPointsSpent(int current_level) {
 	if(current_level == 0)

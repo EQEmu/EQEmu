@@ -1,9 +1,8 @@
-#include "../common/global_define.h"
-#include "../common/event/task.h"
-
 #include "client.h"
-#include "zone.h"
-#include "water_map.h"
+
+#include "common/event/task.h"
+#include "zone/water_map.h"
+#include "zone/zone.h"
 
 extern Zone *zone;
 

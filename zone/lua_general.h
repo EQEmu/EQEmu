@@ -1,6 +1,8 @@
-#ifndef EQEMU_LUA_GENERAL_H
-#define EQEMU_LUA_GENERAL_H
+#pragma once
+
 #ifdef LUA_EQEMU
+
+#include "luabind/luabind.hpp"
 
 luabind::scope lua_register_general();
 luabind::scope lua_register_random();
@@ -26,5 +28,4 @@ luabind::scope lua_register_journal_speakmode();
 luabind::scope lua_register_journal_mode();
 luabind::scope lua_register_exp_source();
 
-#endif
-#endif
+#endif // LUA_EQEMU

@@ -1,7 +1,6 @@
-#ifndef MERC_H
-#define MERC_H
+#pragma once
 
-#include "npc.h"
+#include "zone/npc.h"
 
 class Client;
 class Corpse;
@@ -384,5 +383,3 @@ private:
 	Timer confidence_timer;
 	Timer check_target_timer;
 };
-
-#endif // MERC_H

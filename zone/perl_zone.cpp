@@ -1,10 +1,9 @@
-#include "../common/features.h"
-#include "zone.h"
+#include "common/features.h"
 
 #ifdef EMBPERL_XS_CLASSES
 
-#include "../common/global_define.h"
-#include "embperl.h"
+#include "zone/embperl.h"
+#include "zone/zone.h"
 
 bool Perl_Zone_BuffTimersSuspended(Zone* self)
 {

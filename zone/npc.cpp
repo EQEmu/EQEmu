@@ -16,54 +16,41 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/bodytypes.h"
-#include "../common/classes.h"
-#include "../common/global_define.h"
-#include "../common/misc_functions.h"
-#include "../common/rulesys.h"
-#include "../common/seperator.h"
-#include "../common/spdat.h"
-#include "../common/strings.h"
-#include "../common/emu_versions.h"
-#include "../common/features.h"
-#include "../common/item_instance.h"
-#include "../common/linked_list.h"
-#include "../common/servertalk.h"
-#include "../common/say_link.h"
-#include "../common/data_verification.h"
-
-#include "../common/repositories/npc_types_repository.h"
-#include "../common/repositories/spawngroup_repository.h"
-#include "../common/repositories/spawn2_repository.h"
-#include "../common/repositories/spawnentry_repository.h"
-
-#include "client.h"
-#include "entity.h"
 #include "npc.h"
-#include "string_ids.h"
-#include "spawn2.h"
-#include "zone.h"
-#include "quest_parser_collection.h"
-#include "water_map.h"
-#include "npc_scale_manager.h"
 
-#include "bot.h"
-#include "../common/skill_caps.h"
-#include "../common/events/player_event_logs.h"
+#include "common/bodytypes.h"
+#include "common/classes.h"
+#include "common/data_verification.h"
+#include "common/emu_versions.h"
+#include "common/events/player_event_logs.h"
+#include "common/features.h"
+#include "common/item_instance.h"
+#include "common/linked_list.h"
+#include "common/misc_functions.h"
+#include "common/repositories/npc_types_repository.h"
+#include "common/repositories/spawn2_repository.h"
+#include "common/repositories/spawnentry_repository.h"
+#include "common/repositories/spawngroup_repository.h"
+#include "common/rulesys.h"
+#include "common/say_link.h"
+#include "common/seperator.h"
+#include "common/servertalk.h"
+#include "common/skill_caps.h"
+#include "common/spdat.h"
+#include "common/strings.h"
+#include "zone/bot.h"
+#include "zone/client.h"
+#include "zone/entity.h"
+#include "zone/npc_scale_manager.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/spawn2.h"
+#include "zone/string_ids.h"
+#include "zone/water_map.h"
+#include "zone/zone.h"
 
-#include <stdio.h>
+#include <cstdio>
 #include <string>
 #include <utility>
-
-#ifdef _WINDOWS
-#define snprintf	_snprintf
-#define strncasecmp	_strnicmp
-#define strcasecmp	_stricmp
-#else
-#include <stdlib.h>
-#include <pthread.h>
-
-#endif
 
 extern Zone* zone;
 extern QueryServ* QServ;

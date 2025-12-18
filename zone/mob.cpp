@@ -16,28 +16,27 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/data_verification.h"
-#include "../common/spdat.h"
-#include "../common/strings.h"
-#include "../common/misc_functions.h"
+#include "mob.h"
 
-#include "../common/repositories/bot_data_repository.h"
-#include "../common/repositories/character_data_repository.h"
+#include "common/data_bucket.h"
+#include "common/data_verification.h"
+#include "common/misc_functions.h"
+#include "common/repositories/bot_data_repository.h"
+#include "common/repositories/character_data_repository.h"
+#include "common/spdat.h"
+#include "common/strings.h"
+#include "zone/bot.h"
+#include "zone/dialogue_window.h"
+#include "zone/mob_movement_manager.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/string_ids.h"
+#include "zone/water_map.h"
+#include "zone/worldserver.h"
 
-#include "../common/data_bucket.h"
-#include "quest_parser_collection.h"
-#include "string_ids.h"
-#include "worldserver.h"
-#include "mob_movement_manager.h"
-#include "water_map.h"
-#include "dialogue_window.h"
-
-#include <limits.h>
-#include <math.h>
-#include <sstream>
 #include <algorithm>
-
-#include "bot.h"
+#include <climits>
+#include <cmath>
+#include <sstream>
 
 extern EntityList entity_list;
 
@@ -641,7 +640,7 @@ void Mob::BreakCharmPetIfConditionsMet() {
 
 void Mob::CalcInvisibleLevel()
 {
-	bool was_invisible = invisible;
+	uint8 was_invisible = invisible;
 
 	invisible         = std::max({spellbonuses.invisibility, nobuff_invisible});
 	invisible_undead  = spellbonuses.invisibility_verse_undead;

@@ -16,19 +16,17 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/spdat.h"
-#include "../common/misc_functions.h"
-
-#include "client.h"
-#include "entity.h"
 #include "mob.h"
 
-#include "string_ids.h"
-#include "worldserver.h"
-#include "zonedb.h"
-#include "position.h"
+#include "common/eqemu_logsys.h"
+#include "common/misc_functions.h"
+#include "common/spdat.h"
+#include "zone/client.h"
+#include "zone/entity.h"
+#include "zone/position.h"
+#include "zone/string_ids.h"
+#include "zone/worldserver.h"
+#include "zone/zonedb.h"
 
 float Mob::GetActSpellRange(uint16 spell_id, float range)
 {

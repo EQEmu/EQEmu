@@ -1,38 +1,26 @@
-
-#ifdef _WINDOWS
-#if (!defined(_MSC_VER) || (defined(_MSC_VER) && _MSC_VER < 1900))
-#define snprintf	_snprintf
-#define vsnprintf	_vsnprintf
-#endif
-#define strncasecmp	_strnicmp
-#define strcasecmp	_stricmp
-#endif
-
-#include "../common/data_verification.h"
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/rulesys.h"
-#include "../common/strings.h"
-#include "../common/say_link.h"
-
 #include "corpse.h"
-#include "dynamic_zone.h"
-#include "entity.h"
-#include "groups.h"
-#include "mob.h"
-#include "raids.h"
 
-#include "bot.h"
+#include "common/data_verification.h"
+#include "common/eqemu_logsys.h"
+#include "common/events/player_event_logs.h"
+#include "common/json/json.hpp"
+#include "common/repositories/character_corpse_items_repository.h"
+#include "common/repositories/character_corpses_repository.h"
+#include "common/rulesys.h"
+#include "common/say_link.h"
+#include "common/strings.h"
+#include "zone/bot.h"
+#include "zone/dynamic_zone.h"
+#include "zone/entity.h"
+#include "zone/groups.h"
+#include "zone/mob.h"
+#include "zone/queryserv.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/raids.h"
+#include "zone/string_ids.h"
+#include "zone/worldserver.h"
 
-#include "quest_parser_collection.h"
-#include "string_ids.h"
-#include "worldserver.h"
-#include "../common/events/player_event_logs.h"
-#include "../common/repositories/character_corpses_repository.h"
-#include "../common/repositories/character_corpse_items_repository.h"
 #include <iostream>
-#include "queryserv.h"
-#include "../common/json/json.hpp"
 
 using json = nlohmann::json;
 

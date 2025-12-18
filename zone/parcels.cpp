@@ -16,15 +16,15 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/events/player_event_logs.h"
-#include "../common/repositories/trader_repository.h"
-#include "../common/repositories/character_parcels_repository.h"
-#include "../common/repositories/character_parcels_containers_repository.h"
-#include "worldserver.h"
-#include "string_ids.h"
 #include "client.h"
-#include "../common/ruletypes.h"
+
+#include "common/events/player_event_logs.h"
+#include "common/repositories/character_parcels_containers_repository.h"
+#include "common/repositories/character_parcels_repository.h"
+#include "common/repositories/trader_repository.h"
+#include "common/ruletypes.h"
+#include "zone/string_ids.h"
+#include "zone/worldserver.h"
 
 extern WorldServer worldserver;
 extern QueryServ  *QServ;

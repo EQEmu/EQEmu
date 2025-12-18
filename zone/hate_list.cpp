@@ -16,18 +16,17 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "client.h"
-#include "entity.h"
-#include "groups.h"
-#include "mob.h"
-#include "raids.h"
-
-#include "../common/data_verification.h"
-
 #include "hate_list.h"
-#include "quest_parser_collection.h"
-#include "zone.h"
-#include "water_map.h"
+
+#include "common/data_verification.h"
+#include "zone/client.h"
+#include "zone/entity.h"
+#include "zone/groups.h"
+#include "zone/mob.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/raids.h"
+#include "zone/water_map.h"
+#include "zone/zone.h"
 
 #include <list>
 

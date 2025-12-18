@@ -1,5 +1,4 @@
-#ifndef XTARGETAUTOHATERS_H
-#define XTARGETAUTOHATERS_H
+#pragma once
 
 #include <vector>
 
@@ -41,7 +40,3 @@ private:
 	Group	*m_group;
 	Raid	*m_raid;
 };
-
-
-#endif /* !XTARGETAUTOHATERS_H */
-

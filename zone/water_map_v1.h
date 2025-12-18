@@ -1,8 +1,8 @@
-#ifndef EQEMU_WATER_MAP_V1_H
-#define EQEMU_WATER_MAP_V1_H
+#pragma once
 
-#include "water_map.h"
+#include "zone/water_map.h"
 
+#pragma pack(push)
 #pragma pack(1)
 typedef struct ZBSP_Node {
 	int32 node_number;
@@ -11,7 +11,8 @@ typedef struct ZBSP_Node {
 	int32 special;
 	int32 left, right;
 } ZBSP_Node;
-#pragma pack()
+
+#pragma pack(pop)
 
 class WaterMapV1 : public WaterMap
 {
@@ -36,5 +37,3 @@ private:
 
 	friend class WaterMap;
 };
-
-#endif

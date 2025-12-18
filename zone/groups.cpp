@@ -16,17 +16,18 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
-#include "dynamic_zone.h"
-#include "masterentity.h"
-#include "worldserver.h"
-#include "string_ids.h"
-#include "../common/events/player_event_logs.h"
-#include "../common/repositories/character_expedition_lockouts_repository.h"
-#include "../common/repositories/group_id_repository.h"
-#include "../common/repositories/group_leaders_repository.h"
-#include "queryserv.h"
+#include "groups.h"
+
+#include "common/eqemu_logsys.h"
+#include "common/events/player_event_logs.h"
+#include "common/repositories/character_expedition_lockouts_repository.h"
+#include "common/repositories/group_id_repository.h"
+#include "common/repositories/group_leaders_repository.h"
+#include "zone/dynamic_zone.h"
+#include "zone/masterentity.h"
+#include "zone/queryserv.h"
+#include "zone/string_ids.h"
+#include "zone/worldserver.h"
 
 
 extern EntityList  entity_list;

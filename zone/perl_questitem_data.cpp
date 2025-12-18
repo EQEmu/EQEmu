@@ -1,10 +1,9 @@
-#include "../common/features.h"
+#include "common/features.h"
 #include "client.h"
 
 #ifdef EMBPERL_XS_CLASSES
 
-#include "../common/global_define.h"
-#include "embperl.h"
+#include "zone/embperl.h"
 
 int Perl_QuestItemData_GetMinimumStatus(EQ::ItemData* self)
 {

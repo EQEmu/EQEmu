@@ -18,17 +18,16 @@
  *
  */
 
-#include "../common/data_verification.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/item_data.h"
-#include "../common/spdat.h"
-#include "../common/strings.h"
-
 #include "mob.h"
-#include "quest_parser_collection.h"
-#include "zonedb.h"
 
-#include "bot.h"
+#include "common/data_verification.h"
+#include "common/eqemu_logsys.h"
+#include "common/item_data.h"
+#include "common/spdat.h"
+#include "common/strings.h"
+#include "zone/bot.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/zonedb.h"
 
 void Mob::SetMobTextureProfile(
 	uint8 material_slot,

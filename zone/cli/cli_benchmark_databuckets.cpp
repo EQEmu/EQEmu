@@ -1,15 +1,18 @@
+
+#include "zone/zone_cli.h"
+#include "zone/sidecar_api/sidecar_api.h"
+#include "zone/zonedb.h"
+
+#include "common/cli/eqemu_command_handler.h"
+#include "common/http/httplib.h"
+#include "common/eqemu_logsys.h"
+#include "common/platform.h"
+#include "common/data_bucket.h"
+#include "common/repositories/data_buckets_repository.h"
+
 #include <chrono>
 #include <iostream>
 #include <random>
-#include "../zone_cli.h"
-#include "../../common/cli/eqemu_command_handler.h"
-#include "../../common/http/httplib.h"
-#include "../../common/eqemu_logsys.h"
-#include "../sidecar_api/sidecar_api.h"
-#include "../../common/platform.h"
-#include "../../common/data_bucket.h"
-#include "../zonedb.h"
-#include "../../common/repositories/data_buckets_repository.h"
 
 void RunBenchmarkCycle(uint64_t target_rows)
 {

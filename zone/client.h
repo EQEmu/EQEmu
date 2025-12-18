@@ -15,8 +15,8 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef CLIENT_H
-#define CLIENT_H
+
+#pragma once
 
 class Client;
 class EQApplicationPacket;
@@ -38,59 +38,48 @@ namespace EQ
 	struct ItemData;
 }
 
-#include "../common/timer.h"
-#include "../common/ptimer.h"
-#include "../common/emu_opcodes.h"
-#include "../common/eq_packet_structs.h"
-#include "../common/emu_constants.h"
-#include "../common/eq_stream_intf.h"
-#include "../common/eq_packet.h"
-#include "../common/linked_list.h"
-#include "../common/extprofile.h"
-#include "../common/races.h"
-#include "../common/seperator.h"
-#include "../common/inventory_profile.h"
-#include "../common/guilds.h"
-//#include "../common/item_data.h"
-#include "xtargetautohaters.h"
-#include "aggromanager.h"
+#include "zone/aggromanager.h"
+#include "zone/bot_structs.h"
+#include "zone/cheat_manager.h"
+#include "zone/common.h"
+#include "zone/merc.h"
+#include "zone/mob.h"
+#include "zone/qglobals.h"
+#include "zone/questmgr.h"
+#include "zone/task_client_state.h"
+#include "zone/task_manager.h"
+#include "zone/xtargetautohaters.h"
+#include "zone/zone.h"
+#include "zone/zonedb.h"
 
-#include "common.h"
-#include "merc.h"
-#include "mob.h"
-#include "qglobals.h"
-#include "questmgr.h"
-#include "zone.h"
-#include "zonedb.h"
-#include "../common/zone_store.h"
-#include "task_manager.h"
-#include "task_client_state.h"
-#include "cheat_manager.h"
-#include "../common/events/player_events.h"
-#include "../common/data_verification.h"
-#include "../common/repositories/character_parcels_repository.h"
-#include "../common/repositories/trader_repository.h"
-#include "../common/guild_base.h"
-#include "../common/repositories/buyer_buy_lines_repository.h"
-#include "../common/repositories/character_evolving_items_repository.h"
-#include "../common/repositories/player_titlesets_repository.h"
+#include "common/data_verification.h"
+#include "common/emu_constants.h"
+#include "common/emu_opcodes.h"
+#include "common/eq_packet_structs.h"
+#include "common/eq_packet.h"
+#include "common/eq_stream_intf.h"
+#include "common/events/player_events.h"
+#include "common/extprofile.h"
+#include "common/guild_base.h"
+#include "common/guilds.h"
+#include "common/inventory_profile.h"
+#include "common/linked_list.h"
+#include "common/ptimer.h"
+#include "common/races.h"
+#include "common/repositories/buyer_buy_lines_repository.h"
+#include "common/repositories/character_evolving_items_repository.h"
+#include "common/repositories/character_parcels_repository.h"
+#include "common/repositories/player_titlesets_repository.h"
+#include "common/repositories/trader_repository.h"
+#include "common/seperator.h"
+#include "common/timer.h"
+#include "common/zone_store.h"
 
-#include "bot_structs.h"
-
-#ifdef _WINDOWS
-	// since windows defines these within windef.h (which windows.h include)
-	// we are required to undefine these to use min and max from <algorithm>
-	#undef min
-	#undef max
-#endif
-
-#include <float.h>
+#include <cfloat>
 #include <set>
 #include <algorithm>
 #include <memory>
 #include <deque>
-#include <ctime>
-
 
 #define CLIENT_LD_TIMEOUT 30000 // length of time client stays in zone after LDing
 #define TARGETING_RANGE 200 // range for /assist and /target
@@ -2434,5 +2423,3 @@ public:
 	void CheckAutoIdleAFK(PlayerPositionUpdateClient_Struct *p);
 	void SyncWorldPositionsToClient(bool ignore_idle = false);
 };
-
-#endif

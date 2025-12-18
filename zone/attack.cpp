@@ -16,38 +16,29 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/eq_constants.h"
-#include "../common/eq_packet_structs.h"
-#include "../common/rulesys.h"
-#include "../common/spdat.h"
-#include "../common/strings.h"
-#include "../common/data_verification.h"
-#include "../common/misc_functions.h"
-#include "../common/events/player_event_logs.h"
-#include "queryserv.h"
-#include "quest_parser_collection.h"
-#include "string_ids.h"
-#include "water_map.h"
-#include "worldserver.h"
-#include "zone.h"
-#include "lua_parser.h"
-#include "fastmath.h"
-#include "mob.h"
-#include "npc.h"
-
-#include "bot.h"
+#include "common/data_verification.h"
+#include "common/eq_constants.h"
+#include "common/eq_packet_structs.h"
+#include "common/events/player_event_logs.h"
+#include "common/misc_functions.h"
+#include "common/rulesys.h"
+#include "common/spdat.h"
+#include "common/strings.h"
+#include "zone/bot.h"
+#include "zone/fastmath.h"
+#include "zone/lua_parser.h"
+#include "zone/mob.h"
+#include "zone/npc.h"
+#include "zone/queryserv.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/string_ids.h"
+#include "zone/water_map.h"
+#include "zone/worldserver.h"
+#include "zone/zone.h"
 
 extern QueryServ* QServ;
 extern WorldServer worldserver;
 extern FastMath g_Math;
-
-#ifdef _WINDOWS
-#define snprintf	_snprintf
-#define strncasecmp	_strnicmp
-#define strcasecmp	_stricmp
-#endif
-
 extern EntityList entity_list;
 extern Zone* zone;
 

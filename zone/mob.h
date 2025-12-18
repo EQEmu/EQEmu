@@ -16,28 +16,27 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef MOB_H
-#define MOB_H
 
-#include "common.h"
-#include "../common/data_bucket.h"
-#include "entity.h"
-#include "hate_list.h"
-#include "pathfinder_interface.h"
-#include "position.h"
-#include "aa_ability.h"
-#include "aa.h"
-#include "../common/light_source.h"
-#include "../common/emu_constants.h"
-#include "combat_record.h"
-#include "event_codes.h"
+#pragma once
+
+#include "common/data_bucket.h"
+#include "common/emu_constants.h"
+#include "common/light_source.h"
+#include "zone/aa_ability.h"
+#include "zone/aa.h"
+#include "zone/combat_record.h"
+#include "zone/common.h"
+#include "zone/entity.h"
+#include "zone/event_codes.h"
+#include "zone/hate_list.h"
+#include "zone/heal_rotation.h"
+#include "zone/pathfinder_interface.h"
+#include "zone/position.h"
 
 #include <any>
+#include <memory>
 #include <set>
 #include <vector>
-#include <memory>
-
-#include "heal_rotation.h"
 
 char* strn0cpy(char* dest, const char* source, uint32 size);
 
@@ -1953,6 +1952,3 @@ private:
 	void DoSpellInterrupt(uint16 spell_id, int32 mana_cost, int my_curmana);
 	void HandleDoorOpen();
 };
-
-#endif
-

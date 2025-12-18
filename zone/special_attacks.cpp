@@ -16,18 +16,18 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 	*/
 
-#include "../common/rulesys.h"
-#include "../common/strings.h"
-
-#include "client.h"
-#include "entity.h"
 #include "mob.h"
-#include "string_ids.h"
-#include "lua_parser.h"
-#include "npc.h"
-#include "bot.h"
 
-#include <string.h>
+#include "common/rulesys.h"
+#include "common/strings.h"
+#include "zone/bot.h"
+#include "zone/client.h"
+#include "zone/entity.h"
+#include "zone/lua_parser.h"
+#include "zone/npc.h"
+#include "zone/string_ids.h"
+
+#include <cstring>
 
 extern double frame_time;
 

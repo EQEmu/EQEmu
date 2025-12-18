@@ -16,30 +16,16 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/eq_packet_structs.h"
-#include "../common/features.h"
-#include "../common/repositories/guild_tributes_repository.h"
-#include "../common/guild_base.h"
-#include "guild_mgr.h"
-#include "worldserver.h"
-
 #include "client.h"
 
-#include <map>
+#include "common/eq_packet_structs.h"
+#include "common/features.h"
+#include "common/guild_base.h"
+#include "common/repositories/guild_tributes_repository.h"
+#include "zone/guild_mgr.h"
+#include "zone/worldserver.h"
 
-#ifdef _WINDOWS
-    #include <winsock2.h>
-    #define snprintf	_snprintf
-	#define vsnprintf	_vsnprintf
-    #define strncasecmp	_strnicmp
-    #define strcasecmp	_stricmp
-#else
-    #include <stdarg.h>
-    #include <sys/socket.h>
-    #include <netinet/in.h>
-    #include "../common/unix.h"
-#endif
+#include <map>
 
 /*
 

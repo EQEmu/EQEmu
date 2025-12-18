@@ -1,5 +1,4 @@
-#ifndef STRING_IDS
-#define STRING_IDS
+#pragma once
 
 //These strings are loaded from eqstr_us.txt, but may vary between client versions. Maybe we could make this an enum that's dependent on the client version?
 #define GENERIC_9_STRINGS			1		//%1 %2 %3 %4 %5 %6 %7 %8 %9
@@ -600,6 +599,3 @@
 #define GAIN_XP_BONUS				14541	//You gain experience (with a bonus)!
 #define GAIN_XP_PENALTY				14542	//You gain experience (with a penalty)!
 #define GENERIC_MISS				15041	//%1 missed %2
-
-#endif
-

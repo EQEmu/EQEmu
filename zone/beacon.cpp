@@ -17,30 +17,19 @@
 */
 
 /*
-
 Beacon class, extends Mob. Used for AE rain spells to have a mob
 target to center around.
-
 */
 
-class Zone;
-
-#ifdef _WINDOWS
-	#if (!defined(_MSC_VER) || (defined(_MSC_VER) && _MSC_VER < 1900))
-		#define snprintf	_snprintf
-		#define vsnprintf	_vsnprintf
-	#endif
-    #define strncasecmp	_strnicmp
-    #define strcasecmp	_stricmp
-#endif
-
-#include "../common/races.h"
-#include "beacon.h"
-#include "entity.h"
-#include "mob.h"
+#include "common/races.h"
+#include "zone/beacon.h"
+#include "zone/entity.h"
+#include "zone/mob.h"
 
 extern EntityList entity_list;
 extern Zone* zone;
+
+class Zone;
 
 // if lifetime is 0 this is a permanent beacon.. not sure if that'll be
 // useful for anything
@@ -179,5 +168,3 @@ void Beacon::AELocationSpell(Mob *caster, uint16 cast_spell_id, int16 in_resist_
 	spell_timer.Start(2500);
 	spell_timer.Trigger();
 }
-
-

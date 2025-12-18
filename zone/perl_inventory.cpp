@@ -1,10 +1,9 @@
-#include "../common/features.h"
-#include "client.h"
+#include "common/features.h"
 
 #ifdef EMBPERL_XS_CLASSES
 
-#include "../common/global_define.h"
-#include "embperl.h"
+#include "zone/client.h"
+#include "zone/embperl.h"
 
 bool Perl_Inventory_CanItemFitInContainer(EQ::InventoryProfile* self, EQ::ItemInstance* item_to_check, EQ::ItemInstance* container_to_check)
 {

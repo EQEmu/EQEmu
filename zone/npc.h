@@ -15,29 +15,23 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef NPC_H
-#define NPC_H
 
-#include "../common/rulesys.h"
+#pragma once
 
-#include "mob.h"
-#include "qglobals.h"
-#include "zonedb.h"
-#include "../common/zone_store.h"
-#include "zonedump.h"
-#include "../common/repositories/npc_faction_entries_repository.h"
-#include "../common/repositories/loottable_repository.h"
-#include "../common/repositories/loottable_entries_repository.h"
-#include "../common/repositories/lootdrop_repository.h"
-#include "../common/repositories/lootdrop_entries_repository.h"
+#include "common/repositories/lootdrop_entries_repository.h"
+#include "common/repositories/lootdrop_repository.h"
+#include "common/repositories/loottable_entries_repository.h"
+#include "common/repositories/loottable_repository.h"
+#include "common/repositories/npc_faction_entries_repository.h"
+#include "common/rulesys.h"
+#include "common/zone_store.h"
+#include "zone/mob.h"
+#include "zone/qglobals.h"
+#include "zone/zonedb.h"
+#include "zone/zonedump.h"
 
 #include <deque>
 #include <list>
-
-
-#ifdef _WINDOWS
-	#define M_PI	3.141592
-#endif
 
 typedef struct {
 	float	min_x;
@@ -808,6 +802,3 @@ private:
 	bool                m_record_loot_stats;
 	std::vector<uint32> m_rolled_items = {};
 };
-
-#endif
-

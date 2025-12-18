@@ -7,5 +7,3 @@ AggroMeter::AggroMeter() : lock_id(0), target_id(0), secondary_id(0), lock_chang
 		data[i].pct = 0;
 	}
 }
-
-

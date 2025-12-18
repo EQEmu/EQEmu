@@ -1,36 +1,31 @@
-#include <string.h>
-#include <algorithm>
-#include <thread>
-#include <fmt/format.h>
-#include "../common/repositories/command_subsettings_repository.h"
-
-#ifdef _WINDOWS
-#define strcasecmp _stricmp
-#endif
-
-#include "../common/global_define.h"
-#include "../common/eq_packet.h"
-#include "../common/features.h"
-#include "../common/ptimer.h"
-#include "../common/rulesys.h"
-#include "../common/strings.h"
-#include "../common/say_link.h"
-#include "../common/net/eqstream.h"
-#include "../common/file.h"
-#include "../common/repositories/dynamic_zones_repository.h"
-
-#include "../common/data_bucket.h"
 #include "command.h"
-#include "dynamic_zone.h"
-#include "queryserv.h"
-#include "quest_parser_collection.h"
-#include "titles.h"
-#include "water_map.h"
-#include "worldserver.h"
-#include "fastmath.h"
-#include "mob_movement_manager.h"
-#include "npc_scale_manager.h"
-#include "../common/events/player_event_logs.h"
+
+#include "common/data_bucket.h"
+#include "common/eq_packet.h"
+#include "common/events/player_event_logs.h"
+#include "common/features.h"
+#include "common/file.h"
+#include "common/net/eqstream.h"
+#include "common/ptimer.h"
+#include "common/repositories/command_subsettings_repository.h"
+#include "common/repositories/dynamic_zones_repository.h"
+#include "common/rulesys.h"
+#include "common/say_link.h"
+#include "common/strings.h"
+#include "zone/dynamic_zone.h"
+#include "zone/fastmath.h"
+#include "zone/mob_movement_manager.h"
+#include "zone/npc_scale_manager.h"
+#include "zone/queryserv.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/titles.h"
+#include "zone/water_map.h"
+#include "zone/worldserver.h"
+
+#include "fmt/format.h"
+#include <algorithm>
+#include <cstring>
+#include <thread>
 
 extern QueryServ* QServ;
 extern WorldServer worldserver;

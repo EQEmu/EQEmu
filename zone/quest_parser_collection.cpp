@@ -16,20 +16,18 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-
-#include "../common/global_define.h"
-#include "../common/misc_functions.h"
-#include "../common/features.h"
-
 #include "quest_parser_collection.h"
-#include "quest_interface.h"
-#include "zone.h"
-#include "questmgr.h"
-#include "../common/path_manager.h"
-#include "../common/repositories/perl_event_export_settings_repository.h"
-#include "../common/file.h"
 
-#include <stdio.h>
+#include "common/features.h"
+#include "common/file.h"
+#include "common/misc_functions.h"
+#include "common/path_manager.h"
+#include "common/repositories/perl_event_export_settings_repository.h"
+#include "zone/quest_interface.h"
+#include "zone/questmgr.h"
+#include "zone/zone.h"
+
+#include <cstdio>
 
 // an encounter can register events before the object is loaded
 // examples

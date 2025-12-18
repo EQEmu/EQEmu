@@ -1,8 +1,8 @@
-#ifndef EQEMU_LUA_CORPSE_H
-#define EQEMU_LUA_CORPSE_H
+#pragma once
+
 #ifdef LUA_EQEMU
 
-#include "lua_mob.h"
+#include "zone/lua_mob.h"
 
 class Corpse;
 class Lua_Client;
@@ -68,5 +68,4 @@ public:
 	Lua_Corpse_Loot_List GetLootList(lua_State* L);
 };
 
-#endif
-#endif
+#endif // LUA_EQEMU

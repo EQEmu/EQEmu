@@ -16,25 +16,21 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef _EQE_QUESTPARSERCOLLECTION_H
-#define _EQE_QUESTPARSERCOLLECTION_H
+#pragma once
 
-#include "../common/types.h"
-
-#include "encounter.h"
-#include "beacon.h"
-#include "client.h"
-#include "corpse.h"
-#include "doors.h"
-#include "groups.h"
-#include "mob.h"
-#include "object.h"
-#include "raids.h"
-#include "trap.h"
-
-#include "quest_interface.h"
-
-#include "zone_config.h"
+#include "common/types.h"
+#include "zone/beacon.h"
+#include "zone/client.h"
+#include "zone/corpse.h"
+#include "zone/doors.h"
+#include "zone/encounter.h"
+#include "zone/groups.h"
+#include "zone/mob.h"
+#include "zone/object.h"
+#include "zone/quest_interface.h"
+#include "zone/raids.h"
+#include "zone/trap.h"
+#include "zone/zone_config.h"
 
 #include <list>
 #include <map>
@@ -404,6 +400,3 @@ private:
 };
 
 extern QuestParserCollection *parse;
-
-#endif
-

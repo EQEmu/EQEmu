@@ -5,20 +5,19 @@ eqemu perl wrapper
 Eglin
 */
 
-#ifndef EMBPERL_H
-#define EMBPERL_H
+#pragma once
 
 #ifdef EMBPERL
 
 #include "zone_config.h"
 
+#include "perlbind/perlbind.h"
+#include <cstdio>
+#include <cstring>
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
-#include <stdio.h>
-#include <string.h>
 
-#include <perlbind/perlbind.h>
 namespace perl = perlbind;
 
 #undef connect
@@ -149,6 +148,5 @@ public:
 	//check to see if a sub exists in package
 	bool SubExists(const char* package, const char* sub);
 };
-#endif //EMBPERL
 
-#endif //EMBPERL_H
+#endif // EMBPERL

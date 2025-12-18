@@ -16,10 +16,12 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#ifndef HATELIST_H
-#define HATELIST_H
+#pragma once
 
-#include "../common/emu_constants.h"
+#include "common/emu_constants.h"
+#include "common/types.h"
+
+#include <list>
 
 class Client;
 class Group;
@@ -102,6 +104,3 @@ private:
 	std::list<struct_HateList *> list;
 	Mob                          *hate_owner;
 };
-
-#endif
-

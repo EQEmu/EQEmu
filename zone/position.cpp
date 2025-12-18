@@ -1,12 +1,13 @@
 #include "position.h"
 
-#include <string>
+#include "common/data_verification.h"
+#include "common/strings.h"
+#include "common/types.h"
+
+#include "fmt/format.h"
 #include <cmath>
-#include "../common/strings.h"
-#include "../common/data_verification.h"
 #include <numbers>
-#include "../common/types.h"
-#include <fmt/format.h>
+#include <string>
 
 constexpr float position_eps = 0.0001f;
 

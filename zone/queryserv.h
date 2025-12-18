@@ -1,11 +1,10 @@
-#ifndef QUERYSERV_ZONE_H
-#define QUERYSERV_ZONE_H
+#pragma once
 
-#include "../common/net/servertalk_server.h"
-#include "../common/net/servertalk_client_connection.h"
-#include "../common/event/timer.h"
-#include "../common/rulesys.h"
-#include "../common/eqemu_logsys.h"
+#include "common/eqemu_logsys.h"
+#include "common/event/timer.h"
+#include "common/net/servertalk_client_connection.h"
+#include "common/net/servertalk_server.h"
+#include "common/rulesys.h"
 
 class QueryServ {
 public:
@@ -58,5 +57,3 @@ private:
 	std::map<std::string, std::shared_ptr<EQ::Net::ServertalkServerConnection>> m_streams;
 	std::unique_ptr<EQ::Timer>                                                  m_keepalive;
 };
-
-#endif /* QUERYSERV_ZONE_H */

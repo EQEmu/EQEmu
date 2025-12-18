@@ -16,15 +16,15 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include <fmt/format.h>
-#include "../common/global_define.h"
-#include "../common/types.h"
-
-#include "entity.h"
 #include "spawngroup.h"
-#include "zone.h"
-#include "zonedb.h"
-#include "../common/repositories/criteria/content_filter_criteria.h"
+
+#include "common/repositories/criteria/content_filter_criteria.h"
+#include "common/types.h"
+#include "zone/entity.h"
+#include "zone/zone.h"
+#include "zone/zonedb.h"
+
+#include "fmt/format.h"
 
 extern EntityList entity_list;
 extern Zone       *zone;

@@ -1,10 +1,10 @@
 #ifdef LUA_EQEMU
 
-#include "lua.hpp"
-#include <luabind/luabind.hpp>
-#include <luabind/iterator_policy.hpp>
-
 #include "lua_buff.h"
+
+#include "lua.hpp"
+#include "luabind/iterator_policy.hpp"
+#include "luabind/luabind.hpp"
 
 uint16 Lua_Buff::GetCasterID()
 {
@@ -151,4 +151,4 @@ luabind::scope lua_register_buff() {
 	.def("SendsClientUpdate", &Lua_Buff::SendsClientUpdate);
 }
 
-#endif
+#endif // LUA_EQEMU

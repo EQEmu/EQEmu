@@ -1,8 +1,7 @@
-#if defined(_MSC_VER)
-#define _USE_MATH_DEFINES
-#endif
-#include <cmath>
+
 #include "fastmath.h"
+
+#include <numbers>
 
 FastMath g_Math;
 
@@ -14,7 +13,7 @@ FastMath::FastMath()
 	int si = 128;
 	float res;
 	do {
-		res = std::cos(static_cast<float>(ci) * M_PI * 2 / 512);
+		res = std::cos(static_cast<float>(ci) * std::numbers::pi * 2 / 512);
 		lut_cos[ci] = res;
 		if (si == 512)
 			si = 0;

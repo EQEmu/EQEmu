@@ -269,6 +269,7 @@ add_library(lua_zone STATIC ${lua_sources})
 
 set_property(TARGET lua_zone PROPERTY FOLDER libraries)
 set_target_properties(lua_zone PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 8)
+target_include_directories(lua_zone PRIVATE ..)
 
 set(perl_sources
     perl_bot.cpp
@@ -300,6 +301,8 @@ set(perl_sources
 add_library(perl_zone STATIC ${perl_sources})
 set_property(TARGET perl_zone PROPERTY FOLDER libraries)
 set_target_properties(perl_zone PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 8)
+target_link_libraries(perl_zone PUBLIC cereal::cereal fmt::fmt unofficial::libmariadb)
+target_include_directories(perl_zone PRIVATE ..)
 
 set(gm_command_sources
     bot_command.cpp
@@ -359,7 +362,6 @@ set(gm_command_sources
     bot_commands/bot_spell_resist_limits.cpp
     bot_commands/bot_spell_target_count.cpp
     bot_commands/bot_spelltypes.cpp
-    bot_commands/bot_summon.cpp
     bot_commands/bot_suspend.cpp
     bot_commands/bot_taunt.cpp
     bot_commands/bot_timer.cpp
@@ -664,6 +666,8 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${gm
 
 add_library(gm_commands_zone STATIC ${gm_command_sources})
 target_link_libraries(gm_commands_zone PRIVATE common)
+target_include_directories(gm_commands_zone PRIVATE ..)
+
 set_target_properties(gm_commands_zone PROPERTIES UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 32)
 set_property(TARGET gm_commands_zone PROPERTY FOLDER libraries)
 
@@ -688,7 +692,7 @@ if(EQEMU_BUILD_LUA)
 endif()
 
 if(EQEMU_BUILD_PERL)
-	target_compile_definitions(perl_zone PUBLIC EMBPERL EMBPERL_PLUGIN PERLBIND_NO_STRICT_SCALAR_TYPES)
+    target_compile_definitions(perl_zone PUBLIC EMBPERL EMBPERL_PLUGIN PERLBIND_NO_STRICT_SCALAR_TYPES)
     target_link_libraries(perl_zone PUBLIC perlbind common ${PERL_LIBRARY})
     if (EQEMU_BUILD_STATIC AND PERL_LIBRARY)
         target_link_libraries(zone PRIVATE ${PERL_LIBRARY})
@@ -696,6 +700,7 @@ if(EQEMU_BUILD_PERL)
 endif()
 
 target_link_libraries(zone PRIVATE gm_commands_zone common RecastNavigation::Detour)
+target_include_directories(zone PRIVATE ..)
 
 if(EQEMU_BUILD_LUA)
     target_link_libraries(zone PRIVATE lua_zone)

@@ -18,14 +18,9 @@
  *
  */
 
-#ifndef EQEMU_ZONE_RELOAD_H
-#define EQEMU_ZONE_RELOAD_H
-
+#pragma once
 
 class ZoneReload {
 public:
 	static void HotReloadQuests();
 };
-
-
-#endif //EQEMU_ZONE_RELOAD_H

@@ -16,25 +16,23 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/rulesys.h"
-#include "../common/strings.h"
-#include "../common/eq_packet_structs.h"
-#include "../common/misc_functions.h"
-#include "../common/events/player_event_logs.h"
-#include "../common/repositories/trader_repository.h"
-#include "../common/repositories/buyer_repository.h"
-#include "../common/repositories/buyer_buy_lines_repository.h"
-
 #include "client.h"
-#include "entity.h"
-#include "mob.h"
 
-#include "quest_parser_collection.h"
-#include "string_ids.h"
-#include "worldserver.h"
-#include "../common/bazaar.h"
+#include "common/bazaar.h"
+#include "common/eq_packet_structs.h"
+#include "common/eqemu_logsys.h"
+#include "common/events/player_event_logs.h"
+#include "common/misc_functions.h"
+#include "common/repositories/buyer_buy_lines_repository.h"
+#include "common/repositories/buyer_repository.h"
+#include "common/repositories/trader_repository.h"
+#include "common/rulesys.h"
+#include "common/strings.h"
+#include "zone/entity.h"
+#include "zone/mob.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/string_ids.h"
+#include "zone/worldserver.h"
 #include <numeric>
 
 class QueryServ;

@@ -16,26 +16,22 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/features.h"
-#include "../common/rulesys.h"
-#include "../common/strings.h"
-
-#include "client.h"
-#include "../common/data_bucket.h"
-#include "groups.h"
-#include "mob.h"
-#include "raids.h"
-
-#include "queryserv.h"
-#include "quest_parser_collection.h"
-#include "lua_parser.h"
-#include "string_ids.h"
-#include "../common/data_verification.h"
-
-#include "bot.h"
-#include "../common/events/player_event_logs.h"
-#include "worldserver.h"
+#include "common/data_bucket.h"
+#include "common/data_verification.h"
+#include "common/events/player_event_logs.h"
+#include "common/features.h"
+#include "common/rulesys.h"
+#include "common/strings.h"
+#include "zone/bot.h"
+#include "zone/client.h"
+#include "zone/groups.h"
+#include "zone/lua_parser.h"
+#include "zone/mob.h"
+#include "zone/queryserv.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/raids.h"
+#include "zone/string_ids.h"
+#include "zone/worldserver.h"
 
 extern WorldServer worldserver;
 

@@ -16,14 +16,14 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "bot.h"
-#include "bot_command.h"
-#include "client.h"
-#include "object.h"
-#include "raids.h"
-#include "doors.h"
-#include "quest_parser_collection.h"
-#include "../common/data_verification.h"
+#include "common/data_verification.h"
+#include "zone/bot_command.h"
+#include "zone/bot.h"
+#include "zone/client.h"
+#include "zone/doors.h"
+#include "zone/object.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/raids.h"
 
 std::vector<RaidMember> Raid::GetRaidGroupMembers(uint32 gid)
 {

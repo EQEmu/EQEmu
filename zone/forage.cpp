@@ -16,33 +16,30 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/misc_functions.h"
-#include "../common/rulesys.h"
-#include "../common/strings.h"
-
-#include "entity.h"
 #include "forage.h"
-#include "npc.h"
-#include "quest_parser_collection.h"
-#include "string_ids.h"
-#include "titles.h"
-#include "water_map.h"
-#include "zonedb.h"
-#include "../common/repositories/criteria/content_filter_criteria.h"
-#include "../common/repositories/forage_repository.h"
-#include "../common/repositories/fishing_repository.h"
-#include "../common/events/player_event_logs.h"
-#include "worldserver.h"
-#include "queryserv.h"
+
+#include "common/eqemu_logsys.h"
+#include "common/events/player_event_logs.h"
+#include "common/misc_functions.h"
+#include "common/repositories/criteria/content_filter_criteria.h"
+#include "common/repositories/fishing_repository.h"
+#include "common/repositories/forage_repository.h"
+#include "common/rulesys.h"
+#include "common/strings.h"
+#include "zone/entity.h"
+#include "zone/npc.h"
+#include "zone/queryserv.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/string_ids.h"
+#include "zone/titles.h"
+#include "zone/water_map.h"
+#include "zone/worldserver.h"
+#include "zone/zonedb.h"
+
+#include <numbers>
 
 extern WorldServer worldserver;
 extern QueryServ  *QServ;
-
-#ifdef _WINDOWS
-#define snprintf	_snprintf
-#endif
 
 struct NPCType;
 
@@ -218,8 +215,8 @@ bool Client::CanFish() {
 		HeadingDegrees = (int) ((GetHeading()*360)/512);
 		HeadingDegrees = HeadingDegrees % 360;
 
-		rodPosition.x = m_Position.x + RodLength * sin(HeadingDegrees * M_PI/180.0f);
-		rodPosition.y = m_Position.y + RodLength * cos(HeadingDegrees * M_PI/180.0f);
+		rodPosition.x = m_Position.x + RodLength * sin(HeadingDegrees * std::numbers::pi / 180.0f);
+		rodPosition.y = m_Position.y + RodLength * cos(HeadingDegrees * std::numbers::pi / 180.0f);
 		rodPosition.z = m_Position.z;
 
 		float bestz = zone->zonemap->FindBestZ(rodPosition, nullptr);

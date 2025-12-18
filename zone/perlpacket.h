@@ -15,14 +15,14 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef PERLPACKET_H
-#define PERLPACKET_H
+
+#pragma once
+
+#include "common/emu_opcodes.h"
+#include "common/types.h"
 
 #include <string>
 #include <vector>
-
-#include "../common/types.h"
-#include "../common/emu_opcodes.h"
 
 class Client;
 
@@ -61,5 +61,3 @@ protected:
 	uint32 len;
 	unsigned char *packet;
 };
-
-#endif

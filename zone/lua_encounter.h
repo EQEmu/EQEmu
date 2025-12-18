@@ -1,8 +1,8 @@
-#ifndef EQEMU_LUA_ENCOUNTER_H
-#define EQEMU_LUA_ENCOUNTER_H
+#pragma once
+
 #ifdef LUA_EQEMU
 
-#include "lua_ptr.h"
+#include "zone/lua_ptr.h"
 
 class Encounter;
 
@@ -28,5 +28,5 @@ public:
 	}
 
 };
-#endif
-#endif
+
+#endif // LUA_EQEMU

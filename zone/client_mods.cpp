@@ -16,16 +16,13 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
-
-#include "../common/rulesys.h"
-#include "../common/spdat.h"
-
 #include "client.h"
-#include "mob.h"
 
-#include "bot.h"
+#include "common/eqemu_logsys.h"
+#include "common/rulesys.h"
+#include "common/spdat.h"
+#include "zone/bot.h"
+#include "zone/mob.h"
 
 #include <algorithm>
 

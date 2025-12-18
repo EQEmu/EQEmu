@@ -1,6 +1,3 @@
-#ifndef _LUABIT_H
-#define _LUABIT_H
+#pragma once
 
 int luaopen_bit(lua_State *L);
-
-#endif

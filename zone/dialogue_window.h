@@ -1,9 +1,9 @@
-#ifndef EQEMU_DIALOGUE_WINDOW_H
-#define EQEMU_DIALOGUE_WINDOW_H
+#pragma once
 
-
+#include <map>
 #include <string>
-#include "client.h"
+
+class Client;
 
 static const std::map<std::string, std::string> html_colors = {
 	{"black",                  "#000000"},
@@ -462,6 +462,3 @@ public:
 	static std::string TableCell(std::string message = std::string());
 	static std::string TableRow(std::string message);
 };
-
-
-#endif //EQEMU_DIALOGUE_WINDOW_H

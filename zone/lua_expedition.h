@@ -18,12 +18,13 @@
  *
  */
 
-#ifndef EQEMU_LUA_EXPEDITION_H
-#define EQEMU_LUA_EXPEDITION_H
+#pragma once
+
 #ifdef LUA_EQEMU
 
-#include "lua_ptr.h"
-#include "../common/types.h"
+#include "common/types.h"
+#include "zone/lua_ptr.h"
+
 #include <string>
 
 class DynamicZone;
@@ -96,4 +97,3 @@ public:
 };
 
 #endif // LUA_EQEMU
-#endif // EQEMU_LUA_EXPEDITION_H

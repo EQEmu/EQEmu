@@ -1,6 +1,7 @@
 #include "sidecar_api.h"
-#include "../../common/json/json.hpp"
-#include "../zone.h"
+
+#include "common/json/json.hpp"
+#include "zone/zone.h"
 
 extern Zone *zone;
 

@@ -16,28 +16,26 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/features.h"
-#include "../common/rulesys.h"
-#include "../common/strings.h"
-
-#include "client.h"
-#include "entity.h"
-#include "map.h"
 #include "mob.h"
-#include "npc.h"
-#include "quest_parser_collection.h"
-#include "string_ids.h"
-#include "water_map.h"
-#include "fastmath.h"
-#include "../common/data_verification.h"
 
-#include "bot.h"
-#include "../common/repositories/npc_spells_repository.h"
-#include "../common/repositories/npc_spells_entries_repository.h"
-#include "../common/repositories/criteria/content_filter_criteria.h"
+#include "common/data_verification.h"
+#include "common/features.h"
+#include "common/repositories/criteria/content_filter_criteria.h"
+#include "common/repositories/npc_spells_entries_repository.h"
+#include "common/repositories/npc_spells_repository.h"
+#include "common/rulesys.h"
+#include "common/strings.h"
+#include "zone/bot.h"
+#include "zone/client.h"
+#include "zone/entity.h"
+#include "zone/fastmath.h"
+#include "zone/map.h"
+#include "zone/npc.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/string_ids.h"
+#include "zone/water_map.h"
 
-#include <glm/gtx/projection.hpp>
+#include "glm/gtx/projection.hpp"
 #include <algorithm>
 #include <iostream>
 #include <limits>
@@ -2992,4 +2990,3 @@ uint32 ZoneDatabase::GetMaxNPCSpellsEffectsID() {
 
     return Strings::ToInt(row[0]);
 }
-

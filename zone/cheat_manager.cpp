@@ -1,9 +1,10 @@
 #include "cheat_manager.h"
-#include "client.h"
-#include "quest_parser_collection.h"
-#include "../common/events/player_event_logs.h"
-#include "worldserver.h"
-#include "queryserv.h"
+
+#include "common/events/player_event_logs.h"
+#include "zone/client.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/worldserver.h"
+#include "zone/queryserv.h"
 
 extern WorldServer worldserver;
 extern QueryServ *QServ;

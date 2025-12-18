@@ -18,11 +18,11 @@
  *
  */
 
-#ifndef EQEMU_NPC_SCALE_MANAGER_H
-#define EQEMU_NPC_SCALE_MANAGER_H
+#pragma once
 
-#include "npc.h"
-#include "zone.h"
+#include "zone/npc.h"
+#include "zone/zone.h"
+
 extern Zone* zone;
 
 class NpcScaleManager {
@@ -119,5 +119,3 @@ public:
 };
 
 extern NpcScaleManager *npc_scale_manager;
-
-#endif //EQEMU_NPC_SCALE_MANAGER_H

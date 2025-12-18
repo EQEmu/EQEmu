@@ -16,30 +16,20 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/spdat.h"
-#include "../common/strings.h"
-
-#include "../common/repositories/pets_repository.h"
-#include "../common/repositories/pets_beastlord_data_repository.h"
-#include "../common/repositories/character_pet_name_repository.h"
-
-#include "entity.h"
-#include "client.h"
-#include "mob.h"
-
 #include "pets.h"
-#include "zonedb.h"
+
+#include "common/repositories/character_pet_name_repository.h"
+#include "common/repositories/pets_beastlord_data_repository.h"
+#include "common/repositories/pets_repository.h"
+#include "common/spdat.h"
+#include "common/strings.h"
+#include "zone/bot.h"
+#include "zone/client.h"
+#include "zone/entity.h"
+#include "zone/mob.h"
+#include "zone/zonedb.h"
 
 #include <string>
-
-#include "bot.h"
-
-#ifndef WIN32
-#include <stdlib.h>
-#include "../common/unix.h"
-#endif
-
 
 // need to pass in a char array of 64 chars
 void GetRandPetName(char *name)

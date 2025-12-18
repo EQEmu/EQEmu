@@ -1,22 +1,23 @@
 #ifdef LUA_EQEMU
 
-#include "lua.hpp"
-#include <luabind/luabind.hpp>
-
-#include "client.h"
-#include "dynamic_zone.h"
-#include "expedition_request.h"
 #include "lua_client.h"
-#include "lua_expedition.h"
-#include "lua_npc.h"
-#include "lua_item.h"
-#include "lua_iteminst.h"
-#include "lua_inventory.h"
-#include "lua_group.h"
-#include "lua_raid.h"
-#include "lua_packet.h"
-#include "dialogue_window.h"
-#include "titles.h"
+
+#include "zone/client.h"
+#include "zone/dialogue_window.h"
+#include "zone/dynamic_zone.h"
+#include "zone/expedition_request.h"
+#include "zone/lua_expedition.h"
+#include "zone/lua_group.h"
+#include "zone/lua_inventory.h"
+#include "zone/lua_item.h"
+#include "zone/lua_iteminst.h"
+#include "zone/lua_npc.h"
+#include "zone/lua_packet.h"
+#include "zone/lua_raid.h"
+#include "zone/titles.h"
+
+#include "lua.hpp"
+#include "luabind/luabind.hpp"
 
 struct InventoryWhere { };
 
@@ -4241,6 +4242,4 @@ luabind::scope lua_register_inventory_where() {
 		)];
 }
 
-
-
-#endif
+#endif // LUA_EQEMU

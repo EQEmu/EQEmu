@@ -1,10 +1,9 @@
-#include "../common/global_define.h"
-#include "../common/servertalk.h"
-#include "../common/strings.h"
-#include "../common/events/player_event_logs.h"
 #include "queryserv.h"
-#include "worldserver.h"
 
+#include "common/events/player_event_logs.h"
+#include "common/servertalk.h"
+#include "common/strings.h"
+#include "zone/worldserver.h"
 
 extern WorldServer worldserver;
 extern QueryServ*  QServ;

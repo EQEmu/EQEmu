@@ -16,26 +16,22 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#ifndef BOT_H
-#define BOT_H
+#pragma once
 
-#include "bot_structs.h"
-#include "mob.h"
-#include "client.h"
-#include "pets.h"
-#include "heal_rotation.h"
-#include "groups.h"
-#include "corpse.h"
-#include "zonedb.h"
-#include "../common/zone_store.h"
-#include "string_ids.h"
-#include "../common/misc_functions.h"
-#include "../common/global_define.h"
-#include "guild_mgr.h"
-#include "worldserver.h"
-#include "raids.h"
-
-#include <sstream>
+#include "common/misc_functions.h"
+#include "common/zone_store.h"
+#include "zone/bot_structs.h"
+#include "zone/client.h"
+#include "zone/corpse.h"
+#include "zone/groups.h"
+#include "zone/guild_mgr.h"
+#include "zone/heal_rotation.h"
+#include "zone/mob.h"
+#include "zone/pets.h"
+#include "zone/raids.h"
+#include "zone/string_ids.h"
+#include "zone/worldserver.h"
+#include "zone/zonedb.h"
 
 constexpr uint32 BOT_KEEP_ALIVE_INTERVAL = 5000; // 5 seconds
 
@@ -1266,5 +1262,3 @@ private:
 };
 
 bool IsSpellInBotList(DBbotspells_Struct* spell_list, uint16 spell_id);
-
-#endif // BOT_H

@@ -15,27 +15,19 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/classes.h"
-#include "../common/data_verification.h"
-#include "../common/global_define.h"
-#include "../common/item_instance.h"
-#include "../common/rulesys.h"
-#include "../common/spdat.h"
 
-#include "client.h"
-#include "entity.h"
-#include "mob.h"
+#include "common/classes.h"
+#include "common/data_verification.h"
+#include "common/item_instance.h"
+#include "common/rulesys.h"
+#include "common/spdat.h"
+#include "zone/client.h"
+#include "zone/entity.h"
+#include "zone/mob.h"
+#include "zone/bot.h"
+#include "zone/quest_parser_collection.h"
 
-#include "bot.h"
-
-#include "quest_parser_collection.h"
-
-
-#ifndef WIN32
-#include <stdlib.h>
-#include "../common/unix.h"
-#endif
-
+#include <cstdlib>
 
 void Mob::CalcBonuses()
 {

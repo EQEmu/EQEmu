@@ -1,13 +1,14 @@
-#ifndef ANTICHEAT_H
-#define ANTICHEAT_H
+#pragma once
+
+#include "common/eq_packet_structs.h"
+#include "common/eq_packet.h"
+#include "common/rulesys.h"
+#include "common/timer.h"
+
+#include "glm/vec3.hpp"
+
 class CheatManager;
 class Client;
-
-#include "../common/timer.h"
-#include "../common/rulesys.h"
-#include <glm/ext/vector_float3.hpp>
-#include "../common/eq_packet_structs.h"
-#include "../common/eq_packet.h"
 
 typedef enum {
 	Collision = 1,
@@ -85,5 +86,3 @@ private:
 	Timer  m_time_since_last_movement_history;
 	uint32 m_warp_counter;
 };
-
-#endif //ANTICHEAT_H

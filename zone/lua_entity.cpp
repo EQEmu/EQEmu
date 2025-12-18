@@ -1,18 +1,18 @@
 #ifdef LUA_EQEMU
 
-#include <luabind/luabind.hpp>
-
-#include "entity.h"
 #include "lua_entity.h"
-#include "lua_mob.h"
-#include "lua_client.h"
-#include "lua_npc.h"
-#include "lua_corpse.h"
-#include "lua_object.h"
-#include "lua_door.h"
 
-#include "lua_bot.h"
-#include "lua_merc.h"
+#include "zone/entity.h"
+#include "zone/lua_bot.h"
+#include "zone/lua_client.h"
+#include "zone/lua_corpse.h"
+#include "zone/lua_door.h"
+#include "zone/lua_merc.h"
+#include "zone/lua_mob.h"
+#include "zone/lua_npc.h"
+#include "zone/lua_object.h"
+
+#include "luabind/luabind.hpp"
 
 bool Lua_Entity::IsClient() {
 	Lua_Safe_Call_Bool();

@@ -1,8 +1,8 @@
-#ifndef EQEMU_LUA_ENTITY_LIST_H
-#define EQEMU_LUA_ENTITY_LIST_H
+#pragma once
+
 #ifdef LUA_EQEMU
 
-#include "lua_ptr.h"
+#include "zone/lua_ptr.h"
 
 class EntityList;
 class Lua_Mob;
@@ -161,5 +161,4 @@ public:
 	Lua_NPC_List GetNPCsByExcludedIDs(luabind::adl::object npc_ids);
 };
 
-#endif
-#endif
+#endif // LUA_EQEMU

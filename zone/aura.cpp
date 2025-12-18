@@ -1,10 +1,9 @@
-#include "../common/strings.h"
-#include "../common/repositories/auras_repository.h"
-
-#include "aura.h"
-#include "client.h"
-#include "string_ids.h"
-#include "raids.h"
+#include "common/repositories/auras_repository.h"
+#include "common/strings.h"
+#include "zone/aura.h"
+#include "zone/client.h"
+#include "zone/raids.h"
+#include "zone/string_ids.h"
 
 Aura::Aura(NPCType *type_data, Mob *owner, AuraRecord &record)
 	: NPC(type_data, 0, owner->GetPosition(), GravityBehavior::Flying), spell_id(record.spell_id),

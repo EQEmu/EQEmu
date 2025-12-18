@@ -1,9 +1,9 @@
-#ifndef EQEMU_COMBAT_RECORD_H
-#define EQEMU_COMBAT_RECORD_H
+#pragma once
+
+#include "common/types.h"
 
 #include <ctime>
 #include <string>
-#include "../common/types.h"
 
 class CombatRecord {
 public:
@@ -25,5 +25,3 @@ private:
 	int64       m_damage_received = 0;
 	int64       m_heal_received   = 0;
 };
-
-#endif //EQEMU_COMBAT_RECORD_H

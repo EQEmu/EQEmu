@@ -1,20 +1,19 @@
-#ifndef ZONEDB_H_
-#define ZONEDB_H_
+
+#pragma once
+
+#include "common/eq_packet_structs.h"
+#include "common/eqemu_logsys.h"
+#include "common/faction.h"
+#include "common/races.h"
+#include "common/repositories/doors_repository.h"
+#include "common/repositories/npc_faction_entries_repository.h"
+#include "common/shareddb.h"
+#include "zone/aa_ability.h"
+#include "zone/bot_database.h"
+#include "zone/event_codes.h"
+#include "zone/position.h"
 
 #include <unordered_set>
-
-#include "../common/shareddb.h"
-#include "../common/eq_packet_structs.h"
-#include "position.h"
-#include "../common/faction.h"
-#include "../common/eqemu_logsys.h"
-#include "aa_ability.h"
-#include "event_codes.h"
-#include "../common/repositories/doors_repository.h"
-#include "../common/races.h"
-#include "../common/repositories/npc_faction_entries_repository.h"
-
-#include "bot_database.h"
 
 class Client;
 class Corpse;
@@ -674,6 +673,3 @@ protected:
 
 extern ZoneDatabase database;
 extern ZoneDatabase content_db;
-
-#endif /*ZONEDB_H_*/
-

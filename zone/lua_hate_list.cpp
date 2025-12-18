@@ -1,11 +1,12 @@
 #ifdef LUA_EQEMU
 
-#include <luabind/luabind.hpp>
-#include <luabind/iterator_policy.hpp>
-
-#include "masterentity.h"
-#include "lua_mob.h"
 #include "lua_hate_list.h"
+
+#include "zone/lua_mob.h"
+#include "zone/masterentity.h"
+
+#include "luabind/iterator_policy.hpp"
+#include "luabind/luabind.hpp"
 
 Lua_Mob Lua_HateEntry::GetEnt() {
 	Lua_Safe_Call_Class(Lua_Mob);
@@ -62,4 +63,4 @@ luabind::scope lua_register_hate_list() {
 	.def_readwrite("entries", &Lua_HateList::entries, luabind::return_stl_iterator);
 }
 
-#endif
+#endif // LUA_EQEMU

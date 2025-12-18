@@ -16,15 +16,10 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/rulesys.h"
-
-#include "map.h"
-#include "water_map.h"
-#include "zone.h"
-
-#ifdef _WINDOWS
-#define snprintf	_snprintf
-#endif
+#include "common/rulesys.h"
+#include "zone/map.h"
+#include "zone/water_map.h"
+#include "zone/zone.h"
 
 extern Zone* zone;
 

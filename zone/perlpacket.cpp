@@ -15,11 +15,12 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/global_define.h"
+
 #include "perlpacket.h"
-#include "client.h"
-#include "../common/opcodemgr.h"
-#include "../common/misc_functions.h"
+
+#include "common/misc_functions.h"
+#include "common/opcodemgr.h"
+#include "zone/client.h"
 
 PerlPacket::PerlPacket(const char *opcode, uint32 length) {
 	SetOpcode(opcode);

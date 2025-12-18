@@ -15,10 +15,10 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef __ZoneConfig_H
-#define __ZoneConfig_H
 
-#include "../common/eqemu_config.h"
+#pragma once
+
+#include "common/eqemu_config.h"
 
 class ZoneConfig : public EQEmuConfig {
 	public:
@@ -59,5 +59,3 @@ class ZoneConfig : public EQEmuConfig {
 
 	void Dump() const;
 };
-
-#endif

@@ -1,10 +1,9 @@
-#include "../common/features.h"
+#include "common/features.h"
 
 #ifdef EMBPERL_XS_CLASSES
 
-#include "../common/global_define.h"
-#include "../common/spdat.h"
-#include "embperl.h"
+#include "common/spdat.h"
+#include "zone/embperl.h"
 
 int Perl_Spell_GetActivated(SPDat_Spell_Struct* self)
 {

@@ -1,16 +1,16 @@
 #ifdef LUA_EQEMU
 
-#include "../common/data_verification.h"
-
-#include <luabind/luabind.hpp>
-#include <luabind/object.hpp>
-
-#include "groups.h"
-#include "masterentity.h"
 #include "lua_group.h"
-#include "lua_mob.h"
-#include "lua_client.h"
-#include "lua_npc.h"
+
+#include "common/data_verification.h"
+#include "zone/groups.h"
+#include "zone/lua_client.h"
+#include "zone/lua_mob.h"
+#include "zone/lua_npc.h"
+#include "zone/masterentity.h"
+
+#include "luabind/luabind.hpp"
+#include "luabind/object.hpp"
 
 void Lua_Group::DisbandGroup() {
 	Lua_Safe_Call_Void();
@@ -182,4 +182,4 @@ luabind::scope lua_register_group() {
 	.def("TeleportGroup", (void(Lua_Group::*)(Lua_Mob,uint32,uint32,float,float,float,float))&Lua_Group::TeleportGroup);
 }
 
-#endif
+#endif // LUA_EQEMU

@@ -1,10 +1,9 @@
-#include "../common/features.h"
+#include "common/features.h"
 
 #ifdef EMBPERL_XS_CLASSES
 
-#include "../common/global_define.h"
-#include "embperl.h"
-#include "corpse.h"
+#include "zone/corpse.h"
+#include "zone/embperl.h"
 
 uint32_t Perl_Corpse_GetCharID(Corpse* self) // @categories Account and Character, Corpse
 {

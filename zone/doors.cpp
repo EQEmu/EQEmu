@@ -16,26 +16,23 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/strings.h"
-
-#include "../common/repositories/doors_repository.h"
-
-#include "client.h"
 #include "doors.h"
-#include "entity.h"
-#include "guild_mgr.h"
-#include "mob.h"
-#include "string_ids.h"
-#include "worldserver.h"
-#include "zonedb.h"
-#include "../common/evolving_items.h"
-#include "../common/repositories/criteria/content_filter_criteria.h"
 
-#include <string.h>
+#include "common/eqemu_logsys.h"
+#include "common/evolving_items.h"
+#include "common/repositories/criteria/content_filter_criteria.h"
+#include "common/repositories/doors_repository.h"
+#include "common/strings.h"
+#include "zone/client.h"
+#include "zone/entity.h"
+#include "zone/guild_mgr.h"
+#include "zone/mob.h"
+#include "zone/string_ids.h"
+#include "zone/worldserver.h"
+#include "zone/zonedb.h"
 
-#include <glm/ext/matrix_transform.hpp>
+#include "glm/ext/matrix_transform.hpp"
+#include <cstring>
 #include <numbers>
 
 #define OPEN_DOOR 0x02

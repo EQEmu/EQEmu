@@ -1,6 +1,27 @@
-#ifndef _EQE_LUA_PARSER_EVENTS_H
-#define _EQE_LUA_PARSER_EVENTS_H
+#pragma once
+
 #ifdef LUA_EQEMU
+
+#include "common/types.h"
+
+#include <any>
+#include <string>
+#include <vector>
+
+class Bot;
+class Client;
+class Encounter;
+class Merc;
+class Mob;
+class NPC;
+class QuestInterface;
+class Zone;
+struct lua_State;
+
+namespace EQ
+{
+	class ItemInstance;
+}
 
 typedef void(*NPCArgumentHandler)(QuestInterface*, lua_State*, NPC*, Mob*, std::string, uint32, std::vector<std::any>*);
 typedef void(*PlayerArgumentHandler)(QuestInterface*, lua_State*, Client*, std::string, uint32, std::vector<std::any>*);
@@ -1434,5 +1455,4 @@ void handle_zone_timer_stop(
 	std::vector<std::any> *extra_pointers
 );
 
-#endif
-#endif
+#endif // LUA_EQEMU

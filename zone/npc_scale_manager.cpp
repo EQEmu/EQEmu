@@ -19,8 +19,9 @@
  */
 
 #include "npc_scale_manager.h"
-#include "../common/repositories/npc_scale_global_base_repository.h"
-#include "../common/repositories/npc_types_repository.h"
+
+#include "common/repositories/npc_scale_global_base_repository.h"
+#include "common/repositories/npc_types_repository.h"
 
 /**
  * @param npc

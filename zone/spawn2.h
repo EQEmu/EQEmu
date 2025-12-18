@@ -15,11 +15,11 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef SPAWN2_H
-#define SPAWN2_H
 
-#include "../common/timer.h"
-#include "npc.h"
+#pragma once
+
+#include "common/timer.h"
+#include "zone/npc.h"
 
 #define SC_AlwaysEnabled 0
 
@@ -186,5 +186,3 @@ protected:
 
 constexpr int format_as(SpawnCondition::OnChange val) { return static_cast<int>(val); }
 constexpr int format_as(SpawnEvent::Action val) { return static_cast<int>(val); }
-
-#endif

@@ -1,8 +1,8 @@
-#ifndef EQEMU_LUA_NPC_H
-#define EQEMU_LUA_NPC_H
+#pragma once
+
 #ifdef LUA_EQEMU
 
-#include "lua_mob.h"
+#include "zone/lua_mob.h"
 
 class NPC;
 class Lua_Mob;
@@ -204,5 +204,4 @@ public:
 
 };
 
-#endif
-#endif
+#endif // LUA_EQEMU

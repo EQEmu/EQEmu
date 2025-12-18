@@ -16,25 +16,22 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/strings.h"
-#include "../common/events/player_event_logs.h"
-#include "../common/repositories/character_expedition_lockouts_repository.h"
-#include "../common/repositories/raid_details_repository.h"
-#include "../common/repositories/raid_members_repository.h"
-#include "../common/raid.h"
-
-
-#include "client.h"
-#include "dynamic_zone.h"
-#include "entity.h"
-#include "groups.h"
-#include "mob.h"
-#include "raids.h"
-#include "string_ids.h"
-#include "bot.h"
-
-#include "worldserver.h"
-#include "queryserv.h"
+#include "common/events/player_event_logs.h"
+#include "common/raid.h"
+#include "common/repositories/character_expedition_lockouts_repository.h"
+#include "common/repositories/raid_details_repository.h"
+#include "common/repositories/raid_members_repository.h"
+#include "common/strings.h"
+#include "zone/bot.h"
+#include "zone/client.h"
+#include "zone/dynamic_zone.h"
+#include "zone/entity.h"
+#include "zone/groups.h"
+#include "zone/mob.h"
+#include "zone/queryserv.h"
+#include "zone/raids.h"
+#include "zone/string_ids.h"
+#include "zone/worldserver.h"
 
 extern EntityList  entity_list;
 extern WorldServer worldserver;

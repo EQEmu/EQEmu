@@ -18,16 +18,16 @@
 
 #ifdef EMBPERL
 
-#include "../common/global_define.h"
-#include "../common/seperator.h"
-#include "../common/misc_functions.h"
-#include "../common/strings.h"
-#include "../common/features.h"
-#include "masterentity.h"
-#include "embparser.h"
-#include "questmgr.h"
-#include "qglobals.h"
-#include "zone.h"
+#include "common/features.h"
+#include "common/misc_functions.h"
+#include "common/seperator.h"
+#include "common/strings.h"
+#include "zone/embparser.h"
+#include "zone/masterentity.h"
+#include "zone/qglobals.h"
+#include "zone/questmgr.h"
+#include "zone/zone.h"
+
 #include <algorithm>
 #include <sstream>
 
@@ -2911,4 +2911,4 @@ int PerlembParser::EventGlobalZone(
 	);
 }
 
-#endif
+#endif // EMBPERL

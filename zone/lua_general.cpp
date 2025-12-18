@@ -1,35 +1,36 @@
 #ifdef LUA_EQEMU
 
-#include "lua.hpp"
-#include <luabind/luabind.hpp>
+#include "lua_general.h"
 
-#include <sstream>
+#include "common/classes.h"
+#include "common/content/world_content_service.h"
+#include "common/data_bucket.h"
+#include "common/events/player_event_logs.h"
+#include "common/rulesys.h"
+#include "common/timer.h"
+#include "zone/dialogue_window.h"
+#include "zone/dynamic_zone.h"
+#include "zone/encounter.h"
+#include "zone/lua_client.h"
+#include "zone/lua_encounter.h"
+#include "zone/lua_entity_list.h"
+#include "zone/lua_expedition.h"
+#include "zone/lua_item.h"
+#include "zone/lua_iteminst.h"
+#include "zone/lua_npc.h"
+#include "zone/lua_spell.h"
+#include "zone/lua_zone.h"
+#include "zone/qglobals.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/questmgr.h"
+#include "zone/worldserver.h"
+#include "zone/zone.h"
+
+#include "lua.hpp"
+#include "luabind/luabind.hpp"
 #include <list>
 #include <map>
-
-#include "../common/content/world_content_service.h"
-#include "../common/timer.h"
-#include "../common/classes.h"
-#include "../common/rulesys.h"
-#include "lua_item.h"
-#include "lua_iteminst.h"
-#include "lua_client.h"
-#include "lua_npc.h"
-#include "lua_entity_list.h"
-#include "lua_expedition.h"
-#include "lua_spell.h"
-#include "lua_zone.h"
-#include "quest_parser_collection.h"
-#include "questmgr.h"
-#include "qglobals.h"
-#include "encounter.h"
-#include "lua_encounter.h"
-#include "../common/data_bucket.h"
-#include "dialogue_window.h"
-#include "dynamic_zone.h"
-#include "../common/events/player_event_logs.h"
-#include "worldserver.h"
-#include "zone.h"
+#include <sstream>
 
 struct Events { };
 struct Factions { };
@@ -8082,4 +8083,4 @@ luabind::scope lua_register_exp_source() {
 		)];
 }
 
-#endif
+#endif // LUA_EQEMU

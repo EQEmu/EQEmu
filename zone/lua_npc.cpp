@@ -1,15 +1,16 @@
 #ifdef LUA_EQEMU
 
-#include "lua.hpp"
-#include <luabind/luabind.hpp>
-#include <luabind/iterator_policy.hpp>
-
-#include "npc.h"
 #include "lua_npc.h"
-#include "lua_client.h"
-#include "lua_item.h"
-#include "lua_iteminst.h"
-#include "lua_spawn.h"
+
+#include "zone/lua_client.h"
+#include "zone/lua_item.h"
+#include "zone/lua_iteminst.h"
+#include "zone/lua_spawn.h"
+#include "zone/npc.h"
+
+#include "lua.hpp"
+#include "luabind/iterator_policy.hpp"
+#include "luabind/luabind.hpp"
 
 struct Lua_NPC_Loot_List {
 	std::vector<uint32> entries;
@@ -1131,4 +1132,4 @@ luabind::scope lua_register_npc_loot_list() {
 	.def_readwrite("entries", &Lua_NPC_Loot_List::entries, luabind::return_stl_iterator);
 }
 
-#endif
+#endif // LUA_EQEMU

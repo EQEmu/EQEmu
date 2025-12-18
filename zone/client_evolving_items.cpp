@@ -1,11 +1,9 @@
-#include "../common/evolving_items.h"
-
-#include "../common/events/player_event_logs.h"
-#include "../common/global_define.h"
-
 #include "client.h"
-#include "string_ids.h"
-#include "worldserver.h"
+
+#include "common/events/player_event_logs.h"
+#include "common/evolving_items.h"
+#include "zone/string_ids.h"
+#include "zone/worldserver.h"
 
 extern WorldServer worldserver;
 extern QueryServ*  QServ;

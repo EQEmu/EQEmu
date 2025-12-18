@@ -15,17 +15,16 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef OBJECT_H
-#define OBJECT_H
+
+#pragma once
 
 // Object Class:
 // Represents Zone Objects (forges, ovens, brew barrels, items dropped to ground, etc)
 
-#include "../common/eq_packet_structs.h"
-#include "../common/timer.h"
-#include "../common/types.h"
-
-#include "entity.h"
+#include "common/eq_packet_structs.h"
+#include "common/timer.h"
+#include "common/types.h"
+#include "zone/entity.h"
 
 class Client;
 class EQApplicationPacket;
@@ -380,5 +379,3 @@ static std::map<uint32, std::string> object_types = {
 	{ ObjectType::CollectibleBag,       "Collectible Bag" },
 	{ ObjectType::NoDeposit,            "No Deposit" }
 };
-
-#endif

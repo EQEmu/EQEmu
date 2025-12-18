@@ -18,11 +18,11 @@
  *
  */
 
-#ifndef EXPEDITION_REQUEST_H
-#define EXPEDITION_REQUEST_H
+#pragma once
 
-#include "dynamic_zone.h"
-#include "../common/dynamic_zone_lockout.h"
+#include "common/dynamic_zone_lockout.h"
+#include "zone/dynamic_zone.h"
+
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -67,5 +67,3 @@ private:
 	std::vector<DynamicZoneMember> m_members;
 	std::vector<DzLockout> m_lockouts;
 };
-
-#endif

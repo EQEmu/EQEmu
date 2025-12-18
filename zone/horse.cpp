@@ -16,18 +16,16 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/linked_list.h"
-#include "../common/strings.h"
-
-#include "../common/repositories/horses_repository.h"
-
-#include "client.h"
-#include "entity.h"
 #include "horse.h"
-#include "mob.h"
-#include "string_ids.h"
+
+#include "common/eqemu_logsys.h"
+#include "common/linked_list.h"
+#include "common/repositories/horses_repository.h"
+#include "common/strings.h"
+#include "zone/client.h"
+#include "zone/entity.h"
+#include "zone/mob.h"
+#include "zone/string_ids.h"
 
 std::map<uint16, const NPCType *> Horse::horse_types;
 

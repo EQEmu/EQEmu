@@ -19,13 +19,12 @@
 
 */
 
-#ifndef ZONE_MAP_H
-#define ZONE_MAP_H
+#pragma once
 
-#include "position.h"
-#include <stdio.h>
+#include "zone/position.h"
+#include "zone/zone_config.h"
 
-#include "zone_config.h"
+#include <cstdio>
 
 #define BEST_Z_INVALID -99999
 
@@ -68,5 +67,3 @@ private:
 	struct impl;
 	impl *imp;
 };
-
-#endif

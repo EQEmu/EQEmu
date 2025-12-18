@@ -1,8 +1,9 @@
-#include "../common/features.h"
+#include "common/features.h"
+
 #ifdef EMBPERL_XS_CLASSES
-#include "../common/global_define.h"
-#include "embperl.h"
-#include "merc.h"
+
+#include "zone/embperl.h"
+#include "zone/merc.h"
 
 uint32 Perl_Merc_GetCostFormula(Merc* self)
 {

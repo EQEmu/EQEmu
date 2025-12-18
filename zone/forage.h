@@ -16,11 +16,9 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#ifndef FORAGE_H
-#define FORAGE_H
-#include "../common/types.h"
+#pragma once
+
+#include "common/types.h"
 
 #define MAX_COMMON_FOOD_IDS 8
 #define MAX_COMMON_FISH_IDS 9
-
-#endif

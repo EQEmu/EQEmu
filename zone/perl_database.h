@@ -1,7 +1,7 @@
 #pragma once
 
-#include "quest_db.h"
-#include "../common/mysql_stmt.h"
+#include "common/mysql_stmt.h"
+#include "zone/quest_db.h"
 
 class Perl_MySQLPreparedStmt;
 

@@ -1,17 +1,18 @@
 #include "mob_movement_manager.h"
-#include "client.h"
-#include "mob.h"
-#include "zone.h"
-#include "position.h"
-#include "water_map.h"
-#include "../common/eq_packet_structs.h"
-#include "../common/misc_functions.h"
-#include "../common/data_verification.h"
 
-#include <vector>
+#include "common/data_verification.h"
+#include "common/eq_packet_structs.h"
+#include "common/misc_functions.h"
+#include "zone/client.h"
+#include "zone/mob.h"
+#include "zone/position.h"
+#include "zone/water_map.h"
+#include "zone/zone.h"
+
+#include <cstdlib>
 #include <deque>
 #include <map>
-#include <stdlib.h>
+#include <vector>
 
 extern double frame_time;
 extern Zone   *zone;

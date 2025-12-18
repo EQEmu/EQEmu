@@ -17,17 +17,18 @@
 */
 
 #include "bot.h"
-#include "object.h"
-#include "raids.h"
-#include "doors.h"
-#include "quest_parser_collection.h"
-#include "lua_parser.h"
-#include "../common/repositories/bot_inventories_repository.h"
-#include "../common/repositories/bot_spell_settings_repository.h"
-#include "../common/repositories/bot_starting_items_repository.h"
-#include "../common/data_verification.h"
-#include "../common/repositories/criteria/content_filter_criteria.h"
-#include "../common/skill_caps.h"
+
+#include "common/data_verification.h"
+#include "common/repositories/bot_inventories_repository.h"
+#include "common/repositories/bot_spell_settings_repository.h"
+#include "common/repositories/bot_starting_items_repository.h"
+#include "common/repositories/criteria/content_filter_criteria.h"
+#include "common/skill_caps.h"
+#include "zone/doors.h"
+#include "zone/lua_parser.h"
+#include "zone/object.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/raids.h"
 
 /*
 TODO bot rewrite:

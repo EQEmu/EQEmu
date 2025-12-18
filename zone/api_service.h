@@ -20,7 +20,8 @@
 
 #pragma once
 
+#include "common/net/websocket_server.h"
+
 #include <memory>
-#include "../common/net/websocket_server.h"
 
 void RegisterApiService(std::unique_ptr<EQ::Net::WebsocketServer> &server);

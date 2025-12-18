@@ -1,15 +1,14 @@
-#include "../common/features.h"
+#include "common/features.h"
 
 #ifdef EMBPERL_XS_CLASSES
 
-#include "../common/global_define.h"
-#include "../common/spdat.h"
-#include "embperl.h"
-#include "mob.h"
-#include "client.h"
-#include "dialogue_window.h"
-#include "bot.h"
-#include "questmgr.h"
+#include "common/spdat.h"
+#include "zone/bot.h"
+#include "zone/client.h"
+#include "zone/dialogue_window.h"
+#include "zone/embperl.h"
+#include "zone/mob.h"
+#include "zone/questmgr.h"
 
 bool Perl_Mob_IsClient(Mob* self) // @categories Script Utility
 {

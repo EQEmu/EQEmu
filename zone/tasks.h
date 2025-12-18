@@ -1,12 +1,12 @@
-#ifndef TASKS_H
-#define TASKS_H
+#pragma once
 
-#include "../common/types.h"
-#include "../common/tasks.h"
-#include <list>
-#include <vector>
-#include <string>
+#include "common/tasks.h"
+#include "common/types.h"
+
 #include <algorithm>
+#include <list>
+#include <string>
+#include <vector>
 
 class Client;
 class Mob;
@@ -14,5 +14,3 @@ class Mob;
 namespace EQ {
 	class ItemInstance;
 }
-
-#endif

@@ -1,11 +1,10 @@
-#include "../common/features.h"
+#include "common/features.h"
 
 #ifdef EMBPERL_XS_CLASSES
 
-#include "../common/data_verification.h"
-#include "../common/global_define.h"
-#include "embperl.h"
-#include "groups.h"
+#include "common/data_verification.h"
+#include "zone/embperl.h"
+#include "zone/groups.h"
 
 void Perl_Group_DisbandGroup(Group* self) // @categories Script Utility, Group
 {

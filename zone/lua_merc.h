@@ -1,8 +1,8 @@
-#ifndef EQEMU_LUA_MERC_H
-#define EQEMU_LUA_MERC_H
+#pragma once
+
 #ifdef LUA_EQEMU
 
-#include "lua_mob.h"
+#include "zone/lua_mob.h"
 
 class Merc;
 class Lua_Group;
@@ -60,4 +60,3 @@ public:
 };
 
 #endif // LUA_EQEMU
-#endif // EQEMU_LUA_MERC_H

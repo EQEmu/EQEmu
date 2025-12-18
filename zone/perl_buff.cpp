@@ -1,8 +1,9 @@
-#include "../common/features.h"
+#include "common/features.h"
+
 #ifdef EMBPERL_XS_CLASSES
-#include "../common/global_define.h"
-#include "embperl.h"
-#include "common.h"
+
+#include "zone/common.h"
+#include "zone/embperl.h"
 
 uint16 Perl_Buff_GetCasterID(Buffs_Struct* self)
 {

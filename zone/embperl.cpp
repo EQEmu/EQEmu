@@ -5,19 +5,16 @@ wraps a perl interpreter for use in eqemu
 Eglin
 */
 
-#ifndef EMBPERL_CPP
-#define EMBPERL_CPP
-
 #ifdef EMBPERL
 
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
+#include "common/eqemu_logsys.h"
+#include "common/features.h"
+#include "common/file.h"
+#include "common/process/process.h"
+#include "common/timer.h"
+#include "zone/embperl.h"
+
 #include <vector>
-#include "embperl.h"
-#include "../common/features.h"
-#include "../common/process/process.h"
-#include "../common/file.h"
-#include "../common/timer.h"
 
 #ifndef GvCV_set
 #define GvCV_set(gv,cv)   (GvCV(gv) = (cv))
@@ -354,8 +351,5 @@ XS(XS_EQEmuIO_PRINT)
 	XSRETURN_EMPTY;
 }
 
-#endif //EMBPERL_IO_CAPTURE
-
-#endif //EMBPERL
-
-#endif //EMBPERL_CPP
+#endif // EMBPERL_IO_CAPTURE
+#endif // EMBPERL

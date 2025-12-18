@@ -1,9 +1,9 @@
-#ifndef EQEMU_LUA_PACKET_H
-#define EQEMU_LUA_PACKET_H
+#pragma once
+
 #ifdef LUA_EQEMU
 
-#include "lua_ptr.h"
-#include "../common/types.h"
+#include "common/types.h"
+#include "zone/lua_ptr.h"
 
 class EQApplicationPacket;
 
@@ -67,5 +67,5 @@ private:
 	bool owned_;
 };
 
-#endif
-#endif
+#endif // LUA_EQEMU
+

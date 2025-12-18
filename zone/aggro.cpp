@@ -16,20 +16,16 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/faction.h"
-#include "../common/rulesys.h"
-#include "../common/spdat.h"
-
-#include "client.h"
-#include "entity.h"
-#include "mob.h"
-
-#include "bot.h"
-
-#include "map.h"
-#include "water_map.h"
+#include "common/eqemu_logsys.h"
+#include "common/faction.h"
+#include "common/rulesys.h"
+#include "common/spdat.h"
+#include "zone/bot.h"
+#include "zone/client.h"
+#include "zone/entity.h"
+#include "zone/map.h"
+#include "zone/mob.h"
+#include "zone/water_map.h"
 
 extern Zone* zone;
 //#define LOSDEBUG 6

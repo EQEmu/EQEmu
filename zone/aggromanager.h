@@ -1,8 +1,8 @@
-#ifndef AGGROMANAGER_H
-#define AGGROMANAGER_H
+#pragma once
 
-#include "../common/types.h"
-#include <assert.h>
+#include "common/types.h"
+
+#include <cassert>
 #include <cstddef>
 
 class AggroMeter
@@ -75,6 +75,3 @@ public:
 	// fuck it, lets just use a buffer the size of the largest to work with
 	const inline size_t max_packet_size() const { return sizeof(uint8) + sizeof(uint32) + sizeof(uint8) + (sizeof(uint8) + sizeof(uint16)) * AT_Max; }
 };
-
-
-#endif /* !AGGROMANAGER_H */

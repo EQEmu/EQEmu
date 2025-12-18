@@ -15,65 +15,51 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/opcodemgr.h"
-#include "../common/raid.h"
+#include "client.h"
 
+#include "common/data_bucket.h"
+#include "common/data_verification.h"
+#include "common/eqemu_logsys.h"
+#include "common/events/player_event_logs.h"
+#include "common/opcodemgr.h"
+#include "common/raid.h"
+#include "common/rdtsc.h"
+#include "common/repositories/account_repository.h"
+#include "common/repositories/adventure_members_repository.h"
+#include "common/repositories/buyer_buy_lines_repository.h"
+#include "common/repositories/character_corpses_repository.h"
+#include "common/repositories/character_instance_safereturns_repository.h"
+#include "common/repositories/character_pet_name_repository.h"
+#include "common/repositories/character_stats_record_repository.h"
+#include "common/repositories/criteria/content_filter_criteria.h"
+#include "common/repositories/guild_tributes_repository.h"
+#include "common/repositories/tradeskill_recipe_entries_repository.h"
+#include "common/rulesys.h"
+#include "common/shared_tasks.h"
+#include "zone/bot.h"
+#include "zone/dialogue_window.h"
+#include "zone/dynamic_zone.h"
+#include "zone/event_codes.h"
+#include "zone/gm_commands/door_manipulation.h"
+#include "zone/gm_commands/object_manipulation.h"
+#include "zone/guild_mgr.h"
+#include "zone/merc.h"
+#include "zone/mob_movement_manager.h"
+#include "zone/petitions.h"
+#include "zone/queryserv.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/string_ids.h"
+#include "zone/titles.h"
+#include "zone/water_map.h"
+#include "zone/worldserver.h"
+#include "zone/zone.h"
+
+#include "zlib.h"
+#include <cstdio>
 #include <iomanip>
 #include <iostream>
-#include <math.h>
+#include <numbers>
 #include <set>
-#include <stdio.h>
-#include <string.h>
-#include <zlib.h>
-#include "bot.h"
-
-#ifdef _WINDOWS
-#define snprintf	_snprintf
-#define strncasecmp	_strnicmp
-#define strcasecmp	_stricmp
-#else
-#include <pthread.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#endif
-
-#include "../common/data_verification.h"
-#include "../common/rdtsc.h"
-#include "../common/data_bucket.h"
-#include "dynamic_zone.h"
-#include "event_codes.h"
-#include "guild_mgr.h"
-#include "merc.h"
-#include "petitions.h"
-#include "queryserv.h"
-#include "quest_parser_collection.h"
-#include "string_ids.h"
-#include "titles.h"
-#include "water_map.h"
-#include "worldserver.h"
-#include "zone.h"
-#include "mob_movement_manager.h"
-#include "../common/repositories/character_instance_safereturns_repository.h"
-#include "../common/repositories/criteria/content_filter_criteria.h"
-#include "../common/shared_tasks.h"
-#include "gm_commands/door_manipulation.h"
-#include "gm_commands/object_manipulation.h"
-#include "client.h"
-#include "../common/repositories/account_repository.h"
-#include "../common/repositories/character_corpses_repository.h"
-#include "../common/repositories/guild_tributes_repository.h"
-#include "../common/repositories/buyer_buy_lines_repository.h"
-#include "../common/repositories/character_pet_name_repository.h"
-#include "../common/repositories/tradeskill_recipe_entries_repository.h"
-
-#include "../common/events/player_event_logs.h"
-#include "../common/repositories/character_stats_record_repository.h"
-#include "dialogue_window.h"
-#include "../common/rulesys.h"
-#include "../common/repositories/adventure_members_repository.h"
 
 extern QueryServ* QServ;
 extern Zone* zone;
@@ -4925,7 +4911,7 @@ void Client::Handle_OP_ClientUpdate(const EQApplicationPacket *app) {
 
 			// Calculate angle from boat heading to EQ heading
 			double theta = std::fmod(((boat->GetHeading() * 360.0) / 512.0),360.0);
-			double thetar = (theta * M_PI) / 180.0;
+			double thetar = (theta * std::numbers::pi) / 180.0;
 
 			// Boat cx is inverted (positive to left)
 			// Boat cy is normal (positive toward heading)

@@ -19,13 +19,15 @@
  */
 
 #include "dynamic_zone.h"
-#include "client.h"
-#include "expedition_request.h"
-#include "string_ids.h"
-#include "worldserver.h"
-#include "../common/repositories/character_expedition_lockouts_repository.h"
-#include "../common/repositories/dynamic_zone_lockouts_repository.h"
-#include <cereal/types/utility.hpp>
+
+#include "common/repositories/character_expedition_lockouts_repository.h"
+#include "common/repositories/dynamic_zone_lockouts_repository.h"
+#include "zone/client.h"
+#include "zone/expedition_request.h"
+#include "zone/string_ids.h"
+#include "zone/worldserver.h"
+
+#include "cereal/types/utility.hpp"
 
 extern WorldServer worldserver;
 

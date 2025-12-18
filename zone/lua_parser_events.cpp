@@ -1,27 +1,26 @@
 #ifdef LUA_EQEMU
-#include <sstream>
+
+#include "lua_parser_events.h"
+
+#include "zone/lua_client.h"
+#include "zone/lua_corpse.h"
+#include "zone/lua_door.h"
+#include "zone/lua_encounter.h"
+#include "zone/lua_item.h"
+#include "zone/lua_iteminst.h"
+#include "zone/lua_mob.h"
+#include "zone/lua_npc.h"
+#include "zone/lua_object.h"
+#include "zone/lua_packet.h"
+#include "zone/lua_spell.h"
+#include "zone/masterentity.h"
+#include "zone/quest_interface.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/zone.h"
 
 #include "lua.hpp"
-#include <luabind/luabind.hpp>
-#include <luabind/object.hpp>
-
-#include "quest_parser_collection.h"
-#include "quest_interface.h"
-
-#include "masterentity.h"
-#include "lua_item.h"
-#include "lua_iteminst.h"
-#include "lua_mob.h"
-#include "lua_client.h"
-#include "lua_npc.h"
-#include "lua_spell.h"
-#include "lua_corpse.h"
-#include "lua_door.h"
-#include "lua_object.h"
-#include "lua_packet.h"
-#include "lua_encounter.h"
-#include "zone.h"
-#include "lua_parser_events.h"
+#include "luabind/luabind.hpp"
+#include "luabind/object.hpp"
 
 //NPC
 void handle_npc_event_say(
@@ -3195,4 +3194,4 @@ void handle_zone_timer_stop(
 	lua_setfield(L, -2, "timer");
 }
 
-#endif
+#endif // LUA_EQEMU

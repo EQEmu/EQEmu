@@ -1,9 +1,9 @@
-#include "../common/features.h"
+#include "common/features.h"
 
 #ifdef EMBPERL_XS_CLASSES
-#include "../common/global_define.h"
-#include "embperl.h"
-#include "spawn2.h"
+
+#include "zone/embperl.h"
+#include "zone/spawn2.h"
 
 void Perl_Spawn_Depop(Spawn2* self)
 {

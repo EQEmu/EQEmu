@@ -1,10 +1,11 @@
 #ifdef LUA_EQEMU
 
-#include "lua.hpp"
-#include <luabind/luabind.hpp>
-
-#include "object.h"
 #include "lua_object.h"
+
+#include "zone/object.h"
+
+#include "lua.hpp"
+#include "luabind/luabind.hpp"
 
 void Lua_Object::Depop() {
 	Lua_Safe_Call_Void();
@@ -247,4 +248,4 @@ luabind::scope lua_register_object() {
 	.def("VarSave", (uint32(Lua_Object::*)(void))&Lua_Object::VarSave);
 }
 
-#endif
+#endif // LUA_EQEMU

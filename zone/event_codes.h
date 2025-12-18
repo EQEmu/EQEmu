@@ -1,5 +1,4 @@
-#ifndef EVENT_CODES_H
-#define EVENT_CODES_H
+#pragma once
 
 typedef enum {
 	EVENT_SAY = 0,
@@ -156,6 +155,3 @@ typedef enum {
 } QuestEventID;
 
 extern const char *QuestEventSubroutines[_LargestEventID];
-
-#endif
-

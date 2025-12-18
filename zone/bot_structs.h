@@ -16,14 +16,11 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#ifndef BOT_STRUCTS
-#define BOT_STRUCTS
+#pragma once
 
-#include "../common/types.h"
-#include "../common/timer.h"
-#include "mob.h"
-
-#include <sstream>
+#include "common/types.h"
+#include "common/timer.h"
+#include "zone/mob.h"
 
 struct BotsAvailableList {
 	uint32 bot_id;
@@ -186,5 +183,3 @@ struct FindPositionInput {
 	bool	front_only;
 	bool	bypass_los;
 };
-
-#endif // BOT_STRUCTS

@@ -16,19 +16,11 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#ifdef _WINDOWS
-	#if (!defined(_MSC_VER) || (defined(_MSC_VER) && _MSC_VER < 1900))
-		#define snprintf	_snprintf
-		#define vsnprintf	_vsnprintf
-	#endif
-	#define strncasecmp	_strnicmp
-	#define strcasecmp	_stricmp
-#endif
-
-#include "../common/races.h"
 #include "encounter.h"
-#include "entity.h"
-#include "mob.h"
+
+#include "common/races.h"
+#include "zone/entity.h"
+#include "zone/mob.h"
 
 class Zone;
 

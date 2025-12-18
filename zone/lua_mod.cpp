@@ -1,29 +1,30 @@
 #ifdef LUA_EQEMU
 
-#include "lua.hpp"
-#include <luabind/luabind.hpp>
-#include <luabind/object.hpp>
-
-#include "../common/spdat.h"
-#include "masterentity.h"
-#include "zone.h"
-
-#include "lua_parser.h"
 #include "lua_mod.h"
-#include "lua_item.h"
-#include "lua_iteminst.h"
-#include "lua_mob.h"
-#include "lua_hate_list.h"
-#include "lua_client.h"
-#include "lua_inventory.h"
-#include "lua_npc.h"
-#include "lua_group.h"
-#include "lua_raid.h"
-#include "lua_corpse.h"
-#include "lua_object.h"
-#include "lua_door.h"
-#include "lua_packet.h"
-#include "lua_stat_bonuses.h"
+
+#include "common/spdat.h"
+#include "zone/masterentity.h"
+#include "zone/zone.h"
+#include "zone/lua_parser.h"
+#include "zone/lua_item.h"
+#include "zone/lua_iteminst.h"
+#include "zone/lua_mob.h"
+#include "zone/lua_hate_list.h"
+#include "zone/lua_client.h"
+#include "zone/lua_inventory.h"
+#include "zone/lua_npc.h"
+#include "zone/lua_group.h"
+#include "zone/lua_raid.h"
+#include "zone/lua_corpse.h"
+#include "zone/lua_object.h"
+#include "zone/lua_door.h"
+#include "zone/lua_packet.h"
+#include "zone/lua_stat_bonuses.h"
+
+#include "lua.hpp"
+#include "luabind/luabind.hpp"
+#include "luabind/object.hpp"
+
 
 void LuaMod::Init()
 {
@@ -1082,4 +1083,5 @@ void LuaMod::HealDamage(Mob *self, Mob* caster, uint64 value, uint16 spell_id, u
 		lua_pop(L, n);
 	}
 }
-#endif
+
+#endif // LUA_EQEMU

@@ -16,20 +16,18 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#ifndef EQEMU_ZONE_AA_ABILITY_H
-#define EQEMU_ZONE_AA_ABILITY_H
+#pragma once
 
-#include "../common/global_define.h"
+#include "zone/aa_rank_effects.h"
+#include "zone/aa_rank.h"
+
+#include <memory>
 #include <unordered_map>
 #include <vector>
-#include <memory>
-#include "aa_rank_effects.h"
-#include "aa_rank.h"
 
 class Mob;
 
-namespace AA
-{
+namespace AA {
 
 class Ability
 {
@@ -57,6 +55,4 @@ public:
 	Rank *first;
 };
 
-}
-
-#endif
+} // namespace AA

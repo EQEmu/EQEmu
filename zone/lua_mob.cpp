@@ -1,21 +1,22 @@
 #ifdef LUA_EQEMU
 
-#include "lua.hpp"
-#include <luabind/luabind.hpp>
-
-#include "bot.h"
-#include "client.h"
-#include "dialogue_window.h"
-#include "lua_bot.h"
-#include "lua_buff.h"
-#include "lua_client.h"
-#include "lua_hate_list.h"
-#include "lua_item.h"
-#include "lua_iteminst.h"
 #include "lua_mob.h"
-#include "lua_npc.h"
-#include "lua_stat_bonuses.h"
-#include "npc.h"
+
+#include "zone/bot.h"
+#include "zone/client.h"
+#include "zone/dialogue_window.h"
+#include "zone/lua_bot.h"
+#include "zone/lua_buff.h"
+#include "zone/lua_client.h"
+#include "zone/lua_hate_list.h"
+#include "zone/lua_item.h"
+#include "zone/lua_iteminst.h"
+#include "zone/lua_npc.h"
+#include "zone/lua_stat_bonuses.h"
+#include "zone/npc.h"
+
+#include "lua.hpp"
+#include "luabind/luabind.hpp"
 
 struct SpecialAbilities { };
 

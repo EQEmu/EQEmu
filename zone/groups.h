@@ -15,14 +15,13 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef GROUPS_H
-#define GROUPS_H
 
-#include "../common/eq_packet_structs.h"
-#include "../common/types.h"
+#pragma once
 
-#include "mob.h"
-#include "xtargetautohaters.h"
+#include "common/eq_packet_structs.h"
+#include "common/types.h"
+#include "zone/mob.h"
+#include "zone/xtargetautohaters.h"
 
 class Client;
 class EQApplicationPacket;
@@ -195,5 +194,3 @@ private:
 
 	XTargetAutoHaters m_autohatermgr;
 };
-
-#endif

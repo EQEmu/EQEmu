@@ -1,8 +1,9 @@
-#ifndef EQEMU_ZONE_CLI_H
-#define EQEMU_ZONE_CLI_H
 
-#include <iostream>
-#include "../common/cli/argh.h"
+#pragma once
+
+#include "common/cli/argh.h"
+
+#include <string>
 
 class ZoneCLI {
 public:
@@ -17,5 +18,3 @@ public:
 	static void TestNpcHandinsMultiQuest(int argc, char **argv, argh::parser &cmd, std::string &description);
 	static void TestZoneState(int argc, char **argv, argh::parser &cmd, std::string &description);
 };
-
-#endif //EQEMU_ZONE_CLI_H

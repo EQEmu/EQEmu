@@ -16,26 +16,23 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include "../common/features.h"
-#include "../common/content/world_content_service.h"
-#include "../common/zone_store.h"
-
 #ifdef EMBPERL
 #ifdef EMBPERL_XS
 
-#include "../common/global_define.h"
-#include "../common/misc_functions.h"
-
-#include "dialogue_window.h"
-#include "dynamic_zone.h"
-#include "embperl.h"
-#include "entity.h"
-#include "queryserv.h"
-#include "questmgr.h"
-#include "zone.h"
-#include "../common/data_bucket.h"
-#include "../common/events/player_event_logs.h"
-#include "worldserver.h"
+#include "common/content/world_content_service.h"
+#include "common/data_bucket.h"
+#include "common/events/player_event_logs.h"
+#include "common/features.h"
+#include "common/misc_functions.h"
+#include "common/zone_store.h"
+#include "zone/dialogue_window.h"
+#include "zone/dynamic_zone.h"
+#include "zone/embperl.h"
+#include "zone/entity.h"
+#include "zone/queryserv.h"
+#include "zone/questmgr.h"
+#include "zone/worldserver.h"
+#include "zone/zone.h"
 
 #include <cctype>
 
@@ -7059,5 +7056,5 @@ void perl_register_quest()
 
 }
 
-#endif
-#endif
+#endif // EMBPERL_XS
+#endif // EMBPERL

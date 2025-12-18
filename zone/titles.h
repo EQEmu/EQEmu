@@ -1,8 +1,8 @@
-#ifndef TITLES_H
-#define TITLES_H
+#pragma once
+
+#include "common/repositories/titles_repository.h"
 
 #include <vector>
-#include "../common/repositories/titles_repository.h"
 
 class Client;
 class EQApplicationPacket;
@@ -30,6 +30,3 @@ protected:
 };
 
 extern TitleManager title_manager;
-
-#endif
-

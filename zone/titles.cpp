@@ -1,13 +1,12 @@
-#include "../common/eq_packet_structs.h"
-#include "../common/strings.h"
-#include "../common/misc_functions.h"
-#include "../common/repositories/player_titlesets_repository.h"
-
-#include "client.h"
-#include "mob.h"
-
 #include "titles.h"
-#include "worldserver.h"
+
+#include "common/eq_packet_structs.h"
+#include "common/misc_functions.h"
+#include "common/repositories/player_titlesets_repository.h"
+#include "common/strings.h"
+#include "zone/client.h"
+#include "zone/mob.h"
+#include "zone/worldserver.h"
 
 extern WorldServer worldserver;
 

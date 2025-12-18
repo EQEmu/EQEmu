@@ -32,34 +32,28 @@
 
 */
 
-#include <string.h>
-
-#ifdef _WINDOWS
-#define strcasecmp _stricmp
-#endif
-
-#include "../common/data_verification.h"
-#include "../common/global_define.h"
-#include "../common/eq_packet.h"
-#include "../common/features.h"
-#include "../common/ptimer.h"
-#include "../common/rulesys.h"
-#include "../common/serverinfo.h"
-#include "../common/strings.h"
-#include "../common/say_link.h"
-
 #include "bot_command.h"
-#include "zonedb.h"
-#include "qglobals.h"
-#include "queryserv.h"
-#include "quest_parser_collection.h"
-#include "titles.h"
-#include "water_map.h"
-#include "worldserver.h"
-#include "mob.h"
-#include "bot_database.h"
 
-#include <fmt/format.h>
+#include "common/data_verification.h"
+#include "common/eq_packet.h"
+#include "common/features.h"
+#include "common/ptimer.h"
+#include "common/rulesys.h"
+#include "common/say_link.h"
+#include "common/serverinfo.h"
+#include "common/strings.h"
+#include "zone/bot_database.h"
+#include "zone/mob.h"
+#include "zone/qglobals.h"
+#include "zone/queryserv.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/titles.h"
+#include "zone/water_map.h"
+#include "zone/worldserver.h"
+#include "zone/zonedb.h"
+
+#include "fmt/format.h"
+#include <cstring>
 
 extern QueryServ* QServ;
 extern WorldServer worldserver;

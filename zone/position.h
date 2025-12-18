@@ -15,15 +15,16 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef POSITION_H
-#define POSITION_H
 
+#pragma once
+
+#include "common/types.h"
+
+#include "glm/geometric.hpp"
+#include "glm/vec2.hpp"
+#include "glm/vec3.hpp"
+#include "glm/vec4.hpp"
 #include <string>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
-#include <glm/geometric.hpp>
-#include "../common/types.h"
 
 std::string to_string(const glm::vec4 &position);
 std::string to_string(const glm::vec3 &position);
@@ -65,5 +66,3 @@ float CalculateHeadingAngleBetweenPositions(float x1, float y1, float x2, float 
 
 bool IsWithinCircularArc(glm::vec4 arc_center, glm::vec4 point, uint32 arc_offset, uint32 arc_radius, uint32 arc_radius_limit);
 bool IsWithinSquare(glm::vec4 center, uint32 area, glm::vec4 position);
-
-#endif

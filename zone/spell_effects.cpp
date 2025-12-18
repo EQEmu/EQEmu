@@ -16,28 +16,23 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/eqemu_logsys.h"
-#include "../common/bodytypes.h"
-#include "../common/classes.h"
-#include "../common/global_define.h"
-#include "../common/item_instance.h"
-#include "../common/rulesys.h"
-#include "../common/spdat.h"
-#include "../common/data_verification.h"
-#include "../common/misc_functions.h"
+#include "mob.h"
 
-#include "bot.h"
-#include "quest_parser_collection.h"
-#include "lua_parser.h"
-#include "string_ids.h"
-#include "worldserver.h"
+#include "common/bodytypes.h"
+#include "common/classes.h"
+#include "common/data_verification.h"
+#include "common/eqemu_logsys.h"
+#include "common/item_instance.h"
+#include "common/misc_functions.h"
+#include "common/rulesys.h"
+#include "common/spdat.h"
+#include "zone/bot.h"
+#include "zone/lua_parser.h"
+#include "zone/quest_parser_collection.h"
+#include "zone/string_ids.h"
+#include "zone/worldserver.h"
 
-#include <math.h>
-
-#ifndef WIN32
-#include <stdlib.h>
-#include "../common/unix.h"
-#endif
+#include <cmath>
 
 
 extern Zone* zone;
