@@ -1,7 +1,6 @@
 #ifndef EQEMU_CLIENT_H
 #define EQEMU_CLIENT_H
 
-#include "../common/global_define.h"
 #include "../common/opcodemgr.h"
 #include "../common/random.h"
 #include "../common/eq_stream_intf.h"

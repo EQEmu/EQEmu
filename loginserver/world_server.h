@@ -1,16 +1,15 @@
-#ifndef EQEMU_WORLDSERVER_H
-#define EQEMU_WORLDSERVER_H
+#pragma once
 
-#include "../common/global_define.h"
-#include "../common/net/servertalk_server_connection.h"
-#include "../common/servertalk.h"
-#include "../common/packet_dump.h"
-#include "../common/event/timer.h"
-#include "login_types.h"
-#include "client.h"
-#include "../common/repositories/login_server_admins_repository.h"
-#include <string>
+#include "common/event/timer.h"
+#include "common/net/servertalk_server_connection.h"
+#include "common/packet_dump.h"
+#include "common/repositories/login_server_admins_repository.h"
+#include "common/servertalk.h"
+#include "loginserver/client.h"
+#include "loginserver/login_types.h"
+
 #include <memory>
+#include <string>
 
 /**
  * World server class, controls the connected server processing.
@@ -84,6 +83,3 @@ private:
 
 	static void FormatWorldServerName(char *name, int8 server_list_type);
 };
-
-#endif
-

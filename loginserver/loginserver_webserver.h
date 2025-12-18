@@ -1,9 +1,8 @@
-#ifndef EQEMU_LOGINSERVER_WEBSERVER_H
-#define EQEMU_LOGINSERVER_WEBSERVER_H
+#pragma once
 
-#include "../common/http/httplib.h"
-#include "../common/json/json.h"
-#include "../common/types.h"
+#include "common/http/httplib.h"
+#include "common/json/json.h"
+#include "common/types.h"
 
 namespace LoginserverWebserver {
 
@@ -35,5 +34,3 @@ namespace LoginserverWebserver {
 	void SendResponse(const Json::Value &payload, httplib::Response &res);
 	static Json::Value ParseRequestBody(const httplib::Request &request);
 };
-
-#endif //EQEMU_LOGINSERVER_WEBSERVER_H

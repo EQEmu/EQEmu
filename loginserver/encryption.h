@@ -1,10 +1,11 @@
 #pragma once
 
+#include "common/eqemu_logsys.h"
+#include "common/strings.h"
+#include "common/types.h"
+#include "loginserver/login_types.h"
+
 #include <string>
-#include "../common/types.h"
-#include "login_types.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/strings.h"
 
 enum EncryptionMode {
 	EncryptionModeMD5            = 1,

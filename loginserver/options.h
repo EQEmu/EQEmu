@@ -1,5 +1,6 @@
-#ifndef EQEMU_OPTIONS_H
-#define EQEMU_OPTIONS_H
+#pragma once
+
+#include <string>
 
 class Options {
 public:
@@ -51,7 +52,3 @@ private:
 	std::string m_eqemu_loginserver_address;
 	std::string m_default_loginserver_name;
 };
-
-
-#endif
-

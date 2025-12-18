@@ -1,8 +1,6 @@
-#include "iostream"
-#include "../common/cli/eqemu_command_handler.h"
+#pragma once
 
-#ifndef EQEMU_LOGINSERVER_COMMAND_HANDLER_H
-#define EQEMU_LOGINSERVER_COMMAND_HANDLER_H
+#include "common/cli/eqemu_command_handler.h"
 
 namespace LoginserverCommandHandler {
 	void CommandHandler(int argc, char **argv);
@@ -16,6 +14,3 @@ namespace LoginserverCommandHandler {
 	void UpdateLoginserverWorldAdminAccountPassword(int argc, char **argv, argh::parser &cmd, std::string &description);
 	void HealthCheckLogin(int argc, char **argv, argh::parser &cmd, std::string &description);
 };
-
-
-#endif //EQEMU_LOGINSERVER_COMMAND_HANDLER_H

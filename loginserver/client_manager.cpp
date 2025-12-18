@@ -1,12 +1,12 @@
 #include "client_manager.h"
-#include "login_server.h"
+
+#include "common/file.h"
+#include "common/misc.h"
+#include "common/path_manager.h"
+#include "loginserver/login_server.h"
 
 extern LoginServer server;
 extern bool        run_server;
-
-#include "../common/misc.h"
-#include "../common/path_manager.h"
-#include "../common/file.h"
 
 void CheckTitaniumOpcodeFile(const std::string &path)
 {

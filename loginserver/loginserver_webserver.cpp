@@ -1,10 +1,11 @@
 #include "loginserver_webserver.h"
-#include "world_server_manager.h"
-#include "login_server.h"
-#include "../common/json/json.h"
-#include "../common/strings.h"
-#include "account_management.h"
-#include "../common/repositories/login_api_tokens_repository.h"
+
+#include "common/json/json.h"
+#include "common/repositories/login_api_tokens_repository.h"
+#include "common/strings.h"
+#include "loginserver/account_management.h"
+#include "loginserver/login_server.h"
+#include "loginserver/world_server_manager.h"
 
 extern LoginServer server;
 

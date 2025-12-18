@@ -1,10 +1,9 @@
-#ifndef EQEMU_CLIENTMANAGER_H
-#define EQEMU_CLIENTMANAGER_H
+#pragma once
 
-#include "../common/global_define.h"
-#include "../common/opcodemgr.h"
-#include "../common/net/eqstream.h"
-#include "client.h"
+#include "common/net/eqstream.h"
+#include "common/opcodemgr.h"
+#include "loginserver/client.h"
+
 #include <list>
 
 class ClientManager {
@@ -25,6 +24,3 @@ private:
 	OpcodeManager            *m_larion_ops;
 	EQ::Net::EQStreamManager *m_larion_stream;
 };
-
-#endif
-

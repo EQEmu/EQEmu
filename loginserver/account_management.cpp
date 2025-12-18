@@ -1,7 +1,8 @@
 #include "account_management.h"
-#include "login_server.h"
-#include "../common/event/task_scheduler.h"
-#include "../common/repositories/login_accounts_repository.h"
+
+#include "common/event/task_scheduler.h"
+#include "common/repositories/login_accounts_repository.h"
+#include "loginserver/login_server.h"
 
 EQ::Event::TaskScheduler task_runner;
 

@@ -1,6 +1,10 @@
-#ifndef EQEMU_LOGINSTRUCTURES_H
-#define EQEMU_LOGINSTRUCTURES_H
+#pragma once
 
+#include "common/types.h"
+
+#include <string>
+
+#pragma pack(push)
 #pragma pack(1)
 
 // unencrypted base message header in all packets
@@ -161,5 +165,4 @@ namespace LS {
 	};
 }
 
-#endif
-
+#pragma pack(pop)
