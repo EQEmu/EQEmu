@@ -1,9 +1,5 @@
 #include "world_server_cli.h"
 
-/**
- * @param argc
- * @param argv
- */
 void WorldserverCLI::CommandHandler(int argc, char **argv)
 {
 	if (argc == 1) { return; }
@@ -38,4 +34,3 @@ void WorldserverCLI::CommandHandler(int argc, char **argv)
 
 	EQEmuCommand::HandleMenu(function_map, cmd, argc, argv);
 }
-

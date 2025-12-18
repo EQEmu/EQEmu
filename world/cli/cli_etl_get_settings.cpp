@@ -1,7 +1,8 @@
-#include "../world_server_cli.h"
-#include "../worlddb.h"
-#include "../../common/events/player_event_logs.h"
-#include "../../common/json/json.h"
+#include "world/world_server_cli.h"
+
+#include "common/events/player_event_logs.h"
+#include "common/json/json.h"
+#include "world/worlddb.h"
 
 void WorldserverCLI::EtlGetSettings(int argc, char **argv, argh::parser &cmd, std::string &description)
 {

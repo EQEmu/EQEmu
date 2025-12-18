@@ -15,16 +15,17 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef LAUNCHERLINK_H_
-#define LAUNCHERLINK_H_
 
-#include "../common/timer.h"
-#include "../common/net/servertalk_server_connection.h"
-#include "../common/event/timer.h"
+#pragma once
+
+#include "common/event/timer.h"
+#include "common/net/servertalk_server_connection.h"
+#include "common/timer.h"
+
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
-#include <map>
 
 class ServerPacket;
 
@@ -76,6 +77,3 @@ protected:
 	} ZoneState;
 	std::map<std::string, ZoneState> m_states;
 };
-
-#endif /*LAUNCHERLINK_H_*/
-

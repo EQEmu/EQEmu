@@ -1,6 +1,7 @@
 #include "world_console_connection.h"
-#include <string.h>
-#include <stdarg.h>
+
+#include <cstring>
+#include <cstdarg>
 
 void WorldConsoleTCPConnection::SendEmoteMessage(const char *to, uint32 to_guilddbid, int16 to_minstatus, uint32 type, const char *message, ...)
 {

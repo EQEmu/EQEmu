@@ -1,9 +1,10 @@
-#include "../world_server_cli.h"
-#include "../../common/rulesys.h"
-#include "../../common/repositories/content_flags_repository.h"
-#include "../../common/content/world_content_service.h"
-#include "../../common/repositories/criteria/content_filter_criteria.h"
-#include "../worlddb.h"
+#include "world/world_server_cli.h"
+
+#include "common/content/world_content_service.h"
+#include "common/repositories/content_flags_repository.h"
+#include "common/repositories/criteria/content_filter_criteria.h"
+#include "common/rulesys.h"
+#include "world/worlddb.h"
 
 void WorldserverCLI::ExpansionTestCommand(int argc, char **argv, argh::parser &cmd, std::string &description)
 {

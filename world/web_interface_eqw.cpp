@@ -1,10 +1,11 @@
 #include "web_interface_eqw.h"
-#include "web_interface.h"
-#include "world_config.h"
-#include "login_server_list.h"
-#include "clientlist.h"
-#include "zonelist.h"
-#include "launcher_list.h"
+
+#include "world/clientlist.h"
+#include "world/launcher_list.h"
+#include "world/login_server_list.h"
+#include "world/web_interface.h"
+#include "world/world_config.h"
+#include "world/zonelist.h"
 
 extern LauncherList launcher_list;
 

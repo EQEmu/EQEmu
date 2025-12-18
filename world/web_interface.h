@@ -1,12 +1,11 @@
 #pragma once
 
-#include "../common/net/servertalk_server_connection.h"
-#include "../common/json/json.h"
+#include "common/json/json.h"
+#include "common/net/servertalk_server_connection.h"
+
+#include <functional>
 #include <map>
 #include <string>
-#include <functional>
-
-
 
 class WebInterface
 {

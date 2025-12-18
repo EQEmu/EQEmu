@@ -1,8 +1,10 @@
 #include "world_event_scheduler.h"
-#include "../common/servertalk.h"
+
+#include "common/rulesys.h"
+#include "common/server_reload_types.h"
+#include "common/servertalk.h"
+
 #include <ctime>
-#include "../common/rulesys.h"
-#include "../common/server_reload_types.h"
 
 void WorldEventScheduler::Process(ZSList *zs_list)
 {

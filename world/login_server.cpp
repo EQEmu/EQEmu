@@ -1,24 +1,23 @@
-#include "../common/global_define.h"
-#include <iostream>
-#include <string.h>
-#include <stdio.h>
-#include <iomanip>
-#include <stdlib.h>
-#include "../common/version.h"
-#include "../common/servertalk.h"
-#include "../common/misc_functions.h"
-#include "../common/eq_packet_structs.h"
-#include "../common/packet_dump.h"
-#include "../common/strings.h"
-#include "../common/eqemu_logsys.h"
 #include "login_server.h"
-#include "login_server_list.h"
-#include "zoneserver.h"
-#include "worlddb.h"
-#include "zonelist.h"
-#include "clientlist.h"
-#include "cliententry.h"
-#include "world_config.h"
+
+#include "common/eq_packet_structs.h"
+#include "common/eqemu_logsys.h"
+#include "common/misc_functions.h"
+#include "common/packet_dump.h"
+#include "common/servertalk.h"
+#include "common/strings.h"
+#include "common/version.h"
+#include "world/cliententry.h"
+#include "world/clientlist.h"
+#include "world/login_server_list.h"
+#include "world/world_config.h"
+#include "world/worlddb.h"
+#include "world/zonelist.h"
+#include "world/zoneserver.h"
+
+#include <cstring>
+#include <cstdio>
+#include <cstdlib>
 
 extern uint32        numzones;
 extern uint32        numplayers;

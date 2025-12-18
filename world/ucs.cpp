@@ -1,12 +1,11 @@
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
 #include "ucs.h"
-#include "world_config.h"
 
-#include "../common/misc_functions.h"
-#include "../common/md5.h"
-#include "../common/packet_dump.h"
-#include "../common/event/timer.h"
+#include "common/eqemu_logsys.h"
+#include "common/event/timer.h"
+#include "common/md5.h"
+#include "common/misc_functions.h"
+#include "common/packet_dump.h"
+#include "world/world_config.h"
 
 UCSConnection::UCSConnection()
 {

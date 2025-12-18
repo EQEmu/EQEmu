@@ -1,8 +1,8 @@
-#ifndef WORLD_DYNAMIC_ZONE_MANAGER_H
-#define WORLD_DYNAMIC_ZONE_MANAGER_H
+#pragma once
 
-#include "../common/timer.h"
-#include "../common/repositories/dynamic_zone_templates_repository.h"
+#include "common/repositories/dynamic_zone_templates_repository.h"
+#include "common/timer.h"
+
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -35,5 +35,3 @@ private:
 	Timer m_process_throttle_timer{};
 	std::unordered_map<uint32_t, DynamicZoneTemplatesRepository::DynamicZoneTemplates> m_dz_templates;
 };
-
-#endif

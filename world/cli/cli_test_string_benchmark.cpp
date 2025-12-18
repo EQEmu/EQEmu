@@ -1,8 +1,10 @@
-#include "../world_server_cli.h"
-#include <cereal/archives/json.hpp>
-#include <cereal/types/vector.hpp>
-#include "../../common/events/player_events.h"
-#include "../../common/timer.h"
+#include "world/world_server_cli.h"
+
+#include "common/events/player_events.h"
+#include "common/timer.h"
+
+#include "cereal/archives/json.hpp"
+#include "cereal/types/vector.hpp"
 
 void WorldserverCLI::TestStringBenchmarkCommand(int argc, char **argv, argh::parser &cmd, std::string &description)
 {

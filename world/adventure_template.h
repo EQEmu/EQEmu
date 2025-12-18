@@ -1,9 +1,8 @@
-#ifndef ADVENTURE_TEMPLATE_H
-#define ADVENTURE_TEMPLATE_H
+#pragma once
 
-#include "../common/global_define.h"
-#include "../common/types.h"
+#include "common/types.h"
 
+#pragma pack(push)
 #pragma pack(1)
 
 struct AdventureTemplate
@@ -42,6 +41,4 @@ struct AdventureTemplate
 	float graveyard_radius;
 };
 
-#pragma pack()
-
-#endif
+#pragma pack(pop)

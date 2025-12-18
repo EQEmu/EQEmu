@@ -1,16 +1,16 @@
-#ifndef CLIENTLIST_H_
-#define CLIENTLIST_H_
+#pragma once
 
-#include "../common/eq_packet_structs.h"
-#include "../common/linked_list.h"
-#include "../common/json/json.h"
-#include "../common/timer.h"
-#include "../common/rulesys.h"
-#include "../common/servertalk.h"
-#include "../common/event/timer.h"
-#include "../common/net/console_server_connection.h"
-#include <vector>
+#include "common/eq_packet_structs.h"
+#include "common/event/timer.h"
+#include "common/json/json.h"
+#include "common/linked_list.h"
+#include "common/net/console_server_connection.h"
+#include "common/rulesys.h"
+#include "common/servertalk.h"
+#include "common/timer.h"
+
 #include <string>
+#include <vector>
 
 class Client;
 class ZoneServer;
@@ -111,6 +111,3 @@ private:
 	std::unordered_set<uint32_t>                               m_gm_zone_server_ids;
 	std::unordered_map<uint32_t, std::unordered_set<uint32_t>> m_guild_zone_server_ids;
 };
-
-#endif /*CLIENTLIST_H_*/
-

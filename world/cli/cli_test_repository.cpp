@@ -1,6 +1,7 @@
-#include "../world_server_cli.h"
-#include "../../common/repositories/instance_list_repository.h"
-#include "../worlddb.h"
+#include "world/world_server_cli.h"
+
+#include "common/repositories/instance_list_repository.h"
+#include "world/worlddb.h"
 
 void WorldserverCLI::TestRepository(int argc, char **argv, argh::parser &cmd, std::string &description)
 {

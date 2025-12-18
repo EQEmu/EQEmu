@@ -1,6 +1,9 @@
-#include "../world_server_cli.h"
-#include "../../common/database_schema.h"
-#include "../../common/json/json.h"
+#include "world/world_server_cli.h"
+
+#include "common/database_schema.h"
+#include "common/json/json.h"
+
+#include <iostream>
 
 void WorldserverCLI::DatabaseGetSchema(int argc, char **argv, argh::parser &cmd, std::string &description)
 {
@@ -62,8 +65,5 @@ void WorldserverCLI::DatabaseGetSchema(int argc, char **argv, argh::parser &cmd,
 	schema["version_tables"] = version_tables_json;
 	schema["bot_tables"]     = bot_tables_json;
 
-	std::stringstream payload;
-	payload << schema;
-
-	std::cout << payload.str() << std::endl;
+	std::cout << schema << std::endl;
 }

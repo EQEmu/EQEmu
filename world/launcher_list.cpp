@@ -16,12 +16,10 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-
-#include "../common/global_define.h"
 #include "launcher_list.h"
-#include "launcher_link.h"
 
-#include "eql_config.h"
+#include "world/eql_config.h"
+#include "world/launcher_link.h"
 
 LauncherList::LauncherList()
 	: nextID(1)

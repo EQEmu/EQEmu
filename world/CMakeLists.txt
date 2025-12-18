@@ -96,6 +96,7 @@ add_executable(world ${world_sources} ${world_headers})
 target_compile_definitions(world PRIVATE WORLD)
 
 target_link_libraries(world common)
+target_include_directories(world PRIVATE ..)
 
 if(WIN32 AND EQEMU_BUILD_PCH)
     target_precompile_headers(world PRIVATE ../common/pch/std-pch.h)

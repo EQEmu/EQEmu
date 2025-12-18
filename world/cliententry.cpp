@@ -1,12 +1,12 @@
-#include "../common/global_define.h"
 #include "cliententry.h"
-#include "clientlist.h"
-#include "login_server.h"
-#include "login_server_list.h"
-#include "shared_task_manager.h"
-#include "worlddb.h"
-#include "zoneserver.h"
-#include "world_config.h"
+
+#include "world/clientlist.h"
+#include "world/login_server_list.h"
+#include "world/login_server.h"
+#include "world/shared_task_manager.h"
+#include "world/world_config.h"
+#include "world/worlddb.h"
+#include "world/zoneserver.h"
 
 extern uint32            numplayers;
 extern volatile bool     RunLoops;

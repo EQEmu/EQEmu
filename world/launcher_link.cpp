@@ -16,21 +16,20 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
 #include "launcher_link.h"
-#include "launcher_list.h"
-#include "world_config.h"
 
-#include "../common/md5.h"
-#include "../common/packet_dump.h"
-#include "../common/servertalk.h"
-#include "../common/strings.h"
-#include "../common/misc_functions.h"
-#include "worlddb.h"
-#include "eql_config.h"
+#include "common/md5.h"
+#include "common/misc_functions.h"
+#include "common/packet_dump.h"
+#include "common/servertalk.h"
+#include "common/strings.h"
+#include "world/eql_config.h"
+#include "world/launcher_list.h"
+#include "world/world_config.h"
+#include "world/worlddb.h"
 
-#include <vector>
 #include <string>
+#include <vector>
 
 extern LauncherList launcher_list;
 

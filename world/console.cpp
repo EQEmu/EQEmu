@@ -19,19 +19,21 @@
  */
 
 #include "console.h"
-#include "clientlist.h"
-#include "login_server.h"
-#include "login_server_list.h"
-#include "world_config.h"
-#include "world_console_connection.h"
-#include "worlddb.h"
-#include "zonelist.h"
-#include "zoneserver.h"
-#include "../common/strings.h"
-#include "../common/md5.h"
-#include "eqemu_api_world_data_service.h"
-#include "../common/zone_store.h"
-#include <fmt/format.h>
+
+#include "common/md5.h"
+#include "common/strings.h"
+#include "common/zone_store.h"
+#include "world/clientlist.h"
+#include "world/eqemu_api_world_data_service.h"
+#include "world/login_server_list.h"
+#include "world/login_server.h"
+#include "world/world_config.h"
+#include "world/world_console_connection.h"
+#include "world/worlddb.h"
+#include "world/zonelist.h"
+#include "world/zoneserver.h"
+
+#include "fmt/format.h"
 
 /**
  * @param username

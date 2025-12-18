@@ -15,26 +15,25 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/global_define.h"
-#include <iostream>
-#include <string.h>
-#include <stdio.h>
-#include <iomanip>
-#include <stdlib.h>
-#include "../common/version.h"
+
+#include "login_server_list.h"
+
+#include "common/eq_packet_structs.h"
+#include "common/packet_dump.h"
+#include "common/servertalk.h"
+#include "common/version.h"
+#include "world/clientlist.h"
+#include "world/login_server.h"
+#include "world/world_config.h"
+#include "world/worlddb.h"
+#include "world/zonelist.h"
+#include "world/zoneserver.h"
+
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #define IGNORE_LS_FATAL_ERROR
-
-#include "../common/servertalk.h"
-#include "login_server.h"
-#include "login_server_list.h"
-#include "../common/eq_packet_structs.h"
-#include "../common/packet_dump.h"
-#include "zoneserver.h"
-#include "worlddb.h"
-#include "zonelist.h"
-#include "clientlist.h"
-#include "world_config.h"
 
 extern uint32 numzones;
 extern uint32 numplayers;

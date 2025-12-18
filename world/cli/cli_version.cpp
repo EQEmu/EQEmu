@@ -1,6 +1,9 @@
-#include "../world_server_cli.h"
-#include "../../common/json/json.h"
-#include "../../common/version.h"
+#include "world/world_server_cli.h"
+
+#include "common/json/json.h"
+#include "common/version.h"
+
+#include <iostream>
 
 void WorldserverCLI::Version(int argc, char **argv, argh::parser &cmd, std::string &description)
 {

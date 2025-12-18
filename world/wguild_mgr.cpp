@@ -16,23 +16,23 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/eqemu_logsys.h"
-#include "../common/global_define.h"
 #include "wguild_mgr.h"
-#include "../common/servertalk.h"
-#include "clientlist.h"
-#include "zonelist.h"
-#include "zoneserver.h"
-#include "cliententry.h"
-#include "client.h"
-#include "../common/repositories/guilds_repository.h"
-#include "../common/repositories/guild_ranks_repository.h"
-#include "../common/repositories/guild_permissions_repository.h"
-#include "../common/repositories/guild_members_repository.h"
-#include "../common/repositories/guild_bank_repository.h"
-#include "../common/repositories/guild_tributes_repository.h"
-#include "../common/repositories/tributes_repository.h"
-#include "../common/repositories/tribute_levels_repository.h"
+
+#include "common/eqemu_logsys.h"
+#include "common/repositories/guild_bank_repository.h"
+#include "common/repositories/guild_members_repository.h"
+#include "common/repositories/guild_permissions_repository.h"
+#include "common/repositories/guild_ranks_repository.h"
+#include "common/repositories/guild_tributes_repository.h"
+#include "common/repositories/guilds_repository.h"
+#include "common/repositories/tribute_levels_repository.h"
+#include "common/repositories/tributes_repository.h"
+#include "common/servertalk.h"
+#include "world/client.h"
+#include "world/cliententry.h"
+#include "world/clientlist.h"
+#include "world/zonelist.h"
+#include "world/zoneserver.h"
 
 std::map<uint32, TributeData> tribute_list;
 

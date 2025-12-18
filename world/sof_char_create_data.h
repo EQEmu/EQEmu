@@ -1,6 +1,6 @@
-#ifndef SOFCHARCREATEDATA_H
-#define SOFCHARCREATEDATA_H
+#pragma once
 
+#pragma pack(push)
 #pragma pack(1)
 
 struct RaceClassAllocation {
@@ -26,6 +26,5 @@ struct RaceClassCombos {
 	SoFCCStartZoneData StartZoneData[641];
 };
 */
-#pragma pack()
 
-#endif
+#pragma pack(pop)

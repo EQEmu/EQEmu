@@ -1,8 +1,7 @@
-#ifndef WGUILD_MGR_H_
-#define WGUILD_MGR_H_
+#pragma once
 
-#include "../common/types.h"
-#include "../common/guild_base.h"
+#include "common/types.h"
+#include "common/guild_base.h"
 
 class Client;
 class ServerPacket;
@@ -30,7 +29,3 @@ protected:
 };
 
 extern WorldGuildManager guild_mgr;
-
-
-#endif /*WGUILD_MGR_H_*/
-

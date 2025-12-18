@@ -1,6 +1,7 @@
-#include "../world_server_cli.h"
-#include "../worlddb.h"
-#include "../../common/database_schema.h"
+#include "world/world_server_cli.h"
+
+#include "common/database_schema.h"
+#include "world/worlddb.h"
 
 void WorldserverCLI::MercsEnable(int argc, char **argv, argh::parser &cmd, std::string &description)
 {

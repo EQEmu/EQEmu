@@ -1,12 +1,13 @@
 #include "dynamic_zone.h"
-#include "cliententry.h"
-#include "clientlist.h"
-#include "dynamic_zone_manager.h"
-#include "worlddb.h"
-#include "zonelist.h"
-#include "zoneserver.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/repositories/instance_list_repository.h"
+
+#include "common/eqemu_logsys.h"
+#include "common/repositories/instance_list_repository.h"
+#include "world/cliententry.h"
+#include "world/clientlist.h"
+#include "world/dynamic_zone_manager.h"
+#include "world/worlddb.h"
+#include "world/zonelist.h"
+#include "world/zoneserver.h"
 
 Database& DynamicZone::GetDatabase()
 {

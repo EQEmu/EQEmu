@@ -1,15 +1,15 @@
-#ifndef LOGINSERVER_H
-#define LOGINSERVER_H
+#pragma once
 
-#include "../common/servertalk.h"
-#include "../common/linked_list.h"
-#include "../common/timer.h"
-#include "../common/queue.h"
-#include "../common/eq_packet_structs.h"
-#include "../common/mutex.h"
-#include "../common/net/servertalk_client_connection.h"
-#include "../common/net/servertalk_legacy_client_connection.h"
-#include "../common/event/timer.h"
+#include "common/eq_packet_structs.h"
+#include "common/event/timer.h"
+#include "common/linked_list.h"
+#include "common/mutex.h"
+#include "common/net/servertalk_client_connection.h"
+#include "common/net/servertalk_legacy_client_connection.h"
+#include "common/queue.h"
+#include "common/servertalk.h"
+#include "common/timer.h"
+
 #include <memory>
 
 class LoginServer{
@@ -63,4 +63,3 @@ private:
 	bool                                             m_can_account_update;
 	bool                                             m_is_legacy;
 };
-#endif

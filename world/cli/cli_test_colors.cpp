@@ -1,6 +1,7 @@
-#include "../world_server_cli.h"
-#include "../../common/zone_store.h"
-#include "../../common/termcolor/rang.hpp"
+#include "world/world_server_cli.h"
+
+#include "common/termcolor/rang.hpp"
+#include "common/zone_store.h"
 
 void WorldserverCLI::TestColors(int argc, char **argv, argh::parser &cmd, std::string &description)
 {

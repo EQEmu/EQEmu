@@ -17,22 +17,23 @@
 */
 
 #include "worlddb.h"
-#include "../common/strings.h"
-#include "../common/eq_packet_structs.h"
-#include "../common/inventory_profile.h"
-#include "../common/rulesys.h"
-#include <iostream>
+
+#include "common/eq_packet_structs.h"
+#include "common/inventory_profile.h"
+#include "common/repositories/character_bind_repository.h"
+#include "common/repositories/character_data_repository.h"
+#include "common/repositories/character_instance_safereturns_repository.h"
+#include "common/repositories/character_material_repository.h"
+#include "common/repositories/criteria/content_filter_criteria.h"
+#include "common/repositories/inventory_repository.h"
+#include "common/repositories/start_zones_repository.h"
+#include "common/rulesys.h"
+#include "common/strings.h"
+#include "common/zone_store.h"
+#include "world/sof_char_create_data.h"
+
 #include <cstdlib>
 #include <vector>
-#include "sof_char_create_data.h"
-#include "../common/repositories/character_instance_safereturns_repository.h"
-#include "../common/repositories/inventory_repository.h"
-#include "../common/repositories/criteria/content_filter_criteria.h"
-#include "../common/zone_store.h"
-#include "../common/repositories/character_data_repository.h"
-#include "../common/repositories/character_bind_repository.h"
-#include "../common/repositories/character_material_repository.h"
-#include "../common/repositories/start_zones_repository.h"
 
 WorldDatabase database;
 WorldDatabase content_db;

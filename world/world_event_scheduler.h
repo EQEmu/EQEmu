@@ -1,8 +1,7 @@
-#ifndef EQEMU_EVENT_SCHEDULER_H
-#define EQEMU_EVENT_SCHEDULER_H
+#pragma once
 
-#include "../common/server_event_scheduler.h"
-#include "zonelist.h"
+#include "common/server_event_scheduler.h"
+#include "world/zonelist.h"
 
 class WorldEventScheduler : public ServerEventScheduler {
 public:
@@ -14,5 +13,3 @@ public:
 		return &instance;
 	}
 };
-
-#endif //EQEMU_EVENT_SCHEDULER_H

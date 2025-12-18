@@ -1,13 +1,11 @@
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
 #include "queryserv.h"
-#include "world_config.h"
-#include "clientlist.h"
-#include "zonelist.h"
 
-
-#include "../common/md5.h"
-#include "../common/packet_dump.h"
+#include "common/eqemu_logsys.h"
+#include "common/md5.h"
+#include "common/packet_dump.h"
+#include "world/clientlist.h"
+#include "world/world_config.h"
+#include "world/zonelist.h"
 
 QueryServConnection::QueryServConnection()
 {

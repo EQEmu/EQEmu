@@ -15,10 +15,10 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#ifndef WorldTCPCONNECTION_H
-#define WorldTCPCONNECTION_H
 
-#include "../common/types.h"
+#pragma once
+
+#include "common/types.h"
 
 class WorldTCPConnection
 {
@@ -31,5 +31,3 @@ public:
 	virtual inline bool IsConsole() { return false; }
 	virtual inline bool IsZoneServer() { return false; }
 };
-
-#endif

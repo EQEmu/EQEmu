@@ -1,13 +1,15 @@
 #include "dynamic_zone_manager.h"
-#include "dynamic_zone.h"
-#include "cliententry.h"
-#include "clientlist.h"
-#include "worlddb.h"
-#include "zonelist.h"
-#include "zoneserver.h"
-#include "../common/rulesys.h"
-#include "../common/repositories/dynamic_zone_lockouts_repository.h"
-#include <cereal/types/utility.hpp>
+
+#include "common/repositories/dynamic_zone_lockouts_repository.h"
+#include "common/rulesys.h"
+#include "world/cliententry.h"
+#include "world/clientlist.h"
+#include "world/dynamic_zone.h"
+#include "world/worlddb.h"
+#include "world/zonelist.h"
+#include "world/zoneserver.h"
+
+#include "cereal/types/utility.hpp"
 
 DynamicZoneManager dynamic_zone_manager;
 

@@ -1,15 +1,15 @@
-#ifndef ZONELIST_H_
-#define ZONELIST_H_
+#pragma once
 
-#include "../common/types.h"
-#include "../common/eqtime.h"
-#include "../common/timer.h"
-#include "../common/event/timer.h"
-#include "../common/server_reload_types.h"
-#include <vector>
-#include <memory>
+#include "common/eqtime.h"
+#include "common/event/timer.h"
+#include "common/server_reload_types.h"
+#include "common/timer.h"
+#include "common/types.h"
+
 #include <deque>
+#include <memory>
 #include <mutex>
+#include <vector>
 
 class WorldTCPConnection;
 class ServerPacket;
@@ -97,6 +97,3 @@ private:
 
 	std::list<std::unique_ptr<ZoneServer>> zone_server_list;
 };
-
-#endif /*ZONELIST_H_*/
-

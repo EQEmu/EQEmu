@@ -1,10 +1,9 @@
-#ifndef EQEMU_SHARED_TASK_MANAGER_H
-#define EQEMU_SHARED_TASK_MANAGER_H
+#pragma once
 
-#include "../common/database.h"
-#include "../common/shared_tasks.h"
-#include "../common/timer.h"
-#include "../common/repositories/character_task_timers_repository.h"
+#include "common/database.h"
+#include "common/repositories/character_task_timers_repository.h"
+#include "common/shared_tasks.h"
+#include "common/timer.h"
 
 class DynamicZone;
 
@@ -147,5 +146,3 @@ protected:
 	// memory search
 	std::vector<SharedTaskMember> FindCharactersInSharedTasks(const std::vector<uint32_t> &find_characters);
 };
-
-#endif //EQEMU_SHARED_TASK_MANAGER_H

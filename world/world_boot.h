@@ -1,10 +1,10 @@
-#ifndef EQEMU_WORLD_BOOT_H
-#define EQEMU_WORLD_BOOT_H
+#pragma once
+
+#include "common/discord/discord.h"
+#include "common/types.h"
+#include "world/ucs.h"
 
 #include <string>
-#include "../common/types.h"
-#include "../common/discord/discord.h"
-#include "ucs.h"
 
 class WorldBoot {
 public:
@@ -27,6 +27,3 @@ public:
 		SendDiscordMessage(webhook_id, message_prefix + Discord::FormatDiscordMessage(log_category, message));
 	};
 };
-
-
-#endif //EQEMU_WORLD_BOOT_H

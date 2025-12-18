@@ -16,24 +16,24 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "../common/global_define.h"
-#include "clientlist.h"
-#include "zoneserver.h"
-#include "zonelist.h"
-#include "client.h"
-#include "worlddb.h"
-#include "../common/strings.h"
-#include "../common/guilds.h"
-#include "../common/races.h"
-#include "../common/classes.h"
-#include "../common/packet_dump.h"
-#include "../common/misc.h"
-#include "../common/misc_functions.h"
-#include "../common/json/json.h"
-#include "../common/event_sub.h"
-#include "web_interface.h"
-#include "wguild_mgr.h"
-#include "../common/zone_store.h"
+#include "common/classes.h"
+#include "common/event_sub.h"
+#include "common/guilds.h"
+#include "common/json/json.h"
+#include "common/misc_functions.h"
+#include "common/misc.h"
+#include "common/packet_dump.h"
+#include "common/races.h"
+#include "common/strings.h"
+#include "common/zone_store.h"
+#include "world/client.h"
+#include "world/clientlist.h"
+#include "world/web_interface.h"
+#include "world/wguild_mgr.h"
+#include "world/worlddb.h"
+#include "world/zonelist.h"
+#include "world/zoneserver.h"
+
 #include <set>
 
 uint32 numplayers = 0;	//this really wants to be a member variable of ClientList...

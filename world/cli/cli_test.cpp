@@ -1,9 +1,11 @@
-#include "../world_server_cli.h"
-#include <cereal/archives/json.hpp>
-#include <cereal/types/vector.hpp>
+#include "world/world_server_cli.h"
+
+#include "common/events/player_events.h"
+#include "common/memory/ksm.hpp"
+
+#include "cereal/archives/json.hpp"
+#include "cereal/types/vector.hpp"
 #include <iomanip>
-#include "../../common/events/player_events.h"
-#include "../../common/memory/ksm.hpp"
 
 void WorldserverCLI::TestCommand(int argc, char **argv, argh::parser &cmd, std::string &description)
 {

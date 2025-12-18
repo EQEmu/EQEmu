@@ -1,7 +1,10 @@
-#include "../world_server_cli.h"
-#include "../../common/version.h"
-#include "../../common/json/json.h"
-#include "../../common/rulesys.h"
+#include "world/world_server_cli.h"
+
+#include "common/json/json.h"
+#include "common/rulesys.h"
+#include "common/version.h"
+
+#include <iostream>
 
 void WorldserverCLI::DatabaseVersion(int argc, char **argv, argh::parser &cmd, std::string &description)
 {

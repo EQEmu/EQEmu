@@ -1,8 +1,10 @@
+#include "world/world_server_cli.h"
+
+#include "common/eqemu_config.h"
+#include "common/repositories/zone_repository.h"
+
+#include <csignal>
 #include <thread>
-#include "../world_server_cli.h"
-#include "../../common/repositories/zone_repository.h"
-#include "../../common/eqemu_config.h"
-#include <signal.h>
 
 Database db;
 Database db2;

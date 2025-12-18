@@ -1,11 +1,10 @@
-#ifndef ADVENTURE_MANAGER_H
-#define ADVENTURE_MANAGER_H
+#pragma once
 
-#include "../common/global_define.h"
-#include "../common/types.h"
-#include "../common/timer.h"
-#include "adventure.h"
-#include "adventure_template.h"
+#include "common/timer.h"
+#include "common/types.h"
+#include "world/adventure_template.h"
+#include "world/adventure.h"
+
 #include <map>
 #include <list>
 
@@ -94,5 +93,3 @@ protected:
 	Timer *save_timer;
 	Timer *leaderboard_info_timer;
 };
-
-#endif

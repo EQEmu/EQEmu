@@ -1,18 +1,19 @@
-#include "../common/global_define.h"
-#include "../common/misc_functions.h"
-#include "../common/strings.h"
-#include "../common/servertalk.h"
-#include "../common/rulesys.h"
-#include "../common/random.h"
-#include "adventure.h"
 #include "adventure_manager.h"
-#include "worlddb.h"
-#include "zonelist.h"
-#include "clientlist.h"
-#include "cliententry.h"
-#include "../common/zone_store.h"
+
+#include "common/misc_functions.h"
+#include "common/random.h"
+#include "common/rulesys.h"
+#include "common/servertalk.h"
+#include "common/strings.h"
+#include "common/zone_store.h"
+#include "world/adventure.h"
+#include "world/cliententry.h"
+#include "world/clientlist.h"
+#include "world/worlddb.h"
+#include "world/zonelist.h"
+
+#include <cstdio>
 #include <sstream>
-#include <stdio.h>
 
 AdventureManager::AdventureManager()
 {

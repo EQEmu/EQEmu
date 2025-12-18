@@ -17,13 +17,13 @@
 */
 
 #include "lfplist.h"
-#include "cliententry.h"
-#include "clientlist.h"
-#include "zoneserver.h"
-#include "zonelist.h"
 
-#include "../common/misc_functions.h"
-#include "../common/classes.h"
+#include "common/classes.h"
+#include "common/misc_functions.h"
+#include "world/cliententry.h"
+#include "world/clientlist.h"
+#include "world/zonelist.h"
+#include "world/zoneserver.h"
 
 GroupLFP::GroupLFP(uint32 inLeaderID) {
 

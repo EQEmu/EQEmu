@@ -18,10 +18,9 @@
  *
  */
 
-#ifndef EQEMU_API_WORLD_DATA_SERVICE_H
-#define EQEMU_API_WORLD_DATA_SERVICE_H
+#pragma once
 
-#include "../common/json/json.h"
+#include "common/json/json.h"
 
 class EQEmuApiWorldDataService {
 public:
@@ -30,6 +29,3 @@ public:
 	static void message(Json::Value &r, const std::string &message);
 	static void callGetGuildDetails(Json::Value &response, const std::vector<std::string> &args);
 };
-
-
-#endif //EQEMU_API_WORLD_DATA_SERVICE_H
