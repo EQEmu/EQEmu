@@ -1,5 +1,0 @@
-EQEmu took this code from `C++ Sockets Library`
-http://www.alhem.net/Sockets/
-and integrated it into our world server. We did not care for the actual
-socket code (didnt work on windows) so we scrapped all of it, and just
-used the HTTP framework code.

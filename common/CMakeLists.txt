@@ -45,7 +45,6 @@ set(common_sources
     faction.cpp
     file.cpp
     guild_base.cpp
-    guilds.cpp
     inventory_profile.cpp
     inventory_slot.cpp
     ip_util.cpp
@@ -759,7 +758,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
     mark_as_advanced(EQEMU_SFMT19937)
 endif()
 
-include_directories(Patches SocketLib StackWalker)
+include_directories(Patches StackWalker)
 
 add_library(common ${common_sources} ${common_headers} ${repositories})
 
@@ -807,7 +806,6 @@ endif()
 
 if(UNIX)
     target_link_libraries(common PUBLIC uuid)
-    set_source_files_properties("SocketLib/Mime.cpp" PROPERTY COMPILE_FLAGS -Wno-unused-result)
     set_source_files_properties("patches/sod.cpp" "patches/sof.cpp" "patches/rof.cpp" "patches/rof2.cpp" "patches/uf.cpp" PROPERTIES COMPILE_FLAGS -O0)
 endif()
 
