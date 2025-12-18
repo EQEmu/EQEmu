@@ -1,9 +1,8 @@
-#ifndef CHATCHANNEL_H
-#define CHATCHANNEL_H
+#pragma once
 
-//#include "clientlist.h"
-#include "../common/linked_list.h"
-#include "../common/timer.h"
+#include "common/linked_list.h"
+#include "common/timer.h"
+
 #include <string>
 #include <vector>
 
@@ -102,5 +101,3 @@ private:
 };
 
 std::string CapitaliseName(const std::string& inString);
-
-#endif

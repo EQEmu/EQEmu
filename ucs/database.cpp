@@ -17,40 +17,26 @@
 
 */
 
-
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
-#include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <mysqld_error.h>
-#include <limits.h>
-#include <ctype.h>
-#include <assert.h>
-#include <map>
-
-// Disgrace: for windows compile
-#ifdef _WINDOWS
-#include <windows.h>
-#define snprintf	_snprintf
-#define strncasecmp	_strnicmp
-#define strcasecmp	_stricmp
-#else
-
-#include "../common/unix.h"
-#include <netinet/in.h>
-
-#endif
-
 #include "database.h"
-#include "../common/eq_packet_structs.h"
-#include "../common/misc_functions.h"
-#include "../common/strings.h"
-#include "chatchannel.h"
-#include "../common/repositories/chatchannel_reserved_names_repository.h"
-#include "../common/repositories/chatchannels_repository.h"
-#include "../common/repositories/name_filter_repository.h"
+
+#include "common/eq_packet_structs.h"
+#include "common/eqemu_logsys.h"
+#include "common/misc_functions.h"
+#include "common/platform/platform.h"
+#include "common/repositories/chatchannel_reserved_names_repository.h"
+#include "common/repositories/chatchannels_repository.h"
+#include "common/repositories/name_filter_repository.h"
+#include "common/strings.h"
+#include "ucs/chatchannel.h"
+
+#include "mysqld_error.h"
+#include <cassert>
+#include <cctype>
+#include <climits>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <map>
 
 extern Clientlist      *g_Clientlist;
 extern std::string GetMailPrefix();

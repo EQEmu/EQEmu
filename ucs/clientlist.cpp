@@ -17,22 +17,20 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 */
 
-#include "../common/global_define.h"
-#include "../common/strings.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/misc_functions.h"
+#include "common/eqemu_logsys.h"
+#include "common/misc_functions.h"
+#include "common/path_manager.h"
+#include "common/strings.h"
+#include "ucs/chatchannel.h"
+#include "ucs/clientlist.h"
+#include "ucs/database.h"
+#include "ucs/ucsconfig.h"
 
-#include "ucsconfig.h"
-#include "clientlist.h"
-#include "database.h"
-#include "chatchannel.h"
-#include "../common/path_manager.h"
-
-#include <list>
-#include <vector>
-#include <string>
-#include <cstdlib>
 #include <algorithm>
+#include <cstdlib>
+#include <list>
+#include <string>
+#include <vector>
 
 extern UCSDatabase database;
 extern std::string WorldShortName;

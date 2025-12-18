@@ -15,28 +15,27 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
-#include "../common/global_define.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/servertalk.h"
-#include "../common/misc_functions.h"
-#include "../common/packet_functions.h"
-#include "../common/md5.h"
-#include "../common/strings.h"
-#include "worldserver.h"
-#include "clientlist.h"
-#include "ucsconfig.h"
-#include "database.h"
-#include "../common/discord/discord_manager.h"
-#include "../common/events/player_event_logs.h"
-#include "../common/server_reload_types.h"
 
-#include <iostream>
-#include <string.h>
-#include <stdio.h>
-#include <iomanip>
-#include <time.h>
-#include <stdlib.h>
-#include <stdarg.h>
+#include "worldserver.h"
+
+#include "common/discord/discord_manager.h"
+#include "common/eqemu_logsys.h"
+#include "common/events/player_event_logs.h"
+#include "common/md5.h"
+#include "common/misc_functions.h"
+#include "common/packet_functions.h"
+#include "common/server_reload_types.h"
+#include "common/servertalk.h"
+#include "common/strings.h"
+#include "ucs/clientlist.h"
+#include "ucs/database.h"
+#include "ucs/ucsconfig.h"
+
+#include <cstdarg>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
 
 extern WorldServer     worldserver;
 extern Clientlist      *g_Clientlist;
