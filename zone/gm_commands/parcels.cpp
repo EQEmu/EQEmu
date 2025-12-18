@@ -1,8 +1,8 @@
-#include "../client.h"
-#include "../queryserv.h"
-#include "../worldserver.h"
-#include "../../common/events/player_event_logs.h"
-#include "../string_ids.h"
+#include "common/events/player_event_logs.h"
+#include "zone/client.h"
+#include "zone/queryserv.h"
+#include "zone/string_ids.h"
+#include "zone/worldserver.h"
 
 extern QueryServ  *QServ;
 extern WorldServer worldserver;

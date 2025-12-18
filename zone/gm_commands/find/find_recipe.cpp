@@ -1,6 +1,6 @@
-#include "../../client.h"
-#include "../../command.h"
-#include "../../../common/repositories/tradeskill_recipe_repository.h"
+#include "common/repositories/tradeskill_recipe_repository.h"
+#include "zone/client.h"
+#include "zone/command.h"
 
 void FindRecipe(Client *c, const Seperator *sep)
 {

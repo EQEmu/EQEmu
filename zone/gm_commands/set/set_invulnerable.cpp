@@ -1,4 +1,4 @@
-#include "../../client.h"
+#include "zone/client.h"
 
 void SetInvulnerable(Client *c, const Seperator *sep) {
 	const auto arguments = sep->argnum;

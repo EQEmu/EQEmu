@@ -1,5 +1,5 @@
-#include "../dialogue_window.h"
-#include "../client.h"
+#include "zone/client.h"
+#include "zone/dialogue_window.h"
 
 void command_illusion_block(Client* c, const Seperator* sep)
 {

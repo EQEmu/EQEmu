@@ -1,5 +1,6 @@
-#include "../client.h"
 #include "door_manipulation.h"
+
+#include "zone/client.h"
 
 void command_door(Client *c, const Seperator *sep)
 {

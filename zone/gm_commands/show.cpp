@@ -1,4 +1,4 @@
-#include "../client.h"
+#include "zone/client.h"
 
 void ShowAAs(Client* c, const Seperator* sep);
 void ShowAAPoints(Client* c, const Seperator* sep);

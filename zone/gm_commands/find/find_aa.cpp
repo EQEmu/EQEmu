@@ -1,4 +1,5 @@
-#include "../../client.h"
+#include "common/seperator.h"
+#include "zone/client.h"
 
 void FindAA(Client *c, const Seperator *sep)
 {

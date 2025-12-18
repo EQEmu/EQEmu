@@ -1,4 +1,4 @@
-#include "../../client.h"
+#include "zone/client.h"
 
 uint8 GetCommandStatus(std::string command_name);
 

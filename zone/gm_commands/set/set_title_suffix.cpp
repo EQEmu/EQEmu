@@ -1,5 +1,5 @@
-#include "../../client.h"
-#include "../../titles.h"
+#include "zone/client.h"
+#include "zone/titles.h"
 
 void SetTitleSuffix(Client *c, const Seperator *sep)
 {

@@ -1,5 +1,5 @@
-#include "../../client.h"
-#include "../../dialogue_window.h"
+#include "zone/client.h"
+#include "zone/dialogue_window.h"
 
 void ShowZoneData(Client *c, const Seperator *sep)
 {

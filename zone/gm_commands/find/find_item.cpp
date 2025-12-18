@@ -1,5 +1,5 @@
-#include "../../client.h"
-#include "../../../common/repositories/items_repository.h"
+#include "zone/client.h"
+#include "common/repositories/items_repository.h"
 
 void FindItem(Client *c, const Seperator *sep)
 {

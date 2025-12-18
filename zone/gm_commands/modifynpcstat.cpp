@@ -1,4 +1,4 @@
-#include "../client.h"
+#include "zone/client.h"
 
 std::map<std::string, std::string> GetModifyNPCStatMap()
 {

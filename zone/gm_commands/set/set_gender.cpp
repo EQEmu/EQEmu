@@ -1,4 +1,4 @@
-#include "../../client.h"
+#include "zone/client.h"
 
 void SetGender(Client *c, const Seperator *sep)
 {

@@ -1,5 +1,5 @@
-#include "../client.h"
-#include "../mob_movement_manager.h"
+#include "zone/client.h"
+#include "zone/mob_movement_manager.h"
 
 void command_movement(Client *c, const Seperator *sep)
 {

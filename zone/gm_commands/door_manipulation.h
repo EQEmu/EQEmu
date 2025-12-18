@@ -1,8 +1,7 @@
-#ifndef EQEMU_DOOR_MANIPULATION_H
-#define EQEMU_DOOR_MANIPULATION_H
+#pragma once
 
-#include "../client.h"
-#include "../../common/repositories/tool_game_objects_repository.h"
+#include "common/repositories/tool_game_objects_repository.h"
+#include "zone/client.h"
 
 class DoorManipulation {
 
@@ -18,6 +17,3 @@ public:
 		std::vector<ToolGameObjectsRepository::ToolGameObjects> game_objects
 	);
 };
-
-
-#endif //EQEMU_DOOR_MANIPULATION_H

@@ -1,4 +1,4 @@
-#include "../../client.h"
+#include "zone/client.h"
 
 void ShowQuestGlobals(Client *c, const Seperator *sep)
 {

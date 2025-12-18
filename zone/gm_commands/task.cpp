@@ -1,10 +1,9 @@
-#include "../client.h"
-#include "../worldserver.h"
+#include "common/repositories/completed_tasks_repository.h"
+#include "common/shared_tasks.h"
+#include "zone/client.h"
+#include "zone/worldserver.h"
 
 extern WorldServer worldserver;
-
-#include "../../common/shared_tasks.h"
-#include "../../common/repositories/completed_tasks_repository.h"
 
 void command_task(Client *c, const Seperator *sep)
 {

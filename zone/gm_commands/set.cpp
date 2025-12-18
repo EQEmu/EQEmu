@@ -1,4 +1,4 @@
-#include "../client.h"
+#include "zone/client.h"
 
 void SetAAEXP(Client *c, const Seperator *sep);
 void SetAAPoints(Client *c, const Seperator *sep);

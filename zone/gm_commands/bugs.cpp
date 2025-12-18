@@ -1,5 +1,5 @@
-#include "../client.h"
-#include "../../common/repositories/bug_reports_repository.h"
+#include "common/repositories/bug_reports_repository.h"
+#include "zone/client.h"
 
 void command_bugs(Client *c, const Seperator *sep)
 {

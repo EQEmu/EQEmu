@@ -1,4 +1,4 @@
-#include "../../client.h"
+#include "zone/client.h"
 
 void SetPVP(Client *c, const Seperator *sep)
 {

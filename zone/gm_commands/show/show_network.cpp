@@ -1,5 +1,5 @@
-#include "../../client.h"
-#include "../../dialogue_window.h"
+#include "zone/client.h"
+#include "zone/dialogue_window.h"
 
 void ShowNetwork(Client *c, const Seperator *sep)
 {

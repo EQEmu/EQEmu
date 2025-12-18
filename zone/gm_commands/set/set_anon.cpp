@@ -1,5 +1,5 @@
-#include "../../client.h"
-#include "../../../common/repositories/character_data_repository.h"
+#include "common/repositories/character_data_repository.h"
+#include "zone/client.h"
 
 void SetAnon(Client *c, const Seperator *sep)
 {

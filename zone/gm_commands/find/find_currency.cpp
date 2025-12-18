@@ -1,4 +1,5 @@
-#include "../../client.h"
+#include "zone/client.h"
+#include "zone/command.h"
 
 void FindCurrency(Client *c, const Seperator *sep)
 {

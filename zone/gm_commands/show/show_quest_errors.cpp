@@ -1,5 +1,5 @@
-#include "../../client.h"
-#include "../../quest_parser_collection.h"
+#include "zone/client.h"
+#include "zone/quest_parser_collection.h"
 
 void ShowQuestErrors(Client *c, const Seperator *sep)
 {

@@ -1,5 +1,5 @@
-#include "../client.h"
-#include "../../common/repositories/grid_entries_repository.h"
+#include "common/repositories/grid_entries_repository.h"
+#include "zone/client.h"
 
 void command_grid(Client *c, const Seperator *sep)
 {

@@ -1,5 +1,5 @@
-#include "../../client.h"
-#include "../../../common/repositories/petitions_repository.h"
+#include "common/repositories/petitions_repository.h"
+#include "zone/client.h"
 
 void ShowPetition(Client *c, const Seperator *sep)
 {

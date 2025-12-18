@@ -1,5 +1,5 @@
-#include "../client.h"
-#include "../../common/data_verification.h"
+#include "common/data_verification.h"
+#include "zone/client.h"
 
 void command_untraindisc(Client *c, const Seperator *sep)
 {

@@ -1,7 +1,7 @@
-#include "../client.h"
-#include "../groups.h"
-#include "../raids.h"
-#include "../../common/repositories/npc_types_repository.h"
+#include "common/repositories/npc_types_repository.h"
+#include "zone/client.h"
+#include "zone/groups.h"
+#include "zone/raids.h"
 
 void SendNPCEditSubCommands(Client *c)
 {

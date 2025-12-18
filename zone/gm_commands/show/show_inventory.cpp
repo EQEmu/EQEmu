@@ -1,5 +1,5 @@
-#include "../../client.h"
-#include "../../object.h"
+#include "zone/client.h"
+#include "zone/object.h"
 
 void SendShowInventorySubCommands(Client* c) {
 	c->Message(Chat::White, "Usage: #show inventory equip - Shows items in Equipment slots");

@@ -1,4 +1,4 @@
-#include "../../client.h"
+#include "zone/client.h"
 
 void FindRace(Client *c, const Seperator *sep)
 {

@@ -1,4 +1,4 @@
-#include "../client.h"
+#include "zone/client.h"
 
 void command_resetdisc_timer(Client *c, const Seperator *sep)
 {

@@ -1,5 +1,5 @@
-#include "../client.h"
-#include "../npc_scale_manager.h"
+#include "zone/client.h"
+#include "zone/npc_scale_manager.h"
 
 void command_scale(Client *c, const Seperator *sep)
 {

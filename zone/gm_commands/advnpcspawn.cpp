@@ -1,5 +1,5 @@
-#include "../client.h"
-#include "../groups.h"
+#include "zone/client.h"
+#include "zone/groups.h"
 
 void command_advnpcspawn(Client *c, const Seperator *sep)
 {

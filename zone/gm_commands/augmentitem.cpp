@@ -1,5 +1,5 @@
-#include "../client.h"
-#include "../object.h"
+#include "zone/client.h"
+#include "zone/object.h"
 
 void command_augmentitem(Client *c, const Seperator *sep)
 {

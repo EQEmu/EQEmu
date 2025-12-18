@@ -1,4 +1,4 @@
-#include "../../client.h"
+#include "zone/client.h"
 
 void SetLastName(Client *c, const Seperator *sep)
 {

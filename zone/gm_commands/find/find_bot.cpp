@@ -1,5 +1,5 @@
-#include "../../client.h"
-#include "../../../common/repositories/bot_data_repository.h"
+#include "common/repositories/bot_data_repository.h"
+#include "zone/client.h"
 
 void FindBot(Client *c, const Seperator *sep)
 {

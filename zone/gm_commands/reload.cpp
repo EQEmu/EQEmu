@@ -1,8 +1,9 @@
+#include "common/server_reload_types.h"
+#include "common/strings.h"
+#include "zone/client.h"
+#include "zone/worldserver.h"
+
 #include <string>
-#include "../client.h"
-#include "../../common/strings.h"
-#include "../../common/server_reload_types.h"
-#include "../worldserver.h"
 
 extern WorldServer worldserver;
 

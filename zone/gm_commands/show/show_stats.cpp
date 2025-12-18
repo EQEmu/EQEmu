@@ -1,4 +1,4 @@
-#include "../../client.h"
+#include "zone/client.h"
 
 void ShowStats(Client *c, const Seperator *sep)
 {

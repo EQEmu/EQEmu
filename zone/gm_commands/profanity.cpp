@@ -1,9 +1,9 @@
-#include "../client.h"
-#include "../worldserver.h"
+#include "zone/client.h"
+#include "zone/worldserver.h"
 
 extern WorldServer worldserver;
 
-#include "../../common/profanity_manager.h"
+#include "common/profanity_manager.h"
 
 void command_profanity(Client *c, const Seperator *sep)
 {

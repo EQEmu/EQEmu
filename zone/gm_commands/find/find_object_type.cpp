@@ -1,5 +1,5 @@
-#include "../../object.h"
-#include "../../client.h"
+#include "zone/client.h"
+#include "zone/object.h"
 
 void FindObjectType(Client *c, const Seperator *sep)
 {

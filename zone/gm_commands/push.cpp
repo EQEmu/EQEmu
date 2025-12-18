@@ -1,5 +1,5 @@
-#include "../client.h"
-#include "../fastmath.h"
+#include "zone/client.h"
+#include "zone/fastmath.h"
 
 extern FastMath g_Math;
 

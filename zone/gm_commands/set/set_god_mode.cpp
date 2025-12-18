@@ -1,5 +1,5 @@
-#include "../../client.h"
-#include "../../../common/repositories/account_repository.h"
+#include "common/repositories/account_repository.h"
+#include "zone/client.h"
 
 void SetGodMode(Client *c, const Seperator *sep)
 {

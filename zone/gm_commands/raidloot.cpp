@@ -1,7 +1,6 @@
-#include "../client.h"
-#include "../groups.h"
-#include "../raids.h"
-#include "../raids.h"
+#include "zone/client.h"
+#include "zone/groups.h"
+#include "zone/raids.h"
 
 void command_raidloot(Client *c, const Seperator *sep)
 {

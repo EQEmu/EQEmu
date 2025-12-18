@@ -1,5 +1,5 @@
-#include "../../client.h"
-#include "../../../common/content/world_content_service.h"
+#include "common/content/world_content_service.h"
+#include "zone/client.h"
 
 void FindZone(Client* c, const Seperator* sep)
 {

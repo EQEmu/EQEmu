@@ -1,6 +1,6 @@
-#include "../../client.h"
-#include "../../dialogue_window.h"
-#include "../../groups.h"
+#include "zone/client.h"
+#include "zone/dialogue_window.h"
+#include "zone/groups.h"
 
 void ShowGroupInfo(Client *c, const Seperator *sep)
 {

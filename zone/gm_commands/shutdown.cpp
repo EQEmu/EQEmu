@@ -1,5 +1,6 @@
-#include "../client.h"
-#include "../../world/main.h"
+#include "zone/client.h"
+
+void CatchSignal(int sig_num);
 
 void command_shutdown(Client *c, const Seperator *sep)
 {

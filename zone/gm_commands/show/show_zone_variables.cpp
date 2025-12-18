@@ -1,5 +1,5 @@
-#include "../../client.h"
-#include "../../zone.h"
+#include "zone/client.h"
+#include "zone/zone.h"
 
 extern Zone* zone;
 

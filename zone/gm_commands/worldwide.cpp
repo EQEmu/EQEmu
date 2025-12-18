@@ -1,4 +1,4 @@
-#include "../client.h"
+#include "zone/client.h"
 
 void command_worldwide(Client *c, const Seperator *sep)
 {
