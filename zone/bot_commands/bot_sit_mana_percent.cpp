@@ -1,4 +1,4 @@
-#include "../bot_command.h"
+#include "zone/bot_command.h"
 
 void bot_command_sit_mana_percent(Client* c, const Seperator* sep)
 {

@@ -1,4 +1,4 @@
-#include "../bot_command.h"
+#include "zone/bot_command.h"
 
 void bot_command_spell_pursue_priority(Client* c, const Seperator* sep)
 {

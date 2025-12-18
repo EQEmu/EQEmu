@@ -1,4 +1,4 @@
-#include "../bot_command.h"
+#include "zone/bot_command.h"
 
 void bot_command_spell_delays(Client* c, const Seperator* sep) {
 	if (helper_command_alias_fail(c, "bot_command_spell_delays", sep->arg[0], "spelldelays")) {

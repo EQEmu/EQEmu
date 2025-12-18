@@ -1,5 +1,5 @@
-#include "../bot_command.h"
-#include "../doors.h"
+#include "zone/bot_command.h"
+#include "zone/doors.h"
 
 void bot_command_pick_lock(Client *c, const Seperator *sep)
 {

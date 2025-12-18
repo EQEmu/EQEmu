@@ -1,4 +1,4 @@
-#include "../bot_command.h"
+#include "zone/bot_command.h"
 
 void bot_command_set_assistee(Client* c, const Seperator* sep)
 {
