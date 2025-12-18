@@ -21,9 +21,9 @@
 #include "common/emu_opcodes.h"
 #include "common/eqemu_logsys.h"
 
+#include <cstdio>
 #include <cstring>
 #include <map>
-#include <stdio.h>
 #include <string>
 
 OpcodeManager::OpcodeManager() {

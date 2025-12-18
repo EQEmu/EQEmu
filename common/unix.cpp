@@ -19,8 +19,8 @@
 
 #include "unix.h"
 
-#include <string.h>
-#include <ctype.h>
+#include <cctype>
+#include <cstring>
 
 void Sleep(unsigned int x) {
 	if (x > 0)

@@ -220,8 +220,8 @@ void set_exception_handler() {
 }
 #else
 
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <sys/fcntl.h>

@@ -24,8 +24,8 @@
 #include "common/strings.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cstring>
-#include <ctype.h>
 
 
 static std::list<std::string> profanity_list;

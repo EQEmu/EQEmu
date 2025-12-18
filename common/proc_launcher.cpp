@@ -20,6 +20,9 @@
 
 #include "common/types.h"
 
+#include <csignal>
+#include <cstdio>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -28,14 +31,11 @@
 #else
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <signal.h>
-#include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-#include <string.h>
 #endif
 
 ProcLauncher ProcLauncher::s_launcher;

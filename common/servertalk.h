@@ -440,6 +440,7 @@ public:
 	uint32	destination;
 };
 
+#pragma pack(push)
 #pragma pack(1)
 
 struct SPackSendQueue {

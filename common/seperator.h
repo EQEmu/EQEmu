@@ -25,8 +25,8 @@
 
 #include "common/types.h"
 
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 
 class Seperator
 {

@@ -22,9 +22,8 @@
 #include "common/platform/inet.h"
 
 #include "zlib.h"
-#include <iomanip>
+#include <cstring>
 #include <iostream>
-#include <string.h>
 
 void EncryptProfilePacket(EQApplicationPacket* app) {
 	//EncryptProfilePacket(app->pBuffer, app->size);

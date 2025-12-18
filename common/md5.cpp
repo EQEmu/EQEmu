@@ -13,7 +13,7 @@
 #include "common/strings.h"
 #include "common/seperator.h"
 
-#include <string.h> /* for memcpy() */
+#include <cstring> /* for memcpy() */
 
 MD5::MD5() {
 	memset(pMD5, 0, 16);

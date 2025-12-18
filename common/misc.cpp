@@ -4,13 +4,13 @@
 #include "common/types.h"
 
 #include "zlib.h"
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <iostream>
 #include <map>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string>
-#include <time.h>
 
 std::map<int,std::string> DBFieldNames;
 

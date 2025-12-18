@@ -21,8 +21,8 @@
 
 #include "common/types.h"
 
+#include <cstring>
 #include <sstream>
-#include <string.h>
 #include <string>
 #include <type_traits>
 

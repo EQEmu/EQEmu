@@ -20,10 +20,10 @@
 
 #include "common/servertalk.h"
 
+#include <cstdio>
 #include <iostream>
 #include <sstream>
 #include <iomanip>
-#include <stdio.h>
 
 void DumpPacketAscii(const uchar* buf, uint32 size, uint32 cols, uint32 skip) {
 	// Output as ASCII

@@ -19,6 +19,7 @@
 #pragma once
 
 #include <cstdint>
+
 typedef uint8_t byte;
 typedef uint8_t uint8;
 typedef uint16_t uint16;
@@ -44,7 +45,7 @@ typedef const char Const_char;	//for perl XS
 
 #ifdef _WINDOWS
 	#if (!defined(_MSC_VER) || (defined(_MSC_VER) && _MSC_VER < 1900))
-		#define snprintf	_snprintf
+		#define snprintf    _snprintf
 	#endif
 	#define strncasecmp	_strnicmp
 	#define strcasecmp	_stricmp

@@ -28,6 +28,8 @@
 #include "common/platform.h"
 
 #include <cstdio>
+#include <iomanip>
+#include <iostream>
 
 EQPacket::EQPacket(EmuOpcode op, const unsigned char *buf, uint32 len)
 :	BasePacket(buf, len),

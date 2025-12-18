@@ -60,17 +60,6 @@ struct VarCache_Struct {
 
 class PTimerList;
 
-#ifdef _WINDOWS
-#if _MSC_VER > 1700 // greater than 2012 (2013+)
-#	define _ISNAN_(a) std::isnan(a)
-#else
-#	include <float.h>
-#	define _ISNAN_(a) _isnan(a)
-#endif
-#else
-#	define _ISNAN_(a) std::isnan(a)
-#endif
-
 #define SQL(...) #__VA_ARGS__
 
 class Database : public DBcore {

@@ -2,6 +2,7 @@
 
 #include "event_loop.h"
 
+#include <cstring>
 #include <functional>
 
 namespace EQ {

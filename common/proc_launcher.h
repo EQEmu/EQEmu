@@ -19,6 +19,7 @@
 #pragma once
 
 #include "common/platform/platform.h"
+#include "common/types.h"
 
 #include <map>
 #include <string>

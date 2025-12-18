@@ -5,8 +5,8 @@
 #include "common/strings.h"
 
 #include <chrono>
+#include <ctime>
 #include <iostream>
-#include <time.h>
 
 ServerEventScheduler::ServerEventScheduler()
 {

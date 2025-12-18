@@ -12,7 +12,6 @@
 #include <list>
 #include <map>
 #include <memory>
-#include <queue>
 
 namespace EQ
 {

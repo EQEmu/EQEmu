@@ -29,17 +29,15 @@
 #include "common/strings.h"
 #include "common/termcolor/rang.hpp"
 
+#include <ctime>
 #include <filesystem>
 #include <iostream>
 #include <string>
 #include <sys/stat.h>
-#include <time.h>
 
 #ifdef _WINDOWS
 #include <conio.h>
 #include <direct.h>
-#include <dos.h>
-#include <iostream>
 #include <process.h>
 #include <windows.h>
 #else

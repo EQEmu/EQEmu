@@ -19,7 +19,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #include "database.h"
 
 #include "common/platform/inet.h"
-#include "common/platform/platform"
+#include "common/platform/platform.h"
 #include "common/platform/win/include_windows.h"
 #include "common/repositories/character_corpses_repository.h"
 #include "common/repositories/data_buckets_repository.h"

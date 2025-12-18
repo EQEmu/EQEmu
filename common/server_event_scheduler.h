@@ -2,7 +2,7 @@
 
 #include "common/repositories/server_scheduled_events_repository.h"
 
-#include <time.h>
+#include <ctime>
 #include <chrono>
 
 namespace ServerEvents {

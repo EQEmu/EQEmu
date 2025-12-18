@@ -5,23 +5,9 @@
 #include "common/mysql_stmt.h"
 #include "common/strings.h"
 #include "common/timer.h"
+#include "common/types.h"
 
 #include "mysqld_error.h"
-
-#include <fstream>
-#include <iostream>
-#include <string.h>
-
-#ifdef _WINDOWS
-#define snprintf	_snprintf
-#define strncasecmp	_strnicmp
-#define strcasecmp	_stricmp
-#include <process.h>
-#include <winsock2.h>
-#else
-#include "common/unix.h"
-#include <pthread.h>
-#endif
 
 #ifdef _EQDEBUG
 #define DEBUG_MYSQL_QUERIES 0

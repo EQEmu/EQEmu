@@ -24,7 +24,7 @@
 #include "common/shareddb.h"
 #include "common/strings.h"
 
-#include <limits.h>
+#include <climits>
 
 int32 next_item_serial_number = 1;
 std::unordered_set<uint64> guids{};

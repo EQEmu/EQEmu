@@ -20,10 +20,6 @@
 
 #include "common/types.h"
 
-#include <string>
-#include <time.h>
-
-
 #ifndef ERRBUF_SIZE
 #define ERRBUF_SIZE		1024
 #endif
@@ -46,10 +42,9 @@
 		return; \
 	}
 
-int32	filesize(FILE* fp);
 uint32	ResolveIP(const char* hostname, char* errbuf = 0);
 bool	ParseAddress(const char* iAddress, uint32* oIP, uint16* oPort, char* errbuf = 0);
-void	CoutTimestamp(bool ms = true);
+
 float EQ13toFloat(int d);
 float EQ19toFloat(int d);
 float EQHtoFloat(int d);

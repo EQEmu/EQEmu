@@ -21,7 +21,7 @@
 #include "common/eqemu_exception.h"
 #include "common/types.h"
 
-#include <string.h>
+#include <cstring>
 
 namespace EQ {
 

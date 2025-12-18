@@ -20,6 +20,7 @@
 
 #include "file.h"
 
+#include "common/platform/platform.h"
 #include "fmt/format.h"
 
 #include <filesystem>
@@ -27,18 +28,6 @@
 #include <iostream>
 #include <sys/stat.h>
 #include <vector>
-
-#ifdef _WINDOWS
-#include <direct.h>
-#include <conio.h>
-#include <iostream>
-#include <dos.h>
-#include <windows.h>
-#include <process.h>
-#else
-#include <unistd.h>
-#include <sys/stat.h>
-#endif
 
 
 namespace fs = std::filesystem;
