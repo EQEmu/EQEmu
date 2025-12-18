@@ -17,7 +17,6 @@
 */
 
 #include "common/base_packet.h"
-#include "common/global_define.h"
 #include "common/misc.h"
 #include "common/packet_dump.h"
 

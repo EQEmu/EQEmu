@@ -18,11 +18,9 @@
 
 #pragma once
 
-#include "common/global_define.h"
 #include "common/mutex.h"
-#ifndef WIN32
-#include <pthread.h>
-#endif
+#include "common/platform/posix/include_pthreads.h"
+#include "common/platform/win/include_windows.h"
 
 //Sombody, someday needs to figure out how to implement a condition
 //system on windows...

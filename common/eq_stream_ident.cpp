@@ -2,7 +2,6 @@
 #include "common/eq_stream_ident.h"
 #include "common/eq_stream_proxy.h"
 #include "common/eqemu_logsys.h"
-#include "common/global_define.h"
 #include "common/misc.h"
 
 #include <utility>

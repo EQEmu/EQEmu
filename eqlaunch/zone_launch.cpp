@@ -20,7 +20,6 @@
 
 #include "common/eqemu_config.h"
 #include "common/eqemu_logsys.h"
-#include "common/global_define.h"
 #include "eqlaunch/worldserver.h"
 
 //static const uint32 ZONE_RESTART_DELAY = 10000;

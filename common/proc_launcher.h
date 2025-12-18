@@ -18,15 +18,11 @@
 
 #pragma once
 
-#include "common/global_define.h"
+#include "common/platform/platform.h"
 
 #include <map>
 #include <string>
 #include <vector>
-
-#ifdef __FreeBSD__
-#include <unistd.h>
-#endif
 
 //I forced this object to become a singleton because it registers its
 //signal handler for UNIX

@@ -21,7 +21,6 @@
 #include "common/dbcore.h"
 #include "common/eq_packet_structs.h"
 #include "common/eqemu_logsys.h"
-#include "common/global_define.h"
 #include "common/linked_list.h"
 #include "common/types.h"
 

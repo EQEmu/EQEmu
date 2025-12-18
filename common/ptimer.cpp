@@ -19,7 +19,6 @@
 #include "ptimer.h"
 
 #include "common/database.h"
-#include "common/global_define.h"
 #include "common/strings.h"
 #include "common/timer.h"
 

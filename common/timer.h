@@ -22,8 +22,8 @@
 
 // Disgrace: for windows compile
 #ifdef _WINDOWS
-	#include "global_define.h"
-	int gettimeofday (timeval *tp, ...);
+struct timeval;
+int gettimeofday (timeval *tp, ...);
 #endif
 
 #include <chrono>

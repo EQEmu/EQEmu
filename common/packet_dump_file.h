@@ -20,8 +20,6 @@
 
 #include "common/types.h"
 
-#include <iostream>
-
 class EQApplicationPacket;
 
 void FileDumpPacketAscii(const char* filename, const uchar* buf, uint32 size, uint32 cols=16, uint32 skip=0);

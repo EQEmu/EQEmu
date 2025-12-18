@@ -6,4 +6,3 @@
 #include "common/eqemu_logsys.h"
 #include "common/eqemu_logsys_log_aliases.h"
 #include "common/features.h"
-#include "common/global_define.h"

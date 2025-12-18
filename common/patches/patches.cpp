@@ -19,7 +19,6 @@
 
 #include "patches.h"
 
-#include "common/global_define.h"
 #include "common/patches/rof.h"
 #include "common/patches/rof2.h"
 #include "common/patches/sod.h"

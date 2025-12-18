@@ -20,18 +20,10 @@
 
 #include "common/eq_packet_structs.h"
 #include "common/eqemu_logsys.h"
-#include "common/global_define.h"
 
 #include <fstream>
 #include <iostream>
 #include <memory.h>
-
-	/*#ifdef _CRTDBG_MAP_ALLOC
-		#undef new
-	#endif*/
-	/*#ifdef _CRTDBG_MAP_ALLOC
-		#define new new(_NORMAL_BLOCK, __FILE__, __LINE__)
-	#endif*/
 
 #define EQT_VERSION 1000
 

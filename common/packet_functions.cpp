@@ -18,16 +18,13 @@
 
 #include "packet_functions.h"
 
-#include "common/global_define.h"
 #include "common/packet_dump.h"
+#include "common/platform/inet.h"
 
 #include "zlib.h"
 #include <iomanip>
 #include <iostream>
 #include <string.h>
-#ifndef WIN32
-#include <netinet/in.h>
-#endif
 
 void EncryptProfilePacket(EQApplicationPacket* app) {
 	//EncryptProfilePacket(app->pBuffer, app->size);

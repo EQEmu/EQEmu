@@ -18,7 +18,6 @@
 
 #include "eq_packet.h"
 
-#include "common/global_define.h"
 #include "common/misc.h"
 #include "common/op_codes.h"
 #ifndef STATIC_OPCODE

@@ -18,7 +18,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 #include "database.h"
 
-#include "common/global_define.h"
+#include "common/platform/inet.h"
+#include "common/platform/platform"
+#include "common/platform/win/include_windows.h"
 #include "common/repositories/character_corpses_repository.h"
 #include "common/repositories/data_buckets_repository.h"
 #include "common/repositories/dynamic_zone_members_repository.h"
@@ -34,22 +36,9 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #include "common/rulesys.h"
 #include "common/strings.h"
 #include "common/timer.h"
-
-#include <iomanip>
-#include <iostream>
-
-// Disgrace: for windows compile
-#ifdef _WINDOWS
-#include <windows.h>
-#define snprintf	_snprintf
-#define strncasecmp	_strnicmp
-#define strcasecmp	_stricmp
-#else
 #include "common/unix.h"
 #include "zone/zonedb.h"
-#include <netinet/in.h>
-#include <sys/time.h>
-#endif
+
 
 
 bool Database::AddClientToInstance(uint16 instance_id, uint32 character_id)

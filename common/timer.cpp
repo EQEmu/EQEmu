@@ -20,9 +20,11 @@
 
 // Disgrace: for windows compile
 #ifndef WIN32
-	#include <sys/time.h>
+#include <sys/time.h>
 #else
-	#include <sys/timeb.h>
+#include <sys/timeb.h>
+#include <WinSock2.h>
+#undef GetCurrentTime
 #endif
 
 uint32 current_time = 0;

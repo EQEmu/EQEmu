@@ -22,9 +22,9 @@
 #include "common/eq_packet_structs.h"
 #include "common/events/player_event_logs.h"
 #include "common/extprofile.h"
-#include "common/global_define.h"
 #include "common/http/httplib.h"
 #include "common/http/uri.h"
+#include "common/platform/win/include_windows.h"
 #include "common/repositories/account_repository.h"
 #include "common/repositories/adventure_stats_repository.h"
 #include "common/repositories/bot_data_repository.h"
@@ -56,28 +56,8 @@
 #include "common/strings.h"
 #include "common/zone_store.h"
 
-#include "mysqld_error.h"
-
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <iomanip>
-#include <iostream>
 #include <map>
 #include <algorithm>
-
-// Disgrace: for windows compile
-#ifdef _WINDOWS
-#include <windows.h>
-#define snprintf	_snprintf
-#define strncasecmp	_strnicmp
-#define strcasecmp	_stricmp
-#else
-#include "unix.h"
-#include <netinet/in.h>
-#include <sys/time.h>
-#endif
 
 extern Client client;
 

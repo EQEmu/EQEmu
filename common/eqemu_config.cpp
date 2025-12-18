@@ -19,7 +19,6 @@
 #include "eqemu_config.h"
 
 #include "common/eqemu_logsys.h"
-#include "common/global_define.h"
 #include "common/json/json.hpp"
 #include "common/misc_functions.h"
 #include "common/strings.h"

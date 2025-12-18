@@ -1,6 +1,5 @@
 #include "misc.h"
 
-#include "common/global_define.h"
 #include "common/strings.h"
 #include "common/types.h"
 
@@ -12,9 +11,6 @@
 #include <stdlib.h>
 #include <string>
 #include <time.h>
-#ifndef WIN32
-#include <sys/time.h>
-#endif
 
 std::map<int,std::string> DBFieldNames;
 
@@ -339,23 +335,6 @@ char *bptr;
 
 	*bptr=0;
 	return (bptr-buffer);
-}
-
-std::string generate_key(int length)
-{
-std::string key;
-//TODO: write this for win32...
-#ifndef WIN32
-int i;
-timeval now;
-	static const char *chars="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-	for(i=0;i<length;i++) {
-		gettimeofday(&now,nullptr);
-		srand(now.tv_sec^now.tv_usec);
-		key+=(char)chars[(int) (36.0*rand()/(RAND_MAX+1.0))];
-	}
-#endif
-	return key;
 }
 
 void print_hex(const char *data, unsigned long length) {

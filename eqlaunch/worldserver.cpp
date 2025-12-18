@@ -20,7 +20,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
 #include "common/eqemu_config.h"
 #include "common/eqemu_logsys.h"
-#include "common/global_define.h"
 #include "common/servertalk.h"
 #include "common/strings.h"
 #include "eqlaunch/zone_launch.h"

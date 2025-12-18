@@ -19,7 +19,6 @@
 #include "common/crash.h"
 #include "common/eqemu_config.h"
 #include "common/eqemu_logsys.h"
-#include "common/global_define.h"
 #include "common/path_manager.h"
 #include "common/platform.h"
 #include "common/proc_launcher.h"
@@ -28,11 +27,10 @@
 #include "eqlaunch/worldserver.h"
 #include "eqlaunch/zone_launch.h"
 
-#include <vector>
+#include <csignal>
+#include <ctime>
 #include <map>
 #include <set>
-#include <signal.h>
-#include <time.h>
 
 bool RunLoops = false;
 

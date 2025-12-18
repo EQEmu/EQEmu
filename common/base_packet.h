@@ -18,20 +18,11 @@
 
 #pragma once
 
+#include "common/platform/inet.h"
 #include "common/serialize_buffer.h"
 #include "common/types.h"
 
 #include <cstdio>
-#include <cstring>
-
-#ifdef _WINDOWS
-	#include <time.h>
-	#include <winsock2.h>
-	#include <windows.h>
-#else
-	#include <sys/time.h>
-	#include <netinet/in.h>
-#endif
 
 class BasePacket {
 public:

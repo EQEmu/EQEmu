@@ -17,7 +17,6 @@
 */
 
 #include "common/emu_opcodes.h"
-#include "common/global_define.h"
 
 const char *OpcodeNames[_maxEmuOpcode+1] = {
 	"OP_Unknown",

@@ -18,8 +18,6 @@
 
 #include "timeoutmgr.h"
 
-#include "common/global_define.h"
-
 //#define TIMEOUT_DEBUG
 
 Timeoutable::Timeoutable(uint32 check_frequency)

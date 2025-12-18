@@ -5,8 +5,6 @@
 #include "common/database.h"
 #include "common/strings.h"
 
-#include <boost/tuple/tuple_comparison.hpp>
-
 class CharacterEvolvingItemsRepository: public BaseCharacterEvolvingItemsRepository {
 public:
 	// Custom extended repository methods here

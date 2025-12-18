@@ -1,6 +1,5 @@
 #include "compression.h"
 
-#include "common/global_define.h"
 #include "common/types.h"
 
 #include "zlib.h"

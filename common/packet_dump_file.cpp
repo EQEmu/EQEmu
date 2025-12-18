@@ -16,29 +16,17 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 */
 
-#include "common/global_define.h"
+#include "packet_dump_file.h"
 
+#include "common/eq_stream_intf.h"
+
+#include <cstdarg>
+#include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <stdio.h>
 
-//#ifdef _CRTDBG_MAP_ALLOC
-//	#undef new
-//	#define new new(_NORMAL_BLOCK, __FILE__, __LINE__)
-//#endif
-#include <string.h>
-
-#ifdef _WINDOWS
-	#define snprintf	_snprintf
-	#define strncasecmp	_strnicmp
-	#define strcasecmp	_stricmp
-#else
-	#include <stdarg.h>
-#endif
-
-#include "eq_stream_intf.h"
-#include "packet_dump_file.h"
 
 void FileDumpPacketAscii(const char* filename, const uchar* buf, uint32 size, uint32 cols, uint32 skip) {
 	std::ofstream logfile(filename, std::ios::app);

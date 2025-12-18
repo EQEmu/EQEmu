@@ -23,7 +23,6 @@
 #include "common/events/player_event_logs.h"
 #include "common/evolving_items.h"
 #include "common/file.h"
-#include "common/global_define.h"
 #include "common/path_manager.h"
 #include "common/platform.h"
 #include "common/repositories/base_data_repository.h"

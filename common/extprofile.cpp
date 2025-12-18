@@ -18,8 +18,6 @@
 
 #include "extprofile.h"
 
-#include "common/global_define.h"
-
 //Set defaults in the extended profile...
 void InitExtendedProfile(ExtendedProfile_Struct *p) {
 	memset(p, 0, sizeof(ExtendedProfile_Struct));

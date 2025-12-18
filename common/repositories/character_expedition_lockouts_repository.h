@@ -5,6 +5,7 @@
 #include "common/database.h"
 #include "common/dynamic_zone_lockout.h"
 #include "common/strings.h"
+#include "fmt/ranges.h"
 
 #include <unordered_map>
 

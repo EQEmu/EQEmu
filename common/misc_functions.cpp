@@ -18,7 +18,6 @@
 
 #include "misc_functions.h"
 
-#include "common/global_define.h"
 #include "common/seperator.h"
 #include "common/strings.h"
 #include "common/timer.h"
@@ -30,11 +29,9 @@
 
 #ifdef _WINDOWS
 #include <io.h>
-#include <windows.h>
-
+#include <Windows.h>
+#include <WinSock2.h>
 #define snprintf      _snprintf
-#define strncasecmp   _strnicmp
-#define strcasecmp    _stricmp
 #else
 #include <netinet/in.h>
 #include <sys/socket.h>

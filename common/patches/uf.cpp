@@ -26,7 +26,6 @@
 #include "common/eq_stream_ident.h"
 #include "common/eqemu_config.h"
 #include "common/eqemu_logsys.h"
-#include "common/global_define.h"
 #include "common/guilds.h"
 #include "common/item_instance.h"
 #include "common/misc_functions.h"

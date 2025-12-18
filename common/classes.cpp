@@ -19,7 +19,6 @@
 #include "classes.h"
 
 #include "common/data_verification.h"
-#include "common/global_define.h"
 
 #include "fmt/format.h"
 

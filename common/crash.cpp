@@ -2,7 +2,6 @@
 
 #include "common/eqemu_config.h"
 #include "common/eqemu_logsys.h"
-#include "common/global_define.h"
 #include "common/http/httplib.h"
 #include "common/http/uri.h"
 #include "common/json/json.h"
@@ -15,10 +14,6 @@
 
 #include <cstdio>
 #include <vector>
-
-#ifdef _WINDOWS
-#define popen _popen
-#endif
 
 void SendCrashReport(const std::string &crash_report)
 {

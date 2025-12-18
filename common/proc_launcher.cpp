@@ -18,13 +18,13 @@
 
 #include "proc_launcher.h"
 
-#include "common/global_define.h"
 #include "common/types.h"
 
 #include <string>
 #include <vector>
+
 #ifdef _WINDOWS
-#include <windows.h>
+#include "common/platform/win/include_windows.h"
 #else
 #include <sys/types.h>
 #include <sys/wait.h>

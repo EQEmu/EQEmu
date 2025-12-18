@@ -19,7 +19,6 @@
 #include "eqdb.h"
 
 #include "common/database.h"
-#include "common/global_define.h"
 
 #include "mysql.h"
 #include <cstring>

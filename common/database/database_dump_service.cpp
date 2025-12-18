@@ -28,17 +28,10 @@
 #include "common/strings.h"
 #include "common/termcolor/rang.hpp"
 
-#include <cstdio>
 #include <ctime>
 #include <iterator>
 #include <string>
 
-#if _WIN32
-#include <windows.h>
-#else
-#include <sys/time.h>
-#include <thread>
-#endif
 
 #define DATABASE_DUMP_PATH "backups/"
 

@@ -18,7 +18,6 @@
 
 #include "eqdb_res.h"
 
-#include "common/global_define.h"
 #include "mysql.h"
 
 std::vector<std::string> EQDBRes::fetch_row_array() {

@@ -18,8 +18,6 @@
 
 #include "mutex.h"
 
-#include "common/global_define.h"
-
 #include <iostream>
 
 #define DEBUG_MUTEX_CLASS 0
@@ -163,100 +161,3 @@ void LockMutex::lock() {
 		mut->lock();
 	locked = true;
 }
-
-
-MRMutex::MRMutex() {
-	rl = 0;
-	wr = 0;
-	rl = 0;
-}
-
-MRMutex::~MRMutex() {
-#ifdef _EQDEBUG
-	if (wl || rl) {
-		std::cout << "MRMutex::~MRMutex: poor cleanup detected: rl=" << rl << ", wl=" << wl << std::endl;
-	}
-#endif
-}
-
-void MRMutex::ReadLock() {
-	while (!TryReadLock()) {
-		Sleep(1);
-	}
-}
-
-bool MRMutex::TryReadLock() {
-	MCounters.lock();
-	if (!wr && !wl) {
-		rl++;
-		MCounters.unlock();
-		return true;
-	}
-	else {
-		MCounters.unlock();
-		return false;
-	}
-}
-
-void MRMutex::UnReadLock() {
-	MCounters.lock();
-	rl--;
-	MCounters.unlock();
-}
-
-void MRMutex::WriteLock() {
-	MCounters.lock();
-	if (!rl && !wl) {
-		wl++;
-		MCounters.unlock();
-		return;
-	}
-	else {
-		wr++;
-		MCounters.unlock();
-		while (1) {
-			Sleep(1);
-			MCounters.lock();
-			if (!rl && !wl) {
-				wr--;
-				MCounters.unlock();
-				return;
-			}
-			MCounters.lock();
-		}
-	}
-}
-
-bool MRMutex::TryWriteLock() {
-	MCounters.lock();
-	if (!rl && !wl) {
-		wl++;
-		MCounters.unlock();
-		return true;
-	}
-	else {
-		MCounters.unlock();
-		return false;
-	}
-}
-
-void MRMutex::UnWriteLock() {
-	MCounters.lock();
-	wl--;
-	MCounters.unlock();
-}
-
-int32 MRMutex::ReadLockCount() {
-	MCounters.lock();
-	int32 ret = rl;
-	MCounters.unlock();
-	return ret;
-}
-
-int32 MRMutex::WriteLockCount() {
-	MCounters.lock();
-	int32 ret = wl;
-	MCounters.unlock();
-	return ret;
-}
-

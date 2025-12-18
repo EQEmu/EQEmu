@@ -604,7 +604,6 @@ set(common_headers
     file.h
     fixed_memory_hash_set.h
     fixed_memory_variable_hash_set.h
-    global_define.h
     guild_base.h
     guilds.h
     http/httplib.h
