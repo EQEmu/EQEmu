@@ -4,8 +4,6 @@
 #include "common/eqemu_logsys.h"
 #include "common/strings.h"
 
-#include <map>
-
 // this function does not delete the ServerPacket, so it must be handled at call site
 void QSDatabase::GeneralQueryReceive(ServerPacket *pack)
 {

@@ -10,7 +10,6 @@
 #include "common/rulesys.h"
 #include "common/strings.h"
 #include "common/timer.h"
-#include "common/zone_store.h"
 #include "queryserv/database.h"
 #include "queryserv/lfguild.h"
 #include "queryserv/worldserver.h"
@@ -18,9 +17,7 @@
 #include "queryserv/zoneserver.h"
 #include "queryservconfig.h"
 
-#include <list>
-#include <signal.h>
-#include <thread>
+#include <csignal>
 
 volatile bool RunLoops = true;
 
