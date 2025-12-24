@@ -44,8 +44,7 @@ namespace EQ {
 	IPCMutex::IPCMutex(const std::string& name) : locked_(false) {
 		imp_ = new Implementation;
 #ifdef _WINDOWS
-		auto Config = EQEmuConfig::get();
-		std::string final_name = fmt::format("{}/EQEmuMutex_{}", Config->SharedMemDir, name);
+		std::string final_name = fmt::format("EQEmuMutex_{}", name);
 
 		imp_->mut_ = CreateMutex(nullptr,
 			FALSE,
