@@ -624,7 +624,7 @@ void Client::SendGuildMemberRankAltBanker(uint32 guild_id, uint32 rank, std::str
 
 	out->guild_id = guild_id;
 	out->rank_    = rank;
-	out->alt_banker = (alt << 1) | banker;
+	out->alt_banker = (alt ? 2 : 0) | (banker ? 1 : 0);
 	strn0cpy(out->player_name, player_name.c_str(), sizeof(out->player_name));
 
 	QueuePacket(outapp);
@@ -792,7 +792,7 @@ void EntityList::SendGuildMemberRankAltBanker(uint32 guild_id, uint32 rank_, std
 
 			out->guild_id   = guild_id;
 			out->rank_      = rank_;
-			out->alt_banker = (alt << 1) | banker;
+			out->alt_banker = (alt ? 2 : 0) | (banker ? 1 : 0);
 			strn0cpy(out->player_name, player_name.c_str(), sizeof(out->player_name));
 
 			c.second->QueuePacket(outapp);

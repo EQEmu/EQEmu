@@ -252,7 +252,7 @@ void Client::LoadDefaultBotSettings() {
 		m_bot_spell_settings.push_back(t);
 
 		LogBotSettingsDetail("{} says, 'Setting defaults for {} ({}) [#{}]'", GetCleanName(), t.name, t.short_name, t.spell_type);
-		LogBotSettingsDetail("{} says, 'Delay = [{}ms] | MinThreshold = [{}\%] | MaxThreshold = [{}\%]'", GetCleanName(),
+		LogBotSettingsDetail("{} says, 'Delay = [{}ms] | MinThreshold = [{}%] | MaxThreshold = [{}%]'", GetCleanName(),
 							 GetDefaultSpellTypeDelay(i),
 							 GetDefaultSpellTypeMinThreshold(i), GetDefaultSpellTypeMaxThreshold(i));
 	}

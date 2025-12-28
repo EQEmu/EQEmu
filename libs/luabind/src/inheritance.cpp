@@ -94,7 +94,7 @@ namespace
   {
       m_cache.insert(std::make_pair(
           key_type(src, target, dynamic_id, object_offset)
-        , cache_entry(offset, distance)
+        , cache_entry(offset, static_cast<int>(distance))
       ));
   }
 

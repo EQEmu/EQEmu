@@ -2779,18 +2779,7 @@ bool QuestManager::createBot(const char *name, const char *lastname, uint8 level
 		}
 
 		std::string test_name = name;
-		bool available_flag = false;
-		if (!database.botdb.QueryNameAvailability(test_name, available_flag)) {
-			initiator->Message(
-				Chat::White,
-				fmt::format(
-					"Failed to query name availability for '{}'.",
-					test_name
-				).c_str()
-			);
-			return false;
-		}
-
+		bool available_flag = database.botdb.QueryNameAvailability(test_name);
 		if (!available_flag) {
 			initiator->Message(
 				Chat::White,

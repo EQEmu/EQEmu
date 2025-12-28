@@ -349,7 +349,7 @@ bool EQ::InventoryProfile::SwapItem(
 				fail_state = swapLevel;
 				return false;
 			}
-			if (source_item_instance->IsEvolving() > 0) {
+			if (source_item_instance->IsEvolving()) {
 				source_item_instance->SetEvolveEquipped(true);
 			}
 		}

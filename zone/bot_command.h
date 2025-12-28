@@ -24,26 +24,22 @@
 class Client;
 class Seperator;
 
-
-namespace
-{
 #define HP_RATIO_DELTA 5.0f
 
-	enum { EffectIDFirst = 1, EffectIDLast = 12 };
+enum { EffectIDFirst = 1, EffectIDLast = 12 };
 
 #define VALIDATECLASSID(x) ((x >= Class::Warrior && x <= Class::Berserker) ? (x) : (0))
 
-	// ActionableTarget action_type
+// ActionableTarget action_type
 #define FRIENDLY true
 #define ENEMY false
 
-	enum {
-		AFT_None = 0,
-		AFT_Value,
-		AFT_GenderRace,
-		AFT_Race
-	};
-}
+enum {
+	AFT_None = 0,
+	AFT_Value,
+	AFT_GenderRace,
+	AFT_Race
+};
 
 namespace MyBots
 {

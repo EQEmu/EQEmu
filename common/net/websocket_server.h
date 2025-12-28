@@ -49,9 +49,9 @@ namespace EQ
 			WebsocketException(const std::string &msg)
 				: _msg(msg.empty() ? "Unknown Error" : msg) { }
 
-			~WebsocketException() throw() {}
+			~WebsocketException() noexcept {}
 
-			virtual char const *what() const throw() {
+			virtual char const *what() const noexcept override {
 				return _msg.c_str();
 			}
 		private:

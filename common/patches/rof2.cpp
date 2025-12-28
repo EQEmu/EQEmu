@@ -4120,8 +4120,8 @@ namespace RoF2
 					std::begin(emu->items),
 					std::end(emu->items),
 					std::begin(eq->items),
-					[&](const uint32 x) {
-						return x;
+					[&](uint64 x) {
+						return static_cast<uint32>(x);
 					}
 				);
 				std::copy_n(

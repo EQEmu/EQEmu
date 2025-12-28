@@ -10580,12 +10580,12 @@ void Bot::LoadDefaultBotSettings() {
 		m_bot_spell_settings.push_back(t);
 
 		LogBotSettingsDetail("{} says, 'Setting defaults for {} ({}) [#{}] - [{} [#{}] stance]'", GetCleanName(), t.name, t.short_name, t.spell_type, Stance::GetName(bot_stance), bot_stance);
-		LogBotSettingsDetail("{} says, 'Hold = [{}] | Delay = [{}ms] | MinThreshold = [{}\%] | MaxThreshold = [{}\%]'", GetCleanName(),
+		LogBotSettingsDetail("{} says, 'Hold = [{}] | Delay = [{}ms] | MinThreshold = [{}%] | MaxThreshold = [{}%]'", GetCleanName(),
 							 GetDefaultSpellTypeHold(i, bot_stance),
 							 GetDefaultSpellTypeDelay(i, bot_stance),
 							 GetDefaultSpellTypeMinThreshold(i, bot_stance),
 							 GetDefaultSpellTypeMaxThreshold(i, bot_stance));
-		LogBotSettingsDetail("{} says, 'AggroCheck = [{}] | MinManaPCT = [{}\%] | MaxManaPCT = [{}\%] | MinHPPCT = [{}\% | MaxHPPCT = [{}\%]'", GetCleanName(), GetDefaultSpellTypeAggroCheck(i, bot_stance), GetDefaultSpellTypeMinManaLimit(i, bot_stance), GetDefaultSpellTypeMaxManaLimit(i, bot_stance), GetDefaultSpellTypeMinHPLimit(i, bot_stance), GetDefaultSpellTypeMaxHPLimit(i, bot_stance));
+		LogBotSettingsDetail("{} says, 'AggroCheck = [{}] | MinManaPCT = [{}%] | MaxManaPCT = [{}%] | MinHPPCT = [{}% | MaxHPPCT = [{}%]'", GetCleanName(), GetDefaultSpellTypeAggroCheck(i, bot_stance), GetDefaultSpellTypeMinManaLimit(i, bot_stance), GetDefaultSpellTypeMaxManaLimit(i, bot_stance), GetDefaultSpellTypeMinHPLimit(i, bot_stance), GetDefaultSpellTypeMaxHPLimit(i, bot_stance));
 		LogBotSettingsDetail("{} says, 'IdlePriority = [{}] | EngagedPriority = [{}] | PursuePriority = [{}]'", GetCleanName(), GetDefaultSpellTypeIdlePriority(i, GetClass(), bot_stance), GetDefaultSpellTypeEngagedPriority(i, GetClass(), bot_stance), GetDefaultSpellTypePursuePriority(i, GetClass(), bot_stance));
 		LogBotSettingsDetail("{} says, 'TargetCount = [{}] | AnnounceCast = [{}]'", GetCleanName(), GetDefaultSpellTypeAEOrGroupTargetCount(i, bot_stance), GetDefaultSpellTypeAnnounceCast(i, bot_stance));
 	}
@@ -10636,7 +10636,7 @@ void Bot::SetBotSpellRecastTimer(uint16 spell_type, Mob* tar, bool precast) {
 
 BotSpell Bot::GetSpellByHealType(uint16 spell_type, Mob* tar) {
 	if (!TargetValidation(tar)) {
-		BotSpell result;
+		BotSpell result{};
 
 		return result;
 	}

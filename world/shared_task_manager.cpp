@@ -319,14 +319,14 @@ void SharedTaskManager::LoadSharedTaskState()
 	// load character data for member names
 	std::vector<CharacterDataRepository::CharacterData> shared_task_character_data;
 	if (!shared_task_members_data.empty()) {
-		std::vector<uint32_t> character_ids;
-		for (const auto       &m: shared_task_members_data) {
+		std::vector<int64_t> character_ids;
+		for (const BaseSharedTaskMembersRepository::SharedTaskMembers& m: shared_task_members_data) {
 			character_ids.emplace_back(m.character_id);
 		}
 
 		shared_task_character_data = CharacterDataRepository::GetWhere(
 			*m_database,
-			fmt::format("id IN ({})", Strings::Join(character_ids, ","))
+			fmt::format("id IN ({})", fmt::join(character_ids, ","))
 		);
 	}
 

@@ -17,4 +17,6 @@
 */
 #pragma once
 
-int luaopen_bit(lua_State *L);
+struct lua_State;
+
+int luaopen_bit_embed(lua_State *L);

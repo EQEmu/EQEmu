@@ -447,15 +447,15 @@ void DoorManipulation::CommandHandler(Client *c, const Seperator *sep)
 
 	if (arg1 == "setinclineinc") {
 		std::map<float, std::string> incline_values = {
-			{.01,    "Upright"},
-			{63.75,  "45 Degrees",},
-			{130,    "90 Degrees"},
-			{192.5,  "135 Degrees"},
-			{255,    "180 Degrees"},
-			{321.25, "225 Degrees"},
-			{385,    "270 Degrees"},
-			{448.75, "315 Degrees"},
-			{512.5,  "360 Degrees"}
+			{.01f,     "Upright"},
+			{63.75f,   "45 Degrees",},
+			{130.f,    "90 Degrees"},
+			{192.5f,   "135 Degrees"},
+			{255.f,    "180 Degrees"},
+			{321.25f,  "225 Degrees"},
+			{385.f,    "270 Degrees"},
+			{448.75f,  "315 Degrees"},
+			{512.5f,   "360 Degrees"}
 		};
 
 		std::vector<std::string> incline_normal_options;

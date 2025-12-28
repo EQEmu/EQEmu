@@ -56,12 +56,12 @@ void PlayerEventLogs::Init()
 	auto             s = PlayerEventLogSettingsRepository::All(*m_database);
 	std::vector<int> db{};
 	db.reserve(s.size());
-	for (auto &e: s) {
+	for (auto& e: s) {
 		if (e.id >= PlayerEvent::MAX) {
 			continue;
 		}
 		m_settings[e.id] = e;
-		db.emplace_back(e.id);
+		db.emplace_back(static_cast<int>(e.id));
 	}
 
 	std::vector<PlayerEventLogSettingsRepository::PlayerEventLogSettings> settings_to_insert{};

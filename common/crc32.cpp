@@ -125,6 +125,6 @@ uint32 CRC32::Update(const uint8* buf, uint32 bufsize, uint32 crc32var) {
 	return crc32var;
 }
 
-inline void CRC32::Calc(const uint8 byte, uint32& crc32var) {
+void CRC32::Calc(const uint8 byte, uint32& crc32var) {
 	crc32var = ((crc32var) >> 8) ^ CRC32Table[(byte) ^ ((crc32var) & 0x000000FF)];
 }

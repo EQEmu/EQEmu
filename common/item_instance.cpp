@@ -320,6 +320,7 @@ bool EQ::ItemInstance::IsAugmentSlotAvailable(int32 augment_type, uint8 slot) co
 	}
 
 	return (
+		slot < invaug::SOCKET_COUNT &&
 		(
 			augment_type == -1 ||
 			(

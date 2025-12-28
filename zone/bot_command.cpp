@@ -458,9 +458,7 @@ uint32 helper_bot_create(Client *bot_owner, std::string bot_name, uint8 bot_clas
 		return bot_id;
 	}
 
-	bool available_flag = false;
-
-	!database.botdb.QueryNameAvailability(bot_name, available_flag);
+	bool available_flag = database.botdb.QueryNameAvailability(bot_name);
 
 	if (!available_flag) {
 		bot_owner->Message(

@@ -145,9 +145,7 @@ void bot_command_clone(Client *c, const Seperator *sep)
 		return;
 	}
 
-	bool available_flag = false;
-
-	!database.botdb.QueryNameAvailability(bot_name, available_flag);
+	bool available_flag = database.botdb.QueryNameAvailability(bot_name);
 
 	if (!available_flag) {
 		c->Message(
