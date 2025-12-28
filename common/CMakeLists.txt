@@ -725,25 +725,9 @@ set(common_headers
     zone_store.h
 )
 
-# Source Groups (Regex based for automatic subdirectory handling)
-source_group("CLI" REGULAR_EXPRESSION "^cli/")
-source_group("Content" REGULAR_EXPRESSION "^content/")
-source_group("Cron" REGULAR_EXPRESSION "^cron/")
-source_group("Database" REGULAR_EXPRESSION "^database/")
-source_group("Discord" REGULAR_EXPRESSION "^discord/")
-source_group("Event" REGULAR_EXPRESSION "^event/")
-source_group("Events" REGULAR_EXPRESSION "^events/")
-source_group("Http" REGULAR_EXPRESSION "^http/")
-source_group("Json" REGULAR_EXPRESSION "^json/")
-source_group("Memory" REGULAR_EXPRESSION "^memory/")
-source_group("Net" REGULAR_EXPRESSION "^net/")
-source_group("Patches" REGULAR_EXPRESSION "^patches/")
-source_group("Process" REGULAR_EXPRESSION "^process/")
-source_group("Repositories" REGULAR_EXPRESSION "^repositories/")
-source_group("StackWalker" REGULAR_EXPRESSION "^StackWalker/")
-source_group("Stacktrace" REGULAR_EXPRESSION "^stacktrace/")
-source_group("Termcolor" REGULAR_EXPRESSION "^termcolor/")
-source_group("Util" REGULAR_EXPRESSION "^util/")
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${common_sources})
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Header Files" FILES ${common_headers})
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/repositories" PREFIX "Repositories" FILES ${repositories})
 
 option(EQEMU_ADD_PROFILER "Link with Google perftools profiler" OFF)
 #PRNG options
