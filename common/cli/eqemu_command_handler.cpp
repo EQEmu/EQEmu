@@ -23,12 +23,9 @@
 
 namespace EQEmuCommand {
 
-	std::map<std::string, void (*)(
-		int argc,
-		char **argv,
-		argh::parser &cmd,
-		std::string &description
-	)> function_map;
+	using CommandFunction = void(*)(int argc, char** argv, argh::parser& cmd, std::string& description);
+
+	std::map<std::string, CommandFunction> function_map;
 
 	/**
 	 * @param cmd

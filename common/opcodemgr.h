@@ -31,7 +31,8 @@
 #define SHARED_OPCODES
 #endif
 
-class OpcodeManager {
+class OpcodeManager
+{
 public:
 	OpcodeManager();
 	virtual ~OpcodeManager() {}
@@ -48,9 +49,10 @@ public:
 	EmuOpcode NameSearch(const char *name);
 
 	//This has to be public for stupid visual studio
-	class OpcodeSetStrategy {
+	class OpcodeSetStrategy
+	{
 	public:
-		virtual ~OpcodeSetStrategy() {}	//shut up compiler!
+		virtual ~OpcodeSetStrategy() = default;
 		virtual void Set(EmuOpcode emu_op, uint16 eq_op) = 0;
 	};
 
@@ -62,10 +64,12 @@ protected:
 	static bool LoadOpcodesFile(const char *filename, OpcodeSetStrategy *s, bool report_errors);
 };
 
-class MutableOpcodeManager : public OpcodeManager {
+class MutableOpcodeManager : public OpcodeManager
+{
 public:
-	MutableOpcodeManager() : OpcodeManager() {}
-	virtual bool Mutable() { return(true); }
+	MutableOpcodeManager() = default;
+
+	virtual bool Mutable() override { return true; }
 	virtual void SetOpcode(EmuOpcode emu_op, uint16 eq_op) = 0;
 };
 
@@ -108,16 +112,16 @@ public:
 	virtual void SetOpcode(EmuOpcode emu_op, uint16 eq_op);
 
 protected:
-	class NormalMemStrategy : public OpcodeManager::OpcodeSetStrategy {
+	class NormalMemStrategy : public OpcodeManager::OpcodeSetStrategy
+	{
 	public:
-		virtual ~NormalMemStrategy() {} //shut up compiler!
-		RegularOpcodeManager *it;
-		void Set(EmuOpcode emu_op, uint16 eq_op);
-	};
-	friend class NormalMemStrategy;
+		RegularOpcodeManager* it;
 
-	uint16 *emu_to_eq;
-	EmuOpcode *eq_to_emu;
+		virtual void Set(EmuOpcode emu_op, uint16 eq_op) override;
+	};
+
+	uint16* emu_to_eq;
+	EmuOpcode* eq_to_emu;
 	uint32 EQOpcodeCount;
 	uint32 EmuOpcodeCount;
 };

@@ -44,6 +44,6 @@ public:
 
 private:
 	inline std::string GetIP() const { return (connection && connection->Handle()) ? connection->Handle()->RemoteIP() : 0; }
-	std::shared_ptr<EQ::Net::ServertalkServerConnection> connection;
 
+	std::shared_ptr<EQ::Net::ServertalkServerConnection> connection;
 };
