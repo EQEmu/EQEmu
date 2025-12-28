@@ -37,8 +37,5 @@ void WorldserverCLI::DatabaseVersion(int argc, char **argv, argh::parser &cmd, s
 	v["bots_database_version"]   = RuleB(Bots, Enabled) ? CURRENT_BINARY_BOTS_DATABASE_VERSION : 0;
 	v["custom_database_version"] = CUSTOM_BINARY_DATABASE_VERSION;
 
-	std::stringstream payload;
-	payload << v;
-
-	std::cout << payload.str() << std::endl;
+	std::cout << v << std::endl;
 }

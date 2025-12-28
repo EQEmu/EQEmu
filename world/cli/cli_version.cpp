@@ -39,8 +39,5 @@ void WorldserverCLI::Version(int argc, char **argv, argh::parser &cmd, std::stri
 	j["database_version"]        = CURRENT_BINARY_DATABASE_VERSION;
 	j["server_version"]          = CURRENT_VERSION;
 
-	std::stringstream payload;
-	payload << j;
-
-	std::cout << payload.str() << std::endl;
+	std::cout << j << std::endl;
 }
