@@ -27,7 +27,7 @@
 class SerializeBuffer
 {
 public:
-	SerializeBuffer() : m_buffer(nullptr), m_capacity(0), m_pos(0) {}
+	SerializeBuffer() = default;
 
 	explicit SerializeBuffer(size_t size) : m_capacity(size), m_pos(0)
 	{
@@ -35,8 +35,10 @@ public:
 		memset(m_buffer, 0, size);
 	}
 
-	SerializeBuffer(const SerializeBuffer &rhs)
-	    : m_buffer(new unsigned char[rhs.m_capacity]), m_capacity(rhs.m_capacity), m_pos(rhs.m_pos)
+	SerializeBuffer(const SerializeBuffer& rhs)
+		: m_buffer(new unsigned char[rhs.m_capacity])
+		, m_capacity(rhs.m_capacity)
+		, m_pos(rhs.m_pos)
 	{
 		memcpy(m_buffer, rhs.m_buffer, rhs.m_capacity);
 	}
@@ -53,30 +55,31 @@ public:
 		return *this;
 	}
 
-	SerializeBuffer(SerializeBuffer &&rhs) : m_buffer(rhs.m_buffer), m_capacity(rhs.m_capacity), m_pos(rhs.m_pos)
+	SerializeBuffer(SerializeBuffer&& rhs)
+		: m_buffer(std::exchange(rhs.m_buffer, nullptr))
+		, m_capacity(std::exchange(rhs.m_capacity, 0))
+		, m_pos(std::exchange(rhs.m_pos, 0))
 	{
-		rhs.m_buffer = nullptr;
-		rhs.m_capacity = 0;
-		rhs.m_pos = 0;
 	}
 
-	SerializeBuffer &operator=(SerializeBuffer &&rhs)
+	SerializeBuffer& operator=(SerializeBuffer&& rhs)
 	{
-		if (this != &rhs) {
+		if (this != &rhs)
+		{
 			delete[] m_buffer;
 
-			m_buffer = rhs.m_buffer;
-			m_capacity = rhs.m_capacity;
-			m_pos = rhs.m_pos;
-
-			rhs.m_buffer = nullptr;
-			rhs.m_capacity = 0;
-			rhs.m_pos = 0;
+			m_buffer = std::exchange(rhs.m_buffer, nullptr);
+			m_capacity = std::exchange(rhs.m_capacity, 0);
+			m_pos = std::exchange(rhs.m_pos, 0);
 		}
+
 		return *this;
 	}
 
-	~SerializeBuffer() { delete[] m_buffer; }
+	~SerializeBuffer()
+	{
+		delete[] m_buffer;
+	}
 
 	void WriteUInt8(uint8_t v)
 	{
@@ -209,7 +212,8 @@ public:
 private:
 	void Grow(size_t new_size);
 	void Reset();
-	unsigned char *m_buffer;
-	size_t m_capacity;
-	size_t m_pos;
+
+	unsigned char* m_buffer = nullptr;
+	size_t m_capacity = 0;
+	size_t m_pos = 0;
 };

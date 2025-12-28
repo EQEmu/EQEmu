@@ -153,7 +153,7 @@ std::unique_ptr<EQApplicationPacket> WorldServerManager::CreateServerListPacket(
 		s->SerializeForClientServerList(buf, use_local_ip, client->GetClientVersion());
 	}
 
-	return std::make_unique<EQApplicationPacket>(OP_ServerListResponse, buf);
+	return std::make_unique<EQApplicationPacket>(OP_ServerListResponse, std::move(buf));
 }
 
 void WorldServerManager::SendUserLoginToWorldRequest(

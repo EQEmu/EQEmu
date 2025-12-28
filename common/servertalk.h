@@ -389,35 +389,31 @@ enum {
 class ServerPacket
 {
 public:
-	~ServerPacket() { safe_delete_array(pBuffer); }
-	ServerPacket(uint16 in_opcode = 0, uint32 in_size = 0) {
-		this->compressed = false;
-		size = in_size;
-		opcode = in_opcode;
-		if (size == 0) {
-			pBuffer = 0;
-		}
-		else {
+	~ServerPacket()
+	{
+		safe_delete_array(pBuffer);
+	}
+
+	ServerPacket(uint16 in_opcode = 0, size_t in_size = 0)
+		: size(static_cast<uint32>(in_size))
+		, opcode(in_opcode)
+	{
+		if (size != 0)
+		{
 			pBuffer = new uchar[size];
 			memset(pBuffer, 0, size);
 		}
-		_wpos = 0;
-		_rpos = 0;
 	}
 
-	ServerPacket(uint16 in_opcode, const EQ::Net::Packet &p) {
-		this->compressed = false;
-		size = (uint32)p.Length();
-		opcode = in_opcode;
-		if (size == 0) {
-			pBuffer = 0;
-		}
-		else {
+	ServerPacket(uint16 in_opcode, const EQ::Net::Packet& p)
+		: size(static_cast<uint32>(p.Length()))
+		, opcode(in_opcode)
+	{
+		if (size != 0)
+		{
 			pBuffer = new uchar[size];
 			memcpy(pBuffer, p.Data(), size);
 		}
-		_wpos = 0;
-		_rpos = 0;
 	}
 
 	ServerPacket* Copy() {
@@ -447,14 +443,14 @@ public:
 	void ReadSkipBytes(uint32 count) { _rpos += count; }
 	void SetReadPosition(uint32 Newrpos) { _rpos = Newrpos; }
 
-	uint32	size;
-	uint16	opcode;
-	uchar*	pBuffer;
-	uint32	_wpos;
-	uint32	_rpos;
-	bool	compressed;
-	uint32	InflatedSize;
-	uint32	destination;
+	uint32	size = 0;
+	uint16	opcode = 0;
+	uchar*	pBuffer = nullptr;
+	uint32	_wpos = 0;
+	uint32	_rpos = 0;
+	bool	compressed = false;
+	uint32	InflatedSize = 0;
+	uint32	destination = 0;
 };
 
 #pragma pack(push)
@@ -989,11 +985,12 @@ struct LauncherConnectInfo {
 	char name[64];
 };
 
-typedef enum {
+enum ZoneRequestCommands {
 	ZR_Start,
 	ZR_Restart,
 	ZR_Stop
-} ZoneRequestCommands;
+};
+
 struct LauncherZoneRequest {
 	uint8 command;
 	char short_name[33];

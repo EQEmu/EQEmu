@@ -19,43 +19,33 @@
 #include "common/misc.h"
 #include "common/packet_dump.h"
 
-BasePacket::BasePacket(const unsigned char *buf, uint32 len)
+BasePacket::BasePacket(const unsigned char* buf, size_t len)
 {
-	pBuffer=nullptr;
-	size=0;
-	_wpos = 0;
-	_rpos = 0;
-	timestamp.tv_sec = 0;
-	if (len>0) {
-		size=len;
-		pBuffer= new unsigned char[len];
+	if (len > 0) {
+		size = static_cast<uint32>(len);
+		pBuffer = new unsigned char[len];
 		if (buf) {
-			memcpy(pBuffer,buf,len);
-		} else {
-			memset(pBuffer,0,len);
+			memcpy(pBuffer, buf, len);
+		}
+		else {
+			memset(pBuffer, 0, len);
 		}
 	}
 }
 
-BasePacket::BasePacket(SerializeBuffer &buf)
+BasePacket::BasePacket(SerializeBuffer&& buf)
+	: pBuffer(std::exchange(buf.m_buffer, nullptr))
 {
-	pBuffer = buf.m_buffer;
-	buf.m_buffer = nullptr;
-	size = buf.m_pos;
-	buf.m_pos = 0;
+	// We are essentially taking ownership of this serialize buffer.
+	size = static_cast<uint32>(std::exchange(buf.m_pos, 0));
 	buf.m_capacity = 0;
-	_wpos = 0;
-	_rpos = 0;
-	timestamp.tv_sec = 0;
 }
 
 BasePacket::~BasePacket()
 {
-	if (pBuffer)
-		delete[] pBuffer;
-	pBuffer=nullptr;
+	delete[] pBuffer;
+	pBuffer = nullptr;
 }
-
 
 void BasePacket::build_raw_header_dump(char *buffer, uint16 seq) const
 {

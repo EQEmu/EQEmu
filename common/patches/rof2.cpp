@@ -689,7 +689,7 @@ namespace RoF2
 		EQApplicationPacket *outapp = nullptr;
 		if (eq->bufffade == 1)
 		{
-			outapp = new EQApplicationPacket(OP_BuffCreate, 29);
+			outapp = new EQApplicationPacket(OP_BuffCreate, 29u);
 			outapp->WriteUInt32(emu->entityid);
 			outapp->WriteUInt32(0);	// tic timer
 			outapp->WriteUInt8(0);		// Type of OP_BuffCreate packet ?
@@ -753,7 +753,7 @@ namespace RoF2
 				ar(bl);
 
 				//packet size
-				auto            packet_size = bl.item_name.length() + 1 + 34;
+				size_t          packet_size = bl.item_name.length() + 1 + 34;
 				for (auto const &b: bl.trade_items) {
 					packet_size += b.item_name.length() + 1;
 					packet_size += 12;
@@ -1622,7 +1622,7 @@ namespace RoF2
 			//Log.LogDebugType(Logs::General, Logs::Netcode, "[ERROR] Yourname is %s", gu2->yourname);
 
 			int MemberCount = 1;
-			int PacketLength = 8 + strlen(gu2->leadersname) + 1 + 22 + strlen(gu2->yourname) + 1;
+			uint32 PacketLength = 8 + strlen(gu2->leadersname) + 1 + 22 + strlen(gu2->yourname) + 1;
 
 			for (int i = 0; i < 5; ++i)
 			{
@@ -2207,7 +2207,7 @@ namespace RoF2
 
 		char *Buffer = (char *)in->pBuffer;
 
-		int PacketSize = sizeof(structs::MercenaryMerchantList_Struct) - 4 + emu->MercTypeCount * 4;
+		uint32 PacketSize = sizeof(structs::MercenaryMerchantList_Struct) - 4 + emu->MercTypeCount * 4;
 		PacketSize += (sizeof(structs::MercenaryListEntry_Struct) - sizeof(structs::MercenaryStance_Struct)) * emu->MercCount;
 
 		uint32 r;
@@ -3820,7 +3820,7 @@ namespace RoF2
 
 		buf.WriteString(new_message);
 
-		auto outapp = new EQApplicationPacket(OP_SpecialMesg, buf);
+		auto outapp = new EQApplicationPacket(OP_SpecialMesg, std::move(buf));
 
 		dest->FastQueuePacket(&outapp, ack_req);
 		delete in;
@@ -4599,7 +4599,7 @@ namespace RoF2
 		int k;
 		for (r = 0; r < entrycount; r++, emu++) {
 
-			int PacketSize = 206;
+			uint32 PacketSize = 206;
 
 			PacketSize += strlen(emu->name);
 			PacketSize += strlen(emu->lastName);

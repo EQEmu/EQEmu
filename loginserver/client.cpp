@@ -547,7 +547,7 @@ void Client::SendExpansionPacketData(PlayerLoginReply &plrs)
 				buf.WriteInt32(0xFFFFFFFF);
 			}
 
-			auto out = std::make_unique<EQApplicationPacket>(OP_LoginExpansionPacketData, buf);
+			auto out = std::make_unique<EQApplicationPacket>(OP_LoginExpansionPacketData, std::move(buf));
 			m_connection->QueuePacket(out.get());
 
 		}

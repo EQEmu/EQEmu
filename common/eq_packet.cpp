@@ -31,9 +31,19 @@
 #include <iomanip>
 #include <iostream>
 
-EQPacket::EQPacket(EmuOpcode op, const unsigned char *buf, uint32 len)
-:	BasePacket(buf, len),
-	emu_opcode(op)
+EQPacket::EQPacket()
+{
+}
+
+EQPacket::EQPacket(EmuOpcode op, const unsigned char *buf, size_t len)
+	: BasePacket(buf, len)
+	, emu_opcode(op)
+{
+}
+
+EQPacket::EQPacket(EmuOpcode opcode, SerializeBuffer&& buf)
+	: BasePacket(std::move(buf))
+	, emu_opcode(opcode)
 {
 }
 
@@ -360,17 +370,16 @@ EQRawApplicationPacket::EQRawApplicationPacket(const unsigned char *buf, const u
 	}
 }
 
-void DumpPacket(const EQApplicationPacket* app, bool iShowInfo) {
+void DumpPacket(const EQApplicationPacket* app, bool iShowInfo)
+{
 	if (iShowInfo) {
-		std::cout << "Dumping Applayer: 0x" << std::hex << std::setfill('0') << std::setw(4) << app->GetOpcode() << std::dec;
-		std::cout << " size:" << app->size << std::endl;
+		printf("Dumping Applayer: 0x%04x size: %u", app->GetOpcode(), app->size);
 	}
+
 	DumpPacketHex(app->pBuffer, app->size);
-//	DumpPacketAscii(app->pBuffer, app->size);
 }
 
-std::string DumpPacketToString(const EQApplicationPacket* app){
-	std::ostringstream out;
-	out << DumpPacketHexToString(app->pBuffer, app->size);
-	return out.str();
+std::string DumpPacketToString(const EQApplicationPacket* app)
+{
+	return DumpPacketHexToString(app->pBuffer, app->size);
 }

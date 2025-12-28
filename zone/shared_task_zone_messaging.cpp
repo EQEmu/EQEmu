@@ -117,7 +117,7 @@ void SharedTaskZoneMessaging::HandleWorldMessage(ServerPacket *pack)
 					buf.WriteInt8(m.is_leader ? 1 : 0);
 				}
 
-				auto outapp = std::make_unique<EQApplicationPacket>(OP_SharedTaskMemberList, buf);
+				auto outapp = std::make_unique<EQApplicationPacket>(OP_SharedTaskMemberList, std::move(buf));
 				c->QueuePacket(outapp.get());
 			}
 
@@ -141,7 +141,7 @@ void SharedTaskZoneMessaging::HandleWorldMessage(ServerPacket *pack)
 				// live sends more after the name but it might just be garbage from
 				// a re-used buffer (possibly a former name[64] buffer?)
 
-				auto outapp = std::make_unique<EQApplicationPacket>(OP_SharedTaskMemberChange, buf);
+				auto outapp = std::make_unique<EQApplicationPacket>(OP_SharedTaskMemberChange, std::move(buf));
 				c->QueuePacket(outapp.get());
 			}
 

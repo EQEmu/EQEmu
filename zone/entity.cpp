@@ -4437,7 +4437,7 @@ void EntityList::QuestJournalledSayClose(
 		buf.WriteString(message);
 	}
 
-	auto outapp = new EQApplicationPacket(OP_SpecialMesg, buf);
+	auto outapp = new EQApplicationPacket(OP_SpecialMesg, std::move(buf));
 
 	// client only bothers logging if target spawn ID matches, safe to send to everyone
 	QueueCloseClients(sender, outapp, false, dist);

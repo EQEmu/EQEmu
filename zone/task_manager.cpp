@@ -858,7 +858,7 @@ void TaskManager::SendTaskSelector(Client* client, Mob* mob, const std::vector<i
 		client->GetTaskState()->AddOffer(task_list[i], mob->GetID());
 	}
 
-	auto outapp = std::make_unique<EQApplicationPacket>(OP_TaskSelectWindow, buf);
+	auto outapp = std::make_unique<EQApplicationPacket>(OP_TaskSelectWindow, std::move(buf));
 	client->QueuePacket(outapp.get());
 }
 
@@ -883,7 +883,7 @@ void TaskManager::SendSharedTaskSelector(Client* client, Mob* mob, const std::ve
 		client->GetTaskState()->AddOffer(task_id, mob->GetID());
 	}
 
-	auto outapp = std::make_unique<EQApplicationPacket>(OP_SharedTaskSelectWindow, buf);
+	auto outapp = std::make_unique<EQApplicationPacket>(OP_SharedTaskSelectWindow, std::move(buf));
 	client->QueuePacket(outapp.get());
 }
 
@@ -1009,7 +1009,7 @@ void TaskManager::SendTaskActivityLong(
 
 	activity.SerializeObjective(buf, client->ClientVersion(), done_count);
 
-	auto outapp = std::make_unique<EQApplicationPacket>(OP_TaskActivity, buf);
+	auto outapp = std::make_unique<EQApplicationPacket>(OP_TaskActivity, std::move(buf));
 	client->QueuePacket(outapp.get());
 }
 

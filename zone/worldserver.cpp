@@ -550,7 +550,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 		SerializeBuffer buf(100);
 		buf.WriteString(smotd->motd);
 
-		auto outapp = std::make_unique<EQApplicationPacket>(OP_MOTD, buf);
+		auto outapp = std::make_unique<EQApplicationPacket>(OP_MOTD, std::move(buf));
 
 		entity_list.QueueClients(0, outapp.get());
 		break;

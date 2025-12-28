@@ -1784,7 +1784,7 @@ void Client::Message(uint32 type, const char* message, ...) {
 	buf.WriteInt32(0);
 	buf.WriteString(buffer);
 
-	auto app = new EQApplicationPacket(OP_SpecialMesg, buf);
+	auto app = new EQApplicationPacket(OP_SpecialMesg, std::move(buf));
 
 	FastQueuePacket(&app);
 
@@ -1813,7 +1813,7 @@ void Client::FilteredMessage(Mob *sender, uint32 type, eqFilterType filter, cons
 	buf.WriteInt32(0);
 	buf.WriteString(buffer);
 
-	auto app = new EQApplicationPacket(OP_SpecialMesg, buf);
+	auto app = new EQApplicationPacket(OP_SpecialMesg, std::move(buf));
 
 	FastQueuePacket(&app);
 
@@ -3869,7 +3869,7 @@ void Client::MessageString(uint32 type, uint32 string_id, const char* message1,
 
 	buf.WriteInt8(0); // prevent oob in packet translation, maybe clean that up sometime
 
-	auto outapp = std::make_unique<EQApplicationPacket>(OP_FormattedMessage, buf);
+	auto outapp = std::make_unique<EQApplicationPacket>(OP_FormattedMessage, std::move(buf));
 
 	if (distance > 0)
 		entity_list.QueueCloseClients(this, outapp.get(), false, distance);
@@ -3987,7 +3987,7 @@ void Client::FilteredMessageString(Mob *sender, uint32 type, eqFilterType filter
 
 	buf.WriteInt8(0); // prevent oob in packet translation, maybe clean that up sometime
 
-	auto outapp = std::make_unique<EQApplicationPacket>(OP_FormattedMessage, buf);
+	auto outapp = std::make_unique<EQApplicationPacket>(OP_FormattedMessage, std::move(buf));
 
 	QueuePacket(outapp.get());
 }
