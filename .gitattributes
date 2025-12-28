@@ -20,3 +20,4 @@
 *.css text
 *.js text
 *.types text
+*.pdf binary
