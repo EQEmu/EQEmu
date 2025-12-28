@@ -17,48 +17,31 @@
 */
 #pragma once
 
-#include "common/platform/win/include_windows.h" // uv.h is going to include it so let's do it first.
-#include "uv.h"  // FIXME: hide this
+#include <memory>
 
-#include <cstring>
+typedef struct uv_loop_s uv_loop_t;
 
-namespace EQ
+namespace EQ {
+
+class EventLoop
 {
-	class EventLoop
-	{
-	public:
-		static EventLoop &Get() {
-			static thread_local EventLoop inst;
-			return inst;
-		}
+public:
+	static EventLoop& Get();
 
-		~EventLoop() {
-			uv_loop_close(&m_loop);
-		}
+	~EventLoop();
+	EventLoop(const EventLoop&) = delete;
+	EventLoop& operator=(const EventLoop&) = delete;
 
-		void Process() {
-			uv_run(&m_loop, UV_RUN_NOWAIT);
-		}
+	void Process();
+	void Run();
+	void Shutdown();
 
-		void Run() {
-			uv_run(&m_loop, UV_RUN_DEFAULT);
-		}
+	uv_loop_t* Handle() { return m_loop.get(); }
 
-		void Shutdown() {
-			uv_stop(&m_loop);
-		}
+private:
+	EventLoop();
 
-		uv_loop_t* Handle() { return &m_loop; }
+	std::unique_ptr<uv_loop_t> m_loop;
+};
 
-	private:
-		EventLoop() {
-			memset(&m_loop, 0, sizeof(uv_loop_t));
-			uv_loop_init(&m_loop);
-		}
-		
-		EventLoop(const EventLoop&);
-		EventLoop& operator=(const EventLoop&);
-	
-		uv_loop_t m_loop;
-	};
-}
+} // namespace EQ

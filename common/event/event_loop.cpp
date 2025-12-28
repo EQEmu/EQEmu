@@ -15,17 +15,43 @@
 	You should have received a copy of the GNU General Public License
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#pragma once
 
-#include <functional>
-#include <string>
+#include "common/event/event_loop.h"
+#include "uv.h"
 
-namespace EQ::Net {
+namespace EQ {
 
-using dns_callback_t = std::function<void(const std::string&)>;
+EventLoop& EventLoop::Get()
+{
+	thread_local EventLoop inst;
+	return inst;
+}
 
-void DNSLookup(const std::string& addr, int port, bool ipv6, dns_callback_t cb);
+EventLoop::EventLoop()
+	: m_loop(std::make_unique<uv_loop_t>())
+{
+	memset(m_loop.get(), 0, sizeof(uv_loop_t));
+	uv_loop_init(m_loop.get());
+}
 
-std::string DNSLookupSync(const std::string& addr, int port, bool ipv6 = false);
+EventLoop::~EventLoop()
+{
+	uv_loop_close(m_loop.get());
+}
 
-} // namespace EQ::Net
+void EventLoop::Process()
+{
+	uv_run(m_loop.get(), UV_RUN_NOWAIT);
+}
+
+void EventLoop::Run()
+{
+	uv_run(m_loop.get(), UV_RUN_DEFAULT);
+}
+
+void EventLoop::Shutdown()
+{
+	uv_stop(m_loop.get());
+}
+
+} // namespace EQ

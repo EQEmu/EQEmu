@@ -18,7 +18,7 @@
 #include "world/world_server_cli.h"
 
 #include "common/events/player_events.h"
-#include "common/memory/ksm.hpp"
+#include "common/memory/ksm.h"
 
 #include "cereal/archives/json.hpp"
 #include "cereal/types/vector.hpp"

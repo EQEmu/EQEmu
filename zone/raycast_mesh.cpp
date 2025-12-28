@@ -18,7 +18,7 @@
 #include "raycast_mesh.h"
 
 #include "common/eqemu_logsys.h"
-#include "common/memory/ksm.hpp"
+#include "common/memory/ksm.h"
 
 #include <cassert>
 #include <cmath>

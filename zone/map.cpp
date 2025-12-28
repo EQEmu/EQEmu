@@ -17,7 +17,7 @@
 */
 #include "common/compression.h"
 #include "common/file.h"
-#include "common/memory/ksm.hpp"
+#include "common/memory/ksm.h"
 #include "common/misc_functions.h"
 #include "zone/client.h"
 #include "zone/map.h"

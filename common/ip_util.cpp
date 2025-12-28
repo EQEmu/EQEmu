@@ -25,14 +25,24 @@
 #include "common/net/dns.h"
 
 #include "fmt/format.h"
-#include <cstring>
-#include <csignal>
+#include <iostream>
+#include <string>
 #include <vector>
 
-/**
- * @param ip
- * @return
- */
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib, "Ws2_32.lib")
+#else
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#endif
+
+
 uint32_t IpUtil::IPToUInt(const std::string &ip)
 {
 	int      a, b, c, d;
@@ -49,12 +59,6 @@ uint32_t IpUtil::IPToUInt(const std::string &ip)
 	return addr;
 }
 
-/**
- * @param ip
- * @param network
- * @param mask
- * @return
- */
 bool IpUtil::IsIpInRange(const std::string &ip, const std::string &network, const std::string &mask)
 {
 	uint32_t ip_addr      = IpUtil::IPToUInt(ip);
@@ -67,10 +71,6 @@ bool IpUtil::IsIpInRange(const std::string &ip, const std::string &network, cons
 	return ip_addr >= net_lower && ip_addr <= net_upper;
 }
 
-/**
- * @param ip
- * @return
- */
 bool IpUtil::IsIpInPrivateRfc1918(const std::string &ip)
 {
 	return (
@@ -80,30 +80,13 @@ bool IpUtil::IsIpInPrivateRfc1918(const std::string &ip)
 	);
 }
 
-
-#ifdef _WIN32
-#include <winsock2.h>
-    #include <ws2tcpip.h>
-    #pragma comment(lib, "Ws2_32.lib")
-#else
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#include <fcntl.h>
-#endif
-
-#include <iostream>
-#include <string>
-#include <cstring>
-
 std::string IpUtil::GetLocalIPAddress()
 {
 #ifdef _WIN32
 	WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        return "";
-    }
+	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+		return "";
+	}
 #endif
 
 	char my_ip_address[INET_ADDRSTRLEN];
@@ -114,10 +97,10 @@ std::string IpUtil::GetLocalIPAddress()
 	// Create a UDP socket
 #ifdef _WIN32
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd == INVALID_SOCKET) {
-        WSACleanup();
-        return "";
-    }
+	if (sockfd == INVALID_SOCKET) {
+		WSACleanup();
+		return "";
+	}
 #else
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd < 0) {
@@ -200,98 +183,24 @@ std::string IpUtil::GetPublicIPAddress()
 	return {};
 }
 
-std::string IpUtil::DNSLookupSync(const std::string &addr, int port)
-{
-	auto task_runner = new EQ::Event::TaskScheduler();
-	auto res         = task_runner->Enqueue(
-		[&]() -> std::string {
-			bool        running = true;
-			std::string ret;
-
-			EQ::Net::DNSLookup(
-				addr, port, false, [&](const std::string &addr) {
-					ret = addr;
-					if (addr.empty()) {
-						ret     = "";
-						running = false;
-					}
-
-					return ret;
-				}
-			);
-
-			std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-
-			auto &loop = EQ::EventLoop::Get();
-			while (running) {
-				if (!ret.empty()) {
-					running = false;
-				}
-
-				std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-				if (std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() > 1500) {
-					LogInfo(
-						"Deadline exceeded [{}]",
-						1500
-					);
-					running = false;
-				}
-
-				loop.Process();
-			}
-
-			return ret;
-		}
-	);
-
-	std::string result = res.get();
-	safe_delete(task_runner);
-
-	return result;
-}
-
 bool IpUtil::IsIPAddress(const std::string &ip_address)
 {
-	struct sockaddr_in sa{};
-	int                result = inet_pton(AF_INET, ip_address.c_str(), &(sa.sin_addr));
+	sockaddr_in sa{};
+	int result = inet_pton(AF_INET, ip_address.c_str(), &(sa.sin_addr));
 	return result != 0;
 }
 
 
-#include <iostream>
-#ifdef _WIN32
-#include <winsock2.h>
-    #pragma comment(lib, "ws2_32.lib") // Link against Winsock library
-#else
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
-#endif
-
-#include <iostream>
-#include <string>
-#ifdef _WIN32
-#include <winsock2.h>
-    #include <ws2tcpip.h>  // For inet_pton
-    #pragma comment(lib, "ws2_32.lib") // Link against Winsock library
-#else
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>  // For inet_pton
-#include <unistd.h>
-#endif
-
-bool IpUtil::IsPortInUse(const std::string& ip, int port) {
+bool IpUtil::IsPortInUse(const std::string& ip, int port)
+{
 	bool in_use = false;
 
 #ifdef _WIN32
 	WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
-        std::cerr << "WSAStartup failed\n";
-        return true; // Assume in use on failure
-    }
+	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+		std::cerr << "WSAStartup failed\n";
+		return true; // Assume in use on failure
+	}
 #endif
 
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -319,20 +228,20 @@ bool IpUtil::IsPortInUse(const std::string& ip, int port) {
 		std::cerr << "Invalid IP address format: " << ip << std::endl;
 #ifdef _WIN32
 		closesocket(sock);
-        WSACleanup();
+		WSACleanup();
 #else
 		close(sock);
 #endif
 		return true; // Assume in use on failure
 	}
 
-	if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+	if (bind(sock, (sockaddr*)&addr, sizeof(addr)) < 0) {
 		in_use = true; // Bind failed, port is in use
 	}
 
 #ifdef _WIN32
 	closesocket(sock);
-    WSACleanup();
+	WSACleanup();
 #else
 	close(sock);
 #endif

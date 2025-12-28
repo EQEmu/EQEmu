@@ -37,6 +37,9 @@ set(common_sources
     eqemu_logsys.cpp
     eqtime.cpp
     event_sub.cpp
+    event/event_loop.cpp
+    event/task_scheduler.cpp
+    event/timer.cpp
     events/player_event_discord_formatter.cpp
     events/player_event_logs.cpp
     evolving_items.cpp
@@ -55,7 +58,7 @@ set(common_sources
     json_config.cpp
     light_source.cpp
     md5.cpp
-    memory/ksm.hpp
+    memory/ksm.cpp
     memory_buffer.cpp
     memory_mapped_file.cpp
     misc.cpp
@@ -66,6 +69,7 @@ set(common_sources
     net/console_server.cpp
     net/console_server_connection.cpp
     net/crc32.cpp
+    net/dns.cpp
     net/eqstream.cpp
     net/packet.cpp
     net/reliable_stream_connection.cpp
@@ -613,8 +617,8 @@ set(common_headers
     item_instance.h
     json/json-forwards.h
     json/json.h
-    json/json_archive_single_line.h
     json_config.h
+    json/json_archive_single_line.h
     light_source.h
     linked_list.h
     loot.h
@@ -622,8 +626,9 @@ set(common_headers
     md5.h
     memory_buffer.h
     memory_mapped_file.h
-    misc.h
+    memory/ksm.h
     misc_functions.h
+    misc.h
     mysql_request_result.h
     mysql_request_row.h
     mysql_stmt.h
