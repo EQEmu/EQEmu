@@ -20,13 +20,12 @@
 #include "common/dbcore.h"
 #include "common/eq_packet_structs.h"
 #include "common/eqemu_logsys.h"
-#include "common/linked_list.h"
 #include "common/types.h"
 
-#include <cmath>
+#include <map>
+#include <mutex>
 #include <string>
 #include <vector>
-#include <map>
 
 #define AUTHENTICATION_TIMEOUT    60
 #define INVALID_ID                0xFFFFFFFF
@@ -265,7 +264,7 @@ public:
 	uint64_t GetNextTableId(const std::string& table_name);
 
 private:
-	Mutex           Mvarcache;
+	std::mutex      Mvarcache;
 	VarCache_Struct varcache;
 
 	/* Groups, utility methods. */

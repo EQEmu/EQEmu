@@ -728,7 +728,7 @@ bool Database::LoadVariables()
 		return true;
 	}
 
-	LockMutex lock(&Mvarcache);
+	std::scoped_lock lock(Mvarcache);
 
 	for (const auto& e : l) {
 		varcache.last_update = std::time(nullptr);
@@ -747,7 +747,7 @@ bool Database::LoadVariables()
 
 bool Database::GetVariable(const std::string& name, std::string& value)
 {
-	LockMutex lock(&Mvarcache);
+	std::scoped_lock lock(Mvarcache);
 
 	if (name.empty()) {
 		return false;

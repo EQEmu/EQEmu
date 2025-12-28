@@ -20,7 +20,6 @@
 #include "common/eq_packet_structs.h"
 #include "common/event/timer.h"
 #include "common/linked_list.h"
-#include "common/mutex.h"
 #include "common/net/servertalk_client_connection.h"
 #include "common/net/servertalk_legacy_client_connection.h"
 #include "common/queue.h"

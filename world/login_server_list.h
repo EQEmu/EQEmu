@@ -18,7 +18,6 @@
 #pragma once
 
 #include "common/eq_packet_structs.h"
-#include "common/mutex.h"
 #include "common/queue.h"
 #include "common/servertalk.h"
 #include "common/timer.h"

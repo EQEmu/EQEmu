@@ -17,10 +17,12 @@
 */
 #pragma once
 
+
 #include "mysql.h"
 #include <cassert>
 #include <cstring>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <span>
 #include <string_view>
@@ -183,7 +185,7 @@ public:
 		int64_t, uint64_t, float, double, bool, std::string_view, std::nullptr_t>;
 
 	PreparedStmt() = delete;
-	PreparedStmt(MYSQL& mysql, std::string query, Mutex* mutex, StmtOptions opts = {});
+	PreparedStmt(MYSQL& mysql, std::string query, std::mutex& mutex, StmtOptions opts = {});
 
 	const std::string& GetQuery() const { return m_query; }
 	StmtOptions GetOptions() const { return m_options; }
@@ -219,7 +221,8 @@ private:
 
 	struct StmtDeleter
 	{
-		Mutex* mutex = nullptr;
+		std::mutex& mutex;
+
 		void operator()(MYSQL_STMT* stmt) noexcept;
 	};
 
@@ -232,7 +235,7 @@ private:
 	std::string m_query;
 	StmtOptions m_options = {};
 	bool m_need_bind = true;
-	Mutex* m_mutex = nullptr; // connection mutex
+	std::mutex& m_mutex; // connection mutex
 };
 
 } // namespace mysql

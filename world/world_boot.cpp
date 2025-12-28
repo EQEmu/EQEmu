@@ -49,8 +49,6 @@
 
 extern WorldConfig Config;
 
-auto mutex = new Mutex;
-
 void WorldBoot::GMSayHookCallBackProcessWorld(uint16 log_category, const char *func, std::string message)
 {
 	// we don't want to loop up with chat messages
@@ -180,11 +178,13 @@ bool WorldBoot::LoadDatabaseConnections()
 	}
 	else {
 		content_db.SetMySQL(database);
+
 		// when database and content_db share the same underlying mysql connection
 		// it needs to be protected by a shared mutex otherwise we produce concurrency issues
 		// when database actions are occurring in different threads
-		database.SetMutex(mutex);
-		content_db.SetMutex(mutex);
+		std::shared_ptr<std::mutex> sharedMutex = std::make_shared<std::mutex>();
+		database.SetMutex(sharedMutex);
+		content_db.SetMutex(sharedMutex);
 	}
 
 	return true;
@@ -634,7 +634,6 @@ void WorldBoot::CheckForPossibleConfigurationIssues()
 
 void WorldBoot::Shutdown()
 {
-	safe_delete(mutex);
 }
 
 void WorldBoot::SendDiscordMessage(int webhook_id, const std::string &message)

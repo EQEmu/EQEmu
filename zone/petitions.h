@@ -18,12 +18,9 @@
 #pragma once
 
 #include "common/linked_list.h"
-#include "common/misc_functions.h"
-#include "common/mutex.h"
 #include "common/types.h"
-#include "common/zone_store.h"
-#include "zone/client.h"
-#include "zone/zonedb.h"
+
+#include <mutex>
 
 class Client;
 
@@ -118,5 +115,5 @@ public:
 
 private:
 	LinkedList<Petition*> list;
-	Mutex PList_Mutex;
+	std::mutex PList_Mutex;
 };

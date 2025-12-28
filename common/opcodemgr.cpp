@@ -142,10 +142,12 @@ RegularOpcodeManager::~RegularOpcodeManager() {
 	safe_delete_array(eq_to_emu);
 }
 
-bool RegularOpcodeManager::LoadOpcodes(const char *filename, bool report_errors) {
+bool RegularOpcodeManager::LoadOpcodes(const char *filename, bool report_errors)
+{
+	std::scoped_lock lock(MOpcodes);
+
 	NormalMemStrategy s;
 	s.it = this;
-	MOpcodes.lock();
 
 	loaded = true;
 	eq_to_emu = new EmuOpcode[MAX_EQ_OPCODE];
@@ -158,32 +160,30 @@ bool RegularOpcodeManager::LoadOpcodes(const char *filename, bool report_errors)
 	memset(emu_to_eq, 0, sizeof(uint16)*_maxEmuOpcode);
 
 	bool ret = LoadOpcodesFile(filename, &s, report_errors);
-	MOpcodes.unlock();
 	return ret;
 }
 
-bool RegularOpcodeManager::ReloadOpcodes(const char *filename, bool report_errors) {
-	if(!loaded)
-		return(LoadOpcodes(filename));
+bool RegularOpcodeManager::ReloadOpcodes(const char* filename, bool report_errors)
+{
+	if (!loaded)
+		return LoadOpcodes(filename);
+
+	std::scoped_lock lock(MOpcodes);
 
 	NormalMemStrategy s;
 	s.it = this;
-	MOpcodes.lock();
 
-	memset(eq_to_emu, 0, sizeof(uint16)*MAX_EQ_OPCODE);
-
-	bool ret = LoadOpcodesFile(filename, &s, report_errors);
-
-	MOpcodes.unlock();
-	return(ret);
+	memset(eq_to_emu, 0, sizeof(uint16) * MAX_EQ_OPCODE);
+	return LoadOpcodesFile(filename, &s, report_errors);
 }
 
 uint16 RegularOpcodeManager::EmuToEQ(const EmuOpcode emu_op) {
 	//opcode is checked for validity in GetEQOpcode
 	uint16 res;
-	MOpcodes.lock();
-	res = emu_to_eq[emu_op];
-	MOpcodes.unlock();
+	{
+		std::scoped_lock lock(MOpcodes);
+		res = emu_to_eq[emu_op];
+	}
 
 	LogNetcodeDetail("[Opcode Manager] Translate emu [{}] ({:#06x}) eq [{:#06x}]", OpcodeNames[emu_op], emu_op, res);
 
@@ -193,15 +193,18 @@ uint16 RegularOpcodeManager::EmuToEQ(const EmuOpcode emu_op) {
 	return(res);
 }
 
-EmuOpcode RegularOpcodeManager::EQToEmu(const uint16 eq_op) {
+EmuOpcode RegularOpcodeManager::EQToEmu(const uint16 eq_op)
+{
 	//opcode is checked for validity in GetEmuOpcode
-//Disabled since current live EQ uses the entire uint16 bitspace for opcodes
-//	if(eq_op > MAX_EQ_OPCODE)
-//		return(OP_Unknown);
+	//Disabled since current live EQ uses the entire uint16 bitspace for opcodes
+	//	if(eq_op > MAX_EQ_OPCODE)
+	//		return(OP_Unknown);
 	EmuOpcode res;
-	MOpcodes.lock();
-	res = eq_to_emu[eq_op];
-	MOpcodes.unlock();
+	{
+		std::scoped_lock lock(MOpcodes);
+		res = eq_to_emu[eq_op];
+	}
+
 #ifdef DEBUG_TRANSLATE
 	fprintf(stderr, "M Translate EQ 0x%.4x to Emu %s (%d)\n", eq_op, OpcodeNames[res], res);
 #endif

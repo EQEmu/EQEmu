@@ -20,8 +20,11 @@
 #include "common/eqemu_config.h"
 #include "common/repositories/zone_repository.h"
 
+#include <chrono>
 #include <csignal>
 #include <thread>
+
+using namespace std::chrono_literals;
 
 Database db;
 Database db2;
@@ -60,8 +63,6 @@ void WorldserverCLI::TestDatabaseConcurrency(int argc, char **argv, argh::parser
 
 	LogInfo("Database test");
 
-	auto mutex = new Mutex;
-
 	auto c = EQEmuConfig::get();
 	LogInfo("Connecting to MySQL");
 	if (!db.Connect(
@@ -75,19 +76,19 @@ void WorldserverCLI::TestDatabaseConcurrency(int argc, char **argv, argh::parser
 		return;
 	}
 
-	db.SetMutex(mutex);
+	std::shared_ptr<std::mutex> sharedMutex = std::make_shared<std::mutex>();
+
+	db.SetMutex(sharedMutex);
 
 	db2.SetMySQL(db);
 
-	db2.SetMutex(mutex);
+	db2.SetMutex(sharedMutex);
 
 	std::thread(DatabaseTest).detach();
 	std::thread(DatabaseTest).detach();
 	std::thread(DatabaseTestSecondConnection).detach();
 
 	while (!stop) {
-
+		std::this_thread::sleep_for(0s);
 	}
-
-	safe_delete(mutex);
 }

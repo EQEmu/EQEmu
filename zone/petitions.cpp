@@ -135,10 +135,11 @@ void PetitionList::AddPetition(Petition* pet) {
 }
 
 //Return Values: 0 = Ok ; -1 = Error deleting petition.
-int PetitionList::DeletePetition(uint32 petnumber) {
+int PetitionList::DeletePetition(uint32 petnumber)
+{
 	LinkedListIterator<Petition*> iterator(list);
 	iterator.Reset();
-	LockMutex lock(&PList_Mutex);
+	std::scoped_lock lock(PList_Mutex);
 	while(iterator.MoreElements()) {
 		if (iterator.GetData()->GetID() == petnumber) {
 			database.DeletePetitionFromDB(iterator.GetData());
@@ -179,18 +180,18 @@ void PetitionList::ClearPetitions() {
 	return;
 }
 
-void PetitionList::ReadDatabase() {
-	LockMutex lock(&PList_Mutex);
+void PetitionList::ReadDatabase()
+{
+	std::scoped_lock lock(PList_Mutex);
 	ClearPetitions();
 	database.RefreshPetitionsFromDB();
 	UpdateGMQueue();
-	return;
 }
 
-void PetitionList::UpdatePetition(Petition* pet) {
-	LockMutex lock(&PList_Mutex);
+void PetitionList::UpdatePetition(Petition* pet)
+{
+	std::scoped_lock lock(PList_Mutex);
 	database.UpdatePetitionToDB(pet);
-	return;
 }
 
 void ZoneDatabase::DeletePetitionFromDB(Petition* wpet) {

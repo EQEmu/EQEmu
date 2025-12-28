@@ -18,10 +18,10 @@
 #pragma once
 
 #include "common/emu_opcodes.h"
-#include "common/mutex.h"
 #include "common/types.h"
 
 #include <map>
+#include <mutex>
 
 //enable the use of shared mem opcodes for world and zone only
 #ifdef ZONE
@@ -56,7 +56,7 @@ public:
 
 protected:
 	bool loaded; //true if all opcodes loaded
-	Mutex MOpcodes; //this only protects the local machine
+	std::mutex MOpcodes; //this only protects the local machine
 					//in a shared manager, this dosent protect others
 
 	static bool LoadOpcodesFile(const char *filename, OpcodeSetStrategy *s, bool report_errors);

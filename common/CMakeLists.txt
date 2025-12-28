@@ -7,7 +7,6 @@ set(common_sources
     classes.cpp
     cli/eqemu_command_handler.cpp
     compression.cpp
-    condition.cpp
     content/world_content_service.cpp
     crash.cpp
     crc16.cpp
@@ -61,7 +60,6 @@ set(common_sources
     memory_mapped_file.cpp
     misc.cpp
     misc_functions.cpp
-    mutex.cpp
     mysql_request_result.cpp
     mysql_request_row.cpp
     mysql_stmt.cpp
@@ -548,7 +546,6 @@ set(common_headers
     cli/terminal_color.hpp
     classes.h
     compression.h
-    condition.h
     content/world_content_service.h
     crash.h
     crc16.h
@@ -627,7 +624,6 @@ set(common_headers
     memory_mapped_file.h
     misc.h
     misc_functions.h
-    mutex.h
     mysql_request_result.h
     mysql_request_row.h
     mysql_stmt.h

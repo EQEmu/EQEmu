@@ -17,7 +17,6 @@
 */
 #pragma once
 
-#include "common/mutex.h"
 #include "common/mysql_request_result.h"
 #include "common/types.h"
 
@@ -29,7 +28,8 @@
 
 namespace mysql { class PreparedStmt; }
 
-class DBcore {
+class DBcore
+{
 public:
 	enum eStatus {
 		Closed, Connected, Error
@@ -48,17 +48,17 @@ public:
 	uint32 DoEscapeString(char *tobuf, const char *frombuf, uint32 fromlen);
 	void ping();
 
-	const std::string &GetOriginHost() const;
-	void SetOriginHost(const std::string &origin_host);
+	const std::string& GetOriginHost() const;
+	void SetOriginHost(const std::string& origin_host);
 
 	bool DoesTableExist(const std::string& table_name);
 
-	void SetMySQL(const DBcore &o)
+	void SetMySQL(const DBcore& o)
 	{
 		mysql      = o.mysql;
 		mysqlOwner = false;
 	}
-	void SetMutex(Mutex *mutex);
+	void SetMutex(const std::shared_ptr<std::mutex>& mutex);
 
 	// only safe on connections shared with other threads if results buffered
 	// unsafe to use off main thread due to internal server logging
@@ -81,22 +81,22 @@ protected:
 private:
 	bool Open(uint32 *errnum = nullptr, char *errbuf = nullptr);
 
-	MYSQL*  mysql;
-	bool    mysqlOwner;
-	Mutex   *m_mutex;
-	eStatus pStatus;
+	MYSQL*  mysql = nullptr;
+	bool    mysqlOwner = true;
+	eStatus pStatus = Closed;
 
-	std::mutex m_query_lock{};
+	std::shared_ptr<std::mutex> m_mutex;
+	std::mutex m_query_lock;
 
 	std::string origin_host;
 
-	char   *pHost;
-	char   *pUser;
-	char   *pPassword;
-	char   *pDatabase;
-	bool   pCompress;
-	uint32 pPort;
-	bool   pSSL;
+	std::string m_host;
+	std::string m_user;
+	std::string m_password;
+	std::string m_database;
+	bool   pCompress = false;
+	uint32 pPort = 0;
+	bool   pSSL = false;
 
 	// allows multiple queries to be executed within the same query
 	// do not use this under normal operation

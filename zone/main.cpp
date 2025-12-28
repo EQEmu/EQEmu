@@ -26,7 +26,6 @@
 #include "common/guilds.h"
 #include "common/memory_mapped_file.h"
 #include "common/misc.h"
-#include "common/mutex.h"
 #include "common/net/eqstream.h"
 #include "common/opcodemgr.h"
 #include "common/patches/patches.h"
@@ -216,8 +215,6 @@ int main(int argc, char **argv)
 		}
 	}
 
-	auto mutex = new Mutex;
-
 	LogInfo("Connecting to MySQL");
 	if (!database.Connect(
 		Config->DatabaseHost.c_str(),
@@ -245,11 +242,13 @@ int main(int argc, char **argv)
 		}
 	} else {
 		content_db.SetMySQL(database);
+
 		// when database and content_db share the same underlying mysql connection
 		// it needs to be protected by a shared mutex otherwise we produce concurrency issues
 		// when database actions are occurring in different threads
-		database.SetMutex(mutex);
-		content_db.SetMutex(mutex);
+		std::shared_ptr<std::mutex> sharedMutex = std::make_shared<std::mutex>();
+		database.SetMutex(sharedMutex);
+		content_db.SetMutex(sharedMutex);
 	}
 
 	//rules:
@@ -661,7 +660,6 @@ int main(int argc, char **argv)
 	LogInfo("Proper zone shutdown complete.");
 	EQEmuLogSys::Instance()->CloseFileLogs();
 
-	safe_delete(mutex);
 	safe_delete(QServ);
 
 	return 0;
