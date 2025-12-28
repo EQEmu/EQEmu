@@ -17,7 +17,7 @@
 */
 #pragma once
 
-typedef enum {
+enum QuestEventID {
 	EVENT_SAY = 0,
 	EVENT_TRADE,		//being given an item or money
 	EVENT_DEATH,		//being killed
@@ -169,6 +169,6 @@ typedef enum {
 	EVENT_SPELL_EFFECT_BOT,
 	EVENT_SPELL_EFFECT_BUFF_TIC_BOT,
 	_LargestEventID
-} QuestEventID;
+};
 
 extern const char *QuestEventSubroutines[_LargestEventID];

@@ -27,7 +27,7 @@
 class CheatManager;
 class Client;
 
-typedef enum {
+enum UpdateMovementType {
 	Collision = 1,
 	TeleportB,
 	TeleportA,
@@ -37,18 +37,18 @@ typedef enum {
 	SpellA, // Titanium - UF
 	Unknown0x8,
 	SpellB // Used in RoF+
-} UpdateMovementType;
+};
 
-typedef enum {
+enum ExemptionType {
 	ShadowStep,
 	KnockBack,
 	Port,
 	Assist,
 	Sense,
 	MAX_EXEMPTIONS
-} ExemptionType;
+};
 
-typedef enum {
+enum CheatTypes {
 	MQWarp,
 	MQWarpShadowStep,
 	MQWarpKnockBack,
@@ -59,7 +59,7 @@ typedef enum {
 	MQGhost,
 	MQFastMem,
 	MQWarpAbsolute
-} CheatTypes;
+};
 
 class CheatManager {
 public:

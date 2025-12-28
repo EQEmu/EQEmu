@@ -21,13 +21,14 @@
 
 #pragma pack(push)
 #pragma pack(1)
-typedef struct ZBSP_Node {
+
+struct ZBSP_Node {
 	int32 node_number;
 	float normal[3], splitdistance;
 	int32 region;
 	int32 special;
 	int32 left, right;
-} ZBSP_Node;
+};
 
 #pragma pack(pop)
 

@@ -922,7 +922,7 @@ struct DataBucketCache
 
 enum eStandingPetOrder { SPO_Follow, SPO_Sit, SPO_Guard, SPO_FeignDeath };
 
-typedef enum {
+enum PetTypeOld {
 	petFamiliar,		//only listens to /pet get lost
 	petAnimation,		//does not listen to any commands
 	petOther,
@@ -930,4 +930,4 @@ typedef enum {
 	petNPCFollow,
 	petTargetLock,			//remain active as long something is on the hatelist. Don't listen to any commands
 	petNone = 0xFF // not a pet
-} PetTypeOld;
+};

@@ -69,10 +69,10 @@ protected:
 
 	uint8 m_dynamicCount;
 
-	typedef struct {
+	struct ZoneState{
 		bool up;
 		uint32 starts;	//number of times this zone has started
 		uint16 port;	//the port this zone wants to use (0=pick one)
-	} ZoneState;
+	};
 	std::map<std::string, ZoneState> m_states;
 };

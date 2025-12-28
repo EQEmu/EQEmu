@@ -28,11 +28,11 @@ class Seperator;
 
 typedef void (*CmdFuncPtr)(Client *, const Seperator *);
 
-typedef struct {
+struct CommandRecord {
 	uint8 admin;
 	std::string description;
 	CmdFuncPtr function; // null means perl function
-} CommandRecord;
+};
 
 extern int (*command_dispatch)(Client *, std::string, bool);
 extern int command_count; // Commands Loaded Count

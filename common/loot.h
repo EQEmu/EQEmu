@@ -45,5 +45,4 @@ struct LootItem {
 	uint32      lootdrop_id; // required for zone state referencing
 };
 
-typedef std::list<LootItem*> LootItems;
-
+using LootItems = std::list<LootItem*>;

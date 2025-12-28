@@ -38,10 +38,10 @@
 #define RELOADTASKS 0
 #define RELOADTASKSETS 2
 
-typedef enum {
+enum TaskMethodType {
 	METHODSINGLEID = 0,
 	METHODQUEST    = 2
-} TaskMethodType;
+};
 
 enum class TaskActivityType : int32_t // task element/objective
 {

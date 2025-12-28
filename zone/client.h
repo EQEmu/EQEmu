@@ -106,7 +106,7 @@ enum { //scribing argument to MemorizeSpell
 };
 
 //Modes for the zoning state of the client.
-typedef enum {
+enum ZoneMode {
 	ZoneToSafeCoords,	// Always send ZonePlayerToBind_Struct to client: Succor/Evac
 	GMSummon,			// Always send ZonePlayerToBind_Struct to client: Only a GM Summon
 	GMHiddenSummon,		// Always send ZonePlayerToBind_Struct to client silently: Only a GM Summon
@@ -117,7 +117,7 @@ typedef enum {
 	SummonPC,			// In-zone GMMove() always: Call of the Hero spell or some other type of in zone only summons
 	Rewind,				// Summon to /rewind location.
 	EvacToSafeCoords
-} ZoneMode;
+};
 
 // translate above enum to a string
 std::string GetZoneModeString(ZoneMode mode);
@@ -130,13 +130,13 @@ enum {
 	HideCorpseNPC = 5
 };
 
-typedef enum
+enum ShowSpellType
 {
 	Disciplines,
 	Spells
-} ShowSpellType;
+};
 
-typedef enum
+enum XTargetType
 {
 	Empty = 0,
 	Auto = 1,
@@ -165,8 +165,7 @@ typedef enum
 	MyPetTarget = 24,
 	MyMercenary = 25,
 	MyMercenaryTarget = 26
-
-} XTargetType;
+};
 
 struct XTarget_Struct
 {

@@ -20,7 +20,7 @@
 #define MAX_SWARM_PETS 12	//this can change as long as you make more coords (swarm_pet_x/swarm_pet_y)
 #define WAKE_THE_DEAD_NPCTYPEID 500 //We use first pet in pets table as a template
 
-typedef enum {
+enum aaNonspellAction {
 	aaActionNone				= 0,
 	aaActionAETaunt				= 1,
 	aaActionMassBuff			= 2,
@@ -38,7 +38,7 @@ typedef enum {
 	aaActionLeechTouch			= 14,
 	aaActionProjectIllusion		= 15,
 	aaActionFadingMemories		= 16
-} aaNonspellAction;
+};
 
 enum {	//leadership AA indexes
 	groupAAMarkNPC = 0,
@@ -116,7 +116,7 @@ static const uint8 LeadershipAACosts[_maxLeaderAA][MAX_LEADERSHIP_TIERS] = {
 { 0, 0, 0, 0, 0, 0 },	//raidAA15
 };
 
-typedef enum {	//AA IDs
+enum aaID {	//AA IDs
 	aaNone									=0,
 	aaInnateStrength						=2,//implemented as bonus
 	aaInnateStamina							=7,//implemented as bonus
@@ -1525,7 +1525,7 @@ typedef enum {	//AA IDs
 
 	aaHighestID		//this should always be last, and should always
 					//follow the highest AA ID
-} aaID;
+};
 
 //Structure representing the database's swarm pet configs
 struct SwarmPet_Struct {

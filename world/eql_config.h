@@ -25,10 +25,10 @@
 
 class LauncherLink;
 
-typedef struct {
+struct LauncherZone{
 	std::string name;
 	uint16 port;
-} LauncherZone;
+};
 
 //a class exported to perl representing a launcher's in-DB config
 class EQLConfig {

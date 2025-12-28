@@ -46,7 +46,7 @@
 #define GUILD_INITIATE       7
 #define GUILD_RECRUIT        8
 
-typedef enum {
+enum GuildAction {
 	GUILD_ACTION_BANNER_CHANGE                        = 1,
 	GUILD_ACTION_BANNER_PLANT                         = 2,
 	GUILD_ACTION_BANNER_REMOVE                        = 3,
@@ -77,6 +77,6 @@ typedef enum {
 	GUILD_ACTION_REAL_ESTATE_GUILD_PLOT_SELL          = 28,
 	GUILD_ACTION_REAL_ESTATE_MODIFY_TROPHIES          = 29,
 	GUILD_ACTION_MEMBERS_DEMOTE_SELF                  = 30,
-} GuildAction;
+};
 
 constexpr int format_as(GuildAction action) { return static_cast<int>(action); }

@@ -32,7 +32,7 @@
 #include <deque>
 #include <list>
 
-typedef struct {
+struct NPCProximity {
 	float	min_x;
 	float	max_x;
 	float	min_y;
@@ -41,7 +41,7 @@ typedef struct {
 	float	max_z;
 	bool	say;
 	bool	proximity_set;
-} NPCProximity;
+};
 
 struct AISpells_Struct {
 	uint32	type;			// 0 = never, must be one (and only one) of the defined values

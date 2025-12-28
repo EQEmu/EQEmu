@@ -26,13 +26,13 @@
 //this is the only part of an EQStream that is seen by the application.
 
 
-typedef enum {
+enum EQStreamState {
 	ESTABLISHED,
 	CLOSING,		//waiting for pending data to flush.
 	DISCONNECTING,	//have sent disconnect, waiting for their disconnect reply.
 	CLOSED,			//received a disconnect from remote side.
 	UNESTABLISHED
-} EQStreamState;
+};
 
 class EQApplicationPacket;
 class OpcodeManager;

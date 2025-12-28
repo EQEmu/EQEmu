@@ -24,14 +24,14 @@
 
 #include <vector>
 
-typedef enum {
+enum CLE_Status {
 	Never,
 	Offline,
 	Online,
 	CharSelect,
 	Zoning,
 	InZone
-} CLE_Status;
+};
 
 static const char *CLEStatusString[] = {
 	"Never",
