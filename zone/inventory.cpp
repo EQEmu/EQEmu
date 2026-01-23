@@ -4679,7 +4679,8 @@ bool Client::PutItemInInventoryWithStacking(EQ::ItemInstance *inst)
 			return true;
 		}
 	}
-	if (free_id != INVALID_INDEX) {
+	// Protect equipment slots (0-22) from being overwritten
+	if (free_id != INVALID_INDEX && !EQ::ValueWithin(free_id, EQ::invslot::EQUIPMENT_BEGIN, EQ::invslot::EQUIPMENT_END)) {
 		if (PutItemInInventory(free_id, *inst, true)) {
 			return true;
 		}

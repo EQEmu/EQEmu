@@ -1839,7 +1839,7 @@ int16 EQ::InventoryProfile::FindFirstFreeSlotThatFitsItem(const EQ::ItemData *it
 			}
 		}
 	}
-	return 0;
+	return INVALID_INDEX;
 }
 
 //This function has the same flaw as noted above
