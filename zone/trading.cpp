@@ -2939,15 +2939,29 @@ void Client::BuyTraderItemOutsideBazaar(TraderBuy_Struct *tbs, const EQApplicati
 	);
 
 	// Determine the actual quantity for the purchase
-	int32 charges = static_cast<int32>(tbs->quantity);
-	if (!buy_item->IsStackable()) {
-		if (buy_item->GetCharges() <= 0) {
-			charges = 1;
-		}
-		else {
-			charges = buy_item->GetCharges();
-		}
-	}
+    int32 charges = static_cast<int32>(tbs->quantity);
+    if (!buy_item->IsStackable()) {
+        if (buy_item->GetCharges() <= 0) {
+            charges = 1;
+        }
+        else {
+            charges = buy_item->GetCharges();
+        }
+    } else {
+        if (charges <= 0) {
+            LogTrading("Rejecting purchase with zero/negative quantity [{}] for stackable item [{}]",
+                charges, buy_item->GetItem()->Name);
+            in->method     = BazaarByParcel;
+            in->sub_action = Failed;
+            TraderRepository::UpdateActiveTransaction(database, trader_item.id, false);
+            TradeRequestFailed(app);
+            return;
+        }
+        if (charges > trader_item.item_charges) {
+            charges = trader_item.item_charges;
+        }
+        tbs->quantity = static_cast<uint32>(charges);
+    }
 
 	LogTrading(
 		"Actual quantity that will be traded is <green>[{}] {}",
