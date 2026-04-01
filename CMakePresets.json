@@ -16,9 +16,9 @@
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
         "CMAKE_C_COMPILER_LAUNCHER": "ccache",
         "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
-		"EQEMU_BUILD_LOGIN": "ON",
-		"EQEMU_BUILD_TESTS": "ON",
-		"EQEMU_ADD_PROFILER": "ON"
+        "EQEMU_BUILD_LOGIN": "ON",
+        "EQEMU_BUILD_TESTS": "ON",
+        "EQEMU_ADD_PROFILER": "ON"
       }
     },
     {
@@ -30,19 +30,19 @@
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_C_COMPILER_LAUNCHER": "ccache",
         "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
-		"EQEMU_BUILD_LOGIN": "ON"
+        "EQEMU_BUILD_LOGIN": "ON"
       }
     },
-	{
+  {
       "name": "win-msvc",
       "displayName": "Windows MSVC (VS 2022)",
       "generator": "Visual Studio 17 2022",
-	  "binaryDir": "${sourceDir}/build/{presetName}",
+      "binaryDir": "${sourceDir}/build/${presetName}",
       "architecture": { "value": "x64" },
       "cacheVariables": {
         "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
-		"EQEMU_BUILD_LOGIN": "ON",
-		"EQEMU_BUILD_TESTS": "ON"
+        "EQEMU_BUILD_LOGIN": "ON",
+        "EQEMU_BUILD_TESTS": "ON"
       }
     }
   ]
