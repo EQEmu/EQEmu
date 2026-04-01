@@ -13,13 +13,13 @@
 <a href="https://github.com/EQEmu/EQEmu/graphs/contributors"><img src="https://img.shields.io/github/contributors/EQEmu/EQEmu" alt="Contributors"></a>
 <a href="https://discord.gg/QHsm7CD"><img src="https://img.shields.io/discord/212663220849213441?label=Discord&amp;logo=discord&amp;color=7289DA" alt="Discord"></a>
 <a href="https://docs.eqemu.dev"><img src="https://img.shields.io/badge/docs-MkDocs%20Powered-blueviolet" alt="Docs"></a>
-<a href="./LICENSE"><img src="https://img.shields.io/github/license/EQEmu/EQEmu" alt="License"></a> 
+<a href="./LICENSE.md"><img src="https://img.shields.io/github/license/EQEmu/EQEmu" alt="License"></a>
 <a href="https://github.com/EQEmu/EQEmu/releases"><img src="https://img.shields.io/github/v/release/EQEmu/EQEmu" alt="Latest Release"></a>
 <a href="https://github.com/EQEmu/EQEmu/releases"><img src="https://img.shields.io/github/release-date/EQEmu/EQEmu" alt="Release Date"></a>
 <img src="https://img.shields.io/github/downloads/EQEmu/EQEmu/total.svg" alt="Github All Releases"></a>
 <img src="https://img.shields.io/github/issues-pr-closed/eqemu/server" alt="GitHub Issues or Pull Requests">
 <img src="https://img.shields.io/docker/pulls/akkadius/eqemu-server" alt="Docker Pulls">
-<img src="https://jb.gg/badges/official-plastic.svg" alt="Official"> 
+<img src="https://jb.gg/badges/official-plastic.svg" alt="Official">
 
 </p>
 
@@ -124,7 +124,7 @@ Every system, packet, opcode, and game mechanic has been reconstructed through c
 | **EQEmulator Docs**  | [![Docs](https://img.shields.io/badge/docs-MkDocs%20Powered-blueviolet)](https://docs.eqemu.dev)                                                             | [docs.eqemu.dev](https://docs.eqemu.dev/)                                                           |
 | **Discord Community**| [![Discord](https://img.shields.io/discord/212663220849213441?label=Discord&logo=discord&color=7289DA)](https://discord.gg/QHsm7CD)                         | [Join Discord](https://discord.gg/QHsm7CD)                                                        |
 | **Latest Release**   | [![Latest Release](https://img.shields.io/github/v/release/EQEmu/EQEmu)](https://github.com/EQEmu/EQEmu/releases) <br> [![Release Date](https://img.shields.io/github/release-date/EQEmu/EQEmu)](https://github.com/EQEmu/EQEmu/releases) <br> [![All Releases](https://img.shields.io/github/downloads/EQEmu/EQEmu/total.svg)](https://github.com/EQEmu/EQEmu/releases) | [View Releases](https://github.com/EQEmu/EQEmu/releases)                                         |
-| **License**          | [![License](https://img.shields.io/github/license/EQEmu/EQEmu)](./LICENSE)                                                                                | [View License](./LICENSE)                                                                        |
+| **License**          | [![License](https://img.shields.io/github/license/EQEmu/EQEmu)](./LICENSE.md)                                                                                | [View License](./LICENSE.md)                                                                        |
 | **Build Status**     | [![Build](https://github.com/EQEmu/EQEmu/actions/workflows/build.yaml/badge.svg)](https://github.com/EQEmu/EQEmu/actions/workflows/build.yaml)              | [View Build Status](https://github.com/EQEmu/EQEmu/actions/workflows/build.yaml)                                       |
 | **Docker Pulls**     | [![Docker Pulls](https://img.shields.io/docker/pulls/akkadius/eqemu-server)](https://hub.docker.com/r/akkadius/eqemu-server)                                | [Docker Hub](https://hub.docker.com/r/akkadius/eqemu-server)                                      |
 | **Contributions**    | [![GitHub PRs](https://img.shields.io/github/issues-pr-closed/EQEmu/EQEmu)](https://github.com/EQEmu/EQEmu/pulls?q=is%3Apr+is%3Aclosed)                   | [Closed PRs & Issues](https://github.com/EQEmu/EQEmu/pulls?q=is%3Apr+is%3Aclosed)                |
