@@ -12,14 +12,15 @@ set(common_sources
     crc16.cpp
     crc32.cpp
     data_bucket.cpp
+    data_bucket.cpp
+    database_instances.cpp
     database.cpp
     database/database_dump_service.cpp
     database/database_update.cpp
-    database_instances.cpp
     dbcore.cpp
     deity.cpp
-    discord/discord.cpp
     discord/discord_manager.cpp
+    discord/discord.cpp
     dynamic_zone_base.cpp
     dynamic_zone_lockout.cpp
     emu_constants.cpp
@@ -30,8 +31,8 @@ set(common_sources
     eq_packet.cpp
     eq_stream_ident.cpp
     eq_stream_proxy.cpp
-    eqdb.cpp
     eqdb_res.cpp
+    eqdb.cpp
     eqemu_config.cpp
     eqemu_exception.cpp
     eqemu_logsys.cpp
@@ -53,21 +54,20 @@ set(common_sources
     ipc_mutex.cpp
     item_data.cpp
     item_instance.cpp
-    json/json.hpp
-    json/jsoncpp.cpp
     json_config.cpp
+    json/jsoncpp.cpp
     light_source.cpp
     md5.cpp
-    memory/ksm.cpp
     memory_buffer.cpp
     memory_mapped_file.cpp
-    misc.cpp
+    memory/ksm.cpp
     misc_functions.cpp
+    misc.cpp
     mysql_request_result.cpp
     mysql_request_row.cpp
     mysql_stmt.cpp
-    net/console_server.cpp
     net/console_server_connection.cpp
+    net/console_server.cpp
     net/crc32.cpp
     net/dns.cpp
     net/eqstream.cpp
@@ -75,40 +75,35 @@ set(common_sources
     net/reliable_stream_connection.cpp
     net/servertalk_client_connection.cpp
     net/servertalk_legacy_client_connection.cpp
-    net/servertalk_server.cpp
     net/servertalk_server_connection.cpp
+    net/servertalk_server.cpp
     net/tcp_connection.cpp
     net/tcp_server.cpp
-    net/websocket_server.cpp
     net/websocket_server_connection.cpp
+    net/websocket_server.cpp
     opcode_map.cpp
     opcodemgr.cpp
-    packet_dump.cpp
     packet_dump_file.cpp
+    packet_dump.cpp
     packet_functions.cpp
     patches/patches.cpp
-    patches/rof.cpp
-    patches/rof2.cpp
-    patches/rof2_limits.cpp
     patches/rof_limits.cpp
-    patches/sod.cpp
+    patches/rof.cpp
+    patches/rof2_limits.cpp
+    patches/rof2.cpp
     patches/sod_limits.cpp
-    patches/sof.cpp
+    patches/sod.cpp
     patches/sof_limits.cpp
-    patches/titanium.cpp
+    patches/sof.cpp
     patches/titanium_limits.cpp
-    patches/uf.cpp
+    patches/titanium.cpp
     patches/uf_limits.cpp
+    patches/uf.cpp
     path_manager.cpp
-    perl_eqdb.cpp
+    path_manager.cpp
     perl_eqdb_res.cpp
+    perl_eqdb.cpp
     platform.cpp
-    platform/inet.h
-    platform/platform.h
-    platform/posix/include_inet.h
-    platform/posix/include_pthreads.h
-    platform/win/include_windows.h
-    platform/win/include_winsock2.h
     proc_launcher.cpp
     process.cpp
     process/process.cpp
@@ -125,12 +120,12 @@ set(common_sources
     shareddb.cpp
     skill_caps.cpp
     skills.cpp
-    spdat.cpp
     spdat_bot.cpp
+    spdat.cpp
     StackWalker/StackWalker.cpp
-    strings.cpp
     strings_legacy.cpp
     strings_misc.cpp
+    strings.cpp
     struct_strategy.cpp
     textures.cpp
     timer.cpp
@@ -540,34 +535,32 @@ set(repositories
 )
 
 set(common_headers
-    StackWalker/StackWalker.h
     additive_lagged_fibonacci_engine.h
     base_packet.h
     bazaar.h
     bodytypes.h
+    classes.h
     cli/argh.h
     cli/eqemu_command_handler.h
     cli/terminal_color.hpp
-    classes.h
     compression.h
     content/world_content_service.h
     crash.h
     crc16.h
     crc32.h
     cron/croncpp.h
-    data_bucket.cpp
     data_verification.h
+    database_schema.h
     database.h
     database/database_dump_service.h
-    database/database_update.h
-    database/database_update_manifest.h
     database/database_update_manifest_bots.h
     database/database_update_manifest_custom.h
-    database_schema.h
+    database/database_update_manifest.h
+    database/database_update.h
     dbcore.h
     deity.h
-    discord/discord.h
     discord/discord_manager.h
+    discord/discord.h
     dynamic_zone_base.h
     dynamic_zone_lockout.h
     emu_constants.h
@@ -577,24 +570,24 @@ set(common_headers
     emu_versions.h
     eq_constants.h
     eq_limits.h
-    eq_packet.h
     eq_packet_structs.h
+    eq_packet.h
     eq_stream_ident.h
     eq_stream_intf.h
     eq_stream_locator.h
     eq_stream_proxy.h
-    eqdb.h
     eqdb_res.h
-    eqemu_config.h
+    eqdb.h
     eqemu_config_elements.h
+    eqemu_config.h
     eqemu_exception.h
-    eqemu_logsys.h
     eqemu_logsys_log_aliases.h
+    eqemu_logsys.h
     eqtime.h
+    event_sub.h
     event/event_loop.h
     event/task.h
     event/timer.h
-    event_sub.h
     events/player_event_discord_formatter.h
     events/player_event_logs.h
     events/player_events.h
@@ -615,10 +608,11 @@ set(common_headers
     ipc_mutex.h
     item_data.h
     item_instance.h
-    json/json-forwards.h
-    json/json.h
     json_config.h
     json/json_archive_single_line.h
+    json/json-forwards.h
+    json/json.h
+    json/json.hpp
     light_source.h
     linked_list.h
     loot.h
@@ -632,8 +626,8 @@ set(common_headers
     mysql_request_result.h
     mysql_request_row.h
     mysql_stmt.h
-    net/console_server.h
     net/console_server_connection.h
+    net/console_server.h
     net/crc32.h
     net/dns.h
     net/endian.h
@@ -645,49 +639,54 @@ set(common_headers
     net/servertalk_client_connection.h
     net/servertalk_common.h
     net/servertalk_legacy_client_connection.h
-    net/servertalk_server.h
     net/servertalk_server_connection.h
-    net/tcp_connection.h
+    net/servertalk_server.h
     net/tcp_connection_pooling.h
+    net/tcp_connection.h
     net/tcp_server.h
-    net/websocket_server.h
     net/websocket_server_connection.h
+    net/websocket_server.h
     op_codes.h
     opcode_dispatch.h
     opcodemgr.h
-    packet_dump.h
     packet_dump_file.h
+    packet_dump.h
     packet_functions.h
     patches/patches.h
-    patches/rof.h
-    patches/rof2.h
-    patches/rof2_limits.h
-    patches/rof2_ops.h
-    patches/rof2_structs.h
     patches/rof_limits.h
     patches/rof_ops.h
     patches/rof_structs.h
-    patches/sod.h
+    patches/rof.h
+    patches/rof2_limits.h
+    patches/rof2_ops.h
+    patches/rof2_structs.h
+    patches/rof2.h
     patches/sod_limits.h
     patches/sod_ops.h
     patches/sod_structs.h
-    patches/sof.h
+    patches/sod.h
     patches/sof_limits.h
     patches/sof_ops.h
     patches/sof_structs.h
+    patches/sof.h
     patches/ss_declare.h
     patches/ss_define.h
     patches/ss_register.h
-    patches/titanium.h
     patches/titanium_limits.h
     patches/titanium_ops.h
     patches/titanium_structs.h
-    patches/uf.h
+    patches/titanium.h
     patches/uf_limits.h
     patches/uf_ops.h
     patches/uf_structs.h
-    path_manager.cpp
+    patches/uf.h
     platform.h
+    platform/inet.h
+    platform/platform.h
+    platform/posix/include_inet.h
+    platform/posix/include_pthreads.h
+    platform/win/include_windows.h
+    platform/win/include_winsock2.h
     proc_launcher.h
     process.h
     process/process.h
@@ -714,6 +713,7 @@ set(common_headers
     skills.h
     spdat.h
     stacktrace/backward.hpp
+    StackWalker/StackWalker.h
     strings.h
     struct_strategy.h
     tasks.h
