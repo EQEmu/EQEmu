@@ -51,7 +51,7 @@
 #   include <unistd.h>
 #elif defined(TERMCOLOR_OS_WINDOWS)
 #   include <io.h>
-#   include <windows.h>
+#   include "common/platform/win/include_windows.h"
 #endif
 
 

@@ -19,6 +19,7 @@
 
 #ifdef _WINDOWS
 
+#include "common/platform/win/include_windows.h"
 #include <WinSock2.h>
 
 #endif // _WINDOWS

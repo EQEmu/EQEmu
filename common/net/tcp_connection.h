@@ -19,7 +19,9 @@
 
 #include "common/net/tcp_connection_pooling.h"
 
+#include "common/platform/platform.h"
 #include "uv.h"
+
 #include <functional>
 #include <memory>
 #include <string>

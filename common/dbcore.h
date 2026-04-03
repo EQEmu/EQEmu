@@ -21,6 +21,7 @@
 #include "common/types.h"
 
 #include "mysql.h"
+#include <memory>
 #include <mutex>
 
 #define CR_SERVER_GONE_ERROR    2006

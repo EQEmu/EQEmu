@@ -33,10 +33,8 @@
 #include <sys/stat.h>
 
 #ifdef _WINDOWS
-#include <conio.h>
+#include "common/platform/platform.h"
 #include <direct.h>
-#include <process.h>
-#include <windows.h>
 #else
 #include <sys/stat.h>
 #include <thread>
