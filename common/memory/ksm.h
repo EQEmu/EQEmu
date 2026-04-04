@@ -64,38 +64,6 @@ bool operator!=(const PageAlignedAllocator<T>&, const PageAlignedAllocator<U>&) 
 // Kernel Samepage Merging (KSM) functionality
 namespace KSM {
 
-#ifdef _WIN32
-
-// Windows-specific placeholder functions (no-op)
-inline void CheckPageAlignment(void* ptr)
-{
-}
-
-inline void* AllocatePageAligned(size_t size)
-{
-	return memset(malloc(size), 0, size);
-}
-
-inline void MarkMemoryForKSM(void* start, size_t size)
-{
-}
-
-inline void AlignHeapToPageBoundary()
-{
-}
-
-inline void* MarkHeapStart()
-{
-	return nullptr;
-}
-
-inline size_t MeasureHeapUsage(void* start)
-{
-	return 0;
-}
-
-#else
-
 void CheckPageAlignment(void* ptr);
 void* AllocatePageAligned(size_t size);
 void MarkMemoryForKSM(void* start, size_t size);
@@ -103,5 +71,4 @@ void AlignHeapToPageBoundary();
 void* MarkHeapStart();
 size_t MeasureHeapUsage(void* start);
 
-#endif
-}
+} // namespace KSM

@@ -25,7 +25,6 @@
 #include <unistd.h>    // For sysconf, sbrk
 #endif
 
-
 #ifdef _WIN32
 // Windows-specific functionality
 
@@ -48,6 +47,38 @@ size_t PageAlignedAllocatorBase::getPageSize() const
 	return sysInfo.dwPageSize; // Page size in bytes
 }
 
+namespace KSM {
+
+// Windows-specific placeholder functions (no-op)
+void CheckPageAlignment(void* ptr)
+{
+}
+
+void* AllocatePageAligned(size_t size)
+{
+	return memset(malloc(size), 0, size);
+}
+
+void MarkMemoryForKSM(void* start, size_t size)
+{
+}
+
+void AlignHeapToPageBoundary()
+{
+}
+
+void* MarkHeapStart()
+{
+	return nullptr;
+}
+
+size_t MeasureHeapUsage(void* start)
+{
+	return 0;
+}
+
+} // namespace KSM
+
 #else
 
 // Linux-specific functionality
@@ -68,6 +99,8 @@ size_t PageAlignedAllocatorBase::getPageSize() const
 {
 	return static_cast<size_t>(sysconf(_SC_PAGESIZE));
 }
+
+namespace KSM {
 
 void CheckPageAlignment(void* ptr)
 {
@@ -153,5 +186,7 @@ size_t MeasureHeapUsage(void* start)
 	void* current_break = sbrk(0);
 	return static_cast<char*>(current_break) - static_cast<char*>(start);
 }
+
+} // namespace KSM
 
 #endif
