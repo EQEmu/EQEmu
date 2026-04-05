@@ -17,8 +17,8 @@
 */
 #pragma once
 
+#include "common/dbcore.h"
 
-#include "mysql.h"
 #include <cassert>
 #include <cstring>
 #include <memory>
@@ -185,7 +185,7 @@ public:
 		int64_t, uint64_t, float, double, bool, std::string_view, std::nullptr_t>;
 
 	PreparedStmt() = delete;
-	PreparedStmt(MYSQL& mysql, std::string query, std::mutex& mutex, StmtOptions opts = {});
+	PreparedStmt(MYSQL& mysql, std::string query, DBcore::Mutex& mutex, StmtOptions opts = {});
 
 	const std::string& GetQuery() const { return m_query; }
 	StmtOptions GetOptions() const { return m_options; }
@@ -221,7 +221,7 @@ private:
 
 	struct StmtDeleter
 	{
-		std::mutex& mutex;
+		DBcore::Mutex& mutex;
 
 		void operator()(MYSQL_STMT* stmt) noexcept;
 	};
@@ -235,7 +235,7 @@ private:
 	std::string m_query;
 	StmtOptions m_options = {};
 	bool m_need_bind = true;
-	std::mutex& m_mutex; // connection mutex
+	DBcore::Mutex& m_mutex; // connection mutex
 };
 
 } // namespace mysql

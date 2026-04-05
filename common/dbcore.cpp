@@ -34,7 +34,7 @@
 
 DBcore::DBcore()
 	: mysql(mysql_init(nullptr))
-	, m_mutex(std::make_shared<std::mutex>())
+	, m_mutex(std::make_shared<Mutex>())
 {
 }
 
@@ -220,11 +220,11 @@ bool DBcore::Open(
 
 bool DBcore::Open(uint32 *errnum, char *errbuf)
 {
+	// Expects m_mutex to already be locked.
+
 	if (errbuf) {
 		errbuf[0] = 0;
 	}
-
-	std::scoped_lock lock(*m_mutex);
 
 	if (GetStatus() == Connected) {
 		return true;
@@ -294,7 +294,7 @@ std::string DBcore::Escape(const std::string& s)
 	return temp.data();
 }
 
-void DBcore::SetMutex(const std::shared_ptr<std::mutex>& mutex)
+void DBcore::SetMutex(const std::shared_ptr<Mutex>& mutex)
 {
 	DBcore::m_mutex = mutex;
 }

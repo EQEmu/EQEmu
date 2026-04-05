@@ -35,7 +35,7 @@ void PreparedStmt::StmtDeleter::operator()(MYSQL_STMT* stmt) noexcept
 	mysql_stmt_close(stmt);
 }
 
-PreparedStmt::PreparedStmt(MYSQL& mysql, std::string query, std::mutex& mutex, StmtOptions opts)
+PreparedStmt::PreparedStmt(MYSQL& mysql, std::string query, DBcore::Mutex& mutex, StmtOptions opts)
 	: m_stmt(mysql_stmt_init(&mysql), { mutex })
 	, m_query(std::move(query))
 	, m_options(opts)

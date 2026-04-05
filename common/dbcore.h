@@ -36,6 +36,8 @@ public:
 		Closed, Connected, Error
 	};
 
+	using Mutex = std::recursive_mutex;
+
 	DBcore();
 	~DBcore();
 	eStatus GetStatus() { return pStatus; }
@@ -59,7 +61,7 @@ public:
 		mysql      = o.mysql;
 		mysqlOwner = false;
 	}
-	void SetMutex(const std::shared_ptr<std::mutex>& mutex);
+	void SetMutex(const std::shared_ptr<Mutex>& mutex);
 
 	// only safe on connections shared with other threads if results buffered
 	// unsafe to use off main thread due to internal server logging
@@ -86,8 +88,7 @@ private:
 	bool    mysqlOwner = true;
 	eStatus pStatus = Closed;
 
-	std::shared_ptr<std::mutex> m_mutex;
-	std::mutex m_query_lock;
+	std::shared_ptr<Mutex> m_mutex;
 
 	std::string origin_host;
 

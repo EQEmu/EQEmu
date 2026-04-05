@@ -95,7 +95,7 @@ void TaskScheduler::ProcessWork()
 			m_data->cv.wait(lock,
 				[this]
 			{
-				return !m_data->running || m_data->tasks.empty();
+				return !m_data->running || !m_data->tasks.empty();
 			});
 
 			if (!m_data->running)

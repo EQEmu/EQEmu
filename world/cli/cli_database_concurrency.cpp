@@ -76,7 +76,7 @@ void WorldserverCLI::TestDatabaseConcurrency(int argc, char **argv, argh::parser
 		return;
 	}
 
-	std::shared_ptr<std::mutex> sharedMutex = std::make_shared<std::mutex>();
+	std::shared_ptr<DBcore::Mutex> sharedMutex = std::make_shared<DBcore::Mutex>();
 
 	db.SetMutex(sharedMutex);
 

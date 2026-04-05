@@ -180,7 +180,7 @@ bool WorldBoot::LoadDatabaseConnections()
 		// when database and content_db share the same underlying mysql connection
 		// it needs to be protected by a shared mutex otherwise we produce concurrency issues
 		// when database actions are occurring in different threads
-		std::shared_ptr<std::mutex> sharedMutex = std::make_shared<std::mutex>();
+		std::shared_ptr<DBcore::Mutex> sharedMutex = std::make_shared<DBcore::Mutex>();
 		database.SetMutex(sharedMutex);
 		content_db.SetMutex(sharedMutex);
 	}
