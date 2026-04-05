@@ -1068,6 +1068,7 @@ luabind::scope lua_register_npc() {
 	.def("GetWaypointMax", (int(Lua_NPC::*)(void))&Lua_NPC::GetWaypointMax)
 	.def("HasAISpellEffect", (bool(Lua_NPC::*)(int))&Lua_NPC::HasAISpellEffect)
 	.def("HasItem", (bool(Lua_NPC::*)(uint32))&Lua_NPC::HasItem)
+	.def("HasSpecialAbilities", &Lua_NPC::HasSpecialAbilities)
 	.def("IsAnimal", (bool(Lua_NPC::*)(void))&Lua_NPC::IsAnimal)
 	.def("IsGuarding", (bool(Lua_NPC::*)(void))&Lua_NPC::IsGuarding)
 	.def("IsLDoNLocked", (bool(Lua_NPC::*)(void))&Lua_NPC::IsLDoNLocked)

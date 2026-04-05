@@ -3732,6 +3732,7 @@ luabind::scope lua_register_mob() {
 	.def("GMMove", (void(Lua_Mob::*)(double,double,double))&Lua_Mob::GMMove)
 	.def("GMMove", (void(Lua_Mob::*)(double,double,double,double))&Lua_Mob::GMMove)
 	.def("GMMove", (void(Lua_Mob::*)(double,double,double,double,bool))&Lua_Mob::GMMove)
+	.def("Gate", &Lua_Mob::Gate)
 	.def("GetAA", (int(Lua_Mob::*)(int))&Lua_Mob::GetAA)
 	.def("GetAABonuses", &Lua_Mob::GetAABonuses)
 	.def("GetAAByAAID", (int(Lua_Mob::*)(int))&Lua_Mob::GetAAByAAID)
