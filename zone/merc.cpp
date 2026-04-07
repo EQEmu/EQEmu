@@ -5611,6 +5611,17 @@ uint8 Client::GetNumberOfMercenaries()
 	return count;
 }
 
+int Client::GetFirstFreeMercSlot()
+{
+	int max_slots = std::min(RuleI(Mercs, MaxMercSlots), MAXMERCS);
+	for (int slot_id = 0; slot_id < max_slots; slot_id++) {
+		if (m_mercinfo[slot_id].mercid == 0) {
+			return slot_id;
+		}
+	}
+	return -1;
+}
+
 void Merc::SetMercData( uint32 template_id ) {
 
 	MercTemplate* merc_template = zone->GetMercTemplate(template_id);
