@@ -255,6 +255,7 @@ RULE_BOOL(Mercs, AllowMercSuspendInCombat, true, "Allow merc suspend in combat")
 RULE_BOOL(Mercs, MercsIgnoreLevelBasedHasteCaps, false, "Ignores hard coded level based haste caps.")
 RULE_INT(Mercs, MercsHasteCap, 100, "Haste cap for non-v3(over haste) haste")
 RULE_INT(Mercs, MercsHastev3Cap, 25, "Haste cap for v3(over haste) haste")
+RULE_INT(Mercs, MaxMercSlots, 6, "Maximum number of mercenary slots per character (max 11)")
 RULE_CATEGORY_END()
 
 RULE_CATEGORY(Guild)

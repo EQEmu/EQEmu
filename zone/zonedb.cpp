@@ -2225,7 +2225,7 @@ bool ZoneDatabase::LoadCurrentMercenary(Client* c)
 {
 	const uint8 mercenary_slot = c->GetMercSlot();
 
-	if (mercenary_slot > MAXMERCS) {
+	if (mercenary_slot >= MAXMERCS) {
 		return false;
 	}
 
@@ -2277,7 +2277,7 @@ bool ZoneDatabase::SaveMercenary(Merc* m)
 		auto e = MercsRepository::NewEntity();
 
 		e.OwnerCharacterID = m->GetMercenaryCharacterID();
-		e.Slot             = (c->GetNumberOfMercenaries() - 1);
+		e.Slot             = c->GetMercSlot();
 		e.Name             = m->GetCleanName();
 		e.TemplateID       = m->GetMercenaryTemplateID();
 		e.SuspendedTime    = c->GetMercInfo().SuspendedTime;
@@ -2318,7 +2318,7 @@ bool ZoneDatabase::SaveMercenary(Merc* m)
 	auto e = MercsRepository::FindOne(*this, m->GetMercenaryID());
 
 	e.OwnerCharacterID = m->GetMercenaryCharacterID();
-	e.Slot             = (c->GetNumberOfMercenaries() - 1);
+	e.Slot             = c->GetMercSlot();
 	e.Name             = m->GetCleanName();
 	e.TemplateID       = m->GetMercenaryTemplateID();
 	e.SuspendedTime    = c->GetMercInfo().SuspendedTime;
