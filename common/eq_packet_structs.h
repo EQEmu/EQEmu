@@ -6236,6 +6236,12 @@ struct SuspendMercenary_Struct {
 /*0001*/
 };
 
+// [OPCode: 0x1b37 (RoF2)] [Client->Server] [Size: 4]
+struct SwitchMercenary_Struct {
+/*0000*/	uint32	MercIndex;	// 0-based UI index into owned merc list
+/*0004*/
+};
+
 // [OPCode: 0x2528] On Live as of April 2 2012 [Server->Client] [Size: 4]
 // Response to suspend merc with timestamp
 struct SuspendMercenaryResponse_Struct {

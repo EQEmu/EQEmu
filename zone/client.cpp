@@ -7958,21 +7958,19 @@ void Client::SendMercPersonalInfo()
 		mdus->MercStatus = 0;
 		mdus->MercCount  = mercCount;
 
+		// Lambda to populate a single merc entry in the packet
 		int max_slots = std::min(RuleI(Mercs, MaxMercSlots), MAXMERCS);
 		uint32 merc_index = 0;
-		for (int slot = 0; slot < max_slots && merc_index < MAX_MERC; slot++) {
-			auto& info = GetMercInfo(slot);
-			if (info.mercid == 0) {
-				continue;
-			}
 
-			Message(Chat::Yellow, "SendMercPersonalInfo: slot %i, mercid %u, templateid %u, name '%s', suspended %i",
-				slot, info.mercid, info.MercTemplateID, info.merc_name, info.IsSuspended);
+		auto fillMercEntry = [&](int slot) {
+			auto& info = GetMercInfo(slot);
+			if (info.mercid == 0 || merc_index >= MAX_MERC) {
+				return;
+			}
 
 			auto tmpl_it = zone->merc_templates.find(info.MercTemplateID);
 			if (tmpl_it == zone->merc_templates.end()) {
-				Message(Chat::Red, "SendMercPersonalInfo: slot %i template %u NOT FOUND, skipping", slot, info.MercTemplateID);
-				continue;
+				return;
 			}
 
 			MercTemplate *mercData = &tmpl_it->second;
@@ -7984,7 +7982,7 @@ void Client::SendMercPersonalInfo()
 
 			if (stancecount > MAX_MERC_STANCES) {
 				Log(Logs::General, Logs::Mercenaries, "SendMercPersonalInfo: stance count %u exceeds max for slot %i, skipping", stancecount, slot);
-				continue;
+				return;
 			}
 
 			mdus->MercData[merc_index].MercID            = mercData->MercTemplateID;
@@ -7999,7 +7997,7 @@ void Client::SendMercPersonalInfo()
 			mdus->MercData[merc_index].MercUnk01         = 0;
 			mdus->MercData[merc_index].TimeLeft          = info.MercTimerRemaining;
 			mdus->MercData[merc_index].MerchantSlot      = merc_index + 1;
-			mdus->MercData[merc_index].MercUnk02         = 1;
+			mdus->MercData[merc_index].MercUnk02         = (slot == GetMercSlot()) ? 1 : 0;
 			mdus->MercData[merc_index].StanceCount       = stancecount;
 			mdus->MercData[merc_index].MercUnk03         = 0;
 			mdus->MercData[merc_index].MercUnk04         = 1;
@@ -8017,6 +8015,20 @@ void Client::SendMercPersonalInfo()
 
 			mdus->MercData[merc_index].MercUnk05 = std::min(RuleI(Mercs, MaxMercSlots), MAXMERCS);
 			merc_index++;
+		};
+
+		// Emit the active merc slot first — the client marks the first entry
+		// in the list with the X (active marker), so order matters.
+		if (GetMercSlot() < max_slots && GetMercInfo().mercid != 0) {
+			fillMercEntry(GetMercSlot());
+		}
+
+		// Then emit remaining owned mercs in slot order
+		for (int slot = 0; slot < max_slots; slot++) {
+			if (slot == GetMercSlot()) {
+				continue; // already emitted
+			}
+			fillMercEntry(slot);
 		}
 
 		// Update count in case we skipped any invalid entries

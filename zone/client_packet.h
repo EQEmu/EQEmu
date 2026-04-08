@@ -239,6 +239,7 @@
 	void Handle_OP_MercenaryDismiss(const EQApplicationPacket *app);
 	void Handle_OP_MercenaryHire(const EQApplicationPacket *app);
 	void Handle_OP_MercenarySuspendRequest(const EQApplicationPacket *app);
+	void Handle_OP_MercenarySwitch(const EQApplicationPacket *app);
 	void Handle_OP_MercenaryTimerRequest(const EQApplicationPacket *app);
 	void Handle_OP_MoveCoin(const EQApplicationPacket *app);
 	void Handle_OP_MoveItem(const EQApplicationPacket *app);

@@ -2323,7 +2323,7 @@ namespace RoF2
 					VARSTRUCT_ENCODE_TYPE(uint32, Buffer, emu->MercData[r].Stances[k].Stance);
 				}
 			}
-			VARSTRUCT_ENCODE_TYPE(uint32, Buffer, emu->MercData[0].MercUnk05);	// MercUnk05
+			VARSTRUCT_ENCODE_TYPE(uint32, Buffer, emu->MercData[0].MercUnk05);	// MercUnk05 - trailing field (unlocked slot count)
 		}
 		else
 		{
