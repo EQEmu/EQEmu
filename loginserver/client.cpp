@@ -528,7 +528,7 @@ void Client::SendExpansionPacketData(PlayerLoginReplyOld &plrs)
 
 			//generate expansion data
 			for (int i = 0; i < 19; i++) {
-				buf.WriteInt32(i);                                                    //sequenctial number
+				buf.WriteInt32(i);                                                    //sequential number
 				buf.WriteInt32((expansion & (1 << i)) == (1 << i) ? 0x01 : 0x00);    //1 own 0 not own
 				buf.WriteInt8(0x00);
 				buf.WriteInt32(ExpansionLookup[i]);                                    //from eqlsstr_us.txt
