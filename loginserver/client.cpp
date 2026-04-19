@@ -302,20 +302,13 @@ void Client::SendPlayResponse(EQApplicationPacket *outapp)
 
 void Client::GenerateRandomLoginKey()
 {
-	m_key.clear();
-	int count = 0;
-	while (count < 10) {
-		static const char key_selection[] =
-							  {
-								  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
-								  'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
-								  'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
-								  'Y', 'Z', '0', '1', '2', '3', '4', '5',
-								  '6', '7', '8', '9'
-							  };
+	static constexpr std::string_view key_selection = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+	constexpr size_t key_length = 10;
 
-		m_key.append((const char *) &key_selection[m_random.Int(0, 35)], 1);
-		count++;
+	m_key.clear();
+	m_key.reserve(key_length);
+	for (size_t i = 0; i < key_length; ++i) {
+		m_key += key_selection[m_random.Int(0, key_selection.size() - 1)];
 	}
 }
 
@@ -362,55 +355,30 @@ void Client::SendFailedLogin()
 	m_stored_username.clear();
 	m_stored_password.clear();
 
-	if (m_client_version == cv_tob) {
-		// unencrypted
-		LoginBaseMessage h{};
-		h.sequence = m_login_base_message.sequence; // login (3)
-		h.encrypt_type = m_login_base_message.encrypt_type;
+	// unencrypted
+	LoginBaseMessage h{};
+	h.sequence     = m_login_base_message.sequence;
+	h.encrypt_type = m_login_base_message.encrypt_type;
+	h.unk3         = m_login_base_message.unk3;
 
-		// encrypted
-		PlayerLoginReplyTOB r{};
-		r.base_reply.success = false;
-		r.base_reply.error_str_id = 105; // Error - The username and/or password were not valid
+	PlayerLoginReply r = m_client_version == cv_tob ? PlayerLoginReply(PlayerLoginReplyTOB{}) : PlayerLoginReply(PlayerLoginReplyOld{});
+	r.set_error_code(LS::ErrStr::ERROR_INVALID_CREDS);
+	// We don't care what key we send, just that it exists and is 10 characters so that we do not shift
+	r.set_key("InvalidKey");
 
-		char encrypted_buffer[80] = { 0 };
-		auto rc = eqcrypt_block((const char*)&r, sizeof(r), encrypted_buffer, 1);
-		if (rc == nullptr) {
-			LogDebug("Failed to encrypt eqcrypt block for failed login");
-		}
-
-		constexpr int       outsize = sizeof(LoginBaseMessage) + sizeof(encrypted_buffer);
-		EQApplicationPacket outapp(OP_LoginAccepted, outsize);
-		outapp.WriteData(&h, sizeof(h));
-		outapp.WriteData(&encrypted_buffer, sizeof(encrypted_buffer));
-
-		m_connection->QueuePacket(&outapp);
+	char encrypted_buffer[80] = { 0 };
+	auto rc = eqcrypt_block(r.data(), r.size(), encrypted_buffer, 1);
+	if (rc == nullptr) {
+		LogDebug("Failed to encrypt eqcrypt block for failed login");
 	}
-	else {
-		// unencrypted
-		LoginBaseMessage h{};
-		h.sequence = m_login_base_message.sequence; // login (3)
-		h.encrypt_type = m_login_base_message.encrypt_type;
 
-		// encrypted
-		PlayerLoginReply r{};
-		r.base_reply.success = false;
-		r.base_reply.error_str_id = 105; // Error - The username and/or password were not valid
+	constexpr int       outsize = sizeof(LoginBaseMessage) + sizeof(encrypted_buffer);
+	EQApplicationPacket outapp(OP_LoginAccepted, outsize);
+	outapp.WriteData(&h, sizeof(h));
+	outapp.WriteData(&encrypted_buffer, sizeof(encrypted_buffer));
 
-		char encrypted_buffer[80] = { 0 };
-		auto rc = eqcrypt_block((const char*)&r, sizeof(r), encrypted_buffer, 1);
-		if (rc == nullptr) {
-			LogDebug("Failed to encrypt eqcrypt block for failed login");
-		}
+	m_connection->QueuePacket(&outapp);
 
-		constexpr int       outsize = sizeof(LoginBaseMessage) + sizeof(encrypted_buffer);
-		EQApplicationPacket outapp(OP_LoginAccepted, outsize);
-		outapp.WriteData(&h, sizeof(h));
-		outapp.WriteData(&encrypted_buffer, sizeof(encrypted_buffer));
-
-		m_connection->QueuePacket(&outapp);
-	}
-	
 	m_client_status = cs_failed_to_login;
 }
 
@@ -496,91 +464,44 @@ void Client::DoSuccessfulLogin(LoginAccountsRepository::LoginAccounts &a)
 	m_account_name     = a.account_name;
 	m_loginserver_name = a.source_loginserver;
 
-	if (m_client_version == cv_tob) {
-		// unencrypted
-		LoginBaseMessage h{};
-		h.sequence = m_login_base_message.sequence;
-		h.compressed = false;
-		h.encrypt_type = m_login_base_message.encrypt_type;
-		h.unk3 = m_login_base_message.unk3;
+	// unencrypted
+	LoginBaseMessage h{};
+	h.sequence = m_login_base_message.sequence;
+	h.compressed = false;
+	h.encrypt_type = m_login_base_message.encrypt_type;
+	h.unk3 = m_login_base_message.unk3;
 
-		// not serializing any of the variable length strings so just use struct directly
-		PlayerLoginReplyTOB r{};
-		r.base_reply.success = true;
-		r.base_reply.error_str_id = 101; // No Error
-		r.unk1 = 0;
-		r.unk2 = 0;
-		r.lsid = a.id;
-		r.failed_attempts = 0;
-		r.show_player_count = server.options.IsShowPlayerCountEnabled();
-		r.unk3 = 0;
-		r.unk4 = 0;
-		memcpy(r.key, m_key.c_str(), m_key.size());
+	// not serializing any of the variable length strings so just use struct directly
+	PlayerLoginReply r = m_client_version == cv_tob ? PlayerLoginReply(PlayerLoginReplyTOB{}) : PlayerLoginReply(PlayerLoginReplyOld{});
 
-		//todo: needs to be fixed
-		//SendExpansionPacketData(r);
+	r.set_success(true);
+	r.set_error_code(LS::ErrStr::ERROR_NONE);
+	r.set_lsid(a.id);
+	r.set_show_player_count(server.options.IsShowPlayerCountEnabled());
+	r.set_key(m_key);
 
-		char encrypted_buffer[80] = { 0 };
-
-		auto rc = eqcrypt_block((const char*)&r, sizeof(r), encrypted_buffer, 1);
-		if (rc == nullptr) {
-			LogDebug("Failed to encrypt eqcrypt block");
-		}
-
-		constexpr int outsize = sizeof(LoginBaseMessage) + sizeof(encrypted_buffer);
-		auto          outapp = std::make_unique<EQApplicationPacket>(OP_LoginAccepted, outsize);
-		outapp->WriteData(&h, sizeof(h));
-		outapp->WriteData(&encrypted_buffer, sizeof(encrypted_buffer));
-
-		m_connection->QueuePacket(outapp.get());
+	if (m_client_version != cv_tob) {
+		SendExpansionPacketData(r.old());
 	}
-	else {
-		// unencrypted
-		LoginBaseMessage h{};
-		h.sequence = m_login_base_message.sequence;
-		h.compressed = false;
-		h.encrypt_type = m_login_base_message.encrypt_type;
-		h.unk3 = m_login_base_message.unk3;
 
-		// not serializing any of the variable length strings so just use struct directly
-		PlayerLoginReply r{};
-		r.base_reply.success = true;
-		r.base_reply.error_str_id = 101; // No Error
-		r.unk1 = 0;
-		r.unk2 = 0;
-		r.lsid = a.id;
-		r.failed_attempts = 0;
-		r.show_player_count = server.options.IsShowPlayerCountEnabled();
-		r.offer_min_days = 99;
-		r.offer_min_views = -1;
-		r.offer_cooldown_minutes = 0;
-		r.web_offer_number = 0;
-		r.web_offer_min_days = 99;
-		r.web_offer_min_views = -1;
-		r.web_offer_cooldown_minutes = 0;
-		memcpy(r.key, m_key.c_str(), m_key.size());
+	char encrypted_buffer[80] = { 0 };
 
-		SendExpansionPacketData(r);
-
-		char encrypted_buffer[80] = { 0 };
-
-		auto rc = eqcrypt_block((const char*)&r, sizeof(r), encrypted_buffer, 1);
-		if (rc == nullptr) {
-			LogDebug("Failed to encrypt eqcrypt block");
-		}
-
-		constexpr int outsize = sizeof(LoginBaseMessage) + sizeof(encrypted_buffer);
-		auto          outapp = std::make_unique<EQApplicationPacket>(OP_LoginAccepted, outsize);
-		outapp->WriteData(&h, sizeof(h));
-		outapp->WriteData(&encrypted_buffer, sizeof(encrypted_buffer));
-
-		m_connection->QueuePacket(outapp.get());
+	auto rc = eqcrypt_block(r.data(), r.size(), encrypted_buffer, 1);
+	if (rc == nullptr) {
+		LogDebug("Failed to encrypt eqcrypt block");
 	}
+
+	constexpr int outsize = sizeof(LoginBaseMessage) + sizeof(encrypted_buffer);
+	auto          outapp = std::make_unique<EQApplicationPacket>(OP_LoginAccepted, outsize);
+	outapp->WriteData(&h, sizeof(h));
+	outapp->WriteData(&encrypted_buffer, sizeof(encrypted_buffer));
+
+	m_connection->QueuePacket(outapp.get());
 
 	m_client_status = cs_logged_in;
 }
 
-void Client::SendExpansionPacketData(PlayerLoginReply &plrs)
+void Client::SendExpansionPacketData(PlayerLoginReplyOld &plrs)
 {
 	SerializeBuffer buf;
 	//from eqlsstr_us.txt id of each expansion, excluding 'Everquest'

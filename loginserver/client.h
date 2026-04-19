@@ -38,7 +38,7 @@ public:
 	// Titanium uses the encrypted data block to contact the expansion (You own xxx:) and the max expansions (of yyy)
 	// Rof uses a separate data packet specifically for the expansion data
 	// Live, as of July 2021 uses a similar but slightly different seperate data packet
-	void SendExpansionPacketData(PlayerLoginReply &plrs);
+	void SendExpansionPacketData(PlayerLoginReplyOld &plrs);
 	void SendPlayToWorld(const char *data);
 	void SendServerListPacket(uint32 seq);
 	void SendPlayResponse(EQApplicationPacket *outapp);

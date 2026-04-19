@@ -194,7 +194,7 @@ ClientManager::ClientManager()
 
 	if (!m_tob_ops->LoadOpcodes(opcodes_path.c_str())) {
 		LogError(
-			"ClientManager fatal error: couldn't load opcodes for Steam Latest file [{}]",
+			"ClientManager fatal error: couldn't load opcodes for TOB file [{}]",
 			server.config.GetVariableString("client_configuration", "tob_opcodes", "login_opcodes.conf")
 		);
 
@@ -204,7 +204,7 @@ ClientManager::ClientManager()
 	m_tob_stream->OnNewConnection(
 		[this](std::shared_ptr<EQ::Net::EQStream> stream) {
 			LogInfo(
-				"New Steam Latest client connection from [{}:{}]",
+				"New TOB client connection from [{}:{}]",
 				long2ip(stream->GetRemoteIP()),
 				stream->GetRemotePort()
 			);

@@ -219,7 +219,7 @@ const char* EQ::versions::MobVersionName(MobVersion mob_version)
 	case MobVersion::OfflineRoF2:
 		return "Offline RoF2";
 	case MobVersion::OfflineTOB:
-		return "Offline Steam Latest";
+		return "Offline TOB";
 	default:
 		return "Invalid Version";
 	};
@@ -505,7 +505,7 @@ uint32 EQ::expansions::ConvertExpansionToExpansionBit(Expansion expansion)
 		return bitLS;
 	case Expansion::TOB:
 		return bitTOB;
-		
+
 	default:
 		return bitEverQuest;
 	}
