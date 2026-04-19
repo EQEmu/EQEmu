@@ -62,7 +62,7 @@ struct PlayerLoginReplyOld {
 	int32_t offer_cooldown_minutes;     // guess (default: 0)
 	int32_t web_offer_number;           // web order view number, 0 nothing (default: 0)
 	int32_t web_offer_min_days;         // number of days to show offer (based on first offer time in client eqls ini) (default: 99)
-	int32_t web_offer_min_views;        // mininum views, -1 for no minimum, 0 for never shows (based on client eqls ini) (default: -1)
+	int32_t web_offer_min_views;        // minimum views, -1 for no minimum, 0 for never shows (based on client eqls ini) (default: -1)
 	int32_t web_offer_cooldown_minutes; // minimum minutes between offers (based on last offer time in client eqls ini) (default: 0)
 	char    username[1];                // variable length, if not empty client attempts to re-login to server select when quitting from char select and sends this in a struct
 	char    unknown[1];                 // variable length, password unlikely? client doesn't send this on re-login from char select
@@ -108,6 +108,7 @@ static_assert(std::is_standard_layout_v<PlayerLoginReplyTOB>);
 
 class PlayerLoginReply {
 	std::variant<PlayerLoginReplyOld, PlayerLoginReplyTOB> v_;
+	static_assert(sizeof(PlayerLoginReplyOld::key) == sizeof(PlayerLoginReplyTOB::key), "Old and TOB key buffers must match in size due to code assumptions");
 public:
 	PlayerLoginReply(PlayerLoginReplyOld s) : v_(s) {}
 	PlayerLoginReply(PlayerLoginReplyTOB s) : v_(s) {}
@@ -129,6 +130,11 @@ public:
 			const size_t n = s.copy(st.key, sizeof(st.key) - 1);
 			st.key[n] = '\0';
 		}, v_);
+	}
+	template<size_t N>
+	void set_key(const char (&s)[N]) {
+		static_assert(N != (sizeof(PlayerLoginReplyTOB::key) - 1), "Key literal does not match reply struct's key buffer (without null terminator)");
+		set_key(std::string_view{s, N - 1});
 	}
 
 	PlayerLoginReplyOld&       old()       { return std::get<PlayerLoginReplyOld>(v_); }
