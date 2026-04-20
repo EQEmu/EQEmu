@@ -10689,7 +10689,8 @@ void Client::Handle_OP_MercenaryHire(const EQApplicationPacket *app)
 		Merc* current_merc = GetMerc();
 		if (current_merc) {
 			current_merc->Suspend();
-			SetMerc(nullptr);
+			current_merc->SetOwnerID(0);
+			SetMercID(0);
 		}
 
 		// Select a free slot for the new hire

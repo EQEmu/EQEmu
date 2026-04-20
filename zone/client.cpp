@@ -7950,7 +7950,7 @@ void Client::SendMercPersonalInfo()
 			return;
 		}
 
-		uint32 packetSize = sizeof(MercenaryDataUpdate_Struct) + (mercCount * sizeof(MercenaryData_Struct));
+		uint32 packetSize = sizeof(MercenaryDataUpdate_Struct);
 		auto outapp = new EQApplicationPacket(OP_MercenaryDataUpdate, packetSize);
 		memset(outapp->pBuffer, 0, packetSize);
 		auto mdus   = (MercenaryDataUpdate_Struct *) outapp->pBuffer;
