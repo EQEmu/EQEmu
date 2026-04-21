@@ -2278,15 +2278,19 @@ namespace RoF2
 		// There are 2 different sized versions of this packet depending if a merc is hired or not
 		if (emu->MercStatus >= 0)
 		{
-			PacketSize += sizeof(structs::MercenaryDataUpdate_Struct) + (sizeof(structs::MercenaryData_Struct) - sizeof(structs::MercenaryStance_Struct)) * emu->MercCount;
-
+			// Per-merc size: base struct minus Stances[1] and MercUnk05,
+			// then add back actual stances and name length per merc.
+			// MercUnk05 is a single trailing field after all mercs.
+			PacketSize += sizeof(structs::MercenaryDataUpdate_Struct);
 			uint32 r;
 			uint32 k;
 			for (r = 0; r < emu->MercCount; r++)
 			{
+				PacketSize += sizeof(structs::MercenaryData_Struct) - sizeof(structs::MercenaryStance_Struct) - sizeof(uint32); // subtract Stances[1] and MercUnk05
 				PacketSize += sizeof(structs::MercenaryStance_Struct) * emu->MercData[r].StanceCount;
 				PacketSize += strlen(emu->MercData[r].MercName);	// Null Terminator size already accounted for in the struct
 			}
+			PacketSize += sizeof(uint32); // MercUnk05 - trailing field after all mercs
 
 			outapp = new EQApplicationPacket(OP_MercenaryDataUpdate, PacketSize);
 			Buffer = (char *)outapp->pBuffer;
@@ -2312,15 +2316,14 @@ namespace RoF2
 				VARSTRUCT_ENCODE_TYPE(uint32, Buffer, emu->MercData[r].StanceCount);
 				VARSTRUCT_ENCODE_TYPE(int32, Buffer, emu->MercData[r].MercUnk03);
 				VARSTRUCT_ENCODE_TYPE(uint8, Buffer, emu->MercData[r].MercUnk04);
-				//VARSTRUCT_ENCODE_TYPE(uint8, Buffer, 0);	// MercName
 				VARSTRUCT_ENCODE_STRING(Buffer, emu->MercData[r].MercName);
 				for (k = 0; k < emu->MercData[r].StanceCount; k++)
 				{
 					VARSTRUCT_ENCODE_TYPE(uint32, Buffer, emu->MercData[r].Stances[k].StanceIndex);
 					VARSTRUCT_ENCODE_TYPE(uint32, Buffer, emu->MercData[r].Stances[k].Stance);
 				}
-				VARSTRUCT_ENCODE_TYPE(uint32, Buffer, 1);	// MercUnk05
 			}
+			VARSTRUCT_ENCODE_TYPE(uint32, Buffer, emu->MercData[0].MercUnk05);	// MercUnk05 - trailing field (unlocked slot count)
 		}
 		else
 		{

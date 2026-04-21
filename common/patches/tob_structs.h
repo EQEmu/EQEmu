@@ -12,7 +12,7 @@ namespace TOB {
 		static const uint32 MAX_PP_UNKNOWN_ABILITIES = 25;
 		static const uint32 MAX_RECAST_TYPES = 25;
 		static const uint32 MAX_ITEM_RECAST_TYPES = 100;
-		static const uint32 BLOCKED_BUFF_COUNT = 40;
+		static const uint32 BLOCKED_BUFF_COUNT = 60; // this might not be needed?
 		static const uint32 BUFF_COUNT = 62;
 		static const uint32 MAX_PP_LANGUAGE = 32;
 #pragma pack(1)
@@ -274,7 +274,6 @@ namespace TOB {
 			Unknown39,
 			Unknown40,
 			Unknown41,
-			Unknown42,
 			Birthdate,
 			EncounterLock
 		};
@@ -286,6 +285,15 @@ namespace TOB {
 			/*0008*/ uint64 parameter;		// Type of data sent
 			/*0016*/ uint64 lock_id; //the only place client uses this as far as I can tell is when you send 0x2c as type in which case it sets LockID = this
 			/*0024*/
+		};
+
+		struct ChangeSize_Struct
+		{
+			/*00*/ uint32 EntityID;
+			/*04*/ float Size;
+			/*08*/ float CameraOffset;
+			/*12*/ float AnimationSpeedRelated;
+			/*16*/
 		};
 
 		struct Spawn_Struct_Bitfields
@@ -400,14 +408,14 @@ namespace TOB {
 			/*056*/ float X;
 			/*060*/ float Z;
 			/*064*/ float Heading;
-			/*068*/ float DoorAngle; //not sure if this is actually a float; it might be a uint32 like DefaultDoorAngle
+			/*068*/ float DoorAngle;
 			/*072*/ uint32 ScaleFactor; //rof2's size
 			/*076*/ uint32 Unknown76; //client doesn't seem to read this
 			/*080*/ uint8 Id; //doorid
 			/*081*/ uint8 Type; //opentype
 			/*082*/ uint8 State; //state_at_spawn
 			/*083*/ uint8 DefaultState; //invert_state
-			/*084*/ int32 Param; //door_param
+			/*084*/ int32 Param; //door_param (spell id?)
 			/*088*/ uint32 AdventureDoorId;
 			/*092*/ uint32 DynDoorID;
 			/*096*/ uint32 RealEstateDoorID;
@@ -495,8 +503,8 @@ namespace TOB {
 
 		struct ExpUpdate_Struct
 		{
-			/*000*/ uint64 exp; //This is exp % / 1000 now; eg 69250 = 69.25%
-			/*008*/ uint64 unknown; //unclear, I didn't see the client actually read this value but i might have missed it
+			/*000*/ uint64 exp; // This is exp % / 1000 now; eg 69250 = 69.25%
+			/*008*/ uint64 unknown; // if this is the value "2", it opens up the tip window
 		};
 
 		struct DeleteSpawn_Struct
@@ -508,15 +516,14 @@ namespace TOB {
 
 		//OP_SetServerFilter
 		struct SetServerFilter_Struct {
-			uint32 filters[68];
+			uint32 filters[69];
 		};
 
 		// Was new to RoF2, doesn't look changed
 		// The padding is because these structs are padded to the default 4 bytes
 		struct InventorySlot_Struct
 		{
-			/*000*/	int16 Type;
-			/*002*/	int16 Padding1;
+			/*000*/	int32 Type;
 			/*004*/	int16 Slot;
 			/*006*/	int16 SubIndex;
 			/*008*/	int16 AugIndex;
@@ -547,15 +554,6 @@ namespace TOB {
 			/*022*/ uint8	unknown022;				// Padding probably
 			/*023*/ uint8	unknown023;				// Padding probably
 			/*024*/
-		};
-
-		struct ChangeSize_Struct
-		{
-			/*00*/ uint32 EntityID;
-			/*04*/ float Size;
-			/*08*/ uint32 Unknown08;	// Observed 0
-			/*12*/ float Unknown12;		// Observed 1.0f
-			/*16*/
 		};
 
 		struct SpawnHPUpdate_Struct
@@ -677,9 +675,16 @@ namespace TOB {
 			/*000*/	uint32 spell_id;
 			/*004*/	uint16 caster_id;
 			/*006*/	uint32 cast_time; // in miliseconds
-			/*010*/	uint32 unknown0a; // I think this is caster effective level but im not sure. live always sends 0
+			/*010*/	uint32 unknown0a; // I think this is caster effective level but im not sure. live always sends 0. The client uses this for the spell link
 			/*014*/	uint8 unknown0e; // 0 will short circuit the cast, seen 1 from live usually, maybe related to interrupts or particles or something
 			/*015*/
+		};
+
+		struct MemorizeSpell_Struct {
+			uint32 slot;		// Spot in the spell book/memorized slot
+			uint32 spell_id;	// Spell id (200 or c8 is minor healing, etc)
+			uint32 scribing;	// -1 refreshes book, 0 scribe to book, 2 end mem, 1 start mem, 3 unmem, 4 set activated item keyring -- client will send back 2 if a 0 operation updated a memorized spell of the same group + subgroup
+			uint32 reduction;	// lower reuse (only used if scribing is 4)
 		};
 
 		//I've observed 5 s16 that are all -1.
@@ -706,6 +711,13 @@ namespace TOB {
 			/*34*/  float z_pos;
 			/*38*/	uint8 unknown; //not sure, might also be before y_pos; only ever seen zero for both but should be easy to figure out later
 			/*39*/
+		};
+
+		struct InterruptCast_Struct
+		{
+			uint32 spawnid;
+			uint32 messageid;
+			char	message[0];
 		};
 
 		struct EQAffectSlot_Struct {
@@ -749,10 +761,10 @@ namespace TOB {
 		struct ManaChange_Struct
 		{
 			uint32 new_mana;
-			uint32 stamina;
+			uint32 stamina; // endurance
 			uint32 spell_id;
 			uint32 keepcasting;
-			int32 slot;
+			int32 slot; // gem slot
 		};
 
 		//This is what we call OP_Action
@@ -819,9 +831,8 @@ namespace TOB {
 		struct AA_Array
 		{
 			uint32 AA;
-			uint32 value;
+			uint32 value; // points spent
 			uint32 charges;	// expendable charges
-			bool bUnknown0x0c; // added test winter 2024; removed sometime in summer 2024
 		};
 
 		struct AATable_Struct {
@@ -834,16 +845,7 @@ namespace TOB {
 			/*000*/	uint32 experience;
 			/*004*/	uint32 unspent;
 			/*008*/	uint8 percentage;
-			/*009*/	uint8 unknown009[3];
-		};
-
-		struct BlockedBuffs_Struct
-		{
-			/*000*/ int32 SpellID[BLOCKED_BUFF_COUNT];
-			/*120*/ uint32 Count;
-			/*124*/ uint8 Pet;
-			/*125*/ uint8 Initialise;
-			/*126*/ uint16 Flags;
+			/*009*/	uint8 padding[3];
 		};
 
 		struct ZonePlayerToBind_Struct {

@@ -200,8 +200,8 @@ namespace TOB
 
 		const int16 SLOT_INVALID = IINVALID;
 		const int16 SLOT_BEGIN = INULL;
-		const int16 SLOT_END = 9; //254;
-		const int16 SLOT_COUNT = 10; //255; // server Size will be 255..unsure what actual client is (test)
+		const int16 SLOT_END = 199;
+		const int16 SLOT_COUNT = 200; // server Size will be 200..unsure what actual client is (test)
 
 		const char* GetInvBagIndexName(int16 bag_index);
 

@@ -102,10 +102,10 @@ int Mob::GetBaseSkillDamage(EQ::skills::SkillType skill, Mob *target)
 			}
 
 			if (RuleB(Character, ItemExtraSkillDamageCalcAsPercent) && GetSkillDmgAmt(skill) > 0) {
-				return static_cast<int>(ac_bonus + skill_bonus) * std::abs(GetSkillDmgAmt(skill) / 100);
+				return (base + static_cast<int>(ac_bonus + skill_bonus)) * std::abs(GetSkillDmgAmt(skill) / 100);
 			}
 
-			return static_cast<int>(ac_bonus + skill_bonus);
+			return base + static_cast<int>(ac_bonus + skill_bonus);
 		}
 		case EQ::skills::SkillKick:
 		case EQ::skills::SkillRoundKick: {
@@ -128,10 +128,10 @@ int Mob::GetBaseSkillDamage(EQ::skills::SkillType skill, Mob *target)
 			}
 
 			if (RuleB(Character, ItemExtraSkillDamageCalcAsPercent) && GetSkillDmgAmt(skill) > 0) {
-				return static_cast<int>(ac_bonus + skill_bonus) * std::abs(GetSkillDmgAmt(skill) / 100);
+				return (base + static_cast<int>(ac_bonus + skill_bonus)) * std::abs(GetSkillDmgAmt(skill) / 100);
 			}
 
-			return static_cast<int>(ac_bonus + skill_bonus);
+			return base + static_cast<int>(ac_bonus + skill_bonus);
 		}
 		case EQ::skills::SkillBash: {
 			float                  skill_bonus = skill_level / 10.0f;
@@ -160,10 +160,10 @@ int Mob::GetBaseSkillDamage(EQ::skills::SkillType skill, Mob *target)
 			}
 
 			if (RuleB(Character, ItemExtraSkillDamageCalcAsPercent) && GetSkillDmgAmt(skill) > 0) {
-				return static_cast<int>(ac_bonus + skill_bonus) * std::abs(GetSkillDmgAmt(skill) / 100);
+				return (base + static_cast<int>(ac_bonus + skill_bonus)) * std::abs(GetSkillDmgAmt(skill) / 100);
 			}
 
-			return static_cast<int>(ac_bonus + skill_bonus);
+			return base + static_cast<int>(ac_bonus + skill_bonus);
 		}
 		case EQ::skills::SkillBackstab: {
 			float skill_bonus = static_cast<float>(skill_level) * 0.02f;

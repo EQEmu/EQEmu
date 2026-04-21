@@ -94,6 +94,9 @@
 #include <algorithm>
 #include <cassert>
 
+#include "common/links.h"
+#include "common/packet_dump.h"
+
 extern Zone         *zone;
 extern volatile bool is_zone_loaded;
 extern WorldServer   worldserver;
@@ -319,6 +322,10 @@ bool Mob::DoCastSpell(uint16 spell_id, uint16 target_id, CastingSlot slot,
 	// note that CheckFizzle itself doesn't let NPCs fizzle,
 	// but this code allows for it.
 	if (slot < CastingSlot::MaxGems && !CheckFizzle(spell_id)) {
+		/*
+			MessageFormat: You miss a note, bringing your song to a close! (TOB: You miss a note, bringing your %1 to a close!)
+			MessageFormat: Your spell fizzles! (TOB: Your %1 spell fizzles!)
+		*/
 		int fizzle_msg = IsBardSong(spell_id) ? MISS_NOTE : SPELL_FIZZLE;
 
 		uint32 use_mana = ((spells[spell_id].mana) / 4);
@@ -328,10 +335,16 @@ bool Mob::DoCastSpell(uint16 spell_id, uint16 target_id, CastingSlot slot,
 		Mob::SetMana(GetMana() - use_mana); // We send StopCasting which will update mana
 		StopCasting();
 
-		MessageString(Chat::SpellFailure, fizzle_msg);
+		// TODO: can handle spell name overrides here
+		std::string spell_name(GetSpellName(spell_id));
+		std::string spell_link = Links::FormatSpellLink(spell_id, spell_name);
+
+		// pre-TOB clients will just discard the extra argument here, so don't worry about patching them out in patches
+		MessageString(Chat::SpellFailure, fizzle_msg, spell_link.c_str());
 
 		/**
 		 * Song Failure message
+		 * pre-TOB clients will just discard the extra argument here, so don't worry about patching them out in patches
 		 */
 		entity_list.FilteredMessageCloseString(
 			this,
@@ -342,11 +355,11 @@ bool Mob::DoCastSpell(uint16 spell_id, uint16 target_id, CastingSlot slot,
 			(fizzle_msg == MISS_NOTE ? MISSED_NOTE_OTHER : SPELL_FIZZLE_OTHER),
 			0,
 			/*
-				MessageFormat: You miss a note, bringing your song to a close! (if missed note)
-				MessageFormat: A missed note brings %1's song to a close!
-				MessageFormat: %1's spell fizzles!
+				MessageFormat: A missed note brings %1's song to a close! (TOB: A missed note brings %1's %2 to a close!)
+				MessageFormat: %1's spell fizzles! (TOB: %1's %2 spell fizzles!)
 			*/
-			GetName()
+			GetName(),
+			spell_link.c_str()
 		);
 
 		TryTriggerOnCastRequirement();
@@ -1299,14 +1312,20 @@ void Mob::InterruptSpell(uint16 message, uint16 color, uint16 spellid)
 	if(!message)
 		message = IsBardSong(spellid) ? SONG_ENDS_ABRUPTLY : INTERRUPT_SPELL;
 
+	// TODO: can handle spell name overrides here
+	std::string spellname(GetSpellName(spellid));
+	std::string spelllink = Links::FormatSpellLink(spellid, spellname);
+
 	// clients need some packets
 	if (IsClient() && message != SONG_ENDS)
 	{
 		// the interrupt message
-		outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct));
+		outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + spelllink.size() + 1);
 		InterruptCast_Struct* ic = (InterruptCast_Struct*) outapp->pBuffer;
 		ic->messageid = message;
 		ic->spawnid = GetID();
+		// pre-TOB clients will just discard the extra argument here, so don't worry about patching them out in patches
+		fmt::format_to_n(ic->message, spelllink.size(), "{}", spelllink);
 		outapp->priority = 5;
 		CastToClient()->QueuePacket(outapp);
 		safe_delete(outapp);
@@ -1336,11 +1355,12 @@ void Mob::InterruptSpell(uint16 message, uint16 color, uint16 spellid)
 	}
 
 	// this is the actual message, it works the same as a formatted message
-	outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(GetCleanName()) + 1);
+	outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(GetCleanName()) + spelllink.size() + 2);
 	InterruptCast_Struct* ic = (InterruptCast_Struct*) outapp->pBuffer;
 	ic->messageid = message_other;
 	ic->spawnid = GetID();
-	strcpy(ic->message, GetCleanName());
+	// pre-TOB clients will just discard the extra argument here, so don't worry about patching them out in patches
+	fmt::format_to_n(ic->message, sizeof(GetCleanName()) + spelllink.size() + 1, "{}\x00{}", GetCleanName(), spelllink);
 	entity_list.QueueCloseClients(this, outapp, true, RuleI(Range, SongMessages), 0, true, IsClient() ? FilterPCSpells : FilterNPCSpells);
 	safe_delete(outapp);
 

@@ -734,6 +734,8 @@ set(common_headers
     util/uuid.h
     version.h
     zone_store.h
+		links.h
+		links.cpp
 )
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${common_sources})

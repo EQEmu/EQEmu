@@ -23,7 +23,9 @@
 #include <numeric>
 #include <cassert>
 #include <cinttypes>
+#include <set>
 
+#include "common/packet_dump.h"
 #include "world/sof_char_create_data.h"
 
 namespace TOB
@@ -144,6 +146,20 @@ namespace TOB
 #include "ss_define.h"
 
 	// ENCODE methods
+	ENCODE(OP_AAExpUpdate) {
+		ENCODE_LENGTH_EXACT(AltAdvStats_Struct);
+		SETUP_DIRECT_ENCODE(AltAdvStats_Struct, structs::AltAdvStats_Struct);
+
+		//later we should change the underlying server to use this more accurate value
+		//and encode the 330 in the other patches
+		eq->experience = emu->experience * 100000 / 330;
+
+		OUT(unspent);
+		OUT(percentage);
+
+		FINISH_ENCODE();
+	}
+
 	ENCODE(OP_Action) {
 		ENCODE_LENGTH_EXACT(Action_Struct);
 		SETUP_DIRECT_ENCODE(Action_Struct, structs::MissileHitInfo);
@@ -217,19 +233,22 @@ namespace TOB
 
 	ENCODE(OP_BlockedBuffs)
 	{
-		ENCODE_LENGTH_EXACT(BlockedBuffs_Struct);
-		SETUP_DIRECT_ENCODE(BlockedBuffs_Struct, structs::BlockedBuffs_Struct);
+		// Blocked buffs are a major change. They are stored in a resizable array in TOB, so this sends size, then
+		// spells, then the final two bools -- see 0x140202750
+		SETUP_VAR_ENCODE(BlockedBuffs_Struct);
 
-		for (uint32 i = 0; i < BLOCKED_BUFF_COUNT; ++i)
-			eq->SpellID[i] = emu->SpellID[i];
+		// size is uint32 + count * int32 + uint8 + uint8
+		uint32 sz = 6 + emu->Count * 4;
+		__packet->size = sz;
+		__packet->pBuffer = new unsigned char[sz];
+		memset(__packet->pBuffer, 0, sz);
 
-		for (uint32 i = BLOCKED_BUFF_COUNT; i < structs::BLOCKED_BUFF_COUNT; ++i)
-			eq->SpellID[i] = -1;
+		__packet->WriteUInt32(emu->Count);
+		for (int i = 0; i < emu->Count; i++)
+			__packet->WriteSInt32(emu->SpellID[i]);
 
-		OUT(Count);
-		OUT(Pet);
-		OUT(Initialise);
-		OUT(Flags);
+		__packet->WriteUInt8(emu->Pet);
+		__packet->WriteUInt8(emu->Initialise);
 
 		FINISH_ENCODE();
 	}
@@ -333,6 +352,7 @@ namespace TOB
 
 	ENCODE(OP_CastSpell)
 	{
+		// I don't think the client handles this at all, it only sends the cast packet
 		ENCODE_LENGTH_EXACT(CastSpell_Struct);
 		SETUP_DIRECT_ENCODE(CastSpell_Struct, structs::CastSpell_Struct);
 
@@ -453,7 +473,7 @@ namespace TOB
 
 		int item_count = in->size / sizeof(EQ::InternalSerializedItem_Struct);
 		if (!item_count || (in->size % sizeof(EQ::InternalSerializedItem_Struct)) != 0) {
-			Log(Logs::General, Logs::Netcode, "[STRUCTS] Wrong size on outbound %s: Got %d, expected multiple of %d",
+			LogNetcode("[STRUCTS] Wrong size on outbound {}: Got {}, expected multiple of {}",
 				opcodes->EmuToName(in->GetOpcode()), in->size, sizeof(EQ::InternalSerializedItem_Struct));
 
 			delete in;
@@ -650,8 +670,8 @@ namespace TOB
 		}
 
 		SerializeBuffer buffer;
-		buffer.WriteUInt32(emu->unknown0);
-		buffer.WriteUInt8(0); // Observed
+		buffer.WriteUInt32(0); // This is a string written like the message arrays
+		buffer.WriteUInt8(emu->unknown0);
 		buffer.WriteUInt32(emu->string_id);
 		buffer.WriteUInt32(emu->type);
 
@@ -939,6 +959,27 @@ namespace TOB
 		FINISH_ENCODE();
 	}
 
+	ENCODE(OP_MemorizeSpell) {
+		ENCODE_LENGTH_EXACT(MemorizeSpell_Struct);
+		SETUP_DIRECT_ENCODE(MemorizeSpell_Struct, structs::MemorizeSpell_Struct);
+
+		// in TOB, 2 is "finish memming" so that becomes 1 in emu and 3 is "unmem" which becomes 2
+		if (emu->scribing == 1)
+			eq->scribing = 2;
+		else if (emu->scribing == 2)
+			eq->scribing = 3;
+		else if (emu->scribing == 3)
+			eq->scribing = 4;
+		else
+			OUT(scribing);
+
+		OUT(slot);
+		OUT(spell_id);
+		OUT(reduction);
+
+		FINISH_ENCODE();
+	}
+
 	ENCODE(OP_MobHealth) {
 		ENCODE_LENGTH_EXACT(SpawnHPUpdate_Struct2);
 		SETUP_DIRECT_ENCODE(SpawnHPUpdate_Struct2, structs::MobHealth_Struct);
@@ -981,6 +1022,7 @@ namespace TOB
 	ENCODE(OP_NewSpawn) { ENCODE_FORWARD(OP_ZoneSpawns); }
 
 	ENCODE(OP_NewZone) {
+		// zoneHeader
 		EQApplicationPacket* in = *p;
 		*p = nullptr;
 
@@ -2305,7 +2347,6 @@ namespace TOB
 		eq->container_slot = ServerToTOBSlot(emu->unknown1);
 		structs::InventorySlot_Struct TOBSlot;
 		TOBSlot.Type = 8;	// Observed
-		TOBSlot.Padding1 = 0;
 		TOBSlot.Slot = 0xffff;
 		TOBSlot.SubIndex = 0xffff;
 		TOBSlot.AugIndex = 0xffff;
@@ -2332,12 +2373,11 @@ namespace TOB
 		eq->aapoints_assigned[4] = 0;
 		eq->aapoints_assigned[5] = 0;
 
-		for (uint32 i = 0; i < MAX_PP_AA_ARRAY; ++i)
+		for (uint32 i = 0; i < structs::MAX_PP_AA_ARRAY; ++i)
 		{
 			eq->aa_list[i].AA = emu->aa_list[i].AA;
 			eq->aa_list[i].value = emu->aa_list[i].value;
 			eq->aa_list[i].charges = emu->aa_list[i].charges;
-			eq->aa_list[i].bUnknown0x0c = false;
 		}
 
 		FINISH_ENCODE();
@@ -2386,7 +2426,7 @@ namespace TOB
 		s32 Desc;
 		*/
 
-		buffer.WriteUInt32(emu->id);
+		buffer.WriteUInt32(emu->id); // Index
 		buffer.WriteUInt8(1);
 		buffer.WriteInt32(emu->upper_hotkey_sid);
 		buffer.WriteInt32(emu->lower_hotkey_sid);
@@ -2903,7 +2943,7 @@ namespace TOB
 
 		buf.WriteString(new_message);
 
-		auto outapp = new EQApplicationPacket(OP_SpecialMesg, buf);
+		auto outapp = new EQApplicationPacket(OP_SpecialMesg, std::move(buf));
 
 		dest->FastQueuePacket(&outapp, ack_req);
 		delete in;
@@ -2934,14 +2974,14 @@ namespace TOB
 			return;
 		}
 	
-		auto outapp = new EQApplicationPacket(OP_ChangeSize, sizeof(ChangeSize_Struct));
+		auto outapp = new EQApplicationPacket(OP_ChangeSize, sizeof(structs::ChangeSize_Struct));
 	
-		ChangeSize_Struct* css = (ChangeSize_Struct*)outapp->pBuffer;
+		structs::ChangeSize_Struct* css = (structs::ChangeSize_Struct*)outapp->pBuffer;
 	
 		css->EntityID = sas->spawn_id;
 		css->Size = (float)sas->parameter;
-		css->Unknown08 = 0;
-		css->Unknown12 = 1.0f;
+		css->CameraOffset = 0;
+		css->AnimationSpeedRelated = 1.0f;
 	
 		dest->FastQueuePacket(&outapp, ack_req);
 		delete in;
@@ -3574,18 +3614,28 @@ namespace TOB
 
 	DECODE(OP_BlockedBuffs)
 	{
-		DECODE_LENGTH_EXACT(structs::BlockedBuffs_Struct);
-		SETUP_DIRECT_DECODE(BlockedBuffs_Struct, structs::BlockedBuffs_Struct);
+		uint32 count = __packet->ReadUInt32();
+		std::vector<int32> blocked_spell_ids;
+		blocked_spell_ids.reserve(count);
+		for (int i = 0; i < count; ++i)
+			blocked_spell_ids.push_back(static_cast<int32>(__packet->ReadUInt32()));
 
-		for (uint32 i = 0; i < BLOCKED_BUFF_COUNT; ++i)
-			emu->SpellID[i] = eq->SpellID[i];
+		bool pet = __packet->ReadUInt8() == 1;
+		bool init = __packet->ReadUInt8() == 1;
 
-		IN(Count);
-		IN(Pet);
-		IN(Initialise);
-		IN(Flags);
+		__packet->SetReadPosition(0); // reset the packet read to pass it along
 
-		FINISH_DIRECT_DECODE();
+		__packet->size = sizeof(BlockedBuffs_Struct);
+		__packet->pBuffer = new unsigned char[__packet->size]{};
+		BlockedBuffs_Struct* emu = (BlockedBuffs_Struct*)__packet->pBuffer;
+
+		memset(emu->SpellID, -1, sizeof(emu->SpellID));
+		for (int i = 0; i < count; ++i)
+			emu->SpellID[i] = blocked_spell_ids[i];
+
+		emu->Count = count;
+		emu->Pet = pet;
+		emu->Initialise = init;
 	}
 
 	DECODE(OP_CastSpell)
@@ -3794,6 +3844,35 @@ namespace TOB
 		DECODE_FORWARD(OP_GroupInvite);
 	}
 
+	DECODE(OP_MemorizeSpell) {
+		DECODE_LENGTH_EXACT(structs::MemorizeSpell_Struct);
+		SETUP_DIRECT_DECODE(MemorizeSpell_Struct, structs::MemorizeSpell_Struct);
+
+		// TOB sends status 1 here to let the server know that it's started memming, but doesn't want a response
+		if (eq->scribing == 1) {
+			// TODO: There should be a timer set here to detect short-mem cheats, and then checked when the 2 packet is sent
+			// The previous detection will still happen on scribing == 2, the new client just handles it better
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+
+		// in TOB, 2 is "finish memming" so that becomes 1 in emu and 3 is "unmem" which becomes 2
+		if (eq->scribing == 2)
+			emu->scribing = 1;
+		else if (eq->scribing == 3)
+			emu->scribing = 2;
+		else if (eq->scribing == 4)
+			emu->scribing = 3;
+		else
+			IN(scribing);
+
+		IN(slot);
+		IN(spell_id);
+		IN(reduction);
+
+		FINISH_DIRECT_DECODE();
+	}
+
 	DECODE(OP_MoveItem)
 	{
 		DECODE_LENGTH_EXACT(structs::MoveItem_Struct);
@@ -3817,7 +3896,7 @@ namespace TOB
 
 		int r;
 		for (r = 0; r < 29; r++) {
-			// Size 68 in TOB
+			// Size 69 in TOB
 			IN(filters[r]);
 		}
 
@@ -4121,7 +4200,7 @@ namespace TOB
 		//s32 Variation;
 		//s32 NewArmorId;
 		//s32 NewArmorType;
-		buffer.WriteUInt32(item->Material);
+		buffer.WriteUInt32(item->Material); // this isn't labeled well, material is material *type*
 		buffer.WriteUInt32(0); //unsupported atm
 		buffer.WriteUInt32(item->EliteMaterial);
 		buffer.WriteUInt32(item->HerosForgeModel);
@@ -4239,8 +4318,19 @@ namespace TOB
 
 		//u8 SpellDataSkillMask[78];
 		for (int j = 0; j < 78; ++j) {
-			buffer.WriteUInt8(0); //unsure what this is exactly
+			buffer.WriteUInt8(0); // TODO: collection of ints for bitfield for each skill required to use. reads 19 ints byte by byte in the client, leave like this for further investigation
 		}
+
+
+		/* There are a static 7 spell data entries on an item:
+			Clicky
+			Proc
+			Worn
+			Focus
+			Scroll
+			Focus2
+			Blessing
+		 */
 
 		/* SpellData:
 			s32 SpellId;
@@ -4650,55 +4740,42 @@ namespace TOB
 		//ItemDefinition Item;
 		SerializeItemDefinition(buffer, item);
 
-		//u32 RealEstateArrayCount;
-		// buffer.WriteInt32(0);
-		//s32 RealEstateArray[RealEstateArrayCount];
-		
-		//bool bRealEstateItemPlaceable;
-		// buffer.WriteInt8(0);
-
 		//u32 SubContentSize;
-		uint32 subitem_count = 0;
-
 		int16 SubSlotNumber = EQ::invbag::SLOT_INVALID;
 		
 		if (slot_id_in <= EQ::invslot::GENERAL_END && slot_id_in >= EQ::invslot::GENERAL_BEGIN)
-			SubSlotNumber = EQ::invbag::GENERAL_BAGS_BEGIN + ((slot_id_in - EQ::invslot::GENERAL_BEGIN) * EQ::invbag::SLOT_COUNT);
+			SubSlotNumber = EQ::invbag::GENERAL_BAGS_BEGIN + (slot_id_in - EQ::invslot::GENERAL_BEGIN) * EQ::invbag::SLOT_COUNT;
 		else if (slot_id_in == EQ::invslot::slotCursor)
 			SubSlotNumber = EQ::invbag::CURSOR_BAG_BEGIN;
 		else if (slot_id_in <= EQ::invslot::BANK_END && slot_id_in >= EQ::invslot::BANK_BEGIN)
-			SubSlotNumber = EQ::invbag::BANK_BAGS_BEGIN + ((slot_id_in - EQ::invslot::BANK_BEGIN) * EQ::invbag::SLOT_COUNT);
+			SubSlotNumber = EQ::invbag::BANK_BAGS_BEGIN + (slot_id_in - EQ::invslot::BANK_BEGIN) * EQ::invbag::SLOT_COUNT;
 		else if (slot_id_in <= EQ::invslot::SHARED_BANK_END && slot_id_in >= EQ::invslot::SHARED_BANK_BEGIN)
-			SubSlotNumber = EQ::invbag::SHARED_BANK_BAGS_BEGIN + ((slot_id_in - EQ::invslot::SHARED_BANK_BEGIN) * EQ::invbag::SLOT_COUNT);
+			SubSlotNumber = EQ::invbag::SHARED_BANK_BAGS_BEGIN + (slot_id_in - EQ::invslot::SHARED_BANK_BEGIN) * EQ::invbag::SLOT_COUNT;
 		else
 			SubSlotNumber = slot_id_in; // not sure if this is the best way to handle this..leaving for now
 
 		if (SubSlotNumber != EQ::invbag::SLOT_INVALID) {
+			std::vector<std::pair<int, EQ::ItemInstance*>> subitems;
 			for (uint32 index = EQ::invbag::SLOT_BEGIN; index <= EQ::invbag::SLOT_END; ++index) {
 				EQ::ItemInstance* sub = inst->GetItem(index);
-				if (!sub)
-					continue;
-
-				++subitem_count;
+				if (sub != nullptr)
+					subitems.emplace_back(index, sub);
 			}
 
-			buffer.WriteUInt32(subitem_count);
+			buffer.WriteUInt32(subitems.size());
 
-			for (uint32 index = EQ::invbag::SLOT_BEGIN; index <= EQ::invbag::SLOT_END; ++index) {
-				EQ::ItemInstance* sub = inst->GetItem(index);
-				if (!sub)
-					continue;
-
+			// This must be guaranteed to have subitem_count members, where the index is the correct index. The client doesn't loop through all slots here
+			for (const auto& [index, subitem] : subitems) {
 				buffer.WriteUInt32(index);
-
-				SerializeItem(buffer, sub, SubSlotNumber, (depth + 1), packet_type);
+				SerializeItem(buffer, subitem, SubSlotNumber, depth + 1, packet_type);
 			}
-		}
+		} else
+			buffer.WriteUInt32(0); // no subitems, client needs to know that
 
 		//bool bCollected;
 		buffer.WriteInt8(0); //unsupported atm
 		//u64 DontKnow;
-		buffer.WriteUInt64(0); //unsupported atm
+		buffer.WriteInt64(0); //unsupported atm
 		//s32 Luck;
 		buffer.WriteInt32(0); //unsupported atm
 	}
@@ -4785,7 +4862,9 @@ namespace TOB
 				}
 				default:
 					//unsupported etag right now; just pass it as is
+					message_out.push_back('\x12');
 					message_out.append(segments[segment_iter]);
+					message_out.push_back('\x12');
 					break;
 				}
 			}
@@ -5019,8 +5098,8 @@ namespace TOB
 			TOBSlot.Slot = server_slot - EQ::invslot::WORLD_BEGIN;
 		}
 
-		Log(Logs::Detail, Logs::Netcode, "Convert Server Slot %i to TOB Slot [%i, %i, %i, %i]",
-			server_slot, TOBSlot.Type, TOBSlot.Slot, TOBSlot.SubIndex, TOBSlot.AugIndex);
+		Log(Logs::Detail, Logs::Netcode, fmt::format("Convert Server Slot {} to TOB Slot [{}, {}, {}, {}]",
+			server_slot, TOBSlot.Type, TOBSlot.Slot, TOBSlot.SubIndex, TOBSlot.AugIndex).c_str());
 
 		return TOBSlot;
 	}
@@ -5036,8 +5115,8 @@ namespace TOB
 		if (TOBSlot.Slot != invslot::SLOT_INVALID)
 			TOBSlot.Type = invtype::typeCorpse;
 
-		Log(Logs::Detail, Logs::Netcode, "Convert Server Corpse Slot %i to TOB Corpse Slot [%i, %i, %i, %i]",
-			server_corpse_slot, TOBSlot.Type, TOBSlot.Slot, TOBSlot.SubIndex, TOBSlot.AugIndex);
+		Log(Logs::Detail, Logs::Netcode, fmt::format("Convert Server Corpse Slot {} to TOB Corpse Slot [{}, {}, {}, {}]",
+			server_corpse_slot, TOBSlot.Type, TOBSlot.Slot, TOBSlot.SubIndex, TOBSlot.AugIndex).c_str());
 
 		return TOBSlot;
 	}
@@ -5077,8 +5156,8 @@ namespace TOB
 			}
 		}
 
-		Log(Logs::Detail, Logs::Netcode, "Convert Server Slot %i to TOB Typeless Slot [%i, %i, %i] (implied type: %i)",
-			server_slot, TOBSlot.Slot, TOBSlot.SubIndex, TOBSlot.AugIndex, server_type);
+		Log(Logs::Detail, Logs::Netcode, fmt::format("Convert Server Slot {} to TOB Typeless Slot [{}, {}, {}] (implied type: {})",
+			server_slot, TOBSlot.Slot, TOBSlot.SubIndex, TOBSlot.AugIndex, server_type).c_str());
 
 		return TOBSlot;
 	}
@@ -5086,8 +5165,8 @@ namespace TOB
 	static inline uint32 TOBToServerSlot(structs::InventorySlot_Struct tob_slot)
 	{
 		if (tob_slot.AugIndex < invaug::SOCKET_INVALID || tob_slot.AugIndex >= invaug::SOCKET_COUNT) {
-			Log(Logs::Detail, Logs::Netcode, "Convert TOB Slot [%i, %i, %i, %i] to Server Slot %i",
-				tob_slot.Type, tob_slot.Slot, tob_slot.SubIndex, tob_slot.AugIndex, EQ::invslot::SLOT_INVALID);
+			Log(Logs::Detail, Logs::Netcode, fmt::format("Convert TOB Slot [{}, {}, {}, {}] to Server Slot {}",
+				tob_slot.Type, tob_slot.Slot, tob_slot.SubIndex, tob_slot.AugIndex, EQ::invslot::SLOT_INVALID).c_str());
 
 			return EQ::invslot::SLOT_INVALID;
 		}
@@ -5209,8 +5288,8 @@ namespace TOB
 		}
 		}
 
-		Log(Logs::Detail, Logs::Netcode, "Convert TOB Slot [%i, %i, %i, %i] to Server Slot %i",
-			tob_slot.Type, tob_slot.Slot, tob_slot.SubIndex, tob_slot.AugIndex, server_slot);
+		Log(Logs::Detail, Logs::Netcode, fmt::format("Convert TOB Slot [{}, {}, {}, {}] to Server Slot {}",
+			tob_slot.Type, tob_slot.Slot, tob_slot.SubIndex, tob_slot.AugIndex, server_slot).c_str());
 
 		return server_slot;
 	}
@@ -5227,8 +5306,8 @@ namespace TOB
 			ServerSlot = TOBToServerCorpseMainSlot(tob_corpse_slot.Slot);
 		}
 
-		Log(Logs::Detail, Logs::Netcode, "Convert TOB Slot [%i, %i, %i, %i] to Server Slot %i",
-			tob_corpse_slot.Type, tob_corpse_slot.Slot, tob_corpse_slot.SubIndex, tob_corpse_slot.AugIndex, ServerSlot);
+		Log(Logs::Detail, Logs::Netcode, fmt::format("Convert TOB Slot [{}, {}, {}, {}] to Server Slot {}",
+			tob_corpse_slot.Type, tob_corpse_slot.Slot, tob_corpse_slot.SubIndex, tob_corpse_slot.AugIndex, ServerSlot).c_str());
 
 		return ServerSlot;
 	}
@@ -5249,8 +5328,8 @@ namespace TOB
 	static inline uint32 TOBToServerTypelessSlot(structs::TypelessInventorySlot_Struct tob_slot, int16 tob_type)
 	{
 		if (tob_slot.AugIndex < invaug::SOCKET_INVALID || tob_slot.AugIndex >= invaug::SOCKET_COUNT) {
-			Log(Logs::Detail, Logs::Netcode, "Convert TOB Typeless Slot [%i, %i, %i] (implied type: %i) to Server Slot %i",
-				tob_slot.Slot, tob_slot.SubIndex, tob_slot.AugIndex, tob_type, EQ::invslot::SLOT_INVALID);
+			Log(Logs::Detail, Logs::Netcode, fmt::format("Convert TOB Typeless Slot [{}, {}, {}] (implied type: {}) to Server Slot {}",
+				tob_slot.Slot, tob_slot.SubIndex, tob_slot.AugIndex, tob_type, EQ::invslot::SLOT_INVALID).c_str());
 
 			return EQ::invslot::SLOT_INVALID;
 		}
@@ -5363,8 +5442,8 @@ namespace TOB
 		}
 		}
 
-		Log(Logs::Detail, Logs::Netcode, "Convert TOB Typeless Slot [%i, %i, %i] (implied type: %i) to Server Slot %i",
-			tob_slot.Slot, tob_slot.SubIndex, tob_slot.AugIndex, tob_type, ServerSlot);
+		Log(Logs::Detail, Logs::Netcode, fmt::format("Convert TOB Typeless Slot [{}, {}, {}] (implied type: {}) to Server Slot {}",
+			tob_slot.Slot, tob_slot.SubIndex, tob_slot.AugIndex, tob_type, ServerSlot).c_str());
 
 		return ServerSlot;
 	}

@@ -4885,14 +4885,8 @@ bool Client::CheckCanHireMerc(Mob* merchant, uint32 template_id) {
 
 	MercTemplate* mercTemplate = zone->GetMercTemplate(template_id);
 
-	//check for suspended merc
-	if(GetMercInfo().mercid != 0 && GetMercInfo().IsSuspended) {
-		SendMercResponsePackets(6);
-		return false;
-	}
-
-	// Check if max number of mercs is already reached
-	if(GetNumberOfMercenaries() >= MAXMERCS) {
+	// Check if all merc slots are full (counts both active and suspended mercs)
+	if (GetFirstFreeMercSlot() < 0) {
 		SendMercResponsePackets(6);
 		return false;
 	}
@@ -5046,8 +5040,21 @@ void Client::SuspendMercCommand() {
 				return;
 			}
 
+			// Suspend any currently active merc before unsuspending this one
+			Merc* active_merc = GetMerc();
+			if (active_merc) {
+				active_merc->Suspend();
+				SetMerc(nullptr);
+			}
+
 			// Get merc, assign it to client & spawn
-			Merc* merc = Merc::LoadMercenary(this, &zone->merc_templates[GetMercInfo().MercTemplateID], 0, true);
+			auto tmpl_it = zone->merc_templates.find(GetMercInfo().MercTemplateID);
+			if (tmpl_it == zone->merc_templates.end()) {
+				SendMercResponsePackets(3);
+				Log(Logs::General, Logs::Mercenaries, "SuspendMercCommand Invalid template for %s.", GetName());
+				return;
+			}
+			Merc* merc = Merc::LoadMercenary(this, &tmpl_it->second, 0, true);
 			if(merc)
 			{
 				SpawnMerc(merc, false);
@@ -5119,40 +5126,56 @@ void Client::SpawnMercOnZone() {
 
 	if(database.LoadMercenaryInfo(this))
 	{
-		if(!GetMercInfo().IsSuspended)
-		{
+		// Find the active (non-suspended) merc slot, or fall back to the first owned slot
+		int active_slot = -1;
+		int first_owned_slot = -1;
+		int max_slots = std::min(RuleI(Mercs, MaxMercSlots), MAXMERCS);
+		for (int slot = 0; slot < max_slots; slot++) {
+			if (GetMercInfo(slot).mercid != 0) {
+				if (first_owned_slot < 0) {
+					first_owned_slot = slot;
+				}
+				if (!GetMercInfo(slot).IsSuspended) {
+					active_slot = slot;
+					break;
+				}
+			}
+		}
+
+		if (active_slot >= 0) {
+			SetMercSlot(static_cast<uint8>(active_slot));
 			GetMercInfo().SuspendedTime = 0;
 			// Get merc, assign it to client & spawn
-			Merc* merc = Merc::LoadMercenary(this, &zone->merc_templates[GetMercInfo().MercTemplateID], 0, true);
-			if(merc)
-			{
-				SpawnMerc(merc, false);
+			auto tmpl_it = zone->merc_templates.find(GetMercInfo().MercTemplateID);
+			if (tmpl_it != zone->merc_templates.end()) {
+				Merc* merc = Merc::LoadMercenary(this, &tmpl_it->second, 0, true);
+				if (merc) {
+					SpawnMerc(merc, false);
+				}
 			}
-			Log(Logs::General, Logs::Mercenaries, "SpawnMercOnZone Normal Merc for %s.", GetName());
-		}
-		else
-		{
+			Log(Logs::General, Logs::Mercenaries, "SpawnMercOnZone Normal Merc (slot %i) for %s.", active_slot, GetName());
+		} else if (first_owned_slot >= 0) {
+			SetMercSlot(static_cast<uint8>(first_owned_slot));
 			int32 TimeDiff = GetMercInfo().SuspendedTime - time(nullptr);
-			if (TimeDiff > 0)
-			{
-				if (!GetPTimers().Enabled(pTimerMercSuspend))
-				{
-					// Start the timer to send the packet that refreshes the Unsuspend Button
+			if (TimeDiff > 0) {
+				if (!GetPTimers().Enabled(pTimerMercSuspend)) {
 					GetPTimers().Start(pTimerMercSuspend, TimeDiff);
 				}
 			}
-			// Send Mercenary Status/Timer packet
 			SendMercTimer(GetMerc());
+			Log(Logs::General, Logs::Mercenaries, "SpawnMercOnZone Suspended Merc (slot %i) for %s.", first_owned_slot, GetName());
+		} else {
+			Log(Logs::General, Logs::Mercenaries, "SpawnMercOnZone No valid merc slots found for %s.", GetName());
+		}
 
-			Log(Logs::General, Logs::Mercenaries, "SpawnMercOnZone Suspended Merc for %s.", GetName());
+		// Send merc personal info for all owned mercs (populates the Manage tab)
+		if (GetNumberOfMercenaries() > 0) {
+			SendMercPersonalInfo();
 		}
 	}
 	else
 	{
-		// No Merc Hired
-		// RoF+ displays a message from the following packet, which seems useless
-		//SendClearMercInfo();
-		Log(Logs::General, Logs::Mercenaries, "SpawnMercOnZone Failed to load Merc Info from the Database for %s.", GetName());
+		Log(Logs::General, Logs::Mercenaries, "SpawnMercOnZone No merc info in database for %s.", GetName());
 	}
 }
 
@@ -5323,8 +5346,17 @@ bool Client::DismissMerc(uint32 MercID) {
 		GetMerc()->Depop();
 	}
 
-	SendClearMercInfo();
+	// Clear the dismissed merc's slot data so it becomes available
+	memset(&GetMercInfo(), 0, sizeof(MercInfo));
+
 	SetMerc(nullptr);
+
+	// Update the client with remaining mercs or clear if none left
+	if (GetNumberOfMercenaries() > 0) {
+		SendMercPersonalInfo();
+	} else {
+		SendClearMercInfo();
+	}
 
 	return Dismissed;
 }
@@ -5577,6 +5609,17 @@ uint8 Client::GetNumberOfMercenaries()
 	}
 
 	return count;
+}
+
+int Client::GetFirstFreeMercSlot()
+{
+	int max_slots = std::min(RuleI(Mercs, MaxMercSlots), MAXMERCS);
+	for (int slot_id = 0; slot_id < max_slots; slot_id++) {
+		if (m_mercinfo[slot_id].mercid == 0) {
+			return slot_id;
+		}
+	}
+	return -1;
 }
 
 void Merc::SetMercData( uint32 template_id ) {

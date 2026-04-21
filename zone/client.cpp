@@ -1037,7 +1037,7 @@ bool Client::Save(uint8 iCommitNow) {
 	}
 
 	if (dead || (!GetMerc() && !GetMercInfo().IsSuspended)) {
-		memset(&m_mercinfo, 0, sizeof(struct MercInfo));
+		memset(&m_mercinfo, 0, sizeof(m_mercinfo));
 	}
 
 	m_pp.lastlogin = time(nullptr);
@@ -7940,75 +7940,125 @@ void Client::SendWebLink(const char *website)
 
 void Client::SendMercPersonalInfo()
 {
-	uint32 mercTypeCount = 1;
-	uint32 mercCount = 1; //TODO: Un-hardcode this and support multiple mercs like in later clients than SoD.
-	uint32 i = 0;
 	uint32 altCurrentType = 19; //TODO: Implement alternate currency purchases involving mercs!
 
-	MercTemplate *mercData = &zone->merc_templates[GetMercInfo().MercTemplateID];
-
-	int stancecount = 0;
-	stancecount += zone->merc_stance_list[GetMercInfo().MercTemplateID].size();
-	if(stancecount > MAX_MERC_STANCES || mercCount > MAX_MERC || mercTypeCount > MAX_MERC_GRADES)
-	{
-		Log(Logs::General, Logs::Mercenaries, "SendMercPersonalInfo canceled: (%i) (%i) (%i) for %s", stancecount, mercCount, mercTypeCount, GetName());
-		SendMercMerchantResponsePacket(0);
-		return;
-	}
-
 	if (ClientVersion() >= EQ::versions::ClientVersion::RoF) {
-		auto outapp = new EQApplicationPacket(OP_MercenaryDataUpdate, sizeof(MercenaryDataUpdate_Struct));
-		auto mdus   = (MercenaryDataUpdate_Struct *) outapp->pBuffer;
-
-		mdus->MercStatus                    = 0;
-		mdus->MercCount                     = mercCount;
-		mdus->MercData[i].MercID            = mercData->MercTemplateID;
-		mdus->MercData[i].MercType          = mercData->MercType;
-		mdus->MercData[i].MercSubType       = mercData->MercSubType;
-		mdus->MercData[i].PurchaseCost      = Merc::CalcPurchaseCost(mercData->MercTemplateID, GetLevel(), 0);
-		mdus->MercData[i].UpkeepCost        = Merc::CalcUpkeepCost(mercData->MercTemplateID, GetLevel(), 0);
-		mdus->MercData[i].Status            = 0;
-		mdus->MercData[i].AltCurrencyCost   = Merc::CalcPurchaseCost(
-			mercData->MercTemplateID,
-			GetLevel(),
-			altCurrentType
-		);
-		mdus->MercData[i].AltCurrencyUpkeep = Merc::CalcPurchaseCost(
-			mercData->MercTemplateID,
-			GetLevel(),
-			altCurrentType
-		);
-		mdus->MercData[i].AltCurrencyType   = altCurrentType;
-		mdus->MercData[i].MercUnk01         = 0;
-		mdus->MercData[i].TimeLeft          = GetMercInfo().MercTimerRemaining;    //GetMercTimer().GetRemainingTime();
-		mdus->MercData[i].MerchantSlot      = i + 1;
-		mdus->MercData[i].MercUnk02         = 1;
-		mdus->MercData[i].StanceCount       = zone->merc_stance_list[mercData->MercTemplateID].size();
-		mdus->MercData[i].MercUnk03         = 0;
-		mdus->MercData[i].MercUnk04         = 1;
-
-		strn0cpy(mdus->MercData[i].MercName, GetMercInfo().merc_name, sizeof(mdus->MercData[i].MercName));
-
-		uint32 stanceindex = 0;
-		if (mdus->MercData[i].StanceCount != 0) {
-			auto iter = zone->merc_stance_list[mercData->MercTemplateID].begin();
-			while (iter != zone->merc_stance_list[mercData->MercTemplateID].end()) {
-				mdus->MercData[i].Stances[stanceindex].StanceIndex = stanceindex;
-				mdus->MercData[i].Stances[stanceindex].Stance      = (iter->StanceID);
-				stanceindex++;
-				++iter;
-			}
+		// Count owned mercs across all slots
+		uint32 mercCount = GetNumberOfMercenaries();
+		if (mercCount == 0) {
+			SendClearMercInfo();
+			return;
 		}
 
-		mdus->MercData[i].MercUnk05 = 1;
+		uint32 packetSize = sizeof(MercenaryDataUpdate_Struct);
+		auto outapp = new EQApplicationPacket(OP_MercenaryDataUpdate, packetSize);
+		memset(outapp->pBuffer, 0, packetSize);
+		auto mdus   = (MercenaryDataUpdate_Struct *) outapp->pBuffer;
+
+		mdus->MercStatus = 0;
+		mdus->MercCount  = mercCount;
+
+		// Lambda to populate a single merc entry in the packet
+		int max_slots = std::min(RuleI(Mercs, MaxMercSlots), MAXMERCS);
+		uint32 merc_index = 0;
+
+		auto fillMercEntry = [&](int slot) {
+			auto& info = GetMercInfo(slot);
+			if (info.mercid == 0 || merc_index >= MAX_MERC) {
+				return;
+			}
+
+			auto tmpl_it = zone->merc_templates.find(info.MercTemplateID);
+			if (tmpl_it == zone->merc_templates.end()) {
+				return;
+			}
+
+			MercTemplate *mercData = &tmpl_it->second;
+			uint32 stancecount = 0;
+			auto stance_it = zone->merc_stance_list.find(mercData->MercTemplateID);
+			if (stance_it != zone->merc_stance_list.end()) {
+				stancecount = stance_it->second.size();
+			}
+
+			if (stancecount > MAX_MERC_STANCES) {
+				Log(Logs::General, Logs::Mercenaries, "SendMercPersonalInfo: stance count %u exceeds max for slot %i, skipping", stancecount, slot);
+				return;
+			}
+
+			mdus->MercData[merc_index].MercID            = mercData->MercTemplateID;
+			mdus->MercData[merc_index].MercType          = mercData->MercType;
+			mdus->MercData[merc_index].MercSubType       = mercData->MercSubType;
+			mdus->MercData[merc_index].PurchaseCost      = Merc::CalcPurchaseCost(mercData->MercTemplateID, GetLevel(), 0);
+			mdus->MercData[merc_index].UpkeepCost        = Merc::CalcUpkeepCost(mercData->MercTemplateID, GetLevel(), 0);
+			mdus->MercData[merc_index].Status            = info.IsSuspended ? 0 : 1;
+			mdus->MercData[merc_index].AltCurrencyCost   = Merc::CalcPurchaseCost(mercData->MercTemplateID, GetLevel(), altCurrentType);
+			mdus->MercData[merc_index].AltCurrencyUpkeep = Merc::CalcPurchaseCost(mercData->MercTemplateID, GetLevel(), altCurrentType);
+			mdus->MercData[merc_index].AltCurrencyType   = altCurrentType;
+			mdus->MercData[merc_index].MercUnk01         = 0;
+			mdus->MercData[merc_index].TimeLeft          = info.MercTimerRemaining;
+			mdus->MercData[merc_index].MerchantSlot      = merc_index + 1;
+			mdus->MercData[merc_index].MercUnk02         = (slot == GetMercSlot()) ? 1 : 0;
+			mdus->MercData[merc_index].StanceCount       = stancecount;
+			mdus->MercData[merc_index].MercUnk03         = 0;
+			mdus->MercData[merc_index].MercUnk04         = 1;
+
+			strn0cpy(mdus->MercData[merc_index].MercName, info.merc_name, sizeof(mdus->MercData[merc_index].MercName));
+
+			uint32 stanceindex = 0;
+			if (stance_it != zone->merc_stance_list.end()) {
+				for (const auto& stance : stance_it->second) {
+					mdus->MercData[merc_index].Stances[stanceindex].StanceIndex = stanceindex;
+					mdus->MercData[merc_index].Stances[stanceindex].Stance      = stance.StanceID;
+					stanceindex++;
+				}
+			}
+
+			mdus->MercData[merc_index].MercUnk05 = std::min(RuleI(Mercs, MaxMercSlots), MAXMERCS);
+			merc_index++;
+		};
+
+		// Emit the active merc slot first — the client marks the first entry
+		// in the list with the X (active marker), so order matters.
+		if (GetMercSlot() < max_slots && GetMercInfo().mercid != 0) {
+			fillMercEntry(GetMercSlot());
+		}
+
+		// Then emit remaining owned mercs in slot order
+		for (int slot = 0; slot < max_slots; slot++) {
+			if (slot == GetMercSlot()) {
+				continue; // already emitted
+			}
+			fillMercEntry(slot);
+		}
+
+		// Update count in case we skipped any invalid entries
+		mdus->MercCount = merc_index;
+
 		FastQueuePacket(&outapp);
 		safe_delete(outapp);
 		return;
 	} else {
+		// Pre-RoF path (SoD and earlier) — single merc only
+		if (GetMercInfo().MercTemplateID == 0) {
+			SendClearMercInfo();
+			return;
+		}
+
+		auto tmpl_it = zone->merc_templates.find(GetMercInfo().MercTemplateID);
+		if (tmpl_it == zone->merc_templates.end()) {
+			SendClearMercInfo();
+			return;
+		}
+
+		MercTemplate *mercData = &tmpl_it->second;
+		uint32 mercTypeCount = 1;
+		uint32 mercCount = 1;
+		uint32 i = 0;
+
 		auto outapp = new EQApplicationPacket(OP_MercenaryDataResponse, sizeof(MercenaryMerchantList_Struct));
 		auto mml    = (MercenaryMerchantList_Struct *) outapp->pBuffer;
 
-		mml->MercTypeCount = mercTypeCount; //We should only have one merc entry.
+		mml->MercTypeCount = mercTypeCount;
 		mml->MercGrades[i] = 1;
 
 		mml->MercCount                  = mercCount;

@@ -999,7 +999,7 @@ uint8 GetSpellLevel(uint16 spell_id, uint8 class_id)
 		return UINT8_MAX;
 	}
 
-	if (class_id >= Class::PLAYER_CLASS_COUNT) {
+	if (class_id < Class::Warrior || class_id > Class::PLAYER_CLASS_COUNT) {
 		return UINT8_MAX;
 	}
 

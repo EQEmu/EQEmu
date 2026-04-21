@@ -304,6 +304,7 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_MercenaryDismiss] = &Client::Handle_OP_MercenaryDismiss;
 	ConnectedOpcodes[OP_MercenaryHire] = &Client::Handle_OP_MercenaryHire;
 	ConnectedOpcodes[OP_MercenarySuspendRequest] = &Client::Handle_OP_MercenarySuspendRequest;
+	ConnectedOpcodes[OP_MercenarySwitch] = &Client::Handle_OP_MercenarySwitch;
 	ConnectedOpcodes[OP_MercenaryTimerRequest] = &Client::Handle_OP_MercenaryTimerRequest;
 	ConnectedOpcodes[OP_MoveCoin] = &Client::Handle_OP_MoveCoin;
 	ConnectedOpcodes[OP_MoveItem] = &Client::Handle_OP_MoveItem;
@@ -10423,7 +10424,7 @@ void Client::Handle_OP_MercenaryCommand(const EQApplicationPacket *app)
 	}
 
 	MercenaryCommand_Struct* mc = (MercenaryCommand_Struct*)app->pBuffer;
-	uint32 merc_command = mc->MercCommand;	// Seen 0 (zone in with no merc or suspended), 1 (dismiss merc), 5 (normal state), 20 (unknown), 36 (zone in with merc)
+	uint32 merc_command = mc->MercCommand;	// Seen 0 (zone in with no merc or suspended), 1 (stance/state update), 5 (normal state), 20 (unknown), 36 (zone in with merc)
 	int32 option = mc->Option;	// Seen -1 (zone in with no merc), 0 (setting to passive stance), 1 (normal or setting to balanced stance)
 
 	Log(Logs::General, Logs::Mercenaries, "Command %i, Option %i received from %s.", merc_command, option, GetName());
@@ -10431,9 +10432,6 @@ void Client::Handle_OP_MercenaryCommand(const EQApplicationPacket *app)
 	if (!RuleB(Mercs, AllowMercs))
 		return;
 
-	// Handle the Command here...
-	// Will need a list of what every type of command is supposed to do
-	// Unsure if there is a server response to this packet
 	if (option >= 0)
 	{
 		Merc* merc = GetMerc();
@@ -10489,14 +10487,14 @@ void Client::Handle_OP_MercenaryDataRequest(const EQApplicationPacket *app)
 	if (merchant_id == 0) {
 
 		//send info about your current merc(s)
-		if (GetMercInfo().mercid)
+		if (GetNumberOfMercenaries() > 0)
 		{
 			Log(Logs::General, Logs::Mercenaries, "SendMercPersonalInfo Request for %s.", GetName());
 			SendMercPersonalInfo();
 		}
 		else
 		{
-			Log(Logs::General, Logs::Mercenaries, "SendMercPersonalInfo Not Sent - MercID (%i) for %s.", GetMercInfo().mercid, GetName());
+			Log(Logs::General, Logs::Mercenaries, "SendMercPersonalInfo Not Sent - no mercs owned for %s.", GetName());
 		}
 	}
 
@@ -10680,6 +10678,22 @@ void Client::Handle_OP_MercenaryHire(const EQApplicationPacket *app)
 			return;
 		}
 
+		// Suspend active merc if one exists before hiring into a new slot
+		Merc* current_merc = GetMerc();
+		if (current_merc) {
+			current_merc->Suspend();
+			current_merc->SetOwnerID(0);
+			SetMercID(0);
+		}
+
+		// Select a free slot for the new hire
+		int free_slot = GetFirstFreeMercSlot();
+		if (free_slot < 0) {
+			SendMercResponsePackets(6);
+			return;
+		}
+		SetMercSlot(static_cast<uint8>(free_slot));
+
 		// Set time remaining to max on Hire
 		GetMercInfo().MercTimerRemaining = RuleI(Mercs, UpkeepIntervalMS);
 
@@ -10699,6 +10713,10 @@ void Client::Handle_OP_MercenaryHire(const EQApplicationPacket *app)
 
 			// approved hire request
 			SendMercMerchantResponsePacket(0);
+
+			// Update the client's Manage tab with the newly hired merc info
+			SendMercPersonalInfo();
+			SendMercTimer(merc);
 		}
 		else
 		{
@@ -10732,6 +10750,88 @@ void Client::Handle_OP_MercenarySuspendRequest(const EQApplicationPacket *app)
 		return;
 
 	// Check if the merc is suspended and if so, unsuspend, otherwise suspend it
+	SuspendMercCommand();
+}
+
+void Client::Handle_OP_MercenarySwitch(const EQApplicationPacket *app)
+{
+	if (app->size != sizeof(SwitchMercenary_Struct)) {
+		LogDebug("Size mismatch in OP_MercenarySwitch expected [{}] got [{}]", sizeof(SwitchMercenary_Struct), app->size);
+		DumpPacket(app);
+		return;
+	}
+
+	if (!RuleB(Mercs, AllowMercs))
+		return;
+
+	SwitchMercenary_Struct* sm = (SwitchMercenary_Struct*)app->pBuffer;
+	uint32 merc_ui_index = sm->MercIndex;
+
+	Log(Logs::General, Logs::Mercenaries, "Switch request to UI index %u received from %s.", merc_ui_index, GetName());
+
+	// The client sends a dense UI index (0, 1, 2...) that corresponds to the Nth
+	// owned merc in the list, matching the order sent by SendMercPersonalInfo().
+	// SendMercPersonalInfo emits the active slot first, then remaining slots in order.
+	// We must replicate that same ordering to map UI index -> internal slot.
+	int target_slot = -1;
+	int max_slots = std::min(RuleI(Mercs, MaxMercSlots), MAXMERCS);
+	uint32 ui_pos = 0;
+
+	// First: the active merc slot (emitted first in the packet)
+	if (GetMercSlot() < max_slots && m_mercinfo[GetMercSlot()].mercid != 0) {
+		if (ui_pos == merc_ui_index) {
+			target_slot = GetMercSlot();
+		}
+		ui_pos++;
+	}
+
+	// Then: remaining slots in order (skipping active slot)
+	if (target_slot < 0) {
+		for (int slot = 0; slot < max_slots; slot++) {
+			if (slot == GetMercSlot()) {
+				continue;
+			}
+			if (m_mercinfo[slot].mercid != 0) {
+				if (ui_pos == merc_ui_index) {
+					target_slot = slot;
+					break;
+				}
+				ui_pos++;
+			}
+		}
+	}
+
+	if (target_slot < 0) {
+		Log(Logs::General, Logs::Mercenaries, "Switch request denied — UI index %u has no corresponding merc for %s.", merc_ui_index, GetName());
+		SendMercResponsePackets(0);
+		return;
+	}
+
+	if (target_slot == GetMercSlot()) {
+		Log(Logs::General, Logs::Mercenaries, "Switch request ignored — already on slot %i for %s.", target_slot, GetName());
+		return;
+	}
+
+	// Suspend the currently active merc if one is spawned
+	Merc* current_merc = GetMerc();
+	if (current_merc) {
+		current_merc->Suspend();
+		// Clear merc pointer without wiping slot data (SetMerc(nullptr) would zero the slot)
+		current_merc->SetOwnerID(0);
+		SetMercID(0);
+	}
+
+	// Clear the suspend timer so the target merc can be unsuspended immediately.
+	// The cooldown is meant for rapid suspend/unsuspend of the same merc, not for switching.
+	if (!GetPTimers().Expired(&database, pTimerMercSuspend, false)) {
+		GetPTimers().Clear(&database, pTimerMercSuspend);
+	}
+
+	SetMercSlot(static_cast<uint8>(target_slot));
+
+	Log(Logs::General, Logs::Mercenaries, "Switched active merc slot to %i (UI index %u) for %s.", target_slot, merc_ui_index, GetName());
+
+	// Unsuspend the target merc
 	SuspendMercCommand();
 }
 
@@ -12238,6 +12338,9 @@ void Client::Handle_OP_QueryUCSServerStatus(const EQApplicationPacket *app)
 			break;
 		case EQ::versions::ClientVersion::RoF2:
 			ConnectionType = EQ::versions::ucsRoF2Combined;
+			break;
+		case EQ::versions::ClientVersion::TOB:
+			ConnectionType = EQ::versions::ucsTOBCombined;
 			break;
 		default:
 			ConnectionType = EQ::versions::ucsUnknown;

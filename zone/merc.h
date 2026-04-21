@@ -33,7 +33,7 @@ namespace EQ
 	struct ItemData;
 }
 
-#define MAXMERCS 1
+constexpr int MAXMERCS = 11;
 #define TANK 1
 #define HEALER 2
 #define MELEEDPS 9
