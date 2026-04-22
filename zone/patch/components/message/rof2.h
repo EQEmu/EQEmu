@@ -20,11 +20,10 @@
 #include "zone/patch/components/message/rof.h"
 
 namespace ZoneClient::Message {
-
-class RoF2 : public RoF {
+class RoF2 : public RoF
+{
 public:
 	constexpr RoF2() {}
 	constexpr ~RoF2() override {}
 };
-
 } // namespace Zone::Message

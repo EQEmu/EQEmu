@@ -651,43 +651,6 @@ namespace TOB
 		FINISH_ENCODE();
 	}
 
-	ENCODE(OP_FormattedMessage)
-	{
-		EQApplicationPacket* in = *p;
-		*p = nullptr;
-
-		FormattedMessage_Struct* emu = (FormattedMessage_Struct*)in->pBuffer;
-
-		char* old_message_ptr = (char*)in->pBuffer;
-		old_message_ptr += sizeof(FormattedMessage_Struct);
-
-		std::string old_message_array[9];
-
-		for (int i = 0; i < 9; ++i) {
-			if (*old_message_ptr == 0) { break; }
-			old_message_array[i] = old_message_ptr;
-			old_message_ptr += old_message_array[i].length() + 1;
-		}
-
-		SerializeBuffer buffer;
-		buffer.WriteUInt32(0); // This is a string written like the message arrays
-		buffer.WriteUInt8(emu->unknown0);
-		buffer.WriteUInt32(emu->string_id);
-		buffer.WriteUInt32(emu->type);
-
-		for (int i = 0; i < 9; ++i) {
-			std::string new_message;
-			ServerToTOBConvertLinks(new_message, old_message_array[i]);
-			buffer.WriteLengthString(new_message);
-		}
-
-		auto outapp = new EQApplicationPacket(OP_FormattedMessage, buffer.size());
-		outapp->WriteData(buffer.buffer(), buffer.size());
-		dest->FastQueuePacket(&outapp, ack_req);
-
-		delete in;
-	}
-
 	ENCODE(OP_GMTraining) {
 		ENCODE_LENGTH_EXACT(GMTrainee_Struct);
 		SETUP_DIRECT_ENCODE(GMTrainee_Struct, structs::GMTrainee_Struct);

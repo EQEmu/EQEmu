@@ -20,21 +20,27 @@
 #include "zone/patch/components/message/rof2.h"
 
 namespace ZoneClient::Message {
-class TOB : public RoF2 {
+class TOB : public RoF2
+{
 public:
 	constexpr TOB() {}
 	constexpr ~TOB() override {}
 
+	EQApplicationPacket* Formatted(uint32_t color, uint32_t id,
+		const char* a1 = nullptr, const char* a2 = nullptr, const char* a3 = nullptr,
+		const char* a4 = nullptr, const char* a5 = nullptr, const char* a6 = nullptr,
+		const char* a7 = nullptr, const char* a8 = nullptr, const char* a9 = nullptr) const override;
+
 	EQApplicationPacket* InterruptSpell(uint32_t message, uint32_t spawn_id, uint32_t spell_id,
-	                                    const char* spell_name_override) const override;
+		const char* spell_name_override) const override;
 	EQApplicationPacket* InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, uint32_t spell_id,
-	                                         const char* spell_name_override) const override;
+		const char* spell_name_override) const override;
 
 	EQApplicationPacket* Fizzle(uint32_t type, uint32_t message, uint32_t spell_id) const override;
-	EQApplicationPacket* FizzleOther(uint32_t type, uint32_t message, uint32_t spell_id, const char* caster) const override;
+	EQApplicationPacket*
+	FizzleOther(uint32_t type, uint32_t message, uint32_t spell_id, const char* caster) const override;
 
 protected:
 	uint32_t ResolveID(uint32_t id) const override;
 };
-
 } // namespace Zone::Message

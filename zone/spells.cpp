@@ -80,6 +80,7 @@
 #include "common/rulesys.h"
 #include "common/spdat.h"
 #include "common/strings.h"
+#include "patch/client_version.h"
 #include "zone/bot.h"
 #include "zone/client.h"
 #include "zone/fastmath.h"
@@ -93,10 +94,6 @@
 
 #include <algorithm>
 #include <cassert>
-
-#include "common/links.h"
-#include "common/packet_dump.h"
-#include "patch/client_version.h"
 
 extern Zone         *zone;
 extern volatile bool is_zone_loaded;
@@ -337,15 +334,17 @@ bool Mob::DoCastSpell(uint16 spell_id, uint16 target_id, CastingSlot slot,
 		StopCasting();
 
 		if (IsClient())
-			ZoneClient::ClientPatch::QueuePacket(CastToClient(), &ZoneClient::Message::IMessage::Fizzle,
-			                                     Chat::SpellFailure, fizzle_msg, spell_id);
+			ZoneClient::ClientPatch::QueuePacket(
+				CastToClient(), &ZoneClient::Message::IMessage::Fizzle,
+				Chat::SpellFailure, fizzle_msg, spell_id);
 
 		/**
 		 * Song Failure message
 		 */
-		ZoneClient::ClientPatch::QueueCloseClients(this, true, RuleI(Range, SpellMessages),
-		                                           nullptr, true,
-		                                           IsClient() ? FilterPCSpells : FilterNPCSpells)(
+		ZoneClient::ClientPatch::QueueCloseClients(
+			this, true, RuleI(Range, SpellMessages),
+			nullptr, true,
+			IsClient() ? FilterPCSpells : FilterNPCSpells)(
 			&ZoneClient::Message::IMessage::FizzleOther, Chat::SpellFailure,
 			fizzle_msg == MISS_NOTE ? MISSED_NOTE_OTHER : SPELL_FIZZLE_OTHER, spell_id, GetName());
 

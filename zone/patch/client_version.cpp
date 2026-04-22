@@ -32,8 +32,10 @@
 using Version = EQ::versions::ClientVersion;
 using namespace ZoneClient;
 
-struct ClientComponents {
-	explicit ClientComponents(Version version) : version(version) {
+struct ClientComponents
+{
+	explicit ClientComponents(Version version) : version(version)
+	{
 		switch (version) {
 		case Version::TOB:
 			messageComponent = std::make_shared<Message::TOB>();
@@ -63,7 +65,8 @@ struct ClientComponents {
 	std::shared_ptr<Message::IMessage> messageComponent;
 };
 
-static const ClientComponents& GetComponents(Version version) {
+static const ClientComponents& GetComponents(Version version)
+{
 	static const std::unordered_map<Version, ClientComponents> patches = [] {
 		std::unordered_map<Version, ClientComponents> p;
 		p.emplace(Version::Titanium, Version::Titanium);
@@ -71,7 +74,7 @@ static const ClientComponents& GetComponents(Version version) {
 		p.emplace(Version::SoD, Version::SoD);
 		p.emplace(Version::UF, Version::UF);
 		p.emplace(Version::RoF, Version::RoF);
-		p.emplace(Version::RoF2,Version::RoF2);
+		p.emplace(Version::RoF2, Version::RoF2);
 		p.emplace(Version::TOB, Version::TOB);
 		return p;
 	}();
@@ -79,13 +82,14 @@ static const ClientComponents& GetComponents(Version version) {
 	return patches.at(version);
 }
 
-const std::shared_ptr<Message::IMessage>& ClientPatch::GetMessageComponent(Version version) {
+const std::shared_ptr<Message::IMessage>& ClientPatch::GetMessageComponent(Version version)
+{
 	return GetComponents(version).messageComponent;
 }
 
 void Client::SetClientVersion(Version client_version)
 {
-	m_ClientVersion    = client_version;
+	m_ClientVersion = client_version;
 	m_ClientVersionBit = EQ::versions::ConvertClientVersionToClientVersionBit(client_version);
 	m_messageComponent = GetComponents(client_version).messageComponent;
 }

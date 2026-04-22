@@ -1,9 +1,9 @@
 set(patch_sources
-        client_version.cpp
+    client_version.cpp
 )
 
 set(patch_headers
-        client_version.h
+    client_version.h
 )
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${patch_sources})

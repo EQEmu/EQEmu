@@ -20,11 +20,10 @@
 #include "zone/patch/components/message/titanium.h"
 
 namespace ZoneClient::Message {
-
-class SoF : public Titanium {
+class SoF : public Titanium
+{
 public:
 	constexpr SoF() {}
 	constexpr ~SoF() override {}
 };
-
 } // namespace Zone::Message

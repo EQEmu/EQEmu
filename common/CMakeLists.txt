@@ -135,6 +135,7 @@ set(common_sources
     util/directory.cpp
     util/uuid.cpp
     zone_store.cpp
+	links.cpp
 )
 
 set(repositories
@@ -733,9 +734,8 @@ set(common_headers
     util/memory_stream.h
     util/uuid.h
     version.h
-    zone_store.h
-		links.h
-		links.cpp
+	zone_store.h
+	links.h
 )
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${common_sources})

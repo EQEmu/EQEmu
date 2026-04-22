@@ -20,12 +20,13 @@
 #include "common/links.h"
 
 namespace ZoneClient::Message {
-
-struct TOBStringIDs {
+struct TOBStringIDs
+{
 	static constexpr uint32_t DisarmedTrap = 1458; // You successfully disarmed the trap
 };
 
-uint32_t TOB::ResolveID(uint32_t id) const {
+uint32_t TOB::ResolveID(uint32_t id) const
+{
 	switch (id) {
 	case YOU_FLURRY:
 	case BOW_DOUBLE_DAMAGE:
@@ -72,10 +73,134 @@ uint32_t TOB::ResolveID(uint32_t id) const {
 	}
 }
 
-EQApplicationPacket* TOB::InterruptSpell(uint32_t message, uint32_t spawn_id, uint32_t spell_id, const char* spell_name_override) const {
+// TOB is the first patch to fully support links in the client. This helper function is therefore internal to TOB
+// because any future patches would default to the TOB message strings
+static void ServerToTOBConvertLinks(std::string& message_out, const std::string& message_in)
+{
+	if (message_in.find('\x12') == std::string::npos) {
+		message_out = message_in;
+		return;
+	}
+
+	auto segments = Strings::Split(message_in, '\x12');
+	for (size_t segment_iter = 0; segment_iter < segments.size(); ++segment_iter) {
+		if (segment_iter & 1) {
+			auto etag = std::stoi(segments[segment_iter].substr(0, 1));
+
+			switch (etag) {
+			case 0: {
+				size_t index = 1;
+				auto item_id = segments[segment_iter].substr(index, 5);
+				index += 5;
+
+				auto aug1 = segments[segment_iter].substr(index, 5);
+				index += 5;
+
+				auto aug2 = segments[segment_iter].substr(index, 5);
+				index += 5;
+
+				auto aug3 = segments[segment_iter].substr(index, 5);
+				index += 5;
+
+				auto aug4 = segments[segment_iter].substr(index, 5);
+				index += 5;
+
+				auto aug5 = segments[segment_iter].substr(index, 5);
+				index += 5;
+
+				auto aug6 = segments[segment_iter].substr(index, 5);
+				index += 5;
+
+				auto is_evolving = segments[segment_iter].substr(index, 1);
+				index += 1;
+
+				auto evolutionGroup = segments[segment_iter].substr(index, 4);
+				index += 4;
+
+				auto evolutionLevel = segments[segment_iter].substr(index, 2);
+				index += 2;
+
+				auto ornamentationIconID = segments[segment_iter].substr(index, 5);
+				index += 5;
+
+				auto itemHash = segments[segment_iter].substr(index, 8);
+				index += 8;
+
+				auto text = segments[segment_iter].substr(index);
+
+				message_out.push_back('\x12');
+				message_out.push_back('0'); //etag item
+				message_out.append(item_id);
+				message_out.append(aug1);
+				message_out.append("00000");
+				message_out.append(aug2);
+				message_out.append("00000");
+				message_out.append(aug3);
+				message_out.append("00000");
+				message_out.append(aug4);
+				message_out.append("00000");
+				message_out.append(aug5);
+				message_out.append("00000");
+				message_out.append(aug6);
+				message_out.append("00000");
+				message_out.append(is_evolving);
+				message_out.append(evolutionGroup);
+				message_out.append(evolutionLevel);
+				message_out.append(ornamentationIconID);
+				message_out.append("00000");
+				message_out.append(itemHash);
+				message_out.append(text);
+				message_out.push_back('\x12');
+
+				break;
+			}
+			default:
+				//unsupported etag right now; just pass it as is
+				message_out.push_back('\x12');
+				message_out.append(segments[segment_iter]);
+				message_out.push_back('\x12');
+				break;
+			}
+		} else {
+			message_out.append(segments[segment_iter]);
+		}
+	}
+}
+
+EQApplicationPacket* TOB::Formatted(uint32_t color, uint32_t id, const char* a1, const char* a2, const char* a3,
+	const char* a4, const char* a5, const char* a6, const char* a7, const char* a8, const char* a9) const
+{
+	uint32_t string_id = ResolveID(id);
+	if (string_id > 0) {
+		SerializeBuffer buffer(49);
+		// 49 is the minimum size needed for this packet since each arg writes at least 4 bytes
+		buffer.WriteUInt32(0);
+		// This is a string written like the message arrays, but it seems to be discarded by the client
+		buffer.WriteUInt8(0); // 0 is a zone packet, 1 is a world packet -- these are always sent from zone from here
+		buffer.WriteUInt32(string_id);
+		buffer.WriteUInt32(color);
+
+		for (auto a : {a1, a2, a3, a4, a5, a6, a7, a8, a9}) {
+			if (a != nullptr) {
+				std::string new_message;
+				ServerToTOBConvertLinks(new_message, a);
+				buffer.WriteLengthString(new_message);
+			} else
+				buffer.WriteUInt32(0);
+		}
+
+		return new EQApplicationPacket(OP_FormattedMessage, std::move(buffer));
+	}
+
+	return nullptr;
+}
+
+EQApplicationPacket* TOB::InterruptSpell(uint32_t message, uint32_t spawn_id, uint32_t spell_id,
+	const char* spell_name_override) const
+{
 	std::string spell_name = spell_name_override == nullptr || *spell_name_override == '\0'
-								 ? GetSpellName(spell_id)
-								 : spell_name_override;
+		? GetSpellName(spell_id)
+		: spell_name_override;
 
 	std::string spell_link = Links::FormatSpellLink(spell_id, spell_name);
 
@@ -90,15 +215,17 @@ EQApplicationPacket* TOB::InterruptSpell(uint32_t message, uint32_t spawn_id, ui
 }
 
 EQApplicationPacket* TOB::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, uint32_t spell_id,
-                                              const char* spell_name_override) const {
+	const char* spell_name_override) const
+{
 	std::string spell_name = spell_name_override == nullptr || *spell_name_override == '\0'
-								 ? GetSpellName(spell_id)
-								 : spell_name_override;
+		? GetSpellName(spell_id)
+		: spell_name_override;
 
 	std::string spell_link = Links::FormatSpellLink(spell_id, spell_name);
 
 	auto name = sender->GetCleanName();
-	auto outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(name) + spell_link.size() + 2);
+	auto outapp = new EQApplicationPacket(OP_InterruptCast,
+		sizeof(InterruptCast_Struct) + strlen(name) + spell_link.size() + 2);
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);
 	ic->spawnid = spawn_id;
@@ -107,14 +234,16 @@ EQApplicationPacket* TOB::InterruptSpellOther(Mob* sender, uint32_t message, uin
 	return outapp;
 }
 
-EQApplicationPacket* TOB::Fizzle(uint32_t type, uint32_t message, uint32_t spell_id) const {
+EQApplicationPacket* TOB::Fizzle(uint32_t type, uint32_t message, uint32_t spell_id) const
+{
 	std::string spell_name(GetSpellName(spell_id));
 	std::string spell_link = Links::FormatSpellLink(spell_id, spell_name);
 
 	return Formatted(type, message, spell_link.c_str());
 }
 
-EQApplicationPacket* TOB::FizzleOther(uint32_t type, uint32_t message, uint32_t spell_id, const char* caster) const {
+EQApplicationPacket* TOB::FizzleOther(uint32_t type, uint32_t message, uint32_t spell_id, const char* caster) const
+{
 	std::string spell_name(GetSpellName(spell_id));
 	std::string spell_link = Links::FormatSpellLink(spell_id, spell_name);
 

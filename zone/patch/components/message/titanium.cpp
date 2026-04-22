@@ -24,7 +24,8 @@
 #include "common/serialize_buffer.h"
 
 namespace ZoneClient::Message {
-EQApplicationPacket* Titanium::Simple(uint32_t color, uint32_t id) const {
+EQApplicationPacket* Titanium::Simple(uint32_t color, uint32_t id) const
+{
 	uint32_t string_id = ResolveID(id);
 	if (string_id > 0) {
 		auto outapp = new EQApplicationPacket(OP_SimpleMessage, sizeof(SimpleMessage_Struct));
@@ -39,26 +40,25 @@ EQApplicationPacket* Titanium::Simple(uint32_t color, uint32_t id) const {
 	return nullptr;
 }
 
-EQApplicationPacket* Titanium::Formatted(uint32_t color, uint32_t id,
-                                         const char* a1, const char* a2, const char* a3,
-                                         const char* a4, const char* a5, const char* a6,
-                                         const char* a7, const char* a8, const char* a9) const {
+EQApplicationPacket* Titanium::Formatted(
+	uint32_t color, uint32_t id,
+	const char* a1, const char* a2, const char* a3,
+	const char* a4, const char* a5, const char* a6,
+	const char* a7, const char* a8, const char* a9) const
+{
 	uint32_t string_id = ResolveID(id);
 	if (string_id > 0) {
 		if (!a1)
 			return Simple(color, id);
-
-		const char* args[] = {a1, a2, a3, a4, a5, a6, a7, a8, a9};
 
 		SerializeBuffer buf(20);
 		buf.WriteInt32(0);
 		buf.WriteInt32(string_id);
 		buf.WriteInt32(color);
 
-		for (const auto* arg : args) {
-			if (!arg)
-				break;
-			buf.WriteString(arg);
+		for (const auto* a : {a1, a2, a3, a4, a5, a6, a7, a8, a9}) {
+			if (a != nullptr)
+				buf.WriteString(a);
 		}
 
 		buf.WriteInt8(0);
@@ -69,8 +69,10 @@ EQApplicationPacket* Titanium::Formatted(uint32_t color, uint32_t id,
 	return nullptr;
 }
 
-EQApplicationPacket* Titanium::InterruptSpell(uint32_t message, uint32_t spawn_id, uint32_t spell_id,
-                                              const char* spell_name_override) const {
+EQApplicationPacket* Titanium::InterruptSpell(
+	uint32_t message, uint32_t spawn_id, uint32_t spell_id,
+	const char* spell_name_override) const
+{
 	auto outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct));
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);
@@ -80,8 +82,10 @@ EQApplicationPacket* Titanium::InterruptSpell(uint32_t message, uint32_t spawn_i
 	return outapp;
 }
 
-EQApplicationPacket* Titanium::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, uint32_t spell_id,
-                                                   const char* spell_name_override) const {
+EQApplicationPacket* Titanium::InterruptSpellOther(
+	Mob* sender, uint32_t message, uint32_t spawn_id, uint32_t spell_id,
+	const char* spell_name_override) const
+{
 	auto name = sender->GetCleanName();
 	auto outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(name) + 1);
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
@@ -91,19 +95,21 @@ EQApplicationPacket* Titanium::InterruptSpellOther(Mob* sender, uint32_t message
 	return outapp;
 }
 
-EQApplicationPacket* Titanium::Fizzle(uint32_t type, uint32_t message, uint32_t spell_id) const {
+EQApplicationPacket* Titanium::Fizzle(uint32_t type, uint32_t message, uint32_t spell_id) const
+{
 	return Simple(type, message);
 }
 
-EQApplicationPacket* Titanium::FizzleOther(uint32_t type, uint32_t message, uint32_t spell_id, const char* caster) const {
+EQApplicationPacket* Titanium::FizzleOther(uint32_t type, uint32_t message, uint32_t spell_id, const char* caster) const
+{
 	return Formatted(type, message, caster);
 }
 
 // A value of 0 means that the string isn't mapped in this client, valid string ids start at 1
-uint32_t Titanium::ResolveID(uint32_t id) const {
+uint32_t Titanium::ResolveID(uint32_t id) const
+{
 	// passthrough — string IDs are defined at the base client level;
 	// override in patches where IDs need remapping
 	return id;
 }
-
 } // namespace ZoneClient::Message

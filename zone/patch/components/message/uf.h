@@ -20,11 +20,10 @@
 #include "patch/components/message/sod.h"
 
 namespace ZoneClient::Message {
-
-class UF : public SoD {
+class UF : public SoD
+{
 public:
 	constexpr UF() {}
 	constexpr ~UF() override {}
 };
-
 } // namespace Zone::Message
