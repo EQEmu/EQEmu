@@ -25,9 +25,9 @@ public:
 	constexpr TOB() {}
 	constexpr ~TOB() override {}
 
-	EQApplicationPacket* InterruptSpell(Client* c, uint32_t message, uint32_t spawn_id, uint32_t spell_id,
+	EQApplicationPacket* InterruptSpell(uint32_t message, uint32_t spawn_id, uint32_t spell_id,
 	                                    const char* spell_name_override) const override;
-	EQApplicationPacket* InterruptSpellOther(Mob* m, uint32_t message, uint32_t spawn_id, uint32_t spell_id,
+	EQApplicationPacket* InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, uint32_t spell_id,
 	                                         const char* spell_name_override) const override;
 
 protected:

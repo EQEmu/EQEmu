@@ -1348,7 +1348,7 @@ void Mob::InterruptSpell(uint16 message, uint16 color, uint16 spellid)
 	ZoneClient::ClientPatch::QueueCloseClients(
 		this, true, RuleI(Range, SongMessages), nullptr, true,
 		IsClient() ? FilterPCSpells : FilterNPCSpells)(
-		&ZoneClient::Message::IMessage::InterruptSpellOther, message_other, GetID(), spellid, "");
+		&ZoneClient::Message::IMessage::InterruptSpellOther, this, message_other, GetID(), spellid, "");
 }
 
 // this is like interrupt, just it doesn't spam interrupt packets to everyone

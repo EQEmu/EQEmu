@@ -66,6 +66,8 @@
 #include <cstdio>
 #include <cstdarg>
 
+#include "patch/client_version.h"
+
 extern QueryServ* QServ;
 extern EntityList entity_list;
 extern Zone* zone;
@@ -3809,7 +3811,11 @@ void Client::MessageString(uint32 type, uint32 string_id, uint32 distance)
 	if (GetFilter(FilterSpellCrits) == FilterHide && type == Chat::SpellCrit)
 		return;
 
-	m_messageComponent->Simple(this, type, string_id, distance);
+	if (distance > 0)
+		ZoneClient::ClientPatch::QueueCloseClients(this, false, distance)(
+			&ZoneClient::Message::IMessage::Simple, type, string_id);
+	else
+		ZoneClient::ClientPatch::QueuePacket(this, &ZoneClient::Message::IMessage::Simple, type, string_id);
 }
 
 //
@@ -3837,9 +3843,16 @@ void Client::MessageString(uint32 type, uint32 string_id, const char* message1,
 	if (type == Chat::Emote)
 		type = 4;
 
-	m_messageComponent->Formatted(this, type, string_id,
-		message1, message2, message3, message4, message5,
-		message6, message7, message8, message9, distance);
+	if (distance > 0)
+		ZoneClient::ClientPatch::QueueCloseClients(this, false, distance)(
+			&ZoneClient::Message::IMessage::Formatted, type, string_id,
+			message1, message2, message3, message4, message5,
+			message6, message7, message8, message9);
+	else
+		ZoneClient::ClientPatch::QueuePacket(
+			this, &ZoneClient::Message::IMessage::Formatted, type, string_id,
+			message1, message2, message3, message4, message5,
+			message6, message7, message8, message9);
 }
 
 void Client::MessageString(const CZClientMessageString_Struct* msg)

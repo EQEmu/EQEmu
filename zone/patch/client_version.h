@@ -23,9 +23,11 @@ public:
 	template<typename Fun, typename... Args>
 	static void QueuePacket(Client* c, Fun fun, Args&&... args) {
 		static_assert(std::is_member_function_pointer_v<Fun>);
-		EQApplicationPacket* app = std::invoke(fun, c->GetMessageComponent().get(), c, std::forward<Args>(args)...);
-		c->QueuePacket(app);
-		safe_delete(app);
+		EQApplicationPacket* app = std::invoke(fun, c->GetMessageComponent().get(), std::forward<Args>(args)...);
+		if (app != nullptr) {
+			c->QueuePacket(app);
+			delete app;
+		}
 	}
 
 	// packet generator queue functions
@@ -39,13 +41,15 @@ public:
 				if (!ignore_sender || ent != sender) {
 					auto [packet, _] = build_packets.try_emplace(
 						ent->ClientVersion(),
-						std::invoke(fun, GetMessageComponent(ent->ClientVersion()).get(), sender, std::forward<Args>(args)...));
-					ent->QueuePacket(packet->second, ackreq, Client::CLIENT_CONNECTED);
+						std::invoke(fun, GetMessageComponent(ent->ClientVersion()).get(), std::forward<Args>(args)...));
+					if (packet->second != nullptr)
+						ent->QueuePacket(packet->second, ackreq, Client::CLIENT_CONNECTED);
 				}
 			}
 
 			for (auto [_, packet] : build_packets)
-				safe_delete(packet);
+				if (packet != nullptr)
+					delete packet;
 		};
 	}
 
@@ -77,16 +81,18 @@ public:
 							) {
 								auto [packet, _] = build_packets.try_emplace(
 									client->ClientVersion(),
-									std::invoke(fun, GetMessageComponent(client->ClientVersion()).get(), sender,
+									std::invoke(fun, GetMessageComponent(client->ClientVersion()).get(),
 									            std::forward<Args>(args)...));
-								client->QueuePacket(packet->second, is_ack_required, Client::CLIENT_CONNECTED);
+								if (packet->second != nullptr)
+									client->QueuePacket(packet->second, is_ack_required, Client::CLIENT_CONNECTED);
 							}
 						}
 					}
 				}
 
 				for (auto [_, packet] : build_packets)
-					safe_delete(packet);
+					if (packet != nullptr)
+						delete packet;;
 			}
 		};
 	}

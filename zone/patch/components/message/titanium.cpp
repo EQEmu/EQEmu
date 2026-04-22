@@ -24,23 +24,52 @@
 #include "common/serialize_buffer.h"
 
 namespace ZoneClient::Message {
-void Titanium::Simple(Client* c, uint32_t color, uint32_t id, uint32_t distance) const {
+EQApplicationPacket* Titanium::Simple(uint32_t color, uint32_t id) const {
 	uint32_t string_id = ResolveID(id);
-	if (string_id > 0)
-		SendSimple(c, color, string_id, distance);
+	if (string_id > 0) {
+		auto outapp = new EQApplicationPacket(OP_SimpleMessage, sizeof(SimpleMessage_Struct));
+		auto* sms = reinterpret_cast<SimpleMessage_Struct*>(outapp->pBuffer);
+		sms->string_id = string_id;
+		sms->color = color;
+		sms->unknown8 = 0;
+
+		return outapp;
+	}
+
+	return nullptr;
 }
 
-void Titanium::Formatted(Client* c, uint32_t color, uint32_t id,
-                         const char* a1, const char* a2, const char* a3,
-                         const char* a4, const char* a5, const char* a6,
-                         const char* a7, const char* a8, const char* a9,
-                         uint32_t distance) const {
+EQApplicationPacket* Titanium::Formatted(uint32_t color, uint32_t id,
+                                         const char* a1, const char* a2, const char* a3,
+                                         const char* a4, const char* a5, const char* a6,
+                                         const char* a7, const char* a8, const char* a9) const {
 	uint32_t string_id = ResolveID(id);
-	if (string_id > 0)
-		SendFormatted(c, color, string_id, distance, a1, a2, a3, a4, a5, a6, a7, a8, a9);
+	if (string_id > 0) {
+		if (!a1)
+			return Simple(color, id);
+
+		const char* args[] = {a1, a2, a3, a4, a5, a6, a7, a8, a9};
+
+		SerializeBuffer buf(20);
+		buf.WriteInt32(0);
+		buf.WriteInt32(string_id);
+		buf.WriteInt32(color);
+
+		for (const auto* arg : args) {
+			if (!arg)
+				break;
+			buf.WriteString(arg);
+		}
+
+		buf.WriteInt8(0);
+
+		return new EQApplicationPacket(OP_FormattedMessage, std::move(buf));
+	}
+
+	return nullptr;
 }
 
-EQApplicationPacket* Titanium::InterruptSpell(Client* c, uint32_t message, uint32_t spawn_id, uint32_t spell_id,
+EQApplicationPacket* Titanium::InterruptSpell(uint32_t message, uint32_t spawn_id, uint32_t spell_id,
                                               const char* spell_name_override) const {
 	auto outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct));
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
@@ -51,9 +80,9 @@ EQApplicationPacket* Titanium::InterruptSpell(Client* c, uint32_t message, uint3
 	return outapp;
 }
 
-EQApplicationPacket* Titanium::InterruptSpellOther(Mob* m, uint32_t message, uint32_t spawn_id, uint32_t spell_id,
+EQApplicationPacket* Titanium::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, uint32_t spell_id,
                                                    const char* spell_name_override) const {
-	auto name = m->GetCleanName();
+	auto name = sender->GetCleanName();
 	auto outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(name) + 1);
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);
@@ -73,51 +102,4 @@ uint32_t Titanium::ResolveID(uint32_t id) const {
 	return id;
 }
 
-// Could override these in patches if the format of the packets differ, but they are all compatible
-void Titanium::SendSimple(Client* c, uint32_t color, uint32_t string_id, uint32_t distance) const {
-	auto outapp = new EQApplicationPacket(OP_SimpleMessage, sizeof(SimpleMessage_Struct));
-	auto* sms = reinterpret_cast<SimpleMessage_Struct*>(outapp->pBuffer);
-	sms->string_id = string_id;
-	sms->color = color;
-	sms->unknown8 = 0;
-
-	if (distance > 0)
-		entity_list.QueueCloseClients(c, outapp, false, distance);
-	else
-		c->QueuePacket(outapp);
-
-	safe_delete(outapp);
-}
-
-void Titanium::SendFormatted(
-	Client* c, uint32_t color, uint32_t string_id, uint32_t distance,
-	const char* a1, const char* a2, const char* a3,
-	const char* a4, const char* a5, const char* a6,
-	const char* a7, const char* a8, const char* a9) const {
-	if (!a1) {
-		SendSimple(c, color, string_id, distance);
-	} else {
-		const char* args[] = {a1, a2, a3, a4, a5, a6, a7, a8, a9};
-
-		SerializeBuffer buf(20);
-		buf.WriteInt32(0);
-		buf.WriteInt32(string_id);
-		buf.WriteInt32(color);
-
-		for (const auto* arg : args) {
-			if (!arg)
-				break;
-			buf.WriteString(arg);
-		}
-
-		buf.WriteInt8(0);
-
-		auto outapp = std::make_unique<EQApplicationPacket>(OP_FormattedMessage, std::move(buf));
-
-		if (distance > 0)
-			entity_list.QueueCloseClients(c, outapp.get(), false, distance);
-		else
-			c->QueuePacket(outapp.get());
-	}
-}
 } // namespace ZoneClient::Message

@@ -72,7 +72,7 @@ uint32_t TOB::ResolveID(uint32_t id) const {
 	}
 }
 
-EQApplicationPacket* TOB::InterruptSpell(Client* c, uint32_t message, uint32_t spawn_id, uint32_t spell_id, const char* spell_name_override) const {
+EQApplicationPacket* TOB::InterruptSpell(uint32_t message, uint32_t spawn_id, uint32_t spell_id, const char* spell_name_override) const {
 	std::string spell_name = spell_name_override == nullptr || *spell_name_override == '\0'
 								 ? GetSpellName(spell_id)
 								 : spell_name_override;
@@ -89,7 +89,7 @@ EQApplicationPacket* TOB::InterruptSpell(Client* c, uint32_t message, uint32_t s
 	return outapp;
 }
 
-EQApplicationPacket* TOB::InterruptSpellOther(Mob* m, uint32_t message, uint32_t spawn_id, uint32_t spell_id,
+EQApplicationPacket* TOB::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, uint32_t spell_id,
                                               const char* spell_name_override) const {
 	std::string spell_name = spell_name_override == nullptr || *spell_name_override == '\0'
 								 ? GetSpellName(spell_id)
@@ -97,7 +97,7 @@ EQApplicationPacket* TOB::InterruptSpellOther(Mob* m, uint32_t message, uint32_t
 
 	std::string spell_link = Links::FormatSpellLink(spell_id, spell_name);
 
-	auto name = m->GetCleanName();
+	auto name = sender->GetCleanName();
 	auto outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(name) + spell_link.size() + 2);
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);
