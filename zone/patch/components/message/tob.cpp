@@ -107,4 +107,17 @@ EQApplicationPacket* TOB::InterruptSpellOther(Mob* sender, uint32_t message, uin
 	return outapp;
 }
 
+EQApplicationPacket* TOB::Fizzle(uint32_t type, uint32_t message, uint32_t spell_id) const {
+	std::string spell_name(GetSpellName(spell_id));
+	std::string spell_link = Links::FormatSpellLink(spell_id, spell_name);
+
+	return Formatted(type, message, spell_link.c_str());
+}
+
+EQApplicationPacket* TOB::FizzleOther(uint32_t type, uint32_t message, uint32_t spell_id, const char* caster) const {
+	std::string spell_name(GetSpellName(spell_id));
+	std::string spell_link = Links::FormatSpellLink(spell_id, spell_name);
+
+	return Formatted(type, message, caster, spell_link.c_str());
+}
 } // namespace Zone::Message

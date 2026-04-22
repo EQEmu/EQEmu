@@ -16,7 +16,6 @@
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#include "patch/components/message/IMessage.h"
 
 class Client;
 class EQApplicationPacket;
@@ -348,7 +347,7 @@ public:
 	void MessageString(uint32 type, uint32 string_id, uint32 distance = 0) override;
 	void MessageString(uint32 type, uint32 string_id, const char* message,const char* message2=0,const char* message3=0,const char* message4=0,const char* message5=0,const char* message6=0,const char* message7=0,const char* message8=0,const char* message9=0, uint32 distance = 0) override;
 	void MessageString(const CZClientMessageString_Struct* msg);
-	bool FilteredMessageCheck(Mob *sender, eqFilterType filter);
+	bool ShouldGetPacket(Mob *sender, eqFilterType filter);
 	void FilteredMessageString(Mob *sender, uint32 type, eqFilterType filter, uint32 string_id);
 	void FilteredMessageString(Mob *sender, uint32 type, eqFilterType filter,
 					uint32 string_id, const char *message1, const char *message2 = nullptr,

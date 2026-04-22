@@ -91,8 +91,12 @@ EQApplicationPacket* Titanium::InterruptSpellOther(Mob* sender, uint32_t message
 	return outapp;
 }
 
-EQApplicationPacket* Titanium::Fizzle(Mob* m, uint32_t type, uint32_t message, uint32_t spell_id) const {
-	return nullptr;
+EQApplicationPacket* Titanium::Fizzle(uint32_t type, uint32_t message, uint32_t spell_id) const {
+	return Simple(type, message);
+}
+
+EQApplicationPacket* Titanium::FizzleOther(uint32_t type, uint32_t message, uint32_t spell_id, const char* caster) const {
+	return Formatted(type, message, caster);
 }
 
 // A value of 0 means that the string isn't mapped in this client, valid string ids start at 1

@@ -336,35 +336,21 @@ bool Mob::DoCastSpell(uint16 spell_id, uint16 target_id, CastingSlot slot,
 		Mob::SetMana(GetMana() - use_mana); // We send StopCasting which will update mana
 		StopCasting();
 
-		// TODO: can handle spell name overrides here
-		std::string spell_name(GetSpellName(spell_id));
-		std::string spell_link = Links::FormatSpellLink(spell_id, spell_name);
-
-		// pre-TOB clients will just discard the extra argument here, so don't worry about patching them out in patches
-		MessageString(Chat::SpellFailure, fizzle_msg, spell_link.c_str());
+		if (IsClient())
+			ZoneClient::ClientPatch::QueuePacket(CastToClient(), &ZoneClient::Message::IMessage::Fizzle,
+			                                     Chat::SpellFailure, fizzle_msg, spell_id);
 
 		/**
 		 * Song Failure message
-		 * pre-TOB clients will just discard the extra argument here, so don't worry about patching them out in patches
 		 */
-		entity_list.FilteredMessageCloseString(
-			this,
-			true,
-			RuleI(Range, SpellMessages),
-			Chat::SpellFailure,
-			(IsClient() ? FilterPCSpells : FilterNPCSpells),
-			(fizzle_msg == MISS_NOTE ? MISSED_NOTE_OTHER : SPELL_FIZZLE_OTHER),
-			0,
-			/*
-				MessageFormat: A missed note brings %1's song to a close! (TOB: A missed note brings %1's %2 to a close!)
-				MessageFormat: %1's spell fizzles! (TOB: %1's %2 spell fizzles!)
-			*/
-			GetName(),
-			spell_link.c_str()
-		);
+		ZoneClient::ClientPatch::QueueCloseClients(this, true, RuleI(Range, SpellMessages),
+		                                           nullptr, true,
+		                                           IsClient() ? FilterPCSpells : FilterNPCSpells)(
+			&ZoneClient::Message::IMessage::FizzleOther, Chat::SpellFailure,
+			fizzle_msg == MISS_NOTE ? MISSED_NOTE_OTHER : SPELL_FIZZLE_OTHER, spell_id, GetName());
 
 		TryTriggerOnCastRequirement();
-		return(false);
+		return false;
 	}
 
 	SaveSpellLoc();

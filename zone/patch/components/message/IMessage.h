@@ -46,7 +46,8 @@ public:
 	                                                 const char* spell_name_override = "") const = 0;
 
 	// Everything else is specializations of logic needed to build strings that differ between patches
-	virtual EQApplicationPacket* Fizzle(Mob* m, uint32_t type, uint32_t message, uint32_t spell_id) const = 0;
+	virtual EQApplicationPacket* Fizzle(uint32_t type, uint32_t message, uint32_t spell_id) const = 0;
+	virtual EQApplicationPacket* FizzleOther(uint32_t type, uint32_t message, uint32_t spell_id, const char* caster) const = 0;
 };
 
 } // namespace Zone::Message

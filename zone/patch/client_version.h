@@ -42,6 +42,7 @@ public:
 					auto [packet, _] = build_packets.try_emplace(
 						ent->ClientVersion(),
 						std::invoke(fun, GetMessageComponent(ent->ClientVersion()).get(), std::forward<Args>(args)...));
+
 					if (packet->second != nullptr)
 						ent->QueuePacket(packet->second, ackreq, Client::CLIENT_CONNECTED);
 				}
@@ -71,21 +72,13 @@ public:
 						if ((!ignore_sender || client != sender) &&
 							client != skipped_mob &&
 							DistanceSquared(client->GetPosition(), sender->GetPosition()) < distance_squared &&
-							client->Connected()) {
-							eqFilterMode client_filter = client->GetFilter(filter);
-							if (filter == FilterNone || client_filter == FilterShow ||
-								(client_filter == FilterShowGroupOnly &&
-									(sender == client || (client->GetGroup() && client->GetGroup()->IsGroupMember(
-										sender)))) ||
-								(client_filter == FilterShowSelfOnly && client == sender)
-							) {
-								auto [packet, _] = build_packets.try_emplace(
-									client->ClientVersion(),
-									std::invoke(fun, GetMessageComponent(client->ClientVersion()).get(),
-									            std::forward<Args>(args)...));
-								if (packet->second != nullptr)
-									client->QueuePacket(packet->second, is_ack_required, Client::CLIENT_CONNECTED);
-							}
+							client->Connected() && client->ShouldGetPacket(sender, filter)) {
+							auto [packet, _] = build_packets.try_emplace(
+								client->ClientVersion(),
+								std::invoke(fun, GetMessageComponent(client->ClientVersion()).get(), std::forward<Args>(args)...));
+
+							if (packet->second != nullptr)
+								client->QueuePacket(packet->second, is_ack_required, Client::CLIENT_CONNECTED);
 						}
 					}
 				}

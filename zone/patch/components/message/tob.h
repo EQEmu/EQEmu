@@ -30,6 +30,9 @@ public:
 	EQApplicationPacket* InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, uint32_t spell_id,
 	                                         const char* spell_name_override) const override;
 
+	EQApplicationPacket* Fizzle(uint32_t type, uint32_t message, uint32_t spell_id) const override;
+	EQApplicationPacket* FizzleOther(uint32_t type, uint32_t message, uint32_t spell_id, const char* caster) const override;
+
 protected:
 	uint32_t ResolveID(uint32_t id) const override;
 };

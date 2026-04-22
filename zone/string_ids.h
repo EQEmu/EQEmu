@@ -66,9 +66,9 @@
 #define FISHING_SUCCESS_FISH_NAME	421		//You caught %1!
 #define FISHING_SPILL_BEER			171		//You spill your beer while bringing in your line.
 #define FISHING_LOST_BAIT			172		//You lost your bait!
-#define SPELL_FIZZLE				173		//Your spell fizzles! // TODO: TOB - Your %1 spell fizzles!
+#define SPELL_FIZZLE				173		//Your spell fizzles!
 #define MUST_EQUIP_ITEM				179		//You cannot use this item unless it is equipped.
-#define MISS_NOTE					180		//You miss a note, bringing your song to a close! // TODO: TOB - You miss a note, bringing your %1 to a close!
+#define MISS_NOTE					180		//You miss a note, bringing your song to a close!
 #define CANNOT_USE_ITEM				181		//Your race, class, or deity cannot use this item. // TODO: TOB moved this: 6611 Your class, deity, and/or race may not equip %1.
 #define ITEM_OUT_OF_CHARGES			182		//Item is out of charges.
 #define ALREADY_ON_A_MOUNT			189		//You are already on a mount.

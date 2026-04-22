@@ -44,6 +44,8 @@
 #include "common/spdat.h"
 #include "common/strings.h"
 #include "common/zone_store.h"
+#include "patch/client_version.h"
+#include "patch/components/message/IMessage.h"
 #include "zone/bot_command.h"
 #include "zone/cheat_manager.h"
 #include "zone/command.h"
@@ -65,8 +67,6 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cstdarg>
-
-#include "patch/client_version.h"
 
 extern QueryServ* QServ;
 extern EntityList entity_list;
@@ -1794,7 +1794,7 @@ void Client::Message(uint32 type, const char* message, ...) {
 }
 
 void Client::FilteredMessage(Mob *sender, uint32 type, eqFilterType filter, const char* message, ...) {
-	if (!FilteredMessageCheck(sender, filter))
+	if (!ShouldGetPacket(sender, filter))
 		return;
 
 	va_list argptr;
@@ -3876,50 +3876,49 @@ void Client::MessageString(const CZClientMessageString_Struct* msg)
 	}
 }
 
-// helper function, returns true if we should see the message
-bool Client::FilteredMessageCheck(Mob *sender, eqFilterType filter)
+// helper function, returns true if the client should get the packet based on the filter and sender
+bool Client::ShouldGetPacket(Mob *sender, eqFilterType filter)
 {
 	eqFilterMode mode = GetFilter(filter);
-	// easy ones first
-	if (mode == FilterShow) {
-		return true;
-	} else if (mode == FilterHide) {
-		return false;
-	}
 
-	if (sender != this && mode == FilterShowSelfOnly) {
+	// easy ones first
+	if (mode == FilterShow)
+		return true;
+
+	if (mode == FilterHide)
 		return false;
-	} else if (sender) {
-		if (mode == FilterShowGroupOnly) {
-			auto g = GetGroup();
-			auto r = GetRaid();
-			if (g) {
-				if (g->IsGroupMember(sender)) {
-					return true;
-				}
-			} else if (r && sender->IsClient()) {
-				auto rgid1 = r->GetGroup(this);
-				auto rgid2 = r->GetGroup(sender->CastToClient());
-				if (rgid1 != RAID_GROUPLESS && rgid1 == rgid2) {
-					return true;
-				}
-			} else {
-				return false;
-			}
+
+	if (sender != this && mode == FilterShowSelfOnly)
+		return false;
+
+	if (sender != nullptr && mode == FilterShowGroupOnly) {
+		if (sender == this)
+			return true;
+
+		auto g = GetGroup();
+		if (g && g->IsGroupMember(sender))
+			return true;
+
+		auto r = GetRaid();
+		if (r && sender->IsClient()) {
+			auto rgid1 = r->GetGroup(this);
+			auto rgid2 = r->GetGroup(sender->CastToClient());
+			if (rgid1 != RAID_GROUPLESS && rgid1 == rgid2)
+				return true;
+		} else {
+			return false;
 		}
 	}
 
-	// we passed our checks
+	// fallback case (send by default)
 	return true;
 }
 
 void Client::FilteredMessageString(Mob *sender, uint32 type,
 		eqFilterType filter, uint32 string_id)
 {
-	if (!FilteredMessageCheck(sender, filter))
-		return;
-
-	MessageString(type, string_id);
+	if (ShouldGetPacket(sender, filter))
+		MessageString(type, string_id);
 }
 
 void Client::FilteredMessageString(Mob *sender, uint32 type, eqFilterType filter, uint32 string_id,
@@ -3927,37 +3926,16 @@ void Client::FilteredMessageString(Mob *sender, uint32 type, eqFilterType filter
 		const char *message4, const char *message5, const char *message6,
 		const char *message7, const char *message8, const char *message9)
 {
-	if (!FilteredMessageCheck(sender, filter))
-		return;
-
-	if (type == Chat::Emote)
-		type = 4;
-
 	if (!message1) {
 		FilteredMessageString(sender, type, filter, string_id);	// use the simple message instead
-		return;
+	} else if (ShouldGetPacket(sender, filter)) {
+		if (type == Chat::Emote)
+			type = 4;
+
+		MessageString(
+			type, string_id, message1, message2, message3, message4,
+			message5, message6, message7, message8, message9);
 	}
-
-	const char *message_arg[] = {
-		message1, message2, message3, message4, message5,
-		message6, message7, message8, message9
-	};
-
-	SerializeBuffer buf(20);
-	buf.WriteInt32(0); // unknown
-	buf.WriteInt32(string_id);
-	buf.WriteInt32(type);
-	for (auto &m : message_arg) {
-		if (m == nullptr)
-			break;
-		buf.WriteString(m);
-	}
-
-	buf.WriteInt8(0); // prevent oob in packet translation, maybe clean that up sometime
-
-	auto outapp = std::make_unique<EQApplicationPacket>(OP_FormattedMessage, std::move(buf));
-
-	QueuePacket(outapp.get());
 }
 
 void Client::Tell_StringID(uint32 string_id, const char *who, const char *message)
