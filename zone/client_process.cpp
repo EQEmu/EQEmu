@@ -229,11 +229,11 @@ bool Client::Process() {
 			}
 
 			if (song_target == nullptr) {
-				InterruptSpell(SONG_ENDS_ABRUPTLY, 0x121, bardsong);
+				InterruptSpell(SONG_ENDS_ABRUPTLY, Chat::SpellFailure, bardsong);
 			}
 			else {
 				if (!ApplyBardPulse(bardsong, song_target, bardsong_slot)) {
-					InterruptSpell(SONG_ENDS_ABRUPTLY, 0x121, bardsong);
+					InterruptSpell(SONG_ENDS_ABRUPTLY, Chat::SpellFailure, bardsong);
 				}
 			}
 		}

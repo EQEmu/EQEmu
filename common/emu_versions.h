@@ -61,8 +61,8 @@ namespace EQ
 			maskAllClients = 0xFFFFFFFF
 		};
 
-		const ClientVersion LastClientVersion = ClientVersion::TOB;
-		const size_t ClientVersionCount = (static_cast<size_t>(LastClientVersion) + 1);
+		constexpr ClientVersion LastClientVersion = ClientVersion::TOB;
+		constexpr size_t ClientVersionCount = (static_cast<size_t>(LastClientVersion) + 1);
 
 		bool IsValidClientVersion(ClientVersion client_version);
 		ClientVersion ValidateClientVersion(ClientVersion client_version);

@@ -8912,31 +8912,20 @@ void Client::Handle_OP_Hide(const EQApplicationPacket *app)
 		tmHidden = Timer::GetCurrentTime();
 	}
 	if (GetClass() == Class::Rogue) {
-		auto outapp = new EQApplicationPacket(OP_SimpleMessage, sizeof(SimpleMessage_Struct));
-		SimpleMessage_Struct *msg = (SimpleMessage_Struct *)outapp->pBuffer;
-		msg->color = 0x010E;
-		Mob *evadetar = GetTarget();
-		if (!auto_attack && (evadetar && evadetar->CheckAggro(this)
-			&& evadetar->IsNPC())) {
+		uint32 string_id = HIDE_FAIL;
+		Mob* evadetar = GetTarget();
+
+		if (!auto_attack && evadetar && evadetar->CheckAggro(this) && evadetar->IsNPC()) {
 			if (zone->random.Int(0, 260) < (int)GetSkill(EQ::skills::SkillHide)) {
-				msg->string_id = EVADE_SUCCESS;
+				string_id = EVADE_SUCCESS;
 				RogueEvade(evadetar);
-			}
-			else {
-				msg->string_id = EVADE_FAIL;
-			}
-		}
-		else {
-			if (hidden) {
-				msg->string_id = HIDE_SUCCESS;
-			}
-			else {
-				msg->string_id = HIDE_FAIL;
-			}
-		}
-		FastQueuePacket(&outapp);
+			} else
+				string_id = EVADE_FAIL;
+		} else if (hidden)
+			string_id = HIDE_SUCCESS;
+
+		MessageString(Chat::Skills, string_id);
 	}
-	return;
 }
 
 void Client::Handle_OP_HideCorpse(const EQApplicationPacket *app)
@@ -10325,10 +10314,10 @@ void Client::Handle_OP_ManaChange(const EQApplicationPacket *app)
 	if (app->size == 0) {
 		// i think thats the sign to stop the songs
 		if (IsBardSong(casting_spell_id) || HasActiveSong()) {
-			InterruptSpell(SONG_ENDS, 0x121); //Live doesn't send song end message anymore (~Kayen 1/26/22)
+			InterruptSpell(SONG_ENDS, Chat::SpellFailure); //Live doesn't send song end message anymore (~Kayen 1/26/22)
 		}
 		else {
-			InterruptSpell(INTERRUPT_SPELL, 0x121);
+			InterruptSpell(INTERRUPT_SPELL, Chat::SpellFailure);
 		}
 		return;
 	}

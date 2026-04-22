@@ -96,6 +96,7 @@
 
 #include "common/links.h"
 #include "common/packet_dump.h"
+#include "patch/client_version.h"
 
 extern Zone         *zone;
 extern volatile bool is_zone_loaded;
@@ -1254,7 +1255,6 @@ void Mob::InterruptSpell(uint16 spellid)
 // color not used right now
 void Mob::InterruptSpell(uint16 message, uint16 color, uint16 spellid)
 {
-	EQApplicationPacket *outapp = nullptr;
 	uint16 message_other;
 	bool bard_song_mode = false; //has the bard song gone to auto repeat mode
 
@@ -1312,23 +1312,13 @@ void Mob::InterruptSpell(uint16 message, uint16 color, uint16 spellid)
 	if(!message)
 		message = IsBardSong(spellid) ? SONG_ENDS_ABRUPTLY : INTERRUPT_SPELL;
 
-	// TODO: can handle spell name overrides here
-	std::string spellname(GetSpellName(spellid));
-	std::string spelllink = Links::FormatSpellLink(spellid, spellname);
-
 	// clients need some packets
 	if (IsClient() && message != SONG_ENDS)
 	{
 		// the interrupt message
-		outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + spelllink.size() + 1);
-		InterruptCast_Struct* ic = (InterruptCast_Struct*) outapp->pBuffer;
-		ic->messageid = message;
-		ic->spawnid = GetID();
-		// pre-TOB clients will just discard the extra argument here, so don't worry about patching them out in patches
-		fmt::format_to_n(ic->message, spelllink.size(), "{}", spelllink);
-		outapp->priority = 5;
-		CastToClient()->QueuePacket(outapp);
-		safe_delete(outapp);
+		ZoneClient::ClientPatch::QueuePacket(
+			CastToClient(), &ZoneClient::Message::IMessage::InterruptSpell,
+			message, GetID(), spellid, "");
 
 		SendSpellBarEnable(spellid);
 	}
@@ -1355,15 +1345,10 @@ void Mob::InterruptSpell(uint16 message, uint16 color, uint16 spellid)
 	}
 
 	// this is the actual message, it works the same as a formatted message
-	outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(GetCleanName()) + spelllink.size() + 2);
-	InterruptCast_Struct* ic = (InterruptCast_Struct*) outapp->pBuffer;
-	ic->messageid = message_other;
-	ic->spawnid = GetID();
-	// pre-TOB clients will just discard the extra argument here, so don't worry about patching them out in patches
-	fmt::format_to_n(ic->message, sizeof(GetCleanName()) + spelllink.size() + 1, "{}\x00{}", GetCleanName(), spelllink);
-	entity_list.QueueCloseClients(this, outapp, true, RuleI(Range, SongMessages), 0, true, IsClient() ? FilterPCSpells : FilterNPCSpells);
-	safe_delete(outapp);
-
+	ZoneClient::ClientPatch::QueueCloseClients(
+		this, true, RuleI(Range, SongMessages), nullptr, true,
+		IsClient() ? FilterPCSpells : FilterNPCSpells)(
+		&ZoneClient::Message::IMessage::InterruptSpellOther, message_other, GetID(), spellid, "");
 }
 
 // this is like interrupt, just it doesn't spam interrupt packets to everyone
@@ -7301,14 +7286,9 @@ void Mob::DoBardCastingFromItemClick(bool is_casting_bard_song, uint32 cast_time
 	if (is_casting_bard_song) {
 		//For spells with cast times. Cancel song cast, stop pusling and start item cast.
 		if (cast_time != 0) {
-			EQApplicationPacket *outapp = nullptr;
-			outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct));
-			InterruptCast_Struct* ic = (InterruptCast_Struct*)outapp->pBuffer;
-			ic->messageid = SONG_ENDS;
-			ic->spawnid = GetID();
-			outapp->priority = 5;
-			CastToClient()->QueuePacket(outapp);
-			safe_delete(outapp);
+			ZoneClient::ClientPatch::QueuePacket(
+				CastToClient(), &ZoneClient::Message::IMessage::InterruptSpell,
+				SONG_ENDS, GetID(), spell_id, "");
 
 			ZeroCastingVars();
 			ZeroBardPulseVars();

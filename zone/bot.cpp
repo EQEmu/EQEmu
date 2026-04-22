@@ -5922,13 +5922,13 @@ bool Bot::CastSpell(
 
 		if (DivineAura()) {
 			LogSpellsDetail("Spell casting canceled: cannot cast while Divine Aura is in effect");
-			InterruptSpell(SPELL_FIZZLE, 0x121, false);
+			InterruptSpell(SPELL_FIZZLE, Chat::SpellFailure, false);
 			return false;
 		}
 
 		if (slot < EQ::spells::CastingSlot::MaxGems && !CheckFizzle(spell_id)) {
 			int fizzle_msg = IsBardSong(spell_id) ? MISS_NOTE : SPELL_FIZZLE;
-			InterruptSpell(fizzle_msg, 0x121, spell_id);
+			InterruptSpell(fizzle_msg, Chat::SpellFailure, spell_id);
 
 			uint32 use_mana = ((spells[spell_id].mana) / 4);
 			LogSpellsDetail("Spell casting canceled: fizzled. [{}] mana has been consumed", use_mana);

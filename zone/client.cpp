@@ -3808,18 +3808,8 @@ void Client::MessageString(uint32 type, uint32 string_id, uint32 distance)
 		return;
 	if (GetFilter(FilterSpellCrits) == FilterHide && type == Chat::SpellCrit)
 		return;
-	auto outapp = new EQApplicationPacket(OP_SimpleMessage, 12);
-	SimpleMessage_Struct* sms = (SimpleMessage_Struct*)outapp->pBuffer;
-	sms->color=type;
-	sms->string_id=string_id;
 
-	sms->unknown8=0;
-
-	if(distance>0)
-		entity_list.QueueCloseClients(this,outapp,false,distance);
-	else
-		QueuePacket(outapp);
-	safe_delete(outapp);
+	m_messageComponent->Simple(this, type, string_id, distance);
 }
 
 //
@@ -3847,34 +3837,9 @@ void Client::MessageString(uint32 type, uint32 string_id, const char* message1,
 	if (type == Chat::Emote)
 		type = 4;
 
-	if (!message1) {
-		MessageString(type, string_id);	// use the simple message instead
-		return;
-	}
-
-	const char *message_arg[] = {
+	m_messageComponent->Formatted(this, type, string_id,
 		message1, message2, message3, message4, message5,
-		message6, message7, message8, message9
-	};
-
-	SerializeBuffer buf(20);
-	buf.WriteInt32(0); // unknown
-	buf.WriteInt32(string_id);
-	buf.WriteInt32(type);
-	for (auto &m : message_arg) {
-		if (m == nullptr)
-			break;
-		buf.WriteString(m);
-	}
-
-	buf.WriteInt8(0); // prevent oob in packet translation, maybe clean that up sometime
-
-	auto outapp = std::make_unique<EQApplicationPacket>(OP_FormattedMessage, std::move(buf));
-
-	if (distance > 0)
-		entity_list.QueueCloseClients(this, outapp.get(), false, distance);
-	else
-		QueuePacket(outapp.get());
+		message6, message7, message8, message9, distance);
 }
 
 void Client::MessageString(const CZClientMessageString_Struct* msg)
@@ -3941,17 +3906,7 @@ void Client::FilteredMessageString(Mob *sender, uint32 type,
 	if (!FilteredMessageCheck(sender, filter))
 		return;
 
-	auto outapp = new EQApplicationPacket(OP_SimpleMessage, 12);
-	SimpleMessage_Struct *sms = (SimpleMessage_Struct *)outapp->pBuffer;
-	sms->color = type;
-	sms->string_id = string_id;
-
-	sms->unknown8 = 0;
-
-	QueuePacket(outapp);
-	safe_delete(outapp);
-
-	return;
+	MessageString(type, string_id);
 }
 
 void Client::FilteredMessageString(Mob *sender, uint32 type, eqFilterType filter, uint32 string_id,

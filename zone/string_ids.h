@@ -41,8 +41,8 @@
 #define DOORS_INSUFFICIENT_SKILL	132		//You are not sufficiently skilled to pick this lock.
 #define DOORS_GM					133		//You opened the locked door with your magic GM key.
 #define ITEMS_INSUFFICIENT_LEVEL	136		//You are not sufficient level to use this item.
-#define GAIN_XP						138		//You gain experience!!
-#define GAIN_GROUPXP				139		//You gain party experience!!
+#define GAIN_XP						138		//You gain experience!! // TODO: TOB added experience value - You gain experience!%1
+#define GAIN_GROUPXP				139		//You gain party experience!! // TODO: TOB added experience value - You gain party experience!%1
 #define BOW_DOUBLE_DAMAGE			143		//Your bow shot did double dmg.
 #define YOU_ARE_BEING_BANDAGED		147		//Someone is bandaging you.
 #define FORAGE_GRUBS				150		//You have scrounged up some fishing grubs.
@@ -66,10 +66,10 @@
 #define FISHING_SUCCESS_FISH_NAME	421		//You caught %1!
 #define FISHING_SPILL_BEER			171		//You spill your beer while bringing in your line.
 #define FISHING_LOST_BAIT			172		//You lost your bait!
-#define SPELL_FIZZLE				173		//Your spell fizzles!
+#define SPELL_FIZZLE				173		//Your spell fizzles! // TODO: TOB - Your %1 spell fizzles!
 #define MUST_EQUIP_ITEM				179		//You cannot use this item unless it is equipped.
-#define MISS_NOTE					180		//You miss a note, bringing your song to a close!
-#define CANNOT_USE_ITEM				181		//Your race, class, or deity cannot use this item.
+#define MISS_NOTE					180		//You miss a note, bringing your song to a close! // TODO: TOB - You miss a note, bringing your %1 to a close!
+#define CANNOT_USE_ITEM				181		//Your race, class, or deity cannot use this item. // TODO: TOB moved this: 6611 Your class, deity, and/or race may not equip %1.
 #define ITEM_OUT_OF_CHARGES			182		//Item is out of charges.
 #define ALREADY_ON_A_MOUNT			189		//You are already on a mount.
 #define TARGET_NO_MANA				191		//Your target has no mana to affect
@@ -106,7 +106,7 @@
 #define NO_PET						255		//You do not have a pet.
 #define GATE_FAIL					260		//Your gate is too unstable, and collapses.
 #define CORPSE_CANT_SENSE			262		//You cannot sense any corpses for this PC in this zone.
-#define SPELL_NO_HOLD				263		//Your spell did not take hold.
+#define SPELL_NO_HOLD				263		//Your spell did not take hold. // TODO: This one is complex. There are 4 replacement strings, all taking arguments 9164, 9209, 9210, 9211
 #define CANNOT_CHARM				267		//This NPC cannot be charmed.
 #define SPELL_NO_EFFECT				268		//Your target looks unaffected.
 #define NO_INSTRUMENT_SKILL			269		//Stick to singing until you learn to play this instrument.
@@ -123,9 +123,9 @@
 #define DISARMED_TRAP				305		//You have disarmed the trap.
 #define LDON_SENSE_TRAP1			306		//You do not Sense any traps.
 #define TRADESKILL_NOCOMBINE		334		//You cannot combine these items in this container type!
-#define TRADESKILL_FAILED			336		//You lacked the skills to fashion the items together.
+#define TRADESKILL_FAILED			336		//You lacked the skills to fashion the items together. // TODO: TOB - 336 You lacked the skills to fashion %1.
 #define TRADESKILL_TRIVIAL			338		//You can no longer advance your skill from making this item.
-#define TRADESKILL_SUCCEED			339		//You have fashioned the items together to create something new!
+#define TRADESKILL_SUCCEED			339		//You have fashioned the items together to create something new! // TODO: TOB - 339 You have %2fashioned the items together to create something new: %1.
 #define EVADE_SUCCESS				343		//You have momentarily ducked away from the main combat.
 #define EVADE_FAIL					344		//Your attempts at ducking clear of combat fail.
 #define HIDE_FAIL					345		//You failed to hide yourself.
@@ -136,11 +136,11 @@
 #define MEND_SUCCESS				350		//You mend your wounds and heal some damage.
 #define MEND_WORSEN					351		//You have worsened your wounds!
 #define MEND_FAIL					352		//You have failed to mend your wounds.
-#define LDON_SENSE_TRAP2			367		//You have not detected any traps.
-#define TRAP_TOO_FAR				368		//You are too far away from that trap to affect it.
-#define FAIL_DISARM_DETECTED_TRAP	370		//You fail to disarm the detected trap.
+#define LDON_SENSE_TRAP2			367		//You have not detected any traps. // TODO: TOB - unk
+#define TRAP_TOO_FAR				368		//You are too far away from that trap to affect it. // TODO: TOB - unk
+#define FAIL_DISARM_DETECTED_TRAP	370		//You fail to disarm the detected trap. // TODO: TOB - unk
 #define LOOT_LORE_ERROR				371		//You cannot loot this Lore Item. You already have one.
-#define PICK_LORE					379		//You cannot pick up a lore item you already possess.
+#define PICK_LORE					379		//You cannot pick up a lore item you already possess. // TODO: TOB - 379 You cannot pick up %1 because it is a lore item you already possess.
 #define POISON_TOO_HIGH				382		//This poison is too high level for you to apply.
 #define TAUNT_TOO_FAR				386		//You are too far away from your target to taunt.
 #define CORPSE_TOO_FAR				389		//The corpse is too far away to summon.
@@ -154,17 +154,17 @@
 #define SONG_NEEDS_WIND				406		//You need to play a wind instrument for this song
 #define SONG_NEEDS_STRINGS			407		//You need to play a stringed instrument for this song
 #define SONG_NEEDS_BRASS			408		//You need to play a brass instrument for this song
-#define AA_GAIN_ABILITY				410		//You have gained the ability "%T1" at a cost of %2 ability %T3.
-#define AA_IMPROVE					411		//You have improved %T1 %2 at a cost of %3 ability %T4.
-#define TAUNT_SUCCESS				412		//You taunt %1 to ignore others and attack you!
+#define AA_GAIN_ABILITY				410		//You have gained the ability "%T1" at a cost of %2 ability %T3. // TODO: TOB - You have gained the ability "%B1(1)" at a cost of %2 ability %T3.
+#define AA_IMPROVE					411		//You have improved %T1 %2 at a cost of %3 ability %T4. // TODO: TOB - You have improved %B1(1) %2 at a cost of %3 ability %T4.
+#define TAUNT_SUCCESS				412		//You taunt %1 to ignore others and attack you! // TODO: TOB - unk
 #define AA_REUSE_MSG				413		//You can use the ability %B1(1) again in %2 hour(s) %3 minute(s) %4 seconds.
 #define AA_REUSE_MSG2				414		//You can use the ability %B1(1) again in %2 minute(s) %3 seconds.
-#define YOU_HEALED					419		//%1 has healed you for %2 points of damage.
+#define YOU_HEALED					419		//%1 has healed you for %2 points of damage. // TODO: TOB - 12998 %1 healed you for %2 hit points by %3.
 #define BEGINS_TO_GLOW				422		//Your %1 begins to glow.
 #define ALREADY_INVIS				423		//%1 tries to cast an invisibility spell on you, but you are already invisible.
 #define YOU_ARE_PROTECTED			424		//%1 tries to cast a spell on you, but you are protected.
-#define TARGET_RESISTED				425		//Your target resisted the %1 spell.
-#define YOU_RESIST					426		//You resist the %1 spell!
+#define TARGET_RESISTED				425		//Your target resisted the %1 spell. // TODO: TOB - 425 %1 resisted your %2!
+#define YOU_RESIST					426		//You resist the %1 spell! // TODO: TOB - 426 You resist %1!
 #define YOU_CRIT_HEAL				427		//You perform an exceptional heal! (%1)
 #define YOU_CRIT_BLAST				428		//You deliver a critical blast! (%1)
 #define SUMMONING_CORPSE			429		//Summoning your corpse.
@@ -176,15 +176,15 @@
 #define PET_TAUNTING				438		//Taunting attacker, Master.
 #define INTERRUPT_SPELL				439		//Your spell is interrupted.
 #define LOSE_LEVEL					442		//You LOST a level! You are now level %1!
-#define GAIN_ABILITY_POINT			446		//You have gained an ability point! You now have %1 ability point%2.
+#define GAIN_ABILITY_POINT			446		//You have gained an ability point! You now have %1 ability point%2. // TODO: TOB -  446 You have gained an ability point!  You now have %1 ability points. (Actual system moved to 8019-8021 and can handle multiples)
 #define GAIN_LEVEL					447		//You have gained a level! Welcome to level %1!
 #define LANG_SKILL_IMPROVED			449		//Your language skills have improved.
-#define OTHER_LOOTED_MESSAGE		466		//--%1 has looted a %2--
-#define LOOTED_MESSAGE				467		//--You have looted a %1--
-#define FACTION_WORST				469		//Your faction standing with %1 could not possibly get any worse.
-#define FACTION_WORSE				470		//Your faction standing with %1 got worse.
-#define FACTION_BEST				471		//Your faction standing with %1 could not possibly get any better.
-#define FACTION_BETTER				472		//Your faction standing with %1 got better.
+#define OTHER_LOOTED_MESSAGE		466		//--%1 has looted a %2-- // TODO: TOB - 466 --%1 has looted %2 %3 from %4.--
+#define LOOTED_MESSAGE				467		//--You have looted a %1-- // TODO: TOB - 467 --You have looted %1 %2 from %3.--
+#define FACTION_WORST				469		//Your faction standing with %1 could not possibly get any worse. // TODO: TOB - 469 Your faction standing with %B1(45) could not possibly get any worse.
+#define FACTION_WORSE				470		//Your faction standing with %1 got worse. // TODO: TOB - 14261 Your faction standing with %B1(45) has been adjusted by %2.
+#define FACTION_BEST				471		//Your faction standing with %1 could not possibly get any better. // TODO: TOB - 471 Your faction standing with %B1(45) could not possibly get any better.
+#define FACTION_BETTER				472		//Your faction standing with %1 got better. // TODO: TOB - 14261 Your faction standing with %B1(45) has been adjusted by %2.
 #define PET_REPORT_HP				488		//I have %1 percent of my hit points left.
 #define PET_NO_TAUNT				489		//No longer taunting attackers, Master.
 #define PET_DO_TAUNT				490		//Taunting attackers as normal, Master.
@@ -241,7 +241,7 @@
 #define NPC_RAMPAGE					1044	//%1 goes on a RAMPAGE!
 #define NPC_FLURRY					1045	//%1 executes a FLURRY of attacks on %2!
 #define DISCIPLINE_FEARLESS			1076	//%1 becomes fearless.
-#define DUEL_FINISHED				1088	//dont know text
+#define DUEL_FINISHED				1088	//%1 has defeated %2 in a duel to the death!
 #define EATING_MESSAGE				1091	//Chomp, chomp, chomp... %1 takes a bite from a %2.
 #define DRINKING_MESSAGE			1093	//Glug, glug, glug... %1 takes a drink from a %2.
 #define SUCCESSFUL_TAUNT			1095	//I'll teach you to interfere with me %3.
@@ -285,8 +285,8 @@
 #define MERCHANT_CLOSED_TWO			1200	//Can't you see I'm doing something here?
 #define MERCHANT_CLOSED_THREE		1201	//I am not open for business right now.
 #define AA_POINTS					1215	//points
-#define SPELL_FIZZLE_OTHER			1218	//%1's spell fizzles!
-#define MISSED_NOTE_OTHER			1219	//A missed note brings %1's song to a close!
+#define SPELL_FIZZLE_OTHER			1218	//%1's spell fizzles! // TODO: TOB - 1218 %1's %2 spell fizzles!
+#define MISSED_NOTE_OTHER			1219	//A missed note brings %1's song to a close! // TODO: TOB - 1219 A missed note brings %1's %2 to a close!
 #define SPELL_LEVEL_REQ				1226	//This spell only works on people who are level %1 and under.
 #define CORPSE_DECAY_NOW			1227	//This corpse is waiting to expire.
 #define CORPSE_ITEM_LOST			1228	//Your items will no longer stay with you when you respawn on death. You will now need to return to your corpse for your items.
@@ -327,27 +327,27 @@
 #define SENSE_CORPSE_DIRECTION		1563	//You sense a corpse in this direction.
 #define DUPE_LORE_MERCHANT			1573	//%1 tells you, 'You already have the lore item, %2, on your person, on your shroud, in the bank, in a real estate, or as an augment in another item.  You cannot have more than one of a particular lore item at a time.'
 #define QUEUED_TELL					2458	//[queued]
-#define QUEUE_TELL_FULL				2459	//[zoing and queue is full]
+#define QUEUE_TELL_FULL				2459	//[zoning and queue is full]
 #define TRADER_BUSY_TWO             3192    //Sorry, that action cannot be performed while trading.
 #define SUSPEND_MINION_UNSUSPEND	3267	//%1 tells you, 'I live again...'
 #define SUSPEND_MINION_SUSPEND		3268	//%1 tells you, 'By your command, master.'
-#define ONLY_SUMMONED_PETS			3269	//3269 This effect only works with summoned pets.
+#define ONLY_SUMMONED_PETS			3269	//This effect only works with summoned pets.
 #define SUSPEND_MINION_FIGHTING		3270	//Your pet must be at peace, first.
 #define SHIELD_TARGET_NPC			3278	//You must first target a living Player Character.
 #define ALREADY_SHIELDED			3279	//Either you or your target is already being shielded.
 #define ALREADY_SHIELDING			3280	//Either you or your target is already shielding another.
 #define START_SHIELDING				3281	//%1 begins to use %2 as a living shield!
 #define END_SHIELDING				3282	//%1 ceases protecting %2.
-#define OVER_AA_CAP					3374	//Warning: You are currently over the earned Advancement point limit of %1. Please spend some of your stored AA points. The NEXT time you zone all of your AA points over %2 will be deleted. You MUST spend the extra points now.
+#define OVER_AA_CAP					3374	//Warning: You are currently over the earned Advancement point limit of %1. Please spend some of your stored AA points. The NEXT time you zone all of your AA points over %2 will be deleted. You MUST spend the extra points now. // TODO: TOB - 3374 You are currently over the earned Advancement point limit of %1. You must spend some of your ability points before you can earn more.
 #define TRADESKILL_MISSING_ITEM		3455	//You are missing a %1.
 #define TRADESKILL_MISSING_COMPONENTS	3456	//Sorry, but you don't have everything you need for this recipe in your general inventory.
 #define TRADESKILL_LEARN_RECIPE		3457	//You have learned the recipe %1!
 #define TASK_UPDATED                3471    //Your task '%1' has been updated.
 #define YOU_ASSIGNED_TASK           3472    //You have been assigned the task '%1'.
 #define DZ_YOU_BELONG               3500    //You cannot create this expedition since you already belong to another.
-#define DZ_REPLAY_YOU               3501    //You cannot create this expedition for another %1d:%2h:%3m since you have recently played here.
-#define DZ_PLAYER_COUNT             3503    //You do not meet the player count requirement.  You have %1 players.  You must have at least %2 and no more than %3.
-#define DZ_REPLAY_OTHER             3504    //%1 cannot be added to this expedition for another %2D:%3H:%4M since they have recently played in this area.
+#define DZ_REPLAY_YOU               3501    //You cannot create this expedition for another %1d:%2h:%3m since you have recently played here. // TODO: TOB - 3501 You cannot create this expedition for another %1d:%2h:%3m:%4s since you have recently played here.
+#define DZ_PLAYER_COUNT             3503    //You do not meet the player count requirement.  You have %1 players.  You must have at least %2 and no more than %3. // TODO: TOB - 3503 You do not meet the player count requirement.  You have %1 players.  You must have at least %2.
+#define DZ_REPLAY_OTHER             3504    //%1 cannot be added to this expedition for another %2D:%3H:%4M since they have recently played in this area. // TODO: TOB - 3504 %1 cannot be added to this expedition for another %2d:%3h:%4m:%5s since they have recently played in this area.
 #define DZ_AVAILABLE                3507    //%1 is now available to you.
 #define DZADD_INVITE                3508    //Sending an invitation to: %1.
 #define DZ_PREVENT_ENTERING         3510    //A strange magical presence prevents you from entering.  It's too dangerous to enter at the moment.
@@ -358,7 +358,7 @@
 #define DZ_REMOVED                  3516    //%1 has been removed from %2.
 #define DZSWAP_INVITE               3517    //Sending an invitation to: %1.  They must accept in order to swap party members.
 #define DZ_LEADER_OFFLINE           3518    //%1 is not currently online.  You can only transfer leadership to an online member of the expedition you are in.
-#define DZ_TIMER                    3519    //You have %1d:%2h:%3m remaining until you may enter %4.
+#define DZ_TIMER                    3519    //You have %1d:%2h:%3m remaining until you may enter %4. // TODO: TOB - 3519 You have %1d:%2h:%3m:%4s remaining until you may enter %5.
 #define DZ_LEADER_NAME              3520    //%1 has been made the leader for this expedition.
 #define DZ_LEADER_YOU               3521    //You have been made the leader of this expedition.
 #define DZ_INVITE_ACCEPTED          3522    //%1 has accepted your offer to join your expedition.
@@ -371,8 +371,8 @@
 #define DZ_MINUTES_REMAIN           3551    //You only have %1 minutes remaining before this expedition comes to an end.
 #define DZ_LEADER                   3552    //Expedition Leader: %1
 #define DZ_MEMBERS                  3553    //Expedition Members: %1
-#define DZ_EVENT_TIMER              3561    //%1 cannot be added to this expedition since they have recently experienced %2.  They must wait another %3D:%4H:%5M until they can experience it again.  They may be added to the expedition later, once %2 has been completed.
-#define LOOT_NOT_ALLOWED			3562	//You are not allowed to loot the item: %1.
+#define DZ_EVENT_TIMER              3561    //%1 cannot be added to this expedition since they have recently experienced %2.  They must wait another %3D:%4H:%5M until they can experience it again.  They may be added to the expedition later, once %2 has been completed. // TODO: TOB - 3561 %1 cannot be added to this expedition since they have recently experienced %2.  They must wait another %3d:%4h:%5m:%6s until they can experience it again.  They may be added to the expedition later, once %2 has been completed.
+#define LOOT_NOT_ALLOWED			3562	//You are not allowed to loot the item: %1. // TODO: TOB - 8337 & 8338 (has a reason now)
 #define DZ_UNABLE_RETRIEVE_LEADER   3583    //Unable to retrieve dynamic zone leader to check permissions.
 #define DZADD_NOT_ALLOWING          3585    //The expedition is not allowing players to be added.
 #define DZADD_NOT_ONLINE            3586    //%1 is not currently online.  A player needs to be online to be added to a Dynamic Zone
@@ -380,8 +380,8 @@
 #define DZADD_ALREADY_PART          3588    //You can not add %1 since they are already part of this zone.
 #define DZADD_LEAVE_ZONE            3589    //You can not add %1 since they first need to leave the zone before being allowed back in.
 #define DZADD_ALREADY_OTHER         3590    //%1 can not be added to this dynamic zone since they are already assigned to another dynamic zone.
-#define DZADD_REPLAY_TIMER          3591    //%1 can not be added to this dynamic zone for another %2D:%3H:%4M since they have recently played this zone.
-#define DZADD_EVENT_TIMER           3592    //%1 can not be added to this dynamic zone since they have recently experienced %2.  They must wait for another %3D:%4H:%5M, or until event %2 has occurred.
+#define DZADD_REPLAY_TIMER          3591    //%1 can not be added to this dynamic zone for another %2D:%3H:%4M since they have recently played this zone. // TODO: TOB - 3591 %1 can not be added to this dynamic zone for another %2d:%3h:%4m:%5s since they have recently played this zone.
+#define DZADD_EVENT_TIMER           3592    //%1 can not be added to this dynamic zone since they have recently experienced %2.  They must wait for another %3D:%4H:%5M, or until event %2 has occurred. // TODO: TOB - 3592 %1 can not be added to this dynamic zone since they have recently experienced %2.  They must wait for another %3d:%4h:%5m:%6s, or until event %2 has occurred.
 #define DZADD_PENDING               3593    //%1 currently has an outstanding invitation to join this Dynamic Zone.
 #define DZADD_PENDING_OTHER         3594    //%1 currently has an outstanding invitation to join another Dynamic Zone.  Players may only have one invitation outstanding.
 #define DZSWAP_CANNOT_REMOVE        3595    //%1 can not be removed from this dynamic zone since they are not assigned to it.
@@ -405,9 +405,9 @@
 #define PETITION_NO_DELETE			5053	//You do not have a petition in the queue.
 #define PETITION_DELETED			5054	//Your petition was successfully deleted.
 #define ALREADY_IN_RAID				5060	//%1 is already in a raid.
-#define ALREADY_IN_YOUR_RAID		5077	//%1 is already in your raid.
+#define ALREADY_IN_YOUR_RAID		5077	//%1 is already in your raid. // TODO: TOB - 5077 That person is already in your raid.
 #define NOT_IN_YOUR_RAID            5082	//%1 is not in your raid.
-#define GAIN_RAIDEXP				5085	//You gained raid experience!
+#define GAIN_RAIDEXP				5085	//You gained raid experience! // TODO: TOB - 5085 You gained raid experience!%1
 #define ALREADY_IN_GRP_RAID			5088	//% 1 rejects your invite because they are in a raid and you are not in theirs, or they are a raid group leader
 #define DUNGEON_SEALED				5141	//The gateway to the dungeon is sealed off to you.  Perhaps you would be able to enter if you needed to adventure there.
 #define ADVENTURE_COMPLETE			5147	//You received %1 points for successfully completing the adventure.
@@ -423,8 +423,8 @@
 #define MELEE_SILENCE				5806	//You *CANNOT* use this melee ability, you are suffering from amnesia!
 #define DISCIPLINE_REUSE_MSG		5807	//You can use the ability %1 again in %2 hour(s) %3 minute(s) %4 seconds.
 #define DISCIPLINE_REUSE_MSG2		5808	//You can use the ability %1 again in %2 minute(s) %3 seconds.
-#define FAILED_TAUNT				5811	//You have failed to taunt your target.
-#define PHYSICAL_RESIST_FAIL		5817	//Your target avoided your %1 ability.
+#define FAILED_TAUNT				5811	//You have failed to taunt your target. // TODO: TOB - 5811 You have failed to taunt %1.
+#define PHYSICAL_RESIST_FAIL		5817	//Your target avoided your %1 ability. // TODO: TOB - 5817 %1 avoided your %2!
 #define AA_NO_TARGET				5825	//You must first select a target for this ability!
 #define YOU_RECEIVE                 5941    //You receive %1.
 #define NO_TASK_OFFERS              6009    //Sorry %3, I don't have anything for someone with your abilities.
@@ -447,7 +447,7 @@
 #define TRANSFORM_COMPLETE			6327	//You have successfully transformed your %1.
 #define DETRANSFORM_FAILED			6341 	//%1 has no transformation that can be removed.
 #define GUILD_PERMISSION_FAILED		6418	//You do not have permission to change access options.
-#define PARCEL_DELIVERY_ARRIVED		6465	//You have received a new parcel delivery!
+#define PARCEL_DELIVERY_ARRIVED		6465	//You have received a new parcel delivery! // TODO: TOB - 6465 You have received a new parcel delivery %1!
 #define PARCEL_DELIVERY				6466	//%1 tells you, 'I will deliver the %2 to %3 as soon as possible!'
 #define PARCEL_UNKNOWN_NAME			6467	//%1 tells you, 'Unfortunately, I don't know anyone by the name of %2. Here is your %3 back.''
 #define PARCEL_DELIVERED			6471	//%1 hands you the %2 that was sent from %3.
@@ -474,7 +474,7 @@
 #define LDON_CERTAIN_TRAP			7557	//You are certain that %1 is trapped.
 #define LDON_CERTAIN_NOT_TRAP		7558	//You are certain that %1 is not trapped.
 #define LDON_CANT_DETERMINE_TRAP	7559	//You are unable to determine if %1 is trapped.
-#define LDON_PICKLOCK_SUCCESS		7560	//You have successfully picked %1!
+#define LDON_PICKLOCK_SUCCESS		7560	//You have successfully picked %1! // TODO: TOB - 7560 You have successfully picked %1%2!
 #define LDON_PICKLOCK_FAILURE		7561	//You have failed to pick %1.
 #define LDON_STILL_LOCKED			7562	//You cannot open %1, it is locked.
 #define LDON_BASH_CHEST				7563	//%1 try to %2 %3, but do no damage.
@@ -497,7 +497,7 @@
 #define NOT_DELEGATED_MARKER		8794	//You have not been delegated Raid Mark
 #define GAIN_GROUP_LEADERSHIP_EXP	8788	//
 #define GAIN_RAID_LEADERSHIP_EXP	8789	//
-#define BUFF_MINUTES_REMAINING		8799	//%1 (%2 minutes remaining)
+#define BUFF_MINUTES_REMAINING		8799	//%1 (%2 minutes remaining) // TODO: TOB - 8799 --You sense %1%2 on %3 has %4.--
 #define RAID_NO_LONGER_MARKED       8801	//%1 is no longer marked
 #define YOU_HAVE_BEEN_GIVEN         8994    //You have been given: %1
 #define NO_MORE_TRAPS				9002	//You have already placed your maximum number of traps.
@@ -508,13 +508,13 @@
 #define SPELL_OPPOSITE_EFFECT		9032	//Your spell may have had the opposite effect of what you desired.
 #define HAS_BEEN_AWAKENED			9037	//%1 has been awakened by %2.
 #define YOU_HEAL					9068	//You have healed %1 for %2 points of damage.
-#define YOUR_HIT_DOT				9072	//%1 has taken %2 damage from your %3.
-#define HIT_NON_MELEE				9073	//%1 hit %2 for %3 points of non-melee damage.
+#define YOUR_HIT_DOT				9072	//%1 has taken %2 damage from your %3. // TODO: TOB - 9072 %1 has taken %2 damage from your %3.%4
+#define HIT_NON_MELEE				9073	//%1 hit %2 for %3 points of non-melee damage. // TODO: TOB - 9073 %1 hit %2 for %3 points of %4 damage by %5.%6
 #define GLOWS_BLUE					9074	//Your %1 glows blue.
 #define GLOWS_RED					9075	//Your %1 glows red.
 #define SHAKE_OFF_STUN				9077	//You shake off the stun effect!
 #define STRIKETHROUGH_STRING		9078	//You strike through your opponent's defenses!
-#define SPELL_REFLECT				9082	//%1's spell has been reflected by %2.
+#define SPELL_REFLECT				9082	//%1's spell has been reflected by %2. // TODO: TOB - 9082 %1's %2 spell has been reflected by %3.
 #define NO_MORE_AURAS				9160	//You do not have sufficient focus to maintain that ability.
 #define NEW_SPELLS_AVAIL			9149	//You have new spells available to you. Check the merchants near your guild master.
 #define FD_CAST_ON_NO_BREAK			9174	//The strength of your will allows you to resume feigning death.
@@ -527,17 +527,17 @@
 #define NO_CAST_OUT_OF_COMBAT		9191	//You can not cast this spell while out of combat.
 #define NO_ABILITY_IN_COMBAT		9192	//You can not use this ability while in combat.
 #define NO_ABILITY_OUT_OF_COMBAT	9194	//You can not use this ability while out of combat.
-#define GAIN_GROUPXP_BONUS			9298	//You gain party experience (with a bonus)!
-#define GAIN_GROUPXP_PENALTY		9301	//You gain party experience (with a penalty)!
-#define GAIN_RAIDXP_BONUS			9302	//You gained raid experience (with a bonus)!
-#define GAIN_RAIDXP_PENALTY			9303	//You gained raid experience (with a penalty)!
+#define GAIN_GROUPXP_BONUS			9298	//You gain party experience (with a bonus)! // TODO: TOB - 9298 You gain party experience (with a bonus)!%1
+#define GAIN_GROUPXP_PENALTY		9301	//You gain party experience (with a penalty)! // TODO: TOB - 9301 You gain party experience (with a penalty)!%1
+#define GAIN_RAIDXP_BONUS			9302	//You gained raid experience (with a bonus)! // TODO: TOB - 9302 You gained raid experience (with a bonus)!%1
+#define GAIN_RAIDXP_PENALTY			9303	//You gained raid experience (with a penalty)! // TODO: TOB - 9303 You gained raid experience (with a penalty)!%1
 #define LESSER_SPELL_VERSION        11004   //%1 is a lesser version of %2 and cannot be scribed
 #define AE_RAMPAGE					11015	//%1 goes on a WILD RAMPAGE!
 #define GROUP_IS_FULL				12000	//You cannot join that group, it is full.
 #define FACE_ACCEPTED				12028	//Facial features accepted.
 #define TRACKING_BEGIN				12040   //You begin tracking %1.
 #define SPELL_LEVEL_TO_LOW			12048	//You will have to achieve level %1 before you can scribe the %2.
-#define YOU_RECEIVE_AS_SPLIT		12071   //You receive %1 as your split.
+#define YOU_RECEIVE_AS_SPLIT		12071   //You receive %1 as your split. // TODO: TOB - 12072 You receive %1 from the corpse%2.
 #define ATTACKFAILED				12158	//%1 try to %2 %3, but %4!
 #define HIT_STRING					12183	//hit
 #define CRUSH_STRING				12191	//crush
@@ -554,7 +554,7 @@
 #define TARGET_PLAYER_FOR_GUILD_STATUS		12260
 #define TARGET_ALREADY_IN_GROUP		12265	//% 1 is already in another group.
 #define GROUP_INVITEE_NOT_FOUND		12268	//You must target a player or use /invite <name> to invite someone to your group.
-#define GROUP_INVITEE_SELF			12270	//12270 You cannot invite yourself.
+#define GROUP_INVITEE_SELF			12270	//You cannot invite yourself.
 #define ALREADY_IN_PARTY			12272	//That person is already in your party.
 #define TALKING_TO_SELF				12323	//Talking to yourself again?
 #define SPLIT_NO_GROUP				12328	//You are not in a group! Keep it all.
@@ -593,7 +593,7 @@
 #define RANGED_TOO_CLOSE			12698	//Your target is too close to use a ranged weapon!
 #define BACKSTAB_WEAPON				12874	//You need a piercing weapon as your primary weapon in order to backstab
 #define DISARMED                    12889   //You have been disarmed!
-#define DISARM_SUCCESS              12890   //You disarmed %1!
+#define DISARM_SUCCESS              12890   //You disarmed %1! // TODO: TOB - 12890 You %2disarmed %1!
 #define DISARM_FAILED               12891   //Your attempt to disarm failed.
 #define MORE_SKILLED_THAN_I			12931	//%1 tells you, 'You are more skilled than I! What could I possibly teach you?'
 #define SURNAME_EXISTS				12939	//You already have a surname. Operation failed.
@@ -602,7 +602,7 @@
 #define REPORT_ONCE					12945	//You may only submit a report once per time that you zone. Thank you.
 #define NOW_INVISIBLE				12950	//%1 is now Invisible.
 #define NOW_VISIBLE					12951	//%1 is now Visible.
-#define YOU_TAKE_DOT				12954	//You have taken %1 damage from %2 by %3
+#define YOU_TAKE_DOT				12954	//You have taken %1 damage from %2 by %3 // TODO: TOB - 12954 You have taken %1 damage from %2 by %3.%4
 #define GUILD_NOT_MEMBER2			12966	//You are not in a guild.
 #define HOT_HEAL_SELF				12976 	//You have been healed for %1 hit points by your %2.
 #define HOT_HEAL_OTHER				12997	//You have healed %1 for %2 hit points with your %3.
@@ -612,7 +612,7 @@
 #define TOGGLE_ON					13172	//Asking server to turn ON your incoming tells.
 #define TOGGLE_OFF					13173	//Asking server to turn OFF all incoming tells for you.
 #define DUEL_INPROGRESS				13251	//You have already accepted a duel with someone else cowardly dog.
-#define OTHER_HIT_DOT				13327	//%1 has taken %2 damage from %3 by %4.
-#define GAIN_XP_BONUS				14541	//You gain experience (with a bonus)!
-#define GAIN_XP_PENALTY				14542	//You gain experience (with a penalty)!
+#define OTHER_HIT_DOT				13327	//%1 has taken %2 damage from %3 by %4. // TODO: TOB - 13327 %1 has taken %2 damage from %3 by %4.%5
+#define GAIN_XP_BONUS				14541	//You gain experience (with a bonus)! // TODO: TOB - 14541 You gain experience (with a bonus)!%1
+#define GAIN_XP_PENALTY				14542	//You gain experience (with a penalty)! // TODO: TOB - 14542 You gain experience (with a penalty)!%1
 #define GENERIC_MISS				15041	//%1 missed %2
