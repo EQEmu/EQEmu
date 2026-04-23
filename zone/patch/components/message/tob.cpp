@@ -82,7 +82,7 @@ static void ServerToTOBConvertLinks(std::string& message_out, const std::string&
 		return;
 	}
 
-	auto segments = Strings::Split(message_in, '\x12');
+	std::vector<std::string> segments = Strings::Split(message_in, '\x12');
 	for (size_t segment_iter = 0; segment_iter < segments.size(); ++segment_iter) {
 		if (segment_iter & 1) {
 			auto etag = std::stoi(segments[segment_iter].substr(0, 1));
@@ -90,43 +90,43 @@ static void ServerToTOBConvertLinks(std::string& message_out, const std::string&
 			switch (etag) {
 			case 0: {
 				size_t index = 1;
-				auto item_id = segments[segment_iter].substr(index, 5);
+				std::string item_id = segments[segment_iter].substr(index, 5);
 				index += 5;
 
-				auto aug1 = segments[segment_iter].substr(index, 5);
+				std::string aug1 = segments[segment_iter].substr(index, 5);
 				index += 5;
 
-				auto aug2 = segments[segment_iter].substr(index, 5);
+				std::string aug2 = segments[segment_iter].substr(index, 5);
 				index += 5;
 
-				auto aug3 = segments[segment_iter].substr(index, 5);
+				std::string aug3 = segments[segment_iter].substr(index, 5);
 				index += 5;
 
-				auto aug4 = segments[segment_iter].substr(index, 5);
+				std::string aug4 = segments[segment_iter].substr(index, 5);
 				index += 5;
 
-				auto aug5 = segments[segment_iter].substr(index, 5);
+				std::string aug5 = segments[segment_iter].substr(index, 5);
 				index += 5;
 
-				auto aug6 = segments[segment_iter].substr(index, 5);
+				std::string aug6 = segments[segment_iter].substr(index, 5);
 				index += 5;
 
-				auto is_evolving = segments[segment_iter].substr(index, 1);
+				std::string is_evolving = segments[segment_iter].substr(index, 1);
 				index += 1;
 
-				auto evolutionGroup = segments[segment_iter].substr(index, 4);
+				std::string evolutionGroup = segments[segment_iter].substr(index, 4);
 				index += 4;
 
-				auto evolutionLevel = segments[segment_iter].substr(index, 2);
+				std::string evolutionLevel = segments[segment_iter].substr(index, 2);
 				index += 2;
 
-				auto ornamentationIconID = segments[segment_iter].substr(index, 5);
+				std::string ornamentationIconID = segments[segment_iter].substr(index, 5);
 				index += 5;
 
-				auto itemHash = segments[segment_iter].substr(index, 8);
+				std::string itemHash = segments[segment_iter].substr(index, 8);
 				index += 8;
 
-				auto text = segments[segment_iter].substr(index);
+				std::string text = segments[segment_iter].substr(index);
 
 				message_out.push_back('\x12');
 				message_out.push_back('0'); //etag item
@@ -202,13 +202,14 @@ EQApplicationPacket* TOB::InterruptSpell(uint32_t message, uint32_t spawn_id, ui
 		? GetSpellName(spell_id)
 		: spell_name_override;
 
-	std::string spell_link = Links::FormatSpellLink(spell_id, spell_name);
+	char spell_link[Links::MAX_LINK_SIZE];
+	Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spell_id, spell_name_override);
 
-	auto outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + spell_link.size() + 1);
+	auto outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(spell_link) + 1);
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);
 	ic->spawnid = spawn_id;
-	fmt::format_to_n(ic->message, spell_link.size(), "{}", spell_link);
+	fmt::format_to_n(ic->message, strlen(spell_link) + 1, "{}\0", spell_link);
 	outapp->priority = 5;
 
 	return outapp;
@@ -221,15 +222,16 @@ EQApplicationPacket* TOB::InterruptSpellOther(Mob* sender, uint32_t message, uin
 		? GetSpellName(spell_id)
 		: spell_name_override;
 
-	std::string spell_link = Links::FormatSpellLink(spell_id, spell_name);
+	char spell_link[Links::MAX_LINK_SIZE];
+	Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spell_id);
 
-	auto name = sender->GetCleanName();
+	const char* name = sender->GetCleanName();
 	auto outapp = new EQApplicationPacket(OP_InterruptCast,
-		sizeof(InterruptCast_Struct) + strlen(name) + spell_link.size() + 2);
+		sizeof(InterruptCast_Struct) + strlen(name) + strlen(spell_link) + 2);
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);
 	ic->spawnid = spawn_id;
-	fmt::format_to_n(ic->message, strlen(name) + spell_link.size() + 2, "{}\0{}\0", name, spell_link);
+	fmt::format_to_n(ic->message, strlen(name) + strlen(spell_link) + 2, "{}\0{}\0", name, spell_link);
 
 	return outapp;
 }
@@ -237,16 +239,20 @@ EQApplicationPacket* TOB::InterruptSpellOther(Mob* sender, uint32_t message, uin
 EQApplicationPacket* TOB::Fizzle(uint32_t type, uint32_t message, uint32_t spell_id) const
 {
 	std::string spell_name(GetSpellName(spell_id));
-	std::string spell_link = Links::FormatSpellLink(spell_id, spell_name);
 
-	return Formatted(type, message, spell_link.c_str());
+	char spell_link[Links::MAX_LINK_SIZE];
+	Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spell_id);
+
+	return Formatted(type, message, spell_link);
 }
 
 EQApplicationPacket* TOB::FizzleOther(uint32_t type, uint32_t message, uint32_t spell_id, const char* caster) const
 {
 	std::string spell_name(GetSpellName(spell_id));
-	std::string spell_link = Links::FormatSpellLink(spell_id, spell_name);
 
-	return Formatted(type, message, caster, spell_link.c_str());
+	char spell_link[Links::MAX_LINK_SIZE];
+	Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spell_id);
+
+	return Formatted(type, message, caster, spell_link);
 }
 } // namespace Zone::Message

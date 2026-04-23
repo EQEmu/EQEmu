@@ -23,7 +23,7 @@ namespace ZoneClient::Message {
 class UF : public SoD
 {
 public:
-	constexpr UF() {}
-	constexpr ~UF() override {}
+	UF() {}
+	~UF() override {}
 };
 } // namespace Zone::Message

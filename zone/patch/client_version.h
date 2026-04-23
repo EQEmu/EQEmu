@@ -37,7 +37,7 @@ public:
 		return [=]<typename Fun, typename... Args>(Fun fun, Args&&... args) {
 			static_assert(std::is_member_function_pointer_v<Fun>);
 			std::unordered_map<EQ::versions::ClientVersion, EQApplicationPacket*> build_packets;
-			auto client_list = entity_list.GetClientList();
+			std::unordered_map<uint16, Client*> client_list = entity_list.GetClientList();
 
 			for (auto [_, ent] : client_list) {
 				if (!ignore_sender || ent != sender) {

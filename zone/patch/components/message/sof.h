@@ -23,7 +23,7 @@ namespace ZoneClient::Message {
 class SoF : public Titanium
 {
 public:
-	constexpr SoF() {}
-	constexpr ~SoF() override {}
+	SoF() {}
+	~SoF() override {}
 };
 } // namespace Zone::Message

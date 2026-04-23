@@ -86,7 +86,7 @@ EQApplicationPacket* Titanium::InterruptSpellOther(
 	Mob* sender, uint32_t message, uint32_t spawn_id, uint32_t spell_id,
 	const char* spell_name_override) const
 {
-	auto name = sender->GetCleanName();
+	const char* name = sender->GetCleanName();
 	auto outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(name) + 1);
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);

@@ -23,8 +23,8 @@ namespace ZoneClient::Message {
 class Titanium : public IMessage
 {
 public:
-	constexpr Titanium() {}
-	constexpr ~Titanium() override {}
+	Titanium() {}
+	~Titanium() override {}
 
 	EQApplicationPacket* Simple(uint32_t color, uint32_t id) const override;
 

@@ -23,8 +23,8 @@ namespace ZoneClient::Message {
 class TOB : public RoF2
 {
 public:
-	constexpr TOB() {}
-	constexpr ~TOB() override {}
+	TOB() {}
+	~TOB() override {}
 
 	EQApplicationPacket* Formatted(uint32_t color, uint32_t id,
 		const char* a1 = nullptr, const char* a2 = nullptr, const char* a3 = nullptr,

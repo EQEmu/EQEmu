@@ -3895,14 +3895,14 @@ bool Client::ShouldGetPacket(Mob *sender, eqFilterType filter)
 		if (sender == this)
 			return true;
 
-		auto g = GetGroup();
+		Group* g = GetGroup();
 		if (g && g->IsGroupMember(sender))
 			return true;
 
-		auto r = GetRaid();
+		Raid* r = GetRaid();
 		if (r && sender->IsClient()) {
-			auto rgid1 = r->GetGroup(this);
-			auto rgid2 = r->GetGroup(sender->CastToClient());
+			uint32 rgid1 = r->GetGroup(this);
+			uint32 rgid2 = r->GetGroup(sender->CastToClient());
 			if (rgid1 != RAID_GROUPLESS && rgid1 == rgid2)
 				return true;
 		} else {

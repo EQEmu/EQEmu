@@ -29,8 +29,8 @@ namespace ZoneClient::Message {
 class IMessage
 {
 public:
-	constexpr IMessage() {}
-	constexpr virtual ~IMessage() {}
+	IMessage() {}
+	virtual ~IMessage() {}
 
 	// these two are the basic string message packets
 	virtual EQApplicationPacket* Simple(uint32_t color, uint32_t id) const = 0;
