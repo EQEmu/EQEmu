@@ -17,7 +17,9 @@
 */
 #pragma once
 
-#include <stdint.h>
+#include "patch/client_version.h"
+
+#include <cstdint>
 
 // Migration path: replace string_ids.h usage with ID enum values one call site at a time.
 
@@ -26,28 +28,73 @@ class Mob;
 class EQApplicationPacket;
 
 namespace ZoneClient::Message {
+
+template<typename... Args>
+concept AllConstChar = (std::is_convertible_v<Args, const char*> && ...);
+
 class IMessage
 {
 public:
-	IMessage() {}
-	virtual ~IMessage() {}
+	IMessage() = default;
+	virtual ~IMessage() = default;
 
 	// these two are the basic string message packets
-	virtual EQApplicationPacket* Simple(uint32_t color, uint32_t id) const = 0;
-	virtual EQApplicationPacket* Formatted(uint32_t color, uint32_t id,
-		const char* a1 = nullptr, const char* a2 = nullptr, const char* a3 = nullptr,
-		const char* a4 = nullptr, const char* a5 = nullptr, const char* a6 = nullptr,
-		const char* a7 = nullptr, const char* a8 = nullptr, const char* a9 = nullptr) const = 0;
+	[[nodiscard]] virtual EQApplicationPacket* Simple(uint32_t color, uint32_t id) const = 0;
+	[[nodiscard]] virtual EQApplicationPacket* Formatted(uint32_t color, uint32_t id, const std::array<const char*, 9>& args) const = 0;
 
 	// These aren't technically messages, but they use the same format and are similar enough to include here
-	virtual EQApplicationPacket* InterruptSpell(uint32_t message, uint32_t spawn_id, uint32_t spell_id,
-		const char* spell_name_override = "") const = 0;
+	virtual EQApplicationPacket* InterruptSpell(uint32_t message, uint32_t spawn_id, const char* spell_link) const = 0;
 	virtual EQApplicationPacket* InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id,
-		uint32_t spell_id, const char* spell_name_override = "") const = 0;
-
-	// Everything else is specializations of logic needed to build strings that differ between patches
-	virtual EQApplicationPacket* Fizzle(uint32_t type, uint32_t message, uint32_t spell_id) const = 0;
-	virtual EQApplicationPacket* FizzleOther(uint32_t type, uint32_t message, uint32_t spell_id,
-		const char* caster) const = 0;
+		const char* name, const char* spell_link) const = 0;
 };
-} // namespace Zone::Message
+
+static std::function GetComponent = [](const Client* c) -> IMessage* {
+	return ClientPatch::GetMessageComponent(c->GetClientVersion()).get();
+};
+
+// Helper functions to wrap the packet construction in sends
+template <AllConstChar... Args>
+	requires (sizeof...(Args) <= 9)
+void MessageString(Client* c, uint32_t type, uint32_t id, Args&&... args)
+{
+	if constexpr (sizeof...(Args) == 0) {
+		ClientPatch::QueuePacket(c, &IMessage::Simple, c->GetMessageComponent().get(), type, id);
+	} else {
+		std::array<const char*, 9> a = {args...};
+		ClientPatch::QueuePacket(c, &IMessage::Formatted, c->GetMessageComponent().get(), type, id, a);
+	}
+}
+
+static auto CloseMessageString(
+	Mob* sender, bool ignore_sender = false, float distance = 200.f,
+	Mob* skipped_mob = nullptr, bool is_ack_required = true,
+	eqFilterType filter = FilterNone)
+{
+	return [=]<AllConstChar... Args>(uint32_t type, uint32_t id, Args&&... args) {
+		static_assert(sizeof...(Args) <= 9, "Too many arguments");
+
+		auto queue_close_clients = ClientPatch::QueueCloseClients(sender, ignore_sender, distance, skipped_mob,
+			is_ack_required, filter);
+
+		if constexpr (sizeof...(Args) == 0) {
+			return queue_close_clients(&IMessage::Simple, GetComponent, type, id);
+		} else {
+			std::array<const char*, 9> a = {args...};
+			return queue_close_clients(&IMessage::Formatted, GetComponent, type, id, a);
+		}
+	};
+}
+
+inline void InterruptSpell(Client* c, uint32_t message, uint32_t spawn_id, const char* spell_link)
+{
+	ClientPatch::QueuePacket(c, &IMessage::InterruptSpell, c->GetMessageComponent().get(), message, spawn_id, spell_link);
+}
+
+inline void InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, const char* name, const char* spell_link)
+{
+	ClientPatch::QueueCloseClients(sender, true, RuleI(Range, SongMessages), nullptr, true,
+		sender->IsClient() ? FilterPCSpells : FilterNPCSpells)(
+			&IMessage::InterruptSpellOther, GetComponent, sender, message, spawn_id, name, spell_link);
+}
+
+} // namespace ZoneClient::Message

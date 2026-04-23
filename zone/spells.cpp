@@ -95,6 +95,9 @@
 #include <algorithm>
 #include <cassert>
 
+#include "common/links.h"
+#include "patch/components/message/IMessage.h"
+
 extern Zone         *zone;
 extern volatile bool is_zone_loaded;
 extern WorldServer   worldserver;
@@ -333,20 +336,18 @@ bool Mob::DoCastSpell(uint16 spell_id, uint16 target_id, CastingSlot slot,
 		Mob::SetMana(GetMana() - use_mana); // We send StopCasting which will update mana
 		StopCasting();
 
+		char spell_link[Links::MAX_LINK_SIZE];
+		Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spell_id);
+
 		if (IsClient())
-			ZoneClient::ClientPatch::QueuePacket(
-				CastToClient(), &ZoneClient::Message::IMessage::Fizzle,
-				Chat::SpellFailure, fizzle_msg, spell_id);
+			ZoneClient::Message::MessageString(CastToClient(), Chat::SpellFailure, fizzle_msg, spell_link);
 
 		/**
 		 * Song Failure message
 		 */
-		ZoneClient::ClientPatch::QueueCloseClients(
-			this, true, RuleI(Range, SpellMessages),
-			nullptr, true,
-			IsClient() ? FilterPCSpells : FilterNPCSpells)(
-			&ZoneClient::Message::IMessage::FizzleOther, Chat::SpellFailure,
-			fizzle_msg == MISS_NOTE ? MISSED_NOTE_OTHER : SPELL_FIZZLE_OTHER, spell_id, GetName());
+		ZoneClient::Message::CloseMessageString(this, true, RuleI(Range, SpellMessages),
+			nullptr, true, IsClient() ? FilterPCSpells : FilterNPCSpells)(
+				Chat::SpellFailure, fizzle_msg == MISS_NOTE ? MISSED_NOTE_OTHER : SPELL_FIZZLE_OTHER, GetName(), spell_link);
 
 		TryTriggerOnCastRequirement();
 		return false;
@@ -1301,10 +1302,9 @@ void Mob::InterruptSpell(uint16 message, uint16 color, uint16 spellid)
 	if (IsClient() && message != SONG_ENDS)
 	{
 		// the interrupt message
-		ZoneClient::ClientPatch::QueuePacket(
-			CastToClient(), &ZoneClient::Message::IMessage::InterruptSpell,
-			message, GetID(), spellid, "");
-
+		char spell_link[Links::MAX_LINK_SIZE];
+		Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spellid);
+		ZoneClient::Message::InterruptSpell(CastToClient(), message, GetID(), spell_link);
 		SendSpellBarEnable(spellid);
 	}
 
@@ -1330,10 +1330,9 @@ void Mob::InterruptSpell(uint16 message, uint16 color, uint16 spellid)
 	}
 
 	// this is the actual message, it works the same as a formatted message
-	ZoneClient::ClientPatch::QueueCloseClients(
-		this, true, RuleI(Range, SongMessages), nullptr, true,
-		IsClient() ? FilterPCSpells : FilterNPCSpells)(
-		&ZoneClient::Message::IMessage::InterruptSpellOther, this, message_other, GetID(), spellid, "");
+	char spell_link[Links::MAX_LINK_SIZE];
+	Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spellid);
+	ZoneClient::Message::InterruptSpellOther(this, message_other, GetID(), GetCleanName(), spell_link);
 }
 
 // this is like interrupt, just it doesn't spam interrupt packets to everyone
@@ -7269,11 +7268,11 @@ void Mob::DoBardCastingFromItemClick(bool is_casting_bard_song, uint32 cast_time
 		Known bug: When a bard uses an augment with a clicky that has a cast time, the cast won't display. This issue only affects bards.
 	*/
 	if (is_casting_bard_song) {
-		//For spells with cast times. Cancel song cast, stop pusling and start item cast.
+		//For spells with cast times. Cancel song cast, stop pulsing and start item cast.
 		if (cast_time != 0) {
-			ZoneClient::ClientPatch::QueuePacket(
-				CastToClient(), &ZoneClient::Message::IMessage::InterruptSpell,
-				SONG_ENDS, GetID(), spell_id, "");
+			char spell_link[Links::MAX_LINK_SIZE];
+			Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spell_id);
+			ZoneClient::Message::InterruptSpell(CastToClient(), SONG_ENDS, GetID(), spell_link);
 
 			ZeroCastingVars();
 			ZeroBardPulseVars();

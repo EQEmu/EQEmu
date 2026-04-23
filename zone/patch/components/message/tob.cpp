@@ -73,6 +73,21 @@ uint32_t TOB::ResolveID(uint32_t id) const
 	}
 }
 
+void TOB::ResolveArguments(uint32_t id, std::array<const char*, 9>& args) const
+{
+	switch (id) {
+	case SPELL_FIZZLE:
+	case MISS_NOTE:
+	case SPELL_FIZZLE_OTHER:
+	case MISSED_NOTE_OTHER:
+		// take all arguments (spell link)
+		break;
+	default:
+		RoF2::ResolveArguments(id, args);
+		break;
+	}
+}
+
 // TOB is the first patch to fully support links in the client. This helper function is therefore internal to TOB
 // because any future patches would default to the TOB message strings
 static void ServerToTOBConvertLinks(std::string& message_out, const std::string& message_in)
@@ -167,11 +182,18 @@ static void ServerToTOBConvertLinks(std::string& message_out, const std::string&
 	}
 }
 
-EQApplicationPacket* TOB::Formatted(uint32_t color, uint32_t id, const char* a1, const char* a2, const char* a3,
-	const char* a4, const char* a5, const char* a6, const char* a7, const char* a8, const char* a9) const
+EQApplicationPacket* TOB::Formatted(uint32_t color, uint32_t id, const std::array<const char*, 9>& args) const
+	// const char* a1, const char* a2, const char* a3,
+	// const char* a4, const char* a5, const char* a6,
+	// const char* a7, const char* a8, const char* a9) const
 {
 	uint32_t string_id = ResolveID(id);
 	if (string_id > 0) {
+		std::array<const char*, 9> resolved_args = args;
+		ResolveArguments(id, resolved_args);
+		if (!resolved_args[0])
+			return Simple(color, id);
+
 		SerializeBuffer buffer(49);
 		// 49 is the minimum size needed for this packet since each arg writes at least 4 bytes
 		buffer.WriteUInt32(0);
@@ -180,7 +202,7 @@ EQApplicationPacket* TOB::Formatted(uint32_t color, uint32_t id, const char* a1,
 		buffer.WriteUInt32(string_id);
 		buffer.WriteUInt32(color);
 
-		for (auto a : {a1, a2, a3, a4, a5, a6, a7, a8, a9}) {
+		for (auto a : resolved_args) {
 			if (a != nullptr) {
 				std::string new_message;
 				ServerToTOBConvertLinks(new_message, a);
@@ -195,16 +217,8 @@ EQApplicationPacket* TOB::Formatted(uint32_t color, uint32_t id, const char* a1,
 	return nullptr;
 }
 
-EQApplicationPacket* TOB::InterruptSpell(uint32_t message, uint32_t spawn_id, uint32_t spell_id,
-	const char* spell_name_override) const
+EQApplicationPacket* TOB::InterruptSpell(uint32_t message, uint32_t spawn_id, const char* spell_link) const
 {
-	std::string spell_name = spell_name_override == nullptr || *spell_name_override == '\0'
-		? GetSpellName(spell_id)
-		: spell_name_override;
-
-	char spell_link[Links::MAX_LINK_SIZE];
-	Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spell_id, spell_name_override);
-
 	auto outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(spell_link) + 1);
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);
@@ -215,17 +229,9 @@ EQApplicationPacket* TOB::InterruptSpell(uint32_t message, uint32_t spawn_id, ui
 	return outapp;
 }
 
-EQApplicationPacket* TOB::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, uint32_t spell_id,
-	const char* spell_name_override) const
+EQApplicationPacket* TOB::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, const char* name,
+	const char* spell_link) const
 {
-	std::string spell_name = spell_name_override == nullptr || *spell_name_override == '\0'
-		? GetSpellName(spell_id)
-		: spell_name_override;
-
-	char spell_link[Links::MAX_LINK_SIZE];
-	Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spell_id);
-
-	const char* name = sender->GetCleanName();
 	auto outapp = new EQApplicationPacket(OP_InterruptCast,
 		sizeof(InterruptCast_Struct) + strlen(name) + strlen(spell_link) + 2);
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
@@ -236,23 +242,4 @@ EQApplicationPacket* TOB::InterruptSpellOther(Mob* sender, uint32_t message, uin
 	return outapp;
 }
 
-EQApplicationPacket* TOB::Fizzle(uint32_t type, uint32_t message, uint32_t spell_id) const
-{
-	std::string spell_name(GetSpellName(spell_id));
-
-	char spell_link[Links::MAX_LINK_SIZE];
-	Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spell_id);
-
-	return Formatted(type, message, spell_link);
-}
-
-EQApplicationPacket* TOB::FizzleOther(uint32_t type, uint32_t message, uint32_t spell_id, const char* caster) const
-{
-	std::string spell_name(GetSpellName(spell_id));
-
-	char spell_link[Links::MAX_LINK_SIZE];
-	Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spell_id);
-
-	return Formatted(type, message, caster, spell_link);
-}
-} // namespace Zone::Message
+} // namespace ZoneClient::Message

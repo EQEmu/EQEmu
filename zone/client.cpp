@@ -3812,10 +3812,10 @@ void Client::MessageString(uint32 type, uint32 string_id, uint32 distance)
 		return;
 
 	if (distance > 0)
-		ZoneClient::ClientPatch::QueueCloseClients(this, false, distance)(
-			&ZoneClient::Message::IMessage::Simple, type, string_id);
+		ZoneClient::Message::CloseMessageString(this, false, static_cast<float>(distance))(
+			type, string_id);
 	else
-		ZoneClient::ClientPatch::QueuePacket(this, &ZoneClient::Message::IMessage::Simple, type, string_id);
+		ZoneClient::Message::MessageString(this, type, string_id);
 }
 
 //
@@ -3825,9 +3825,9 @@ void Client::MessageString(uint32 type, uint32 string_id, uint32 distance)
 // This hack sucks but it's gonna work for now.
 //
 void Client::MessageString(uint32 type, uint32 string_id, const char* message1,
-	const char* message2,const char* message3,const char* message4,
-	const char* message5,const char* message6,const char* message7,
-	const char* message8,const char* message9, uint32 distance)
+	const char* message2, const char* message3, const char* message4,
+	const char* message5, const char* message6, const char* message7,
+	const char* message8, const char* message9, uint32 distance)
 {
 	if (GetFilter(FilterSpellDamage) == FilterHide && type == Chat::NonMelee)
 		return;
@@ -3844,14 +3844,10 @@ void Client::MessageString(uint32 type, uint32 string_id, const char* message1,
 		type = 4;
 
 	if (distance > 0)
-		ZoneClient::ClientPatch::QueueCloseClients(this, false, distance)(
-			&ZoneClient::Message::IMessage::Formatted, type, string_id,
-			message1, message2, message3, message4, message5,
-			message6, message7, message8, message9);
+		ZoneClient::Message::CloseMessageString(this, false, static_cast<float>(distance))(type, string_id, message1,
+			message2, message3, message4, message5, message6, message7, message8, message9);
 	else
-		ZoneClient::ClientPatch::QueuePacket(
-			this, &ZoneClient::Message::IMessage::Formatted, type, string_id,
-			message1, message2, message3, message4, message5,
+		ZoneClient::Message::MessageString(this, type, string_id, message1, message2, message3, message4, message5,
 			message6, message7, message8, message9);
 }
 

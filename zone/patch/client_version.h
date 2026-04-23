@@ -7,12 +7,13 @@
 #include <memory>
 
 #include "common/emu_versions.h"
-#include "components/message/IMessage.h"
 
 #include "zone/client.h"
 #include "zone/mob.h"
 
 namespace ZoneClient {
+
+namespace Message { class IMessage; }
 
 // store all static functions for the different patches here
 class ClientPatch {
@@ -20,11 +21,11 @@ public:
 	using ClientList = std::unordered_map<uint16, Client*>;
     static const std::shared_ptr<Message::IMessage>& GetMessageComponent(EQ::versions::ClientVersion version);
 
-	template<typename Fun, typename... Args>
-	static void QueuePacket(Client* c, Fun fun, Args&&... args)
+	template<typename Fun, typename Obj, typename... Args>
+	static void QueuePacket(Client* c, Fun fun, Obj* obj, Args&&... args)
 	{
 		static_assert(std::is_member_function_pointer_v<Fun>);
-		EQApplicationPacket* app = std::invoke(fun, c->GetMessageComponent().get(), std::forward<Args>(args)...);
+		EQApplicationPacket* app = std::invoke(fun, obj, std::forward<Args>(args)...);
 		if (app != nullptr) {
 			c->QueuePacket(app);
 			delete app;
@@ -34,8 +35,9 @@ public:
 	// packet generator queue functions
 	static auto QueueClients(Mob* sender, bool ignore_sender = false, bool ackreq = true)
 	{
-		return [=]<typename Fun, typename... Args>(Fun fun, Args&&... args) {
-			static_assert(std::is_member_function_pointer_v<Fun>);
+		return [=]<typename Fun, typename Obj, typename... Args>(Fun fun, std::function<Obj*(const Client*)> component_getter, Args&&... args) {
+			static_assert(std::is_member_function_pointer_v<Fun> && "Function is required to be a member function");
+
 			std::unordered_map<EQ::versions::ClientVersion, EQApplicationPacket*> build_packets;
 			std::unordered_map<uint16, Client*> client_list = entity_list.GetClientList();
 
@@ -43,7 +45,7 @@ public:
 				if (!ignore_sender || ent != sender) {
 					auto [packet, _] = build_packets.try_emplace(
 						ent->ClientVersion(),
-						std::invoke(fun, GetMessageComponent(ent->ClientVersion()).get(), std::forward<Args>(args)...));
+						std::invoke(fun, component_getter(ent), std::forward<Args>(args)...));
 
 					if (packet->second != nullptr)
 						ent->QueuePacket(packet->second, ackreq, Client::CLIENT_CONNECTED);
@@ -61,11 +63,13 @@ public:
 		Mob* skipped_mob = nullptr, bool is_ack_required = true,
 		eqFilterType filter = FilterNone)
 	{
-		if (distance <= 0) distance = zone->GetClientUpdateRange();
+		if (distance <= 0) distance = static_cast<float>(zone->GetClientUpdateRange());
 
-		return [=]<typename Fun, typename... Args>(Fun fun, Args&&... args) {
+		return [=]<typename Fun, typename Obj, typename... Args>(Fun fun, std::function<Obj*(const Client*)> component_getter, Args&&... args) {
+			static_assert(std::is_member_function_pointer_v<Fun> && "Function is required to be a member function");
+
 			if (sender == nullptr) {
-				QueueClients(sender, ignore_sender, is_ack_required)(fun, std::forward<Args>(args)...);
+				QueueClients(sender, ignore_sender, is_ack_required)(fun, component_getter, std::forward<Args>(args)...);
 			} else {
 				float distance_squared = distance * distance;
 				std::unordered_map<EQ::versions::ClientVersion, EQApplicationPacket*> build_packets;
@@ -80,7 +84,7 @@ public:
 							&& client->ShouldGetPacket(sender, filter)) {
 							auto [packet, _] = build_packets.try_emplace(
 								client->ClientVersion(),
-								std::invoke(fun, GetMessageComponent(client->ClientVersion()).get(), std::forward<Args>(args)...));
+								std::invoke(fun, component_getter(client), std::forward<Args>(args)...));
 
 							if (packet->second != nullptr)
 								client->QueuePacket(packet->second, is_ack_required, Client::CLIENT_CONNECTED);
