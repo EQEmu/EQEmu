@@ -16,6 +16,7 @@
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "encryption.h"
+#include "common/compiler_macros.h"
 
 #ifdef EQEMU_USE_OPENSSL
 #include <openssl/des.h>
@@ -137,7 +138,9 @@ const char *eqcrypt_block(const char *buffer_in, size_t buffer_in_sz, char *buff
 		return nullptr;
 	}
 
+	PUSH_DISABLE_DEPRECATED_WARNINGS()
 	DES_ncbc_encrypt((const unsigned char*)buffer_in, (unsigned char*)buffer_out, (long)buffer_in_sz, &k, &v, enc);
+	POP_DISABLE_DEPRECATED_WARNINGS()
 #endif
 	return buffer_out;
 }
@@ -164,7 +167,9 @@ std::string eqcrypt_md5(const std::string &msg)
 	unsigned char md5_digest[16];
 	char tmp[4];
 
+	PUSH_DISABLE_DEPRECATED_WARNINGS()
 	MD5((const unsigned char*)msg.c_str(), msg.length(), md5_digest);
+	POP_DISABLE_DEPRECATED_WARNINGS()
 
 	for (int i = 0; i < 16; ++i) {
 		sprintf(&tmp[0], "%02x", md5_digest[i]);

@@ -58,7 +58,7 @@ namespace has_get_pointer_
   T* get_pointer(T const volatile*);
 
   template<class T>
-  T* get_pointer(std::auto_ptr<T> const&);
+  T* get_pointer(std::unique_ptr<T> const&);
 
 # endif
 

@@ -6,6 +6,7 @@ set(common_sources
     bodytypes.cpp
     classes.cpp
     cli/eqemu_command_handler.cpp
+    compiler_macros.h
     compression.cpp
     content/world_content_service.cpp
     crash.cpp

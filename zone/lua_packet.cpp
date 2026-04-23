@@ -82,6 +82,16 @@ Lua_Packet::Lua_Packet(const Lua_Packet& o) {
 	}
 }
 
+Lua_Packet::~Lua_Packet()
+{
+	if (owned_) {
+		EQApplicationPacket* ptr = GetLuaPtrData();
+		if (ptr) {
+			delete ptr;
+		}
+	}
+}
+
 int Lua_Packet::GetSize() {
 	Lua_Safe_Call_Int();
 	return static_cast<int>(self->size);
