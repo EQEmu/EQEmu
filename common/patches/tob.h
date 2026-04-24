@@ -1,6 +1,6 @@
-#ifndef COMMON_LAURION_H
-#define COMMON_LAURION_H
+#pragma once
 
+#include "rof2.h"
 #include "../struct_strategy.h"
 
 class EQStreamIdentifier;
@@ -34,4 +34,22 @@ namespace TOB
 
 }; /*TOB*/
 
-#endif /*COMMON_LAURION_H*/
+namespace Message {
+
+class TOB : public RoF2
+{
+public:
+	TOB() {}
+	~TOB() override {}
+
+	[[nodiscard]] EQApplicationPacket* Formatted(uint32_t color, uint32_t id, const std::array<const char*, 9>& args) const override;
+
+	EQApplicationPacket* InterruptSpell(uint32_t message, uint32_t spawn_id, const char* spell_link) const override;
+	EQApplicationPacket* InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, const char* name, const char* spell_link) const override;
+
+protected:
+	[[nodiscard]] uint32_t ResolveID(uint32_t id) const override;
+	void ResolveArguments(uint32_t id, std::array<const char*, 9>& args) const override;
+};
+
+} // namespace Message

@@ -32,6 +32,7 @@
 #include "common/raid.h"
 #include "common/rulesys.h"
 #include "common/strings.h"
+#include "zone/string_ids.h"
 
 #include <sstream>
 
@@ -3919,3 +3920,97 @@ namespace Titanium
 		return index; // as long as we guard against bad slots server side, we should be fine
 	}
 } /*Titanium*/
+
+namespace Message {
+
+EQApplicationPacket* Titanium::Simple(uint32_t color, uint32_t id) const
+{
+	uint32_t string_id = ResolveID(id);
+	if (string_id > 0) {
+		auto outapp = new EQApplicationPacket(OP_SimpleMessage, sizeof(SimpleMessage_Struct));
+		auto* sms = reinterpret_cast<SimpleMessage_Struct*>(outapp->pBuffer);
+		sms->string_id = string_id;
+		sms->color = color;
+		sms->unknown8 = 0;
+
+		return outapp;
+	}
+
+	return nullptr;
+}
+
+EQApplicationPacket* Titanium::Formatted(
+	uint32_t color, uint32_t id, const std::array<const char*, 9>& args) const
+{
+	uint32_t string_id = ResolveID(id);
+	if (string_id > 0) {
+		std::array<const char*, 9> resolved_args = args;
+		ResolveArguments(id, resolved_args);
+		if (!resolved_args[0])
+			return Simple(color, id);
+
+		SerializeBuffer buf(20);
+		buf.WriteUInt32(0);
+		buf.WriteUInt32(string_id);
+		buf.WriteUInt32(color);
+
+		for (const auto* a : resolved_args) {
+			if (a != nullptr)
+				buf.WriteString(a);
+		}
+
+		buf.WriteUInt8(0);
+
+		return new EQApplicationPacket(OP_FormattedMessage, std::move(buf));
+	}
+
+	return nullptr;
+}
+
+EQApplicationPacket* Titanium::InterruptSpell(uint32_t message, uint32_t spawn_id, const char* spell_link) const
+{
+	auto outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct));
+	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
+	ic->messageid = ResolveID(message);
+	ic->spawnid = spawn_id;
+	outapp->priority = 5;
+
+	return outapp;
+}
+
+EQApplicationPacket* Titanium::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, const char* name,
+	const char* spell_link) const
+{
+	auto outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(name) + 1);
+	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
+	ic->messageid = ResolveID(message);
+	ic->spawnid = spawn_id;
+	fmt::format_to_n(ic->message, strlen(name) + 1, "{}\0", name);
+	return outapp;
+}
+
+// A value of 0 means that the string isn't mapped in this client, valid string ids start at 1
+uint32_t Titanium::ResolveID(uint32_t id) const
+{
+	// passthrough — string IDs are defined at the base client level;
+	// override in patches where IDs need remapping
+	return id;
+}
+
+void Titanium::ResolveArguments(uint32_t id, std::array<const char*, 9>& args) const
+{
+	switch (id) {
+	case SPELL_FIZZLE:
+	case MISS_NOTE:
+		args[0] = nullptr; // drop spell link
+		break;
+	case SPELL_FIZZLE_OTHER:
+	case MISSED_NOTE_OTHER:
+		args[1] = nullptr; // drop spell link
+		break;
+	default:
+		break;
+	}
+}
+
+} // namespace Message

@@ -17,6 +17,7 @@
 */
 #pragma once
 
+#include "sof.h"
 #include "common/struct_strategy.h"
 
 class EQStreamIdentifier;
@@ -48,3 +49,14 @@ namespace SoD
 	};
 
 } /*SoD*/
+
+namespace Message {
+
+class SoD : public SoF
+{
+public:
+	SoD() = default;
+	~SoD() override = default;
+};
+
+} // namespace Message

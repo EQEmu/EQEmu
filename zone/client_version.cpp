@@ -15,15 +15,15 @@
 	You should have received a copy of the GNU General Public License
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#pragma once
 
-#include "zone/patch/components/message/rof.h"
+#include "client_version.h"
 
-namespace ZoneClient::Message {
-class RoF2 : public RoF
+using Version = EQ::versions::ClientVersion;
+
+void Client::SetClientVersion(Version client_version)
 {
-public:
-	RoF2() {}
-	~RoF2() override {}
-};
-} // namespace Zone::Message
+	m_ClientVersion = client_version;
+	m_ClientVersionBit = EQ::versions::ConvertClientVersionToClientVersionBit(client_version);
+}
+
+Version Client::GetClientVersion() const { return m_ClientVersion; }

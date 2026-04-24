@@ -17,6 +17,7 @@
 */
 #pragma once
 
+#include "titanium.h"
 #include "common/struct_strategy.h"
 
 class EQStreamIdentifier;
@@ -48,3 +49,14 @@ namespace SoF
 	};
 
 } /*SoF*/
+
+namespace Message {
+
+class SoF : public Titanium
+{
+public:
+	SoF() = default;
+	~SoF() override = default;
+};
+
+} // namespace Message

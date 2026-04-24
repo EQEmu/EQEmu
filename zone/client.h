@@ -19,7 +19,6 @@
 
 class Client;
 class EQApplicationPacket;
-namespace ZoneClient::Message { class IMessage; }
 class DynamicZone;
 class DzLockout;
 class ExpeditionRequest;
@@ -1553,7 +1552,6 @@ public:
 	inline const uint32 ClientVersionBit() const { return m_ClientVersionBit; }
 	void SetClientVersion(EQ::versions::ClientVersion client_version);
 	EQ::versions::ClientVersion GetClientVersion() const;
-	const std::shared_ptr<ZoneClient::Message::IMessage>& GetMessageComponent() const { return m_messageComponent; }
 
 	/** Adventure Stuff **/
 	void SendAdventureError(const char *error);
@@ -2283,7 +2281,6 @@ private:
 
 	EQ::versions::ClientVersion m_ClientVersion;
 	uint32 m_ClientVersionBit;
-	std::shared_ptr<ZoneClient::Message::IMessage> m_messageComponent;
 
 	int XPRate;
 

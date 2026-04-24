@@ -18,19 +18,15 @@
 
 #include "client_version.h"
 
-#include "zone/patch/components/message/titanium.h"
-#include "zone/patch/components/message/sof.h"
-#include "zone/patch/components/message/sod.h"
-#include "zone/patch/components/message/uf.h"
-#include "zone/patch/components/message/rof.h"
-#include "zone/patch/components/message/rof2.h"
-#include "zone/patch/components/message/tob.h"
-
-#include "client.h"
-#include "websocketpp/http/parser.hpp"
+#include "common/patches/titanium.h"
+#include "common/patches/sof.h"
+#include "common/patches/sod.h"
+#include "common/patches/uf.h"
+#include "common/patches/rof.h"
+#include "common/patches/rof2.h"
+#include "common/patches/tob.h"
 
 using Version = EQ::versions::ClientVersion;
-using namespace ZoneClient;
 
 struct ClientComponents
 {
@@ -82,16 +78,7 @@ static const ClientComponents& GetComponents(Version version)
 	return patches.at(version);
 }
 
-const std::shared_ptr<Message::IMessage>& ClientPatch::GetMessageComponent(Version version)
+const std::shared_ptr<Message::IMessage>& GetMessageComponent(Version version)
 {
 	return GetComponents(version).messageComponent;
 }
-
-void Client::SetClientVersion(Version client_version)
-{
-	m_ClientVersion = client_version;
-	m_ClientVersionBit = EQ::versions::ConvertClientVersionToClientVersionBit(client_version);
-	m_messageComponent = GetComponents(client_version).messageComponent;
-}
-
-Version Client::GetClientVersion() const { return m_ClientVersion; }

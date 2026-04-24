@@ -44,10 +44,9 @@
 #include "common/spdat.h"
 #include "common/strings.h"
 #include "common/zone_store.h"
-#include "patch/client_version.h"
-#include "patch/components/message/IMessage.h"
 #include "zone/bot_command.h"
 #include "zone/cheat_manager.h"
+#include "zone/client_version.h"
 #include "zone/command.h"
 #include "zone/dialogue_window.h"
 #include "zone/dynamic_zone.h"
@@ -3812,10 +3811,10 @@ void Client::MessageString(uint32 type, uint32 string_id, uint32 distance)
 		return;
 
 	if (distance > 0)
-		ZoneClient::Message::CloseMessageString(this, false, static_cast<float>(distance))(
+		Message::CloseMessageString(this, false, static_cast<float>(distance))(
 			type, string_id);
 	else
-		ZoneClient::Message::MessageString(this, type, string_id);
+		Message::MessageString(this, type, string_id);
 }
 
 //
@@ -3844,10 +3843,10 @@ void Client::MessageString(uint32 type, uint32 string_id, const char* message1,
 		type = 4;
 
 	if (distance > 0)
-		ZoneClient::Message::CloseMessageString(this, false, static_cast<float>(distance))(type, string_id, message1,
+		Message::CloseMessageString(this, false, static_cast<float>(distance))(type, string_id, message1,
 			message2, message3, message4, message5, message6, message7, message8, message9);
 	else
-		ZoneClient::Message::MessageString(this, type, string_id, message1, message2, message3, message4, message5,
+		Message::MessageString(this, type, string_id, message1, message2, message3, message4, message5,
 			message6, message7, message8, message9);
 }
 

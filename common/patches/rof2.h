@@ -17,6 +17,7 @@
 */
 #pragma once
 
+#include "rof.h"
 #include "common/struct_strategy.h"
 
 class EQStreamIdentifier;
@@ -48,3 +49,14 @@ namespace RoF2
 	};
 
 }; /*RoF2*/
+
+namespace Message {
+
+class RoF2 : public RoF
+{
+public:
+	RoF2() = default;
+	~RoF2() override = default;
+};
+
+} // namespace Message

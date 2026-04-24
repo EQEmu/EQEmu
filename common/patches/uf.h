@@ -17,6 +17,7 @@
 */
 #pragma once
 
+#include "sod.h"
 #include "common/struct_strategy.h"
 
 class EQStreamIdentifier;
@@ -48,3 +49,14 @@ namespace UF
 	};
 
 }; /*UF*/
+
+namespace Message {
+
+class UF : public SoD
+{
+public:
+	UF() = default;
+	~UF() override = default;
+};
+
+} // namespace Message

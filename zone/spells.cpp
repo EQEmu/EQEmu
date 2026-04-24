@@ -80,9 +80,9 @@
 #include "common/rulesys.h"
 #include "common/spdat.h"
 #include "common/strings.h"
-#include "patch/client_version.h"
 #include "zone/bot.h"
 #include "zone/client.h"
+#include "zone/client_version.h"
 #include "zone/fastmath.h"
 #include "zone/lua_parser.h"
 #include "zone/mob_movement_manager.h"
@@ -96,7 +96,6 @@
 #include <cassert>
 
 #include "common/links.h"
-#include "patch/components/message/IMessage.h"
 
 extern Zone         *zone;
 extern volatile bool is_zone_loaded;
@@ -340,12 +339,12 @@ bool Mob::DoCastSpell(uint16 spell_id, uint16 target_id, CastingSlot slot,
 		Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spell_id);
 
 		if (IsClient())
-			ZoneClient::Message::MessageString(CastToClient(), Chat::SpellFailure, fizzle_msg, spell_link);
+			Message::MessageString(CastToClient(), Chat::SpellFailure, fizzle_msg, spell_link);
 
 		/**
 		 * Song Failure message
 		 */
-		ZoneClient::Message::CloseMessageString(this, true, RuleI(Range, SpellMessages),
+		Message::CloseMessageString(this, true, RuleI(Range, SpellMessages),
 			nullptr, true, IsClient() ? FilterPCSpells : FilterNPCSpells)(
 				Chat::SpellFailure, fizzle_msg == MISS_NOTE ? MISSED_NOTE_OTHER : SPELL_FIZZLE_OTHER, GetName(), spell_link);
 
@@ -1304,7 +1303,7 @@ void Mob::InterruptSpell(uint16 message, uint16 color, uint16 spellid)
 		// the interrupt message
 		char spell_link[Links::MAX_LINK_SIZE];
 		Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spellid);
-		ZoneClient::Message::InterruptSpell(CastToClient(), message, GetID(), spell_link);
+		Message::InterruptSpell(CastToClient(), message, GetID(), spell_link);
 		SendSpellBarEnable(spellid);
 	}
 
@@ -1332,7 +1331,7 @@ void Mob::InterruptSpell(uint16 message, uint16 color, uint16 spellid)
 	// this is the actual message, it works the same as a formatted message
 	char spell_link[Links::MAX_LINK_SIZE];
 	Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spellid);
-	ZoneClient::Message::InterruptSpellOther(this, message_other, GetID(), GetCleanName(), spell_link);
+	Message::InterruptSpellOther(this, message_other, GetID(), GetCleanName(), spell_link);
 }
 
 // this is like interrupt, just it doesn't spam interrupt packets to everyone
@@ -7272,7 +7271,7 @@ void Mob::DoBardCastingFromItemClick(bool is_casting_bard_song, uint32 cast_time
 		if (cast_time != 0) {
 			char spell_link[Links::MAX_LINK_SIZE];
 			Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spell_id);
-			ZoneClient::Message::InterruptSpell(CastToClient(), SONG_ENDS, GetID(), spell_link);
+			Message::InterruptSpell(CastToClient(), SONG_ENDS, GetID(), spell_link);
 
 			ZeroCastingVars();
 			ZeroBardPulseVars();

@@ -27,6 +27,7 @@
 
 #include "common/packet_dump.h"
 #include "world/sof_char_create_data.h"
+#include "zone/string_ids.h"
 
 namespace TOB
 {
@@ -37,8 +38,8 @@ namespace TOB
 	void SerializeItem(SerializeBuffer &buffer, const EQ::ItemInstance* inst, int16 slot_id, uint8 depth, ItemPacketType packet_type);
 
 	// message link converters
-	static inline void ServerToTOBConvertLinks(std::string& message_out, const std::string& message_in);
-	static inline void TOBToServerConvertLinks(std::string& message_out, const std::string& message_in);
+	static void ServerToTOBConvertLinks(std::string& message_out, const std::string& message_in);
+	static void TOBToServerConvertLinks(std::string& message_out, const std::string& message_in);
 
 	// SpawnAppearance
 	static inline uint32 ServerToTOBSpawnAppearanceType(uint32 server_type);
@@ -4743,60 +4744,59 @@ namespace TOB
 		buffer.WriteInt32(0); //unsupported atm
 	}
 
-	static inline void ServerToTOBConvertLinks(std::string& message_out, const std::string& message_in)
+	static void ServerToTOBConvertLinks(std::string& message_out, const std::string& message_in)
 	{
 		if (message_in.find('\x12') == std::string::npos) {
 			message_out = message_in;
 			return;
 		}
 
-		auto segments = Strings::Split(message_in, '\x12');
+		std::vector<std::string> segments = Strings::Split(message_in, '\x12');
 		for (size_t segment_iter = 0; segment_iter < segments.size(); ++segment_iter) {
 			if (segment_iter & 1) {
 				auto etag = std::stoi(segments[segment_iter].substr(0, 1));
 
 				switch (etag) {
-				case 0:
-				{
+				case 0: {
 					size_t index = 1;
-					auto item_id = segments[segment_iter].substr(index, 5);
+					std::string item_id = segments[segment_iter].substr(index, 5);
 					index += 5;
-					
-					auto aug1 = segments[segment_iter].substr(index, 5);
+
+					std::string aug1 = segments[segment_iter].substr(index, 5);
 					index += 5;
-					
-					auto aug2 = segments[segment_iter].substr(index, 5);
+
+					std::string aug2 = segments[segment_iter].substr(index, 5);
 					index += 5;
-					
-					auto aug3 = segments[segment_iter].substr(index, 5);
+
+					std::string aug3 = segments[segment_iter].substr(index, 5);
 					index += 5;
-					
-					auto aug4 = segments[segment_iter].substr(index, 5);
+
+					std::string aug4 = segments[segment_iter].substr(index, 5);
 					index += 5;
-					
-					auto aug5 = segments[segment_iter].substr(index, 5);
+
+					std::string aug5 = segments[segment_iter].substr(index, 5);
 					index += 5;
-					
-					auto aug6 = segments[segment_iter].substr(index, 5);
+
+					std::string aug6 = segments[segment_iter].substr(index, 5);
 					index += 5;
-					
-					auto is_evolving = segments[segment_iter].substr(index, 1);
+
+					std::string is_evolving = segments[segment_iter].substr(index, 1);
 					index += 1;
-					
-					auto evolutionGroup = segments[segment_iter].substr(index, 4);
+
+					std::string evolutionGroup = segments[segment_iter].substr(index, 4);
 					index += 4;
-					
-					auto evolutionLevel = segments[segment_iter].substr(index, 2);
+
+					std::string evolutionLevel = segments[segment_iter].substr(index, 2);
 					index += 2;
-					
-					auto ornamentationIconID = segments[segment_iter].substr(index, 5);
+
+					std::string ornamentationIconID = segments[segment_iter].substr(index, 5);
 					index += 5;
-					
-					auto itemHash = segments[segment_iter].substr(index, 8);
+
+					std::string itemHash = segments[segment_iter].substr(index, 8);
 					index += 8;
-					
-					auto text = segments[segment_iter].substr(index);
-					
+
+					std::string text = segments[segment_iter].substr(index);
+
 					message_out.push_back('\x12');
 					message_out.push_back('0'); //etag item
 					message_out.append(item_id);
@@ -4830,14 +4830,13 @@ namespace TOB
 					message_out.push_back('\x12');
 					break;
 				}
-			}
-			else {
+			} else {
 				message_out.append(segments[segment_iter]);
 			}
 		}
 	}
 
-	static inline void TOBToServerConvertLinks(std::string& message_out, const std::string& message_in) {
+	static void TOBToServerConvertLinks(std::string& message_out, const std::string& message_in) {
 		message_out = message_in;
 	}
 
@@ -5560,4 +5559,133 @@ namespace TOB
 		return index; // as long as we guard against bad slots server side, we should be fine
 	}
 } /*TOB*/
+
+namespace Message {
+
+struct TOBStringIDs
+{
+	static constexpr uint32_t DisarmedTrap = 1458; // You successfully disarmed the trap
+};
+
+uint32_t TOB::ResolveID(uint32_t id) const
+{
+	switch (id) {
+	case YOU_FLURRY:
+	case BOW_DOUBLE_DAMAGE:
+	case NO_INSTRUMENT_SKILL:
+	case DISCIPLINE_CONLOST:
+	case TGB_ON:
+	case TGB_OFF:
+	case DISCIPLINE_RDY:
+	case SONG_NEEDS_DRUM:
+	case SONG_NEEDS_WIND:
+	case SONG_NEEDS_STRINGS:
+	case SONG_NEEDS_BRASS:
+	case YOU_CRIT_HEAL:
+	case YOU_CRIT_BLAST:
+	case SPELL_WORN_OFF:
+	case PET_TAUNTING:
+	case DISC_LEVEL_ERROR:
+	case MALE_SLAYUNDEAD:
+	case FEMALE_SLAYUNDEAD:
+	case FINISHING_BLOW:
+	case ASSASSINATES:
+	case CRIPPLING_BLOW:
+	case CRITICAL_HIT:
+	case DEADLY_STRIKE:
+	case OTHER_CRIT_HEAL:
+	case OTHER_CRIT_BLAST:
+	case NPC_RAMPAGE:
+	case NPC_FLURRY:
+	case DISCIPLINE_FEARLESS:
+	case CORPSE_ITEM_LOST:
+	case FATAL_BOW_SHOT:
+	case CURRENT_SPELL_EFFECTS:
+	case NOT_DELEGATED_MARKER:
+	case STRIKETHROUGH_STRING:
+	case AE_RAMPAGE:
+	case DISC_LEVEL_USE_ERROR:
+	case SPLIT_FAIL:
+		// removed from the client
+		return 0;
+	case DISARMED_TRAP:
+		return TOBStringIDs::DisarmedTrap;
+	default:
+		return RoF2::ResolveID(id);
+	}
+}
+
+void TOB::ResolveArguments(uint32_t id, std::array<const char*, 9>& args) const
+{
+	switch (id) {
+	case SPELL_FIZZLE:
+	case MISS_NOTE:
+	case SPELL_FIZZLE_OTHER:
+	case MISSED_NOTE_OTHER:
+		// take all arguments (spell link)
+		break;
+	default:
+		RoF2::ResolveArguments(id, args);
+		break;
+	}
+}
+
+EQApplicationPacket* TOB::Formatted(uint32_t color, uint32_t id, const std::array<const char*, 9>& args) const
+{
+	uint32_t string_id = ResolveID(id);
+	if (string_id > 0) {
+		std::array<const char*, 9> resolved_args = args;
+		ResolveArguments(id, resolved_args);
+		if (!resolved_args[0])
+			return Simple(color, id);
+
+		SerializeBuffer buffer(49);
+		// 49 is the minimum size needed for this packet since each arg writes at least 4 bytes
+		buffer.WriteUInt32(0);
+		// This is a string written like the message arrays, but it seems to be discarded by the client
+		buffer.WriteUInt8(0); // 0 is a zone packet, 1 is a world packet -- these are always sent from zone from here
+		buffer.WriteUInt32(string_id);
+		buffer.WriteUInt32(color);
+
+		for (auto a : resolved_args) {
+			if (a != nullptr) {
+				std::string new_message;
+				::TOB::ServerToTOBConvertLinks(new_message, a);
+				buffer.WriteLengthString(new_message);
+			} else
+				buffer.WriteUInt32(0);
+		}
+
+		return new EQApplicationPacket(OP_FormattedMessage, std::move(buffer));
+	}
+
+	return nullptr;
+}
+
+EQApplicationPacket* TOB::InterruptSpell(uint32_t message, uint32_t spawn_id, const char* spell_link) const
+{
+	auto outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(spell_link) + 1);
+	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
+	ic->messageid = ResolveID(message);
+	ic->spawnid = spawn_id;
+	fmt::format_to_n(ic->message, strlen(spell_link) + 1, "{}\0", spell_link);
+	outapp->priority = 5;
+
+	return outapp;
+}
+
+EQApplicationPacket* TOB::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, const char* name,
+	const char* spell_link) const
+{
+	auto outapp = new EQApplicationPacket(OP_InterruptCast,
+		sizeof(InterruptCast_Struct) + strlen(name) + strlen(spell_link) + 2);
+	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
+	ic->messageid = ResolveID(message);
+	ic->spawnid = spawn_id;
+	fmt::format_to_n(ic->message, strlen(name) + strlen(spell_link) + 2, "{}\0{}\0", name, spell_link);
+
+	return outapp;
+}
+
+} // namespace Message
 

@@ -17,6 +17,7 @@
 */
 #pragma once
 
+#include "IMessage.h"
 #include "common/struct_strategy.h"
 
 class EQStreamIdentifier;
@@ -48,3 +49,27 @@ namespace Titanium
 	};
 
 } /*Titanium*/
+
+// out-going message packets
+namespace Message {
+
+class Titanium : public IMessage
+{
+public:
+	Titanium() = default;
+	~Titanium() override = default;
+
+	[[nodiscard]] EQApplicationPacket* Simple(uint32_t color, uint32_t id) const override;
+	[[nodiscard]] EQApplicationPacket* Formatted(uint32_t color, uint32_t id, const std::array<const char*, 9>& args) const override;
+
+	EQApplicationPacket* InterruptSpell(uint32_t message, uint32_t spawn_id, const char* spell_link) const override;
+	EQApplicationPacket* InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, const char* name,
+		const char* spell_link) const override;
+
+protected:
+	[[nodiscard]] virtual uint32_t ResolveID(uint32_t id) const;
+	virtual void ResolveArguments(uint32_t id, std::array<const char*, 9>& args) const;
+};
+
+} // namespace Message
+
