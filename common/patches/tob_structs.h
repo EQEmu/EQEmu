@@ -741,8 +741,8 @@ namespace TOB {
 			/*132*/ float y;
 			/*136*/ float x;
 			/*140*/ float z;
-			/*144*/ uint8 level;
-			/*145*/ uint8 type;
+			/*144*/ uint8 type;
+			/*145*/ uint8 level;
 			/*146*/ uint8 charges; //no idea if these are right; eqlib doesn't seem to know either
 			/*147*/ uint8 activatable;
 			/*148*/ uint32 unknown1; //might be some timer, not sure though
@@ -754,7 +754,7 @@ namespace TOB {
 			/*004*/ int32 unknown004;
 			/*008*/ EQAffect_Struct affect;
 			/*160*/ uint32 slot_id;
-			/*164*/ uint32 buff_fade;
+			/*164*/ uint32 buff_fade; // 1: remove, 2: modify, 3: add new
 			/*168*/
 		};
 
