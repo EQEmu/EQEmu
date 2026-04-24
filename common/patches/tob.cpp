@@ -389,8 +389,7 @@ namespace TOB
 
 		VARSTRUCT_ENCODE_STRING(OutBuffer, emu->sender);
 		VARSTRUCT_ENCODE_STRING(OutBuffer, emu->targetname);
-		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);	// Unknown
-		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);	// Unknown
+		VARSTRUCT_ENCODE_TYPE(uint64, OutBuffer, 0);	// Unknown
 		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, emu->language);
 		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, emu->chan_num);
 		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);	// Unknown
@@ -398,11 +397,13 @@ namespace TOB
 		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, emu->skill_in_language);
 		VARSTRUCT_ENCODE_STRING(OutBuffer, new_message.c_str());
 
-		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);	// Unknown
-		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);	// Unknown
-		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);	// Unknown
-		VARSTRUCT_ENCODE_TYPE(uint16, OutBuffer, 0);	// Unknown
-		VARSTRUCT_ENCODE_TYPE(uint8, OutBuffer, 0);	// Unknown
+		VARSTRUCT_ENCODE_TYPE(uint8, OutBuffer, 0); // Unknown
+		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);// Unknown
+		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);// Unknown
+
+		VARSTRUCT_ENCODE_STRING(OutBuffer, "");
+		VARSTRUCT_ENCODE_TYPE(uint8, OutBuffer, 0); // Unknown
+		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);// Unknown
 
 		delete[] __emu_buffer;
 		dest->FastQueuePacket(&in, ack_req);
@@ -3640,9 +3641,12 @@ namespace TOB
 
 		uint32 Skill = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
 
+		// this has a size limit of 11k in the client
 		std::string old_message = InBuffer;
 		std::string new_message;
 		TOBToServerConvertLinks(new_message, old_message);
+
+		// there are 15 bytes after this, part of which is an unk string, check the ENCODE for the layout
 
 		__packet->size = sizeof(ChannelMessage_Struct) + new_message.length() + 1;
 		__packet->pBuffer = new unsigned char[__packet->size];
