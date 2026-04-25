@@ -61,24 +61,19 @@ struct ClientComponents
 	std::unique_ptr<Message::IMessage> messageComponent;
 };
 
-static const ClientComponents& GetComponents(Version version)
-{
-	static const std::unordered_map<Version, ClientComponents> patches = [] {
-		std::unordered_map<Version, ClientComponents> p;
-		p.emplace(Version::Titanium, Version::Titanium);
-		p.emplace(Version::SoF, Version::SoF);
-		p.emplace(Version::SoD, Version::SoD);
-		p.emplace(Version::UF, Version::UF);
-		p.emplace(Version::RoF, Version::RoF);
-		p.emplace(Version::RoF2, Version::RoF2);
-		p.emplace(Version::TOB, Version::TOB);
-		return p;
-	}();
-
-	return patches.at(version);
-}
+static const std::unordered_map<Version, ClientComponents> s_patches = [] {
+	std::unordered_map<Version, ClientComponents> p;
+	p.emplace(Version::Titanium, Version::Titanium);
+	p.emplace(Version::SoF, Version::SoF);
+	p.emplace(Version::SoD, Version::SoD);
+	p.emplace(Version::UF, Version::UF);
+	p.emplace(Version::RoF, Version::RoF);
+	p.emplace(Version::RoF2, Version::RoF2);
+	p.emplace(Version::TOB, Version::TOB);
+	return p;
+}();
 
 const std::unique_ptr<Message::IMessage>& GetMessageComponent(Version version)
 {
-	return GetComponents(version).messageComponent;
+	return s_patches.at(version).messageComponent;
 }
