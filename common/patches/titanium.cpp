@@ -3922,12 +3922,11 @@ namespace Titanium
 } /*Titanium*/
 
 namespace Message {
-
-EQApplicationPacket* Titanium::Simple(uint32_t color, uint32_t id) const
+std::unique_ptr<EQApplicationPacket> Titanium::Simple(uint32_t color, uint32_t id) const
 {
 	uint32_t string_id = ResolveID(id);
 	if (string_id > 0) {
-		auto outapp = new EQApplicationPacket(OP_SimpleMessage, sizeof(SimpleMessage_Struct));
+		auto outapp = std::make_unique<EQApplicationPacket>(OP_SimpleMessage, sizeof(SimpleMessage_Struct));
 		auto* sms = reinterpret_cast<SimpleMessage_Struct*>(outapp->pBuffer);
 		sms->string_id = string_id;
 		sms->color = color;
@@ -3939,7 +3938,7 @@ EQApplicationPacket* Titanium::Simple(uint32_t color, uint32_t id) const
 	return nullptr;
 }
 
-EQApplicationPacket* Titanium::Formatted(
+std::unique_ptr<EQApplicationPacket> Titanium::Formatted(
 	uint32_t color, uint32_t id, const std::array<const char*, 9>& args) const
 {
 	uint32_t string_id = ResolveID(id);
@@ -3961,15 +3960,16 @@ EQApplicationPacket* Titanium::Formatted(
 
 		buf.WriteUInt8(0);
 
-		return new EQApplicationPacket(OP_FormattedMessage, std::move(buf));
+		return std::make_unique<EQApplicationPacket>(OP_FormattedMessage, std::move(buf));
 	}
 
 	return nullptr;
 }
 
-EQApplicationPacket* Titanium::InterruptSpell(uint32_t message, uint32_t spawn_id, const char* spell_link) const
+std::unique_ptr<EQApplicationPacket> Titanium::InterruptSpell(uint32_t message, uint32_t spawn_id,
+	const char* spell_link) const
 {
-	auto outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct));
+	auto outapp = std::make_unique<EQApplicationPacket>(OP_InterruptCast, sizeof(InterruptCast_Struct));
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);
 	ic->spawnid = spawn_id;
@@ -3978,10 +3978,11 @@ EQApplicationPacket* Titanium::InterruptSpell(uint32_t message, uint32_t spawn_i
 	return outapp;
 }
 
-EQApplicationPacket* Titanium::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, const char* name,
+std::unique_ptr<EQApplicationPacket> Titanium::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id,
+	const char* name,
 	const char* spell_link) const
 {
-	auto outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(name) + 1);
+	auto outapp = std::make_unique<EQApplicationPacket>(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(name) + 1);
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);
 	ic->spawnid = spawn_id;

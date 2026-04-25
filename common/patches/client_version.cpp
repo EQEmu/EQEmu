@@ -34,31 +34,31 @@ struct ClientComponents
 	{
 		switch (version) {
 		case Version::TOB:
-			messageComponent = std::make_shared<Message::TOB>();
+			messageComponent = std::make_unique<Message::TOB>();
 			break;
 		case Version::RoF2:
-			messageComponent = std::make_shared<Message::RoF2>();
+			messageComponent = std::make_unique<Message::RoF2>();
 			break;
 		case Version::RoF:
-			messageComponent = std::make_shared<Message::RoF>();
+			messageComponent = std::make_unique<Message::RoF>();
 			break;
 		case Version::UF:
-			messageComponent = std::make_shared<Message::UF>();
+			messageComponent = std::make_unique<Message::UF>();
 			break;
 		case Version::SoD:
-			messageComponent = std::make_shared<Message::SoD>();
+			messageComponent = std::make_unique<Message::SoD>();
 			break;
 		case Version::SoF:
-			messageComponent = std::make_shared<Message::SoF>();
+			messageComponent = std::make_unique<Message::SoF>();
 			break;
 		default:
-			messageComponent = std::make_shared<Message::Titanium>();
+			messageComponent = std::make_unique<Message::Titanium>();
 			break;
 		}
 	}
 
 	const Version version;
-	std::shared_ptr<Message::IMessage> messageComponent;
+	std::unique_ptr<Message::IMessage> messageComponent;
 };
 
 static const ClientComponents& GetComponents(Version version)
@@ -78,7 +78,7 @@ static const ClientComponents& GetComponents(Version version)
 	return patches.at(version);
 }
 
-const std::shared_ptr<Message::IMessage>& GetMessageComponent(Version version)
+const std::unique_ptr<Message::IMessage>& GetMessageComponent(Version version)
 {
 	return GetComponents(version).messageComponent;
 }

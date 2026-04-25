@@ -37,12 +37,14 @@ public:
 	virtual ~IMessage() = default;
 
 	// these two are the basic string message packets
-	[[nodiscard]] virtual EQApplicationPacket* Simple(uint32_t color, uint32_t id) const = 0;
-	[[nodiscard]] virtual EQApplicationPacket* Formatted(uint32_t color, uint32_t id, const std::array<const char*, 9>& args) const = 0;
+	virtual std::unique_ptr<EQApplicationPacket> Simple(uint32_t color, uint32_t id) const = 0;
+	virtual std::unique_ptr<EQApplicationPacket> Formatted(uint32_t color, uint32_t id,
+		const std::array<const char*, 9>& args) const = 0;
 
 	// These aren't technically messages, but they use the same format and are similar enough to include here
-	virtual EQApplicationPacket* InterruptSpell(uint32_t message, uint32_t spawn_id, const char* spell_link) const = 0;
-	virtual EQApplicationPacket* InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id,
+	virtual std::unique_ptr<EQApplicationPacket> InterruptSpell(uint32_t message, uint32_t spawn_id,
+		const char* spell_link) const = 0;
+	virtual std::unique_ptr<EQApplicationPacket> InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id,
 		const char* name, const char* spell_link) const = 0;
 };
 

@@ -5634,7 +5634,8 @@ void TOB::ResolveArguments(uint32_t id, std::array<const char*, 9>& args) const
 	}
 }
 
-EQApplicationPacket* TOB::Formatted(uint32_t color, uint32_t id, const std::array<const char*, 9>& args) const
+std::unique_ptr<EQApplicationPacket> TOB::Formatted(uint32_t color, uint32_t id,
+	const std::array<const char*, 9>& args) const
 {
 	uint32_t string_id = ResolveID(id);
 	if (string_id > 0) {
@@ -5660,15 +5661,16 @@ EQApplicationPacket* TOB::Formatted(uint32_t color, uint32_t id, const std::arra
 				buffer.WriteUInt32(0);
 		}
 
-		return new EQApplicationPacket(OP_FormattedMessage, std::move(buffer));
+		return std::make_unique<EQApplicationPacket>(OP_FormattedMessage, std::move(buffer));
 	}
 
 	return nullptr;
 }
 
-EQApplicationPacket* TOB::InterruptSpell(uint32_t message, uint32_t spawn_id, const char* spell_link) const
+std::unique_ptr<EQApplicationPacket> TOB::InterruptSpell(uint32_t message, uint32_t spawn_id,
+	const char* spell_link) const
 {
-	auto outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(spell_link) + 1);
+	auto outapp = std::make_unique<EQApplicationPacket>(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(spell_link) + 1);
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);
 	ic->spawnid = spawn_id;
@@ -5678,10 +5680,11 @@ EQApplicationPacket* TOB::InterruptSpell(uint32_t message, uint32_t spawn_id, co
 	return outapp;
 }
 
-EQApplicationPacket* TOB::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, const char* name,
+std::unique_ptr<EQApplicationPacket> TOB::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id,
+	const char* name,
 	const char* spell_link) const
 {
-	auto outapp = new EQApplicationPacket(OP_InterruptCast,
+	auto outapp = std::make_unique<EQApplicationPacket>(OP_InterruptCast,
 		sizeof(InterruptCast_Struct) + strlen(name) + strlen(spell_link) + 2);
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);
