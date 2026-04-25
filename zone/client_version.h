@@ -16,9 +16,10 @@
 namespace ClientPatch {
 
 using ClientList = std::unordered_map<uint16, Client*>;
+template<typename Obj> using ComponentGetter = std::function<Obj*(const Client*)>;
 
 template <typename Fun, typename Obj, typename... Args>
-requires std::is_member_function_pointer_v<Fun>
+	requires std::is_member_function_pointer_v<Fun>
 static void QueuePacket(Client* c, Fun fun, Obj* obj, Args&&... args)
 {
 	std::unique_ptr<EQApplicationPacket> app = std::invoke(fun, obj, std::forward<Args>(args)...);
@@ -29,9 +30,8 @@ static void QueuePacket(Client* c, Fun fun, Obj* obj, Args&&... args)
 // packet generator queue functions
 static auto QueueClients(Mob* sender, bool ignore_sender = false, bool ackreq = true)
 {
-	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun,
-		std::function<Obj*(const Client*)> component_getter, Args&&... args)
-		requires std::is_member_function_pointer_v<Fun>
+	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun, ComponentGetter<Obj> component, Args&&... args)
+			requires std::is_member_function_pointer_v<Fun>
 	{
 		std::vector<std::pair<EQ::versions::ClientVersion, std::unique_ptr<EQApplicationPacket>>> build_packets;
 		std::unordered_map<uint16, Client*> client_list = entity_list.GetClientList();
@@ -45,7 +45,7 @@ static auto QueueClients(Mob* sender, bool ignore_sender = false, bool ackreq = 
 
 				if (packet_it == build_packets.end())
 					packet_it = build_packets.emplace(build_packets.end(), ent->ClientVersion(),
-						std::invoke(fun, component_getter(ent), std::forward<Args>(args)...));
+						std::invoke(fun, component(ent), std::forward<Args>(args)...));
 
 				if (packet_it->second != nullptr)
 					ent->QueuePacket(packet_it->second.get(), ackreq, Client::CLIENT_CONNECTED);
@@ -61,12 +61,11 @@ static auto QueueCloseClients(
 {
 	if (distance <= 0) distance = static_cast<float>(zone->GetClientUpdateRange());
 
-	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun,
-		std::function<Obj*(const Client*)> component_getter, Args&&... args)
-		requires std::is_member_function_pointer_v<Fun>
+	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun, ComponentGetter<Obj> component, Args&&... args)
+			requires std::is_member_function_pointer_v<Fun>
 	{
 		if (sender == nullptr) {
-			QueueClients(sender, ignore_sender, is_ack_required)(fun, component_getter, std::forward<Args>(args)...);
+			QueueClients(sender, ignore_sender, is_ack_required)(fun, component, std::forward<Args>(args)...);
 		} else {
 			float distance_squared = distance * distance;
 			std::vector<std::pair<EQ::versions::ClientVersion, std::unique_ptr<EQApplicationPacket>>> build_packets;
@@ -87,7 +86,7 @@ static auto QueueCloseClients(
 
 						if (packet_it == build_packets.end())
 							packet_it = build_packets.emplace(build_packets.end(), client->ClientVersion(),
-								std::invoke(fun, component_getter(client), std::forward<Args>(args)...));
+								std::invoke(fun, component(client), std::forward<Args>(args)...));
 
 						if (packet_it->second != nullptr)
 							client->QueuePacket(packet_it->second.get(), is_ack_required, Client::CLIENT_CONNECTED);
@@ -124,9 +123,9 @@ static auto CloseMessageString(
 	Mob* skipped_mob = nullptr, bool is_ack_required = true,
 	eqFilterType filter = FilterNone)
 {
-	return [=]<AllConstChar... Args>(uint32_t type, uint32_t id, Args&&... args) {
-		static_assert(sizeof...(Args) <= 9, "Too many arguments");
-
+	return [=]<AllConstChar... Args>(uint32_t type, uint32_t id, Args&&... args)
+			requires (sizeof...(Args) <= 9)
+	{
 		auto queue_close_clients = ClientPatch::QueueCloseClients(sender, ignore_sender, distance, skipped_mob,
 			is_ack_required, filter);
 
