@@ -60,3 +60,14 @@ public:
 };
 
 } // namespace Message
+
+namespace Buff {
+
+class UF : public SoD
+{
+public:
+	UF() = default;
+	~UF() override = default;
+};
+
+} // namespace Buff

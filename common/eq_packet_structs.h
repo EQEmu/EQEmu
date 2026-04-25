@@ -5656,7 +5656,7 @@ struct BuffIcon_Struct
 	uint32 entity_id;
 	uint8  all_buffs;
 	uint16 count;
-	uint8 type; // 0 = self buff window, 1 = self target window, 4 = group, 5 = PC, 7 = NPC
+	uint8 type; // 0 = self buff window, 1 = self target window, 2 = pet buff or target window, 4 = group, 5 = PC, 7 = NPC
 	int32 tic_timer;
 	int32 name_lengths; // so ahh we kind of do these packets hacky, this is the total length of all the names to make creating the real packets in the translators easier
 	BuffIconEntry_Struct entries[0];

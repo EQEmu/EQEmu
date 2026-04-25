@@ -34,30 +34,38 @@ struct ClientComponents
 	{
 		switch (version) {
 		case Version::TOB:
+			buffComponent = std::make_shared<Buff::TOB>();
 			messageComponent = std::make_shared<Message::TOB>();
 			break;
 		case Version::RoF2:
+			buffComponent = std::make_shared<Buff::RoF2>();
 			messageComponent = std::make_shared<Message::RoF2>();
 			break;
 		case Version::RoF:
+			buffComponent = std::make_shared<Buff::RoF>();
 			messageComponent = std::make_shared<Message::RoF>();
 			break;
 		case Version::UF:
+			buffComponent = std::make_shared<Buff::UF>();
 			messageComponent = std::make_shared<Message::UF>();
 			break;
 		case Version::SoD:
+			buffComponent = std::make_shared<Buff::SoD>();
 			messageComponent = std::make_shared<Message::SoD>();
 			break;
 		case Version::SoF:
+			buffComponent = std::make_shared<Buff::SoF>();
 			messageComponent = std::make_shared<Message::SoF>();
 			break;
 		default:
+			buffComponent = std::make_shared<Buff::Titanium>();
 			messageComponent = std::make_shared<Message::Titanium>();
 			break;
 		}
 	}
 
 	const Version version;
+    std::shared_ptr<Buff::IBuff> buffComponent;
 	std::shared_ptr<Message::IMessage> messageComponent;
 };
 
@@ -76,6 +84,11 @@ static const ClientComponents& GetComponents(Version version)
 	}();
 
 	return patches.at(version);
+}
+
+const std::shared_ptr<Buff::IBuff>& GetBuffComponent(Version version)
+{
+	return GetComponents(version).buffComponent;
 }
 
 const std::shared_ptr<Message::IMessage>& GetMessageComponent(Version version)

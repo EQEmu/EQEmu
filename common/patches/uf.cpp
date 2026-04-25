@@ -434,7 +434,7 @@ namespace UF
 		}
 	}
 
-	ENCODE(OP_Buff)
+	ENCODE(OP_BuffDefinition)
 	{
 		ENCODE_LENGTH_EXACT(SpellBuffPacket_Struct);
 		SETUP_DIRECT_ENCODE(SpellBuffPacket_Struct, structs::SpellBuffPacket_Struct);
@@ -454,7 +454,7 @@ namespace UF
 		FINISH_ENCODE();
 	}
 
-	ENCODE(OP_BuffCreate)
+	ENCODE(OP_RefreshBuffs)
 	{
 		SETUP_VAR_ENCODE(BuffIcon_Struct);
 
@@ -1800,7 +1800,7 @@ namespace UF
 		FINISH_ENCODE();
 	}
 
-	ENCODE(OP_PetBuffWindow)
+	ENCODE(OP_RefreshPetBuffs)
 	{
 		EQApplicationPacket *in = *p;
 		*p = nullptr;
@@ -2729,7 +2729,7 @@ namespace UF
 		FINISH_ENCODE();
 	}
 
-	ENCODE(OP_TargetBuffs) { ENCODE_FORWARD(OP_BuffCreate); }
+	ENCODE(OP_RefreshTargetBuffs) { ENCODE_FORWARD(OP_RefreshBuffs); }
 
 	ENCODE(OP_TaskDescription)
 	{
@@ -3638,7 +3638,7 @@ namespace UF
 		FINISH_DIRECT_DECODE();
 	}
 
-	DECODE(OP_Buff)
+	DECODE(OP_BuffDefinition)
 	{
 		DECODE_LENGTH_EXACT(structs::SpellBuffPacket_Struct);
 		SETUP_DIRECT_DECODE(SpellBuffPacket_Struct, structs::SpellBuffPacket_Struct);

@@ -60,3 +60,14 @@ public:
 };
 
 } // namespace Message
+
+namespace Buff {
+
+class SoF : public Titanium
+{
+public:
+	SoF() = default;
+	~SoF() override = default;
+};
+
+} // namespace Buff

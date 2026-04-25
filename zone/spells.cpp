@@ -5834,7 +5834,7 @@ void Client::MakeBuffFadePacket(uint16 spell_id, int slot_id, bool send_message)
 {
 	EQApplicationPacket* outapp = nullptr;
 
-	outapp = new EQApplicationPacket(OP_Buff, sizeof(SpellBuffPacket_Struct));
+	outapp = new EQApplicationPacket(OP_BuffDefinition, sizeof(SpellBuffPacket_Struct));
 	SpellBuffPacket_Struct* sbf = (SpellBuffPacket_Struct*) outapp->pBuffer;
 
 	sbf->entityid = GetID();
@@ -6530,7 +6530,7 @@ int Mob::GetCasterLevel(uint16 spell_id) {
 void Client::SendBuffDurationPacket(Buffs_Struct &buff, int slot)
 {
 	EQApplicationPacket* outapp = nullptr;
-	outapp = new EQApplicationPacket(OP_Buff, sizeof(SpellBuffPacket_Struct));
+	outapp = new EQApplicationPacket(OP_BuffDefinition, sizeof(SpellBuffPacket_Struct));
 	SpellBuffPacket_Struct* sbf = (SpellBuffPacket_Struct*) outapp->pBuffer;
 
 	sbf->entityid = GetID();
@@ -6566,7 +6566,7 @@ void Client::SendBuffNumHitPacket(Buffs_Struct &buff, int slot)
 	if (ClientVersion() < EQ::versions::ClientVersion::UF)
 		return;
 	EQApplicationPacket *outapp = nullptr;
-	outapp = new EQApplicationPacket(OP_BuffCreate, sizeof(BuffIcon_Struct) + sizeof(BuffIconEntry_Struct));
+	outapp = new EQApplicationPacket(OP_RefreshBuffs, sizeof(BuffIcon_Struct) + sizeof(BuffIconEntry_Struct));
 	BuffIcon_Struct *bi = (BuffIcon_Struct *)outapp->pBuffer;
 	bi->entity_id = GetID();
 	bi->count = 1;
@@ -6591,7 +6591,7 @@ void Mob::SendPetBuffsToClient()
 
 	int PetBuffCount = 0;
 
-	auto outapp = new EQApplicationPacket(OP_PetBuffWindow, sizeof(PetBuff_Struct));
+	auto outapp = new EQApplicationPacket(OP_RefreshPetBuffs, sizeof(PetBuff_Struct));
 	PetBuff_Struct* pbs=(PetBuff_Struct*)outapp->pBuffer;
 	memset(outapp->pBuffer,0,outapp->size);
 	pbs->petid=GetID();
@@ -6651,10 +6651,10 @@ EQApplicationPacket *Mob::MakeBuffsPacket(bool for_target, bool clear_buffs)
 
 	//Create it for a targeting window, else create it for a create buff packet.
 	if(for_target) {
-		outapp = new EQApplicationPacket(OP_TargetBuffs, sizeof(BuffIcon_Struct) + sizeof(BuffIconEntry_Struct) * count);
+		outapp = new EQApplicationPacket(OP_RefreshTargetBuffs, sizeof(BuffIcon_Struct) + sizeof(BuffIconEntry_Struct) * count);
 	}
 	else {
-		outapp = new EQApplicationPacket(OP_BuffCreate, sizeof(BuffIcon_Struct) + sizeof(BuffIconEntry_Struct) * count);
+		outapp = new EQApplicationPacket(OP_RefreshBuffs, sizeof(BuffIcon_Struct) + sizeof(BuffIconEntry_Struct) * count);
 	}
 	BuffIcon_Struct *buff = (BuffIcon_Struct*)outapp->pBuffer;
 	buff->entity_id = GetID();

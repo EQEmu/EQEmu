@@ -656,6 +656,7 @@ set(common_headers
     packet_dump_file.h
     packet_dump.h
     packet_functions.h
+	patches/IBuff.h
 	patches/IMessage.h
 	patches/client_version.h
     patches/patches.h

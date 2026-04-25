@@ -402,7 +402,7 @@ namespace RoF
 		FINISH_ENCODE();
 	}
 
-	ENCODE(OP_Buff)
+	ENCODE(OP_BuffDefinition)
 	{
 		ENCODE_LENGTH_EXACT(SpellBuffPacket_Struct);
 		SETUP_DIRECT_ENCODE(SpellBuffPacket_Struct, structs::SpellBuffPacket_Struct);
@@ -427,14 +427,14 @@ namespace RoF
 		else
 			eq->bufffade = 2;
 
-		// Bit of a hack. OP_Buff appears to add/remove the buff while OP_BuffCreate adds/removes the actual buff icon
+		// Bit of a hack. OP_BuffDefinition appears to add/remove the buff while OP_RefreshBuffs adds/removes the actual buff icon
 		EQApplicationPacket *outapp = nullptr;
 		if (eq->bufffade == 1)
 		{
-			outapp = new EQApplicationPacket(OP_BuffCreate, 29);
+			outapp = new EQApplicationPacket(OP_RefreshBuffs, 29);
 			outapp->WriteUInt32(emu->entityid);
 			outapp->WriteUInt32(0);	// tic timer
-			outapp->WriteUInt8(0);		// Type of OP_BuffCreate packet ?
+			outapp->WriteUInt8(0);		// Type of OP_RefreshBuffs packet ?
 			outapp->WriteUInt16(1);		// 1 buff in this packet
 			outapp->WriteUInt32(eq->slotid);
 			outapp->WriteUInt32(0xffffffff);		// SpellID (0xffff to remove)
@@ -446,10 +446,10 @@ namespace RoF
 		FINISH_ENCODE();
 
 		if (outapp)
-			dest->FastQueuePacket(&outapp);	// Send the OP_BuffCreate to remove the buff
+			dest->FastQueuePacket(&outapp);	// Send the OP_RefreshBuffs to remove the buff
 	}
 
-	ENCODE(OP_BuffCreate)
+	ENCODE(OP_RefreshBuffs)
 	{
 		SETUP_VAR_ENCODE(BuffIcon_Struct);
 
@@ -1858,9 +1858,9 @@ namespace RoF
 		FINISH_ENCODE();
 	}
 
-	ENCODE(OP_PetBuffWindow)
+	ENCODE(OP_RefreshPetBuffs)
 	{
-		// The format of the RoF packet is identical to the OP_BuffCreate packet.
+		// The format of the RoF packet is identical to the OP_RefreshBuffs packet.
 
 		SETUP_VAR_ENCODE(PetBuff_Struct);
 
@@ -3239,7 +3239,7 @@ namespace RoF
 		FINISH_ENCODE();
 	}
 
-	ENCODE(OP_TargetBuffs) { ENCODE_FORWARD(OP_BuffCreate); }
+	ENCODE(OP_RefreshTargetBuffs) { ENCODE_FORWARD(OP_RefreshBuffs); }
 
 	ENCODE(OP_TaskDescription)
 	{
@@ -4196,7 +4196,7 @@ namespace RoF
 		FINISH_DIRECT_DECODE();
 	}
 
-	DECODE(OP_Buff)
+	DECODE(OP_BuffDefinition)
 	{
 		DECODE_LENGTH_EXACT(structs::SpellBuffPacket_Struct);
 		SETUP_DIRECT_DECODE(SpellBuffPacket_Struct, structs::SpellBuffPacket_Struct);

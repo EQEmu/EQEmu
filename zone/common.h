@@ -223,9 +223,9 @@ namespace Journal {
 
 //this is our internal representation of the BUFF struct, can put whatever we want in it
 struct Buffs_Struct {
-	uint16	spellid;
+	int32	spellid;
 	uint8	casterlevel;
-	uint16	casterid;		// Maybe change this to a pointer sometime, but gotta make sure it's 0'd when it no longer points to anything
+	uint32	casterid;		// Maybe change this to a pointer sometime, but gotta make sure it's 0'd when it no longer points to anything
 	char	caster_name[64];
 	int32	ticsremaining;
 	uint32	counters;

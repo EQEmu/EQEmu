@@ -36,6 +36,8 @@
 
 #include <sstream>
 
+#include "zone/mob.h"
+
 
 namespace Titanium
 {
@@ -326,7 +328,7 @@ namespace Titanium
 		}
 	}
 
-	ENCODE(OP_Buff)
+	ENCODE(OP_BuffDefinition)
 	{
 		ENCODE_LENGTH_EXACT(SpellBuffPacket_Struct);
 		SETUP_DIRECT_ENCODE(SpellBuffPacket_Struct, structs::SpellBuffPacket_Struct);
@@ -1307,7 +1309,7 @@ namespace Titanium
 		FINISH_ENCODE();
 	}
 
-	ENCODE(OP_PetBuffWindow)
+	ENCODE(OP_RefreshPetBuffs)
 	{
 		ENCODE_LENGTH_EXACT(PetBuff_Struct);
 		SETUP_DIRECT_ENCODE(PetBuff_Struct, PetBuff_Struct);
@@ -2540,7 +2542,7 @@ namespace Titanium
 		}
 	}
 
-	DECODE(OP_Buff)
+	DECODE(OP_BuffDefinition)
 	{
 		DECODE_LENGTH_EXACT(structs::SpellBuffPacket_Struct);
 		SETUP_DIRECT_DECODE(SpellBuffPacket_Struct, structs::SpellBuffPacket_Struct);
@@ -4014,3 +4016,79 @@ void Titanium::ResolveArguments(uint32_t id, std::array<const char*, 9>& args) c
 }
 
 } // namespace Message
+
+namespace Buff {
+EQApplicationPacket* Titanium::MakeLegacyBuffsPacket(Mob* mob, int32_t timer, bool for_target, bool clear_buffs) const
+{
+	uint32 count = 0;
+	uint32 buff_count;
+
+	// for self we want all buffs, for target, we want to skip song window buffs
+	// since NPCs and pets don't have a song window, we still see it for them :P
+	if (for_target) {
+		buff_count = (clear_buffs) ? 0 : mob->GetMaxBuffSlots();
+	}
+	else {
+		buff_count = mob->GetMaxTotalSlots();
+	}
+
+	Buffs_Struct* buffs = mob->GetBuffs();
+
+	for(int i = 0; i < buff_count; ++i) {
+		if (buffs[i].spellid > 1) {
+			++count;
+		}
+	}
+
+	EQApplicationPacket* outapp = nullptr;
+
+	//Create it for a targeting window, else create it for a create buff packet.
+	if(for_target) {
+		outapp = new EQApplicationPacket(OP_RefreshTargetBuffs, sizeof(BuffIcon_Struct) + sizeof(BuffIconEntry_Struct) * count);
+	}
+	else {
+		outapp = new EQApplicationPacket(OP_RefreshBuffs, sizeof(BuffIcon_Struct) + sizeof(BuffIconEntry_Struct) * count);
+	}
+	BuffIcon_Struct *buff = (BuffIcon_Struct*)outapp->pBuffer;
+	buff->entity_id = mob->GetID();
+	buff->count = count;
+	buff->all_buffs = 1;
+	buff->tic_timer = timer;
+	// there are more types, the client doesn't seem to really care though. The others are also currently hard to fill in here ...
+	// (see comment in common/eq_packet_structs.h)
+	if (for_target)
+		buff->type = mob->IsClient() ? 5 : 7;
+	else
+		buff->type = 0;
+
+	buff->name_lengths = 0; // hacky shit
+	uint32 index = 0;
+	for(int i = 0; i < buff_count; ++i) {
+		if (buffs[i].spellid > 1) {
+			buff->entries[index].buff_slot = i;
+			buff->entries[index].spell_id = buffs[i].spellid;
+			buff->entries[index].tics_remaining = buffs[i].ticsremaining;
+			buff->entries[index].num_hits = buffs[i].hit_number;
+			strn0cpy(buff->entries[index].caster, buffs[i].caster_name, 64);
+			buff->name_lengths += strlen(buff->entries[index].caster);
+			++index;
+		}
+	}
+
+	return outapp;
+}
+
+EQApplicationPacket* Titanium::BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot, bool fade) const
+{
+	return nullptr;
+}
+
+EQApplicationPacket* Titanium::RefreshBuffs(EmuOpcode opcode, Mob* mob, int32_t timer, bool remove,
+	bool buff_timers_suspended, const std::vector<uint32_t>& slots) const
+{
+	return nullptr;
+}
+
+void Titanium::SetRefreshType(EQApplicationPacket* packet, Mob* source, Client* target) const {}
+
+} // namespace Buff

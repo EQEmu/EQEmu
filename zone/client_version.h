@@ -7,6 +7,7 @@
 
 #include "common/emu_versions.h"
 #include "common/patches/client_version.h"
+#include "common/patches/IBuff.h"
 #include "common/patches/IMessage.h"
 
 #include "zone/client.h"
@@ -97,10 +98,88 @@ static auto QueueCloseClients(
 	};
 }
 
+template <typename Fun, typename Obj, typename... Args>
+static void FastQueuePacket(Client* c, Fun fun, Obj* obj, Args&&... args)
+{
+	static_assert(std::is_member_function_pointer_v<Fun>);
+	EQApplicationPacket* app = std::invoke(fun, obj, std::forward<Args>(args)...);
+	if (app != nullptr) {
+		c->FastQueuePacket(&app); // FastQueuePacket inherits the lifetime management of the packet, do not delete or it will be double free
+	}
+}
+
+static auto QueueClientsByTarget(Mob* sender, bool iSendToSender, Mob* SkipThisMob, bool ackreq, bool HoTT,
+	uint32 ClientVersionBits, bool inspect_buffs, bool clear_target_window)
+{
+	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun,
+		std::function<Obj*(const Client*)> component_getter, Args&&... args) {
+		static_assert(std::is_member_function_pointer_v<Fun>, "Function is required to be a member function");
+		std::unordered_map<EQ::versions::ClientVersion, EQApplicationPacket*> build_packets;
+		std::unordered_map<uint16, Client*> client_list = entity_list.GetClientList();
+
+		for (auto [_, c] : client_list) {
+			if (c != SkipThisMob && (iSendToSender || c != sender)) {
+				Mob* Target = c->GetTarget();
+				if (Target != nullptr) {
+					// if (Target == sender || (iSendToSender && c == sender) || (HoTT && Target->GetTarget() == sender)) {
+					// 	// the client has the sender targeted, so check if we send the packet
+					// 	EQApplicationPacket* app = std::invoke(fun, component_getter(c), std::forward<Args>(args)...);
+					// }
+					Mob* TargetsTarget = Target->GetTarget();
+					bool Send = iSendToSender && c == sender;
+					if (c != sender) {
+						if (Target == sender) {
+							if (inspect_buffs) { // if inspect_buffs is true we're sending a mob's buffs to those with the LAA
+								Send = clear_target_window;
+								if (c->GetGM() || RuleB(Spells, AlwaysSendTargetsBuffs)) {
+									if (c->GetGM()) {
+										if (!c->EntityVariableExists(SEE_BUFFS_FLAG)) {
+											c->Message(Chat::White,
+												"Your GM flag allows you to always see your targets' buffs.");
+											c->SetEntityVariable(SEE_BUFFS_FLAG, "1");
+										}
+									}
+
+									Send = !clear_target_window;
+								} else if (c->IsRaidGrouped()) {
+									Raid* raid = c->GetRaid();
+									if (raid) {
+										uint32 gid = raid->GetGroup(c);
+										if (gid < MAX_RAID_GROUPS && raid->GroupCount(gid) >= 3) {
+											if (raid->GetLeadershipAA(groupAAInspectBuffs, gid))
+												Send = !clear_target_window;
+										}
+									}
+								} else {
+									Group* group = c->GetGroup();
+									if (group && group->GroupCount() >= 3) {
+										if (group->GetLeadershipAA(groupAAInspectBuffs)) {
+											Send = !clear_target_window;
+										}
+									}
+								}
+							} else {
+								Send = true;
+							}
+						} else if (HoTT && TargetsTarget == sender) {
+							Send = true;
+						}
+					}
+
+					if (Send && (c->ClientVersionBit() & ClientVersionBits)) {
+						EQApplicationPacket* app = std::invoke(fun, component_getter(c), std::forward<Args>(args)...);
+					}
+				}
+			}
+		}
+	};
+}
+
 } // namespace ClientPatch
 
 // Helpers for the Message interface to send message packets
 namespace Message {
+
 static std::function GetComponent = [](const Client* c) -> IMessage* {
 	return GetMessageComponent(c->GetClientVersion()).get();
 };
@@ -152,3 +231,22 @@ inline void InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id
 }
 
 } // namespace Message
+
+// helper functions to handle sending buffs
+namespace Buff {
+
+static std::function GetComponent = [](const Client* c) -> IBuff* {
+	return GetBuffComponent(c->GetClientVersion()).get();
+};
+
+inline void SendLegacyBuffsPacket(Client* c, Mob* sender, int32 timer, bool for_target = true, bool clear_buffs = false)
+{
+	ClientPatch::FastQueuePacket(c, &IBuff::MakeLegacyBuffsPacket, GetComponent(c), sender, timer, for_target, clear_buffs);
+}
+
+inline void SendLegacyBuffsPacketToClients(Client* c, bool for_target = true, bool clear_buffs = false)
+{
+
+}
+
+} // namespace Buff

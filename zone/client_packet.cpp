@@ -139,7 +139,7 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_BlockedBuffs] = &Client::Handle_OP_BlockedBuffs;
 	ConnectedOpcodes[OP_BoardBoat] = &Client::Handle_OP_BoardBoat;
 	ConnectedOpcodes[OP_BookButton] = &Client::Handle_OP_BookButton;
-	ConnectedOpcodes[OP_Buff] = &Client::Handle_OP_Buff;
+	ConnectedOpcodes[OP_BuffDefinition] = &Client::Handle_OP_BuffDefinition;
 	ConnectedOpcodes[OP_BuffRemoveRequest] = &Client::Handle_OP_BuffRemoveRequest;
 	ConnectedOpcodes[OP_Bug] = &Client::Handle_OP_Bug;
 	ConnectedOpcodes[OP_Camp] = &Client::Handle_OP_Camp;
@@ -4163,14 +4163,14 @@ void Client::Handle_OP_BookButton(const EQApplicationPacket* app)
 	QueuePacket(&outapp);
 }
 
-void Client::Handle_OP_Buff(const EQApplicationPacket *app)
+void Client::Handle_OP_BuffDefinition(const EQApplicationPacket *app)
 {
 	/*
 		Note: if invisibility is on client, this will force it to drop.
 	*/
 	if (app->size != sizeof(SpellBuffPacket_Struct))
 	{
-		LogError("Size mismatch in OP_Buff. expected [{}] got [{}]", sizeof(SpellBuffPacket_Struct), app->size);
+		LogError("Size mismatch in OP_BuffDefinition. expected [{}] got [{}]", sizeof(SpellBuffPacket_Struct), app->size);
 		DumpPacket(app);
 		return;
 	}

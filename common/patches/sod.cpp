@@ -293,7 +293,7 @@ namespace SoD
 		dest->FastQueuePacket(&in, ack_req);
 	}
 
-	ENCODE(OP_Buff)
+	ENCODE(OP_BuffDefinition)
 	{
 		ENCODE_LENGTH_EXACT(SpellBuffPacket_Struct);
 		SETUP_DIRECT_ENCODE(SpellBuffPacket_Struct, structs::SpellBuffPacket_Struct);
@@ -1375,7 +1375,7 @@ namespace SoD
 		FINISH_ENCODE();
 	}
 
-	ENCODE(OP_PetBuffWindow)
+	ENCODE(OP_RefreshPetBuffs)
 	{
 		EQApplicationPacket *in = *p;
 		*p = nullptr;
@@ -2145,7 +2145,7 @@ namespace SoD
 		FINISH_ENCODE();
 	}
 
-	ENCODE(OP_TargetBuffs)
+	ENCODE(OP_RefreshTargetBuffs)
 	{
 		SETUP_VAR_ENCODE(BuffIcon_Struct);
 
@@ -2877,7 +2877,7 @@ namespace SoD
 		FINISH_DIRECT_DECODE();
 	}
 
-	DECODE(OP_Buff)
+	DECODE(OP_BuffDefinition)
 	{
 		DECODE_LENGTH_EXACT(structs::SpellBuffPacket_Struct);
 		SETUP_DIRECT_DECODE(SpellBuffPacket_Struct, structs::SpellBuffPacket_Struct);

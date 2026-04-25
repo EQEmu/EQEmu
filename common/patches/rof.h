@@ -60,3 +60,14 @@ public:
 };
 
 } // namespace Message
+
+namespace Buff {
+
+class RoF : public UF
+{
+public:
+	RoF() = default;
+	~RoF() override = default;
+};
+
+} // namespace Buff

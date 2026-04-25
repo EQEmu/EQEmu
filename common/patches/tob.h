@@ -39,8 +39,8 @@ namespace Message {
 class TOB : public RoF2
 {
 public:
-	TOB() {}
-	~TOB() override {}
+	TOB() = default;
+	~TOB() override = default;
 
 	[[nodiscard]] EQApplicationPacket* Formatted(uint32_t color, uint32_t id, const std::array<const char*, 9>& args) const override;
 
@@ -53,3 +53,20 @@ protected:
 };
 
 } // namespace Message
+
+namespace Buff {
+
+class TOB : public RoF2
+{
+public:
+	TOB() = default;
+	~TOB() override = default;
+
+	EQApplicationPacket* MakeLegacyBuffsPacket(Mob* mob, int32_t timer, bool for_target, bool clear_buffs) const override;
+
+	EQApplicationPacket* BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot, bool fade) const override;
+	EQApplicationPacket* RefreshBuffs(EmuOpcode opcode, Mob* mob, int32_t timer, bool remove, bool buff_timers_suspended, const std::vector<uint32_t>& slots) const override;
+	void SetRefreshType(EQApplicationPacket* packet, Mob* source, Client* target) const override;
+};
+
+} // namespace Buff

@@ -17,6 +17,7 @@
 */
 #pragma once
 
+#include "IBuff.h"
 #include "IMessage.h"
 #include "common/struct_strategy.h"
 
@@ -72,4 +73,21 @@ protected:
 };
 
 } // namespace Message
+
+namespace Buff {
+
+class Titanium : public IBuff
+{
+public:
+	Titanium() = default;
+	~Titanium() override = default;
+
+	EQApplicationPacket* MakeLegacyBuffsPacket(Mob* mob, int32_t timer, bool for_target, bool clear_buffs) const override;
+
+	EQApplicationPacket* BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot, bool fade) const override;
+	EQApplicationPacket* RefreshBuffs(EmuOpcode opcode, Mob* mob, int32_t timer, bool remove, bool buff_timers_suspended, const std::vector<uint32_t>& slots) const override;
+	void SetRefreshType(EQApplicationPacket* packet, Mob* source, Client* target) const override;
+};
+
+} // namespace Buff
 
