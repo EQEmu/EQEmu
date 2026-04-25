@@ -51,8 +51,10 @@ struct ClientComponents
 		case Version::SoF:
 			messageComponent = std::make_unique<Message::SoF>();
 			break;
-		default:
+		case Version::Titanium:
 			messageComponent = std::make_unique<Message::Titanium>();
+			break;
+		default:
 			break;
 		}
 	}
@@ -61,19 +63,22 @@ struct ClientComponents
 	std::unique_ptr<Message::IMessage> messageComponent;
 };
 
-static const std::unordered_map<Version, ClientComponents> s_patches = [] {
-	std::unordered_map<Version, ClientComponents> p;
-	p.emplace(Version::Titanium, Version::Titanium);
-	p.emplace(Version::SoF, Version::SoF);
-	p.emplace(Version::SoD, Version::SoD);
-	p.emplace(Version::UF, Version::UF);
-	p.emplace(Version::RoF, Version::RoF);
-	p.emplace(Version::RoF2, Version::RoF2);
-	p.emplace(Version::TOB, Version::TOB);
-	return p;
-}();
+// this array must be in the same order as the Version enum because it converts Version to index directly
+static const std::array<ClientComponents, EQ::versions::ClientVersionCount> s_patches = {
+	{
+		ClientComponents(Version::Unknown), // empty
+		ClientComponents(Version::Client62), // empty
+		ClientComponents(Version::Titanium),
+		ClientComponents(Version::SoF),
+		ClientComponents(Version::SoD),
+		ClientComponents(Version::UF),
+		ClientComponents(Version::RoF),
+		ClientComponents(Version::RoF2),
+		ClientComponents(Version::TOB),
+	}
+};
 
 const std::unique_ptr<Message::IMessage>& GetMessageComponent(Version version)
 {
-	return s_patches.at(version).messageComponent;
+	return s_patches.at(static_cast<uint32_t>(version)).messageComponent;
 }
