@@ -26,6 +26,7 @@
 #include "common/platform.h"
 #include "common/timer.h"
 #include "common/types.h"
+#include "loginserver/encryption.h"
 #include "loginserver/login_server.h"
 #include "loginserver/loginserver_command_handler.h"
 #include "loginserver/loginserver_webserver.h"
@@ -160,6 +161,11 @@ int main(int argc, char **argv)
 	RegisterExecutablePlatform(ExePlatformLogin);
 	set_exception_handler();
 
+	if (!eqcrypt_init()) {
+		LogError("Failed to initialize crypto providers");
+		return 1;
+	}
+
 	LogInfo("Logging System Init");
 
 	if (argc == 1) {
@@ -279,6 +285,8 @@ int main(int argc, char **argv)
 
 	LogInfo("Server Manager Shutdown");
 	delete server.server_manager;
+
+	eqcrypt_shutdown();
 
 	return 0;
 }
