@@ -17,42 +17,39 @@
 namespace ClientPatch {
 
 using ClientList = std::unordered_map<uint16, Client*>;
+template<typename Obj> using ComponentGetter = std::function<Obj*(const Client*)>;
 
 template <typename Fun, typename Obj, typename... Args>
+	requires std::is_member_function_pointer_v<Fun>
 static void QueuePacket(Client* c, Fun fun, Obj* obj, Args&&... args)
 {
-	static_assert(std::is_member_function_pointer_v<Fun>);
-	EQApplicationPacket* app = std::invoke(fun, obj, std::forward<Args>(args)...);
-	if (app != nullptr) {
-		c->QueuePacket(app);
-		delete app;
+	if (obj != nullptr) {
+		std::unique_ptr<EQApplicationPacket> app = std::invoke(fun, obj, std::forward<Args>(args)...);
+		if (app)
+			c->QueuePacket(app.get());
 	}
 }
 
 // packet generator queue functions
 static auto QueueClients(Mob* sender, bool ignore_sender = false, bool ackreq = true)
 {
-	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun,
-		std::function<Obj*(const Client*)> component_getter, Args&&... args) {
-		static_assert(std::is_member_function_pointer_v<Fun> && "Function is required to be a member function");
-
-		std::unordered_map<EQ::versions::ClientVersion, EQApplicationPacket*> build_packets;
+	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun, const ComponentGetter<Obj>& component, Args&&... args)
+			requires std::is_member_function_pointer_v<Fun>
+	{
+		std::array<std::unique_ptr<EQApplicationPacket>, EQ::versions::ClientVersionCount> build_packets;
 		std::unordered_map<uint16, Client*> client_list = entity_list.GetClientList();
 
 		for (auto [_, ent] : client_list) {
 			if (!ignore_sender || ent != sender) {
-				auto [packet, _] = build_packets.try_emplace(
-					ent->ClientVersion(),
-					std::invoke(fun, component_getter(ent), std::forward<Args>(args)...));
+				auto& packet = build_packets.at(static_cast<uint32_t>(ent->ClientVersion()));
+				if (!packet)
+					if (auto comp = component(ent); comp != nullptr)
+						packet = std::invoke(fun, comp, std::forward<Args>(args)...);
 
-				if (packet->second != nullptr)
-					ent->QueuePacket(packet->second, ackreq, Client::CLIENT_CONNECTED);
+				if (packet)
+					ent->QueuePacket(packet.get(), ackreq, Client::CLIENT_CONNECTED);
 			}
 		}
-
-		for (auto [_, packet] : build_packets)
-			if (packet != nullptr)
-				delete packet;
 	};
 }
 
@@ -63,15 +60,14 @@ static auto QueueCloseClients(
 {
 	if (distance <= 0) distance = static_cast<float>(zone->GetClientUpdateRange());
 
-	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun,
-		std::function<Obj*(const Client*)> component_getter, Args&&... args) {
-		static_assert(std::is_member_function_pointer_v<Fun>, "Function is required to be a member function");
-
+	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun, const ComponentGetter<Obj>& component, Args&&... args)
+			requires std::is_member_function_pointer_v<Fun>
+	{
 		if (sender == nullptr) {
-			QueueClients(sender, ignore_sender, is_ack_required)(fun, component_getter, std::forward<Args>(args)...);
+			QueueClients(sender, ignore_sender, is_ack_required)(fun, component, std::forward<Args>(args)...);
 		} else {
 			float distance_squared = distance * distance;
-			std::unordered_map<EQ::versions::ClientVersion, EQApplicationPacket*> build_packets;
+			std::array<std::unique_ptr<EQApplicationPacket>, EQ::versions::ClientVersionCount> build_packets;
 
 			for (auto& [_, mob] : sender->GetCloseMobList(distance)) {
 				if (mob && mob->IsClient()) {
@@ -80,40 +76,42 @@ static auto QueueCloseClients(
 						&& client != skipped_mob
 						&& DistanceSquared(client->GetPosition(), sender->GetPosition()) < distance_squared
 						&& client->Connected()
-						&& client->ShouldGetPacket(sender, filter)) {
-						auto [packet, _] = build_packets.try_emplace(
-							client->ClientVersion(),
-							std::invoke(fun, component_getter(client), std::forward<Args>(args)...));
+						&& client->ShouldGetPacket(sender, filter))
+					{
+						auto& packet = build_packets.at(static_cast<uint32_t>(client->ClientVersion()));
+						if (!packet)
+							if (auto comp = component(client); comp != nullptr)
+								packet = std::invoke(fun, comp, std::forward<Args>(args)...);
 
-						if (packet->second != nullptr)
-							client->QueuePacket(packet->second, is_ack_required, Client::CLIENT_CONNECTED);
+						if (packet)
+							client->QueuePacket(packet.get(), is_ack_required, Client::CLIENT_CONNECTED);
 					}
 				}
 			}
-
-			for (auto [_, packet] : build_packets)
-				if (packet != nullptr)
-					delete packet;;
 		}
 	};
 }
 
 template <typename Fun, typename Obj, typename... Args>
 static void FastQueuePacket(Client* c, Fun fun, Obj* obj, Args&&... args)
+	requires std::is_member_function_pointer_v<Fun>
 {
-	static_assert(std::is_member_function_pointer_v<Fun>);
-	EQApplicationPacket* app = std::invoke(fun, obj, std::forward<Args>(args)...);
-	if (app != nullptr) {
-		c->FastQueuePacket(&app); // FastQueuePacket inherits the lifetime management of the packet, do not delete or it will be double free
+	if (obj != nullptr) {
+		std::unique_ptr<EQApplicationPacket> app = std::invoke(fun, obj, std::forward<Args>(args)...);
+		if (app) {
+			// FastQueuePacket specifically takes lifetime management of packet, so release here
+			EQApplicationPacket* packet = app.release();
+			c->FastQueuePacket(&packet);
+		}
 	}
 }
 
 static auto QueueClientsByTarget(Mob* sender, bool iSendToSender, Mob* SkipThisMob, bool ackreq, bool HoTT,
 	uint32 ClientVersionBits, bool inspect_buffs, bool clear_target_window)
 {
-	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun,
-		std::function<Obj*(const Client*)> component_getter, Args&&... args) {
-		static_assert(std::is_member_function_pointer_v<Fun>, "Function is required to be a member function");
+	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun, const ComponentGetter<Obj> component, Args&&... args)
+			requires std::is_member_function_pointer_v<Fun>
+	{
 		std::unordered_map<EQ::versions::ClientVersion, EQApplicationPacket*> build_packets;
 		std::unordered_map<uint16, Client*> client_list = entity_list.GetClientList();
 
@@ -167,7 +165,7 @@ static auto QueueClientsByTarget(Mob* sender, bool iSendToSender, Mob* SkipThisM
 					}
 
 					if (Send && (c->ClientVersionBit() & ClientVersionBits)) {
-						EQApplicationPacket* app = std::invoke(fun, component_getter(c), std::forward<Args>(args)...);
+						EQApplicationPacket* app = std::invoke(fun, component(c), std::forward<Args>(args)...);
 					}
 				}
 			}
@@ -180,6 +178,7 @@ static auto QueueClientsByTarget(Mob* sender, bool iSendToSender, Mob* SkipThisM
 // Helpers for the Message interface to send message packets
 namespace Message {
 
+// this can return nullptr when the component doesn't exist for the version
 static std::function GetComponent = [](const Client* c) -> IMessage* {
 	return GetMessageComponent(c->GetClientVersion()).get();
 };
@@ -202,9 +201,9 @@ static auto CloseMessageString(
 	Mob* skipped_mob = nullptr, bool is_ack_required = true,
 	eqFilterType filter = FilterNone)
 {
-	return [=]<AllConstChar... Args>(uint32_t type, uint32_t id, Args&&... args) {
-		static_assert(sizeof...(Args) <= 9, "Too many arguments");
-
+	return [=]<AllConstChar... Args>(uint32_t type, uint32_t id, Args&&... args)
+			requires (sizeof...(Args) <= 9)
+	{
 		auto queue_close_clients = ClientPatch::QueueCloseClients(sender, ignore_sender, distance, skipped_mob,
 			is_ack_required, filter);
 

@@ -42,10 +42,13 @@ public:
 	TOB() = default;
 	~TOB() override = default;
 
-	[[nodiscard]] EQApplicationPacket* Formatted(uint32_t color, uint32_t id, const std::array<const char*, 9>& args) const override;
+	std::unique_ptr<EQApplicationPacket> Formatted(uint32_t color, uint32_t id,
+		const std::array<const char*, 9>& args) const override;
 
-	EQApplicationPacket* InterruptSpell(uint32_t message, uint32_t spawn_id, const char* spell_link) const override;
-	EQApplicationPacket* InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, const char* name, const char* spell_link) const override;
+	std::unique_ptr<EQApplicationPacket> InterruptSpell(uint32_t message, uint32_t spawn_id,
+		const char* spell_link) const override;
+	std::unique_ptr<EQApplicationPacket> InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id,
+		const char* name, const char* spell_link) const override;
 
 protected:
 	[[nodiscard]] uint32_t ResolveID(uint32_t id) const override;
@@ -62,11 +65,14 @@ public:
 	TOB() = default;
 	~TOB() override = default;
 
-	EQApplicationPacket* MakeLegacyBuffsPacket(Mob* mob, int32_t timer, bool for_target, bool clear_buffs) const override;
+	std::unique_ptr<EQApplicationPacket> MakeLegacyBuffsPacket(Mob* mob, int32_t timer, bool for_target,
+		bool clear_buffs) const override;
 
-	EQApplicationPacket* BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot, bool fade) const override;
-	EQApplicationPacket* RefreshBuffs(EmuOpcode opcode, Mob* mob, int32_t timer, bool remove, bool buff_timers_suspended, const std::vector<uint32_t>& slots) const override;
-	void SetRefreshType(EQApplicationPacket* packet, Mob* source, Client* target) const override;
+	std::unique_ptr<EQApplicationPacket>
+	BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot, bool fade) const override;
+	std::unique_ptr<EQApplicationPacket> RefreshBuffs(EmuOpcode opcode, Mob* mob, int32_t timer, bool remove,
+		bool buff_timers_suspended, const std::vector<uint32_t>& slots) const override;
+	void SetRefreshType(const std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const override;
 };
 
 } // namespace Buff

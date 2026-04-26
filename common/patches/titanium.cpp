@@ -3924,12 +3924,11 @@ namespace Titanium
 } /*Titanium*/
 
 namespace Message {
-
-EQApplicationPacket* Titanium::Simple(uint32_t color, uint32_t id) const
+std::unique_ptr<EQApplicationPacket> Titanium::Simple(uint32_t color, uint32_t id) const
 {
 	uint32_t string_id = ResolveID(id);
 	if (string_id > 0) {
-		auto outapp = new EQApplicationPacket(OP_SimpleMessage, sizeof(SimpleMessage_Struct));
+		auto outapp = std::make_unique<EQApplicationPacket>(OP_SimpleMessage, sizeof(SimpleMessage_Struct));
 		auto* sms = reinterpret_cast<SimpleMessage_Struct*>(outapp->pBuffer);
 		sms->string_id = string_id;
 		sms->color = color;
@@ -3941,7 +3940,7 @@ EQApplicationPacket* Titanium::Simple(uint32_t color, uint32_t id) const
 	return nullptr;
 }
 
-EQApplicationPacket* Titanium::Formatted(
+std::unique_ptr<EQApplicationPacket> Titanium::Formatted(
 	uint32_t color, uint32_t id, const std::array<const char*, 9>& args) const
 {
 	uint32_t string_id = ResolveID(id);
@@ -3963,15 +3962,16 @@ EQApplicationPacket* Titanium::Formatted(
 
 		buf.WriteUInt8(0);
 
-		return new EQApplicationPacket(OP_FormattedMessage, std::move(buf));
+		return std::make_unique<EQApplicationPacket>(OP_FormattedMessage, std::move(buf));
 	}
 
 	return nullptr;
 }
 
-EQApplicationPacket* Titanium::InterruptSpell(uint32_t message, uint32_t spawn_id, const char* spell_link) const
+std::unique_ptr<EQApplicationPacket> Titanium::InterruptSpell(uint32_t message, uint32_t spawn_id,
+	const char* spell_link) const
 {
-	auto outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct));
+	auto outapp = std::make_unique<EQApplicationPacket>(OP_InterruptCast, sizeof(InterruptCast_Struct));
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);
 	ic->spawnid = spawn_id;
@@ -3980,10 +3980,11 @@ EQApplicationPacket* Titanium::InterruptSpell(uint32_t message, uint32_t spawn_i
 	return outapp;
 }
 
-EQApplicationPacket* Titanium::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, const char* name,
+std::unique_ptr<EQApplicationPacket> Titanium::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id,
+	const char* name,
 	const char* spell_link) const
 {
-	auto outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(name) + 1);
+	auto outapp = std::make_unique<EQApplicationPacket>(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(name) + 1);
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);
 	ic->spawnid = spawn_id;
@@ -4018,7 +4019,8 @@ void Titanium::ResolveArguments(uint32_t id, std::array<const char*, 9>& args) c
 } // namespace Message
 
 namespace Buff {
-EQApplicationPacket* Titanium::MakeLegacyBuffsPacket(Mob* mob, int32_t timer, bool for_target, bool clear_buffs) const
+std::unique_ptr<EQApplicationPacket> Titanium::MakeLegacyBuffsPacket(Mob* mob, int32_t timer, bool for_target,
+	bool clear_buffs) const
 {
 	uint32 count = 0;
 	uint32 buff_count;
@@ -4040,15 +4042,10 @@ EQApplicationPacket* Titanium::MakeLegacyBuffsPacket(Mob* mob, int32_t timer, bo
 		}
 	}
 
-	EQApplicationPacket* outapp = nullptr;
-
 	//Create it for a targeting window, else create it for a create buff packet.
-	if(for_target) {
-		outapp = new EQApplicationPacket(OP_RefreshTargetBuffs, sizeof(BuffIcon_Struct) + sizeof(BuffIconEntry_Struct) * count);
-	}
-	else {
-		outapp = new EQApplicationPacket(OP_RefreshBuffs, sizeof(BuffIcon_Struct) + sizeof(BuffIconEntry_Struct) * count);
-	}
+	auto outapp = std::make_unique<EQApplicationPacket>(for_target ? OP_RefreshTargetBuffs : OP_RefreshBuffs,
+		sizeof(BuffIcon_Struct) + sizeof(BuffIconEntry_Struct) * count);
+
 	BuffIcon_Struct *buff = (BuffIcon_Struct*)outapp->pBuffer;
 	buff->entity_id = mob->GetID();
 	buff->count = count;
@@ -4078,17 +4075,18 @@ EQApplicationPacket* Titanium::MakeLegacyBuffsPacket(Mob* mob, int32_t timer, bo
 	return outapp;
 }
 
-EQApplicationPacket* Titanium::BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot, bool fade) const
+std::unique_ptr<EQApplicationPacket> Titanium::BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot,
+	bool fade) const
 {
 	return nullptr;
 }
 
-EQApplicationPacket* Titanium::RefreshBuffs(EmuOpcode opcode, Mob* mob, int32_t timer, bool remove,
+std::unique_ptr<EQApplicationPacket> Titanium::RefreshBuffs(EmuOpcode opcode, Mob* mob, int32_t timer, bool remove,
 	bool buff_timers_suspended, const std::vector<uint32_t>& slots) const
 {
 	return nullptr;
 }
 
-void Titanium::SetRefreshType(EQApplicationPacket* packet, Mob* source, Client* target) const {}
+void Titanium::SetRefreshType(const std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const {}
 
 } // namespace Buff

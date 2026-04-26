@@ -5550,7 +5550,8 @@ void TOB::ResolveArguments(uint32_t id, std::array<const char*, 9>& args) const
 	}
 }
 
-EQApplicationPacket* TOB::Formatted(uint32_t color, uint32_t id, const std::array<const char*, 9>& args) const
+std::unique_ptr<EQApplicationPacket> TOB::Formatted(uint32_t color, uint32_t id,
+	const std::array<const char*, 9>& args) const
 {
 	uint32_t string_id = ResolveID(id);
 	if (string_id > 0) {
@@ -5576,15 +5577,16 @@ EQApplicationPacket* TOB::Formatted(uint32_t color, uint32_t id, const std::arra
 				buffer.WriteUInt32(0);
 		}
 
-		return new EQApplicationPacket(OP_FormattedMessage, std::move(buffer));
+		return std::make_unique<EQApplicationPacket>(OP_FormattedMessage, std::move(buffer));
 	}
 
 	return nullptr;
 }
 
-EQApplicationPacket* TOB::InterruptSpell(uint32_t message, uint32_t spawn_id, const char* spell_link) const
+std::unique_ptr<EQApplicationPacket> TOB::InterruptSpell(uint32_t message, uint32_t spawn_id,
+	const char* spell_link) const
 {
-	auto outapp = new EQApplicationPacket(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(spell_link) + 1);
+	auto outapp = std::make_unique<EQApplicationPacket>(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(spell_link) + 1);
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);
 	ic->spawnid = spawn_id;
@@ -5594,10 +5596,11 @@ EQApplicationPacket* TOB::InterruptSpell(uint32_t message, uint32_t spawn_id, co
 	return outapp;
 }
 
-EQApplicationPacket* TOB::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, const char* name,
+std::unique_ptr<EQApplicationPacket> TOB::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id,
+	const char* name,
 	const char* spell_link) const
 {
-	auto outapp = new EQApplicationPacket(OP_InterruptCast,
+	auto outapp = std::make_unique<EQApplicationPacket>(OP_InterruptCast,
 		sizeof(InterruptCast_Struct) + strlen(name) + strlen(spell_link) + 2);
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);
@@ -5610,12 +5613,12 @@ EQApplicationPacket* TOB::InterruptSpellOther(Mob* sender, uint32_t message, uin
 } // namespace Message
 
 namespace Buff {
+std::unique_ptr<EQApplicationPacket> TOB::MakeLegacyBuffsPacket(Mob* mob, int32_t timer, bool for_target,
+	bool clear_buffs) const { return nullptr; }
 
-EQApplicationPacket* TOB::MakeLegacyBuffsPacket(Mob* mob, int32_t timer, bool for_target, bool clear_buffs) const { return nullptr; }
-
-EQApplicationPacket* TOB::BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot, bool fade) const
+std::unique_ptr<EQApplicationPacket> TOB::BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot, bool fade) const
 {
-	auto packet = new EQApplicationPacket(OP_BuffDefinition, sizeof(::TOB::structs::EQAffectPacket_Struct));
+	auto packet = std::make_unique<EQApplicationPacket>(OP_BuffDefinition, sizeof(::TOB::structs::EQAffectPacket_Struct));
 	auto affect = reinterpret_cast<::TOB::structs::EQAffectPacket_Struct*>(packet->pBuffer);
 
 	// base packet
@@ -5665,7 +5668,8 @@ EQApplicationPacket* TOB::BuffDefinition(Mob* mob, const Buffs_Struct& buff, int
 	return packet;
 }
 
-EQApplicationPacket* TOB::RefreshBuffs(EmuOpcode opcode, Mob* mob, int32_t timer, bool remove, bool buff_timers_suspended, const std::vector<uint32_t>& slots) const
+std::unique_ptr<EQApplicationPacket> TOB::RefreshBuffs(EmuOpcode opcode, Mob* mob, int32_t timer, bool remove,
+	bool buff_timers_suspended, const std::vector<uint32_t>& slots) const
 {
 	Buffs_Struct* buffs = mob->GetBuffs();
 
@@ -5704,11 +5708,11 @@ EQApplicationPacket* TOB::RefreshBuffs(EmuOpcode opcode, Mob* mob, int32_t timer
 	buffer.WriteUInt8(opcode == OP_RefreshPetBuffs ? 2 : 0);
 	buffer.WriteUInt8(buff_timers_suspended ? 1 : 0); // bBuffTimersOnHold
 
-	return new EQApplicationPacket(opcode, std::move(buffer));
+	return std::make_unique<EQApplicationPacket>(opcode, std::move(buffer));
 }
 
 // 0 = self buff window, 1 = self target window, 2 = pet buff or target window, 4 = group, 5 = PC, 7 = NPC
-void TOB::SetRefreshType(EQApplicationPacket* packet, Mob* source, Client* target) const
+void TOB::SetRefreshType(const std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const
 {
 	unsigned char* type = &packet->pBuffer[packet->size - 2];
 

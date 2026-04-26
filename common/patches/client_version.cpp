@@ -26,6 +26,8 @@
 #include "common/patches/rof2.h"
 #include "common/patches/tob.h"
 
+#include <array>
+
 using Version = EQ::versions::ClientVersion;
 
 struct ClientComponents
@@ -34,64 +36,64 @@ struct ClientComponents
 	{
 		switch (version) {
 		case Version::TOB:
-			buffComponent = std::make_shared<Buff::TOB>();
-			messageComponent = std::make_shared<Message::TOB>();
+			buffComponent = std::make_unique<Buff::TOB>();
+			messageComponent = std::make_unique<Message::TOB>();
 			break;
 		case Version::RoF2:
-			buffComponent = std::make_shared<Buff::RoF2>();
-			messageComponent = std::make_shared<Message::RoF2>();
+			buffComponent = std::make_unique<Buff::RoF2>();
+			messageComponent = std::make_unique<Message::RoF2>();
 			break;
 		case Version::RoF:
-			buffComponent = std::make_shared<Buff::RoF>();
-			messageComponent = std::make_shared<Message::RoF>();
+			buffComponent = std::make_unique<Buff::RoF>();
+			messageComponent = std::make_unique<Message::RoF>();
 			break;
 		case Version::UF:
-			buffComponent = std::make_shared<Buff::UF>();
-			messageComponent = std::make_shared<Message::UF>();
+			buffComponent = std::make_unique<Buff::UF>();
+			messageComponent = std::make_unique<Message::UF>();
 			break;
 		case Version::SoD:
-			buffComponent = std::make_shared<Buff::SoD>();
-			messageComponent = std::make_shared<Message::SoD>();
+			buffComponent = std::make_unique<Buff::SoD>();
+			messageComponent = std::make_unique<Message::SoD>();
 			break;
 		case Version::SoF:
-			buffComponent = std::make_shared<Buff::SoF>();
-			messageComponent = std::make_shared<Message::SoF>();
+			buffComponent = std::make_unique<Buff::SoF>();
+			messageComponent = std::make_unique<Message::SoF>();
+			break;
+		case Version::Titanium:
+			buffComponent = std::make_unique<Buff::Titanium>();
+			messageComponent = std::make_unique<Message::Titanium>();
 			break;
 		default:
-			buffComponent = std::make_shared<Buff::Titanium>();
-			messageComponent = std::make_shared<Message::Titanium>();
 			break;
 		}
 	}
 
 	const Version version;
-    std::shared_ptr<Buff::IBuff> buffComponent;
-	std::shared_ptr<Message::IMessage> messageComponent;
+    std::unique_ptr<Buff::IBuff> buffComponent;
+	std::unique_ptr<Message::IMessage> messageComponent;
 };
 
-static const ClientComponents& GetComponents(Version version)
-{
-	static const std::unordered_map<Version, ClientComponents> patches = [] {
-		std::unordered_map<Version, ClientComponents> p;
-		p.emplace(Version::Titanium, Version::Titanium);
-		p.emplace(Version::SoF, Version::SoF);
-		p.emplace(Version::SoD, Version::SoD);
-		p.emplace(Version::UF, Version::UF);
-		p.emplace(Version::RoF, Version::RoF);
-		p.emplace(Version::RoF2, Version::RoF2);
-		p.emplace(Version::TOB, Version::TOB);
-		return p;
-	}();
+// this array must be in the same order as the Version enum because it converts Version to index directly
+static const std::array<ClientComponents, EQ::versions::ClientVersionCount> s_patches = {
+	{
+		ClientComponents(Version::Unknown), // empty
+		ClientComponents(Version::Client62), // empty
+		ClientComponents(Version::Titanium),
+		ClientComponents(Version::SoF),
+		ClientComponents(Version::SoD),
+		ClientComponents(Version::UF),
+		ClientComponents(Version::RoF),
+		ClientComponents(Version::RoF2),
+		ClientComponents(Version::TOB),
+	}
+};
 
-	return patches.at(version);
+const std::unique_ptr<Buff::IBuff>& GetBuffComponent(Version version)
+{
+	return s_patches.at(static_cast<uint32_t>(version)).buffComponent;
 }
 
-const std::shared_ptr<Buff::IBuff>& GetBuffComponent(Version version)
+const std::unique_ptr<Message::IMessage>& GetMessageComponent(Version version)
 {
-	return GetComponents(version).buffComponent;
-}
-
-const std::shared_ptr<Message::IMessage>& GetMessageComponent(Version version)
-{
-	return GetComponents(version).messageComponent;
+	return s_patches.at(static_cast<uint32_t>(version)).messageComponent;
 }
