@@ -35,23 +35,18 @@ static auto QueueClients(Mob* sender, bool ignore_sender = false, bool ackreq = 
 	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun, const ComponentGetter<Obj>& component, Args&&... args)
 			requires std::is_member_function_pointer_v<Fun>
 	{
-		std::vector<std::pair<EQ::versions::ClientVersion, std::unique_ptr<EQApplicationPacket>>> build_packets;
+		std::array<std::unique_ptr<EQApplicationPacket>, EQ::versions::ClientVersionCount> build_packets;
 		std::unordered_map<uint16, Client*> client_list = entity_list.GetClientList();
 
 		for (auto [_, ent] : client_list) {
 			if (!ignore_sender || ent != sender) {
-				auto packet_it = std::find_if(build_packets.begin(), build_packets.end(),
-					[version = ent->GetClientVersion()](const auto& build_packet) {
-						return build_packet.first == version;
-					});
+				auto& packet = build_packets.at(static_cast<uint32_t>(ent->ClientVersion()));
+				if (!packet)
+					if (auto comp = component(ent); comp != nullptr)
+						packet = std::invoke(fun, comp, std::forward<Args>(args)...);
 
-				if (packet_it == build_packets.end())
-					if (Obj* comp = component(ent); comp != nullptr)
-						packet_it = build_packets.emplace(build_packets.end(), ent->ClientVersion(),
-							std::invoke(fun, comp, std::forward<Args>(args)...));
-
-				if (packet_it->second != nullptr)
-					ent->QueuePacket(packet_it->second.get(), ackreq, Client::CLIENT_CONNECTED);
+				if (packet)
+					ent->QueuePacket(packet.get(), ackreq, Client::CLIENT_CONNECTED);
 			}
 		}
 	};
@@ -71,7 +66,7 @@ static auto QueueCloseClients(
 			QueueClients(sender, ignore_sender, is_ack_required)(fun, component, std::forward<Args>(args)...);
 		} else {
 			float distance_squared = distance * distance;
-			std::vector<std::pair<EQ::versions::ClientVersion, std::unique_ptr<EQApplicationPacket>>> build_packets;
+			std::array<std::unique_ptr<EQApplicationPacket>, EQ::versions::ClientVersionCount> build_packets;
 
 			for (auto& [_, mob] : sender->GetCloseMobList(distance)) {
 				if (mob && mob->IsClient()) {
@@ -82,18 +77,13 @@ static auto QueueCloseClients(
 						&& client->Connected()
 						&& client->ShouldGetPacket(sender, filter))
 					{
-						auto packet_it = std::find_if(build_packets.begin(), build_packets.end(),
-							[version = client->GetClientVersion()](const auto& build_packet) {
-								return build_packet.first == version;
-							});
-
-						if (packet_it == build_packets.end())
+						auto& packet = build_packets.at(static_cast<uint32_t>(client->ClientVersion()));
+						if (!packet)
 							if (auto comp = component(client); comp != nullptr)
-								packet_it = build_packets.emplace(build_packets.end(), client->ClientVersion(),
-									std::invoke(fun, comp, std::forward<Args>(args)...));
+								packet = std::invoke(fun, comp, std::forward<Args>(args)...);
 
-						if (packet_it->second != nullptr)
-							client->QueuePacket(packet_it->second.get(), is_ack_required, Client::CLIENT_CONNECTED);
+						if (packet)
+							client->QueuePacket(packet.get(), is_ack_required, Client::CLIENT_CONNECTED);
 					}
 				}
 			}
