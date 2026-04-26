@@ -26,6 +26,8 @@
 #include "common/patches/rof2.h"
 #include "common/patches/tob.h"
 
+#include <array>
+
 using Version = EQ::versions::ClientVersion;
 
 struct ClientComponents
