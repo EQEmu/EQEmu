@@ -163,7 +163,7 @@ public:
 	//Actual Implementation Stuff
 
 	void	RaidMessageString(Mob* sender, uint32 type, uint32 string_id, const char* message,const char* message2=0,const char* message3=0,const char* message4=0,const char* message5=0,const char* message6=0,const char* message7=0,const char* message8=0,const char* message9=0, uint32 distance = 0);
-	void	CastGroupSpell(Mob* caster,uint16 spellid, uint32 gid);
+	void	CastGroupSpell(Mob* caster,int32 spellid, uint32 gid);
 	void	SplitExp(ExpSource exp_source, const uint64 exp, Mob* other);
 	uint32	GetTotalRaidDamage(Mob* other);
 	void	BalanceHP(int32 penalty, uint32 group_id, float range = 0, Mob* caster = nullptr, int32 limit = 0);

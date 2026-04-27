@@ -1851,7 +1851,7 @@ void Mob::CalcSpellBonuses(StatBonuses* newbon)
 		newbon->ManaRegen = 0; // Bards do not get mana regen from spells.
 }
 
-void Mob::ApplySpellsBonuses(uint16 spell_id, uint8 casterlevel, StatBonuses *new_bonus, uint16 casterId,
+void Mob::ApplySpellsBonuses(int32 spell_id, uint8 casterlevel, StatBonuses *new_bonus, uint16 casterId,
 			     uint8 WornType, int32 ticsremaining, int buffslot, int instrument_mod,
 			     bool IsAISpellEffect, uint16 effect_id, int32 se_base, int32 se_limit, int32 se_max)
 {
@@ -4108,7 +4108,7 @@ bool Client::DoItemEnterZone(uint32 slot_x, uint32 slot_y) {
 	return changed;
 }
 
-uint8 Mob::IsFocusEffect(uint16 spell_id,int effect_index, bool AA,uint32 aa_effect)
+uint8 Mob::IsFocusEffect(int32 spell_id,int effect_index, bool AA,uint32 aa_effect)
 {
 	uint16 effect = 0;
 
@@ -4212,7 +4212,7 @@ uint8 Mob::IsFocusEffect(uint16 spell_id,int effect_index, bool AA,uint32 aa_eff
 	return 0;
 }
 
-void Mob::NegateSpellEffectBonuses(uint16 spell_id)
+void Mob::NegateSpellEffectBonuses(int32 spell_id)
 {
 	if (!IsValidSpell(spell_id))
 		return;

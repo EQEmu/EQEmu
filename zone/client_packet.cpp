@@ -1560,7 +1560,7 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 				m_pp.buffs[i].num_hits = buffs[i].hit_number;
 			}
 			else {
-				m_pp.buffs[i].spellid = SPELLBOOK_UNKNOWN;
+				m_pp.buffs[i].spellid = SPELL_UNKNOWN;
 				m_pp.buffs[i].bard_modifier = 10;
 				m_pp.buffs[i].effect_type = 0;
 				m_pp.buffs[i].player_id = 0;
@@ -4228,7 +4228,7 @@ void Client::Handle_OP_BuffRemoveRequest(const EQApplicationPacket *app)
 	if (brrs->SlotID > (uint32)m->GetMaxTotalSlots())
 		return;
 
-	uint16 SpellID = m->GetSpellIDFromSlot(brrs->SlotID);
+	int32 SpellID = m->GetSpellIDFromSlot(brrs->SlotID);
 
 	if (SpellID && (GetGM() || ((IsBeneficialSpell(SpellID) || IsEffectInSpell(SpellID, SpellEffect::BindSight)) && !spells[SpellID].no_remove))) {
 		m->BuffFadeBySlot(brrs->SlotID, true);
@@ -4419,9 +4419,9 @@ void Client::Handle_OP_CastSpell(const EQApplicationPacket *app)
 			if (inst && inst->IsClassCommon())
 			{
 				const EQ::ItemData* item = inst->GetItem();
-				if (item->Click.Effect != (uint32)castspell->spell_id)
+				if (item->Click.Effect != castspell->spell_id)
 				{
-					std::string message = fmt::format("OP_CastSpell with item, tried to cast a different spell than what was on item - item spell id [{}] attempted [{}]", item->Click.Effect, (uint32)castspell->spell_id);
+					std::string message = fmt::format("OP_CastSpell with item, tried to cast a different spell than what was on item - item spell id [{}] attempted [{}]", item->Click.Effect, castspell->spell_id);
 					RecordPlayerEventLog(PlayerEvent::POSSIBLE_HACK, PlayerEvent::PossibleHackEvent{.message = message});
 					InterruptSpell(castspell->spell_id);	//CHEATER!!
 					return;
@@ -5841,8 +5841,8 @@ void Client::Handle_OP_DeleteSpell(const EQApplicationPacket *app)
 	if (dss->spell_slot < 0 || dss->spell_slot >= EQ::spells::DynamicLookup(ClientVersion(), GetGM())->SpellbookSize)
 		return;
 
-	if (m_pp.spell_book[dss->spell_slot] != SPELLBOOK_UNKNOWN) {
-		m_pp.spell_book[dss->spell_slot] = SPELLBOOK_UNKNOWN;
+	if (m_pp.spell_book[dss->spell_slot] != SPELL_UNKNOWN) {
+		m_pp.spell_book[dss->spell_slot] = SPELL_UNKNOWN;
 		database.DeleteCharacterSpell(CharacterID(), dss->spell_slot);
 		dss->success = 1;
 	}
@@ -15843,7 +15843,7 @@ void Client::Handle_OP_Translocate(const EQApplicationPacket *app)
 	}
 
 	if (its->Complete == 1) {
-		uint32 spell_id = PendingTranslocateData.spell_id;
+		int32 spell_id = PendingTranslocateData.spell_id;
 		bool in_translocate_zone = (
 			zone->GetZoneID() == PendingTranslocateData.zone_id &&
 			zone->GetInstanceID() == PendingTranslocateData.instance_id

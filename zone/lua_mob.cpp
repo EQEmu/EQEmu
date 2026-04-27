@@ -334,12 +334,12 @@ void Lua_Mob::SetInvisible(int state) {
 	self->SetInvisible(state);
 }
 
-bool Lua_Mob::FindBuff(uint16 spell_id) {
+bool Lua_Mob::FindBuff(int32 spell_id) {
 	Lua_Safe_Call_Bool();
 	return self->FindBuff(spell_id);
 }
 
-bool Lua_Mob::FindBuff(uint16 spell_id, uint16 caster_id) {
+bool Lua_Mob::FindBuff(int32 spell_id, uint16 caster_id) {
 	Lua_Safe_Call_Bool();
 	return self->FindBuff(spell_id, caster_id);
 }
@@ -2397,7 +2397,7 @@ int Lua_Mob::GetOrigBodyType()
 	return (int)self->GetOrigBodyType();
 }
 
-void Lua_Mob::CheckNumHitsRemaining(int type, int32 buff_slot, uint16 spell_id)
+void Lua_Mob::CheckNumHitsRemaining(int type, int32 buff_slot, int32 spell_id)
 {
 	Lua_Safe_Call_Void();
 	self->CheckNumHitsRemaining((NumHit)type, buff_slot, spell_id);
@@ -3010,62 +3010,62 @@ float Lua_Mob::GetDefaultRaceSize(int race_id, int gender_id) {
 	return self->GetDefaultRaceSize(race_id, gender_id);
 }
 
-float Lua_Mob::GetActSpellRange(uint16 spell_id, float range) {
+float Lua_Mob::GetActSpellRange(int32 spell_id, float range) {
 	Lua_Safe_Call_Real();
 	return self->GetActSpellRange(spell_id, range);
 }
 
-int64 Lua_Mob::GetActSpellDamage(uint16 spell_id, int64 value) {
+int64 Lua_Mob::GetActSpellDamage(int32 spell_id, int64 value) {
 	Lua_Safe_Call_Int();
 	return self->GetActSpellDamage(spell_id, value);
 }
 
-int64 Lua_Mob::GetActSpellDamage(uint16 spell_id, int64 value, Lua_Mob target) {
+int64 Lua_Mob::GetActSpellDamage(int32 spell_id, int64 value, Lua_Mob target) {
 	Lua_Safe_Call_Int();
 	return self->GetActSpellDamage(spell_id, value, target);
 }
 
-int64 Lua_Mob::GetActDoTDamage(uint16 spell_id, int64 value, Lua_Mob target) {
+int64 Lua_Mob::GetActDoTDamage(int32 spell_id, int64 value, Lua_Mob target) {
 	Lua_Safe_Call_Int();
 	return self->GetActDoTDamage(spell_id, value, target);
 }
 
-int64 Lua_Mob::GetActDoTDamage(uint16 spell_id, int64 value, Lua_Mob target, bool from_buff_tic) {
+int64 Lua_Mob::GetActDoTDamage(int32 spell_id, int64 value, Lua_Mob target, bool from_buff_tic) {
 	Lua_Safe_Call_Int();
 	return self->GetActDoTDamage(spell_id, value, target, from_buff_tic);
 }
 
-int64 Lua_Mob::GetActSpellHealing(uint16 spell_id, int64 value) {
+int64 Lua_Mob::GetActSpellHealing(int32 spell_id, int64 value) {
 	Lua_Safe_Call_Int();
 	return self->GetActSpellHealing(spell_id, value);
 }
 
-int64 Lua_Mob::GetActSpellHealing(uint16 spell_id, int64 value, Lua_Mob target) {
+int64 Lua_Mob::GetActSpellHealing(int32 spell_id, int64 value, Lua_Mob target) {
 	Lua_Safe_Call_Int();
 	return self->GetActSpellHealing(spell_id, value, target);
 }
 
-int64 Lua_Mob::GetActSpellHealing(uint16 spell_id, int64 value, Lua_Mob target, bool from_buff_tic) {
+int64 Lua_Mob::GetActSpellHealing(int32 spell_id, int64 value, Lua_Mob target, bool from_buff_tic) {
 	Lua_Safe_Call_Int();
 	return self->GetActSpellHealing(spell_id, value, target, from_buff_tic);
 }
 
-int Lua_Mob::GetActSpellCost(uint16 spell_id, int cost) {
+int Lua_Mob::GetActSpellCost(int32 spell_id, int cost) {
 	Lua_Safe_Call_Int();
 	return self->GetActSpellCost(spell_id, cost);
 }
 
-int Lua_Mob::GetActSpellDuration(uint16 spell_id, int duration) {
+int Lua_Mob::GetActSpellDuration(int32 spell_id, int duration) {
 	Lua_Safe_Call_Int();
 	return self->GetActSpellDuration(spell_id, duration);
 }
 
-int Lua_Mob::GetActSpellCasttime(uint16 spell_id, uint32 cast_time) {
+int Lua_Mob::GetActSpellCasttime(int32 spell_id, uint32 cast_time) {
 	Lua_Safe_Call_Int();
 	return self->GetActSpellCasttime(spell_id, cast_time);
 }
 
-int64 Lua_Mob::GetActReflectedSpellDamage(uint16 spell_id, int64 value, int effectiveness) {
+int64 Lua_Mob::GetActReflectedSpellDamage(int32 spell_id, int64 value, int effectiveness) {
 	Lua_Safe_Call_Int();
 	return self->GetActReflectedSpellDamage(spell_id, value, effectiveness);
 }
@@ -3434,37 +3434,37 @@ void Lua_Mob::AreaAttack(float distance, int16 slot_id, int count, bool is_from_
 	entity_list.AEAttack(self, distance, slot_id, count, is_from_spell, attack_rounds);
 }
 
-void Lua_Mob::AreaSpell(Lua_Mob center, uint16 spell_id)
+void Lua_Mob::AreaSpell(Lua_Mob center, int32 spell_id)
 {
 	Lua_Safe_Call_Void();
 	entity_list.AESpell(self, center, spell_id);
 }
 
-void Lua_Mob::AreaSpell(Lua_Mob center, uint16 spell_id, bool affect_caster)
+void Lua_Mob::AreaSpell(Lua_Mob center, int32 spell_id, bool affect_caster)
 {
 	Lua_Safe_Call_Void();
 	entity_list.AESpell(self, center, spell_id, affect_caster);
 }
 
-void Lua_Mob::AreaSpell(Lua_Mob center, uint16 spell_id, bool affect_caster, int16 resist_adjust)
+void Lua_Mob::AreaSpell(Lua_Mob center, int32 spell_id, bool affect_caster, int16 resist_adjust)
 {
 	Lua_Safe_Call_Void();
 	entity_list.AESpell(self, center, spell_id, affect_caster, resist_adjust);
 }
 
-void Lua_Mob::AreaSpell(Lua_Mob center, uint16 spell_id, bool affect_caster, int16 resist_adjust, int max_targets)
+void Lua_Mob::AreaSpell(Lua_Mob center, int32 spell_id, bool affect_caster, int16 resist_adjust, int max_targets)
 {
 	Lua_Safe_Call_Void();
 	entity_list.AESpell(self, center, spell_id, affect_caster, resist_adjust, &max_targets);
 }
 
-void Lua_Mob::MassGroupBuff(Lua_Mob center, uint16 spell_id)
+void Lua_Mob::MassGroupBuff(Lua_Mob center, int32 spell_id)
 {
 	Lua_Safe_Call_Void();
 	entity_list.MassGroupBuff(self, center, spell_id);
 }
 
-void Lua_Mob::MassGroupBuff(Lua_Mob center, uint16 spell_id, bool affect_caster)
+void Lua_Mob::MassGroupBuff(Lua_Mob center, int32 spell_id, bool affect_caster)
 {
 	Lua_Safe_Call_Void();
 	entity_list.MassGroupBuff(self, center, spell_id, affect_caster);
@@ -3566,10 +3566,10 @@ luabind::scope lua_register_mob() {
 	.def("AreaAttack", (void(Lua_Mob::*)(float, int16, int))&Lua_Mob::AreaAttack)
 	.def("AreaAttack", (void(Lua_Mob::*)(float, int16, int, bool))&Lua_Mob::AreaAttack)
 	.def("AreaAttack", (void(Lua_Mob::*)(float, int16, int, bool, int))&Lua_Mob::AreaAttack)
-	.def("AreaSpell", (void(Lua_Mob::*)(Lua_Mob, uint16))&Lua_Mob::AreaSpell)
-	.def("AreaSpell", (void(Lua_Mob::*)(Lua_Mob, uint16, bool))&Lua_Mob::AreaSpell)
-	.def("AreaSpell", (void(Lua_Mob::*)(Lua_Mob, uint16, bool, int16))&Lua_Mob::AreaSpell)
-	.def("AreaSpell", (void(Lua_Mob::*)(Lua_Mob, uint16, bool, int16, int))&Lua_Mob::AreaSpell)
+	.def("AreaSpell", (void(Lua_Mob::*)(Lua_Mob, int32))&Lua_Mob::AreaSpell)
+	.def("AreaSpell", (void(Lua_Mob::*)(Lua_Mob, int32, bool))&Lua_Mob::AreaSpell)
+	.def("AreaSpell", (void(Lua_Mob::*)(Lua_Mob, int32, bool, int16))&Lua_Mob::AreaSpell)
+	.def("AreaSpell", (void(Lua_Mob::*)(Lua_Mob, int32, bool, int16, int))&Lua_Mob::AreaSpell)
 	.def("Attack", (bool(Lua_Mob::*)(Lua_Mob))&Lua_Mob::Attack)
 	.def("Attack", (bool(Lua_Mob::*)(Lua_Mob,int))&Lua_Mob::Attack)
 	.def("Attack", (bool(Lua_Mob::*)(Lua_Mob,int,bool))&Lua_Mob::Attack)
@@ -3721,8 +3721,8 @@ luabind::scope lua_register_mob() {
 	.def("Emote", &Lua_Mob::Emote)
 	.def("EntityVariableExists", &Lua_Mob::EntityVariableExists)
 	.def("FaceTarget", (void(Lua_Mob::*)(Lua_Mob))&Lua_Mob::FaceTarget)
-	.def("FindBuff", (bool(Lua_Mob::*)(uint16))&Lua_Mob::FindBuff)
-	.def("FindBuff", (bool(Lua_Mob::*)(uint16,uint16))&Lua_Mob::FindBuff)
+	.def("FindBuff", (bool(Lua_Mob::*)(int32))&Lua_Mob::FindBuff)
+	.def("FindBuff", (bool(Lua_Mob::*)(int32,uint16))&Lua_Mob::FindBuff)
 	.def("FindBuffBySlot", (uint16(Lua_Mob::*)(int))&Lua_Mob::FindBuffBySlot)
 	.def("FindGroundZ", (double(Lua_Mob::*)(double,double))&Lua_Mob::FindGroundZ)
 	.def("FindGroundZ", (double(Lua_Mob::*)(double,double,double))&Lua_Mob::FindGroundZ)
@@ -3739,17 +3739,17 @@ luabind::scope lua_register_mob() {
 	.def("GetAC", &Lua_Mob::GetAC)
 	.def("GetAGI", &Lua_Mob::GetAGI)
 	.def("GetATK", &Lua_Mob::GetATK)
-	.def("GetActDoTDamage", (int64(Lua_Mob::*)(uint16,int64,Lua_Mob))&Lua_Mob::GetActDoTDamage)
-	.def("GetActDoTDamage", (int64(Lua_Mob::*)(uint16,int64,Lua_Mob,bool))&Lua_Mob::GetActDoTDamage)
+	.def("GetActDoTDamage", (int64(Lua_Mob::*)(int32,int64,Lua_Mob))&Lua_Mob::GetActDoTDamage)
+	.def("GetActDoTDamage", (int64(Lua_Mob::*)(int32,int64,Lua_Mob,bool))&Lua_Mob::GetActDoTDamage)
 	.def("GetActReflectedSpellDamage", &Lua_Mob::GetActReflectedSpellDamage)
 	.def("GetActSpellCasttime", &Lua_Mob::GetActSpellCasttime)
 	.def("GetActSpellCost", &Lua_Mob::GetActSpellCost)
 	.def("GetActSpellDuration", &Lua_Mob::GetActSpellDuration)
-	.def("GetActSpellDamage", (int64(Lua_Mob::*)(uint16,int64))&Lua_Mob::GetActSpellDamage)
-	.def("GetActSpellDamage", (int64(Lua_Mob::*)(uint16,int64,Lua_Mob))&Lua_Mob::GetActSpellDamage)
-	.def("GetActSpellHealing", (int64(Lua_Mob::*)(uint16,int64))&Lua_Mob::GetActSpellHealing)
-	.def("GetActSpellHealing", (int64(Lua_Mob::*)(uint16,int64,Lua_Mob))&Lua_Mob::GetActSpellHealing)
-	.def("GetActSpellHealing", (int64(Lua_Mob::*)(uint16,int64,Lua_Mob,bool))&Lua_Mob::GetActSpellHealing)
+	.def("GetActSpellDamage", (int64(Lua_Mob::*)(int32,int64))&Lua_Mob::GetActSpellDamage)
+	.def("GetActSpellDamage", (int64(Lua_Mob::*)(int32,int64,Lua_Mob))&Lua_Mob::GetActSpellDamage)
+	.def("GetActSpellHealing", (int64(Lua_Mob::*)(int32,int64))&Lua_Mob::GetActSpellHealing)
+	.def("GetActSpellHealing", (int64(Lua_Mob::*)(int32,int64,Lua_Mob))&Lua_Mob::GetActSpellHealing)
+	.def("GetActSpellHealing", (int64(Lua_Mob::*)(int32,int64,Lua_Mob,bool))&Lua_Mob::GetActSpellHealing)
 	.def("GetActSpellRange", &Lua_Mob::GetActSpellRange)
 	.def("GetAggroRange", (float(Lua_Mob::*)(void))&Lua_Mob::GetAggroRange)
 	.def("GetAllowBeneficial", (bool(Lua_Mob::*)(void))&Lua_Mob::GetAllowBeneficial)
@@ -3996,8 +3996,8 @@ luabind::scope lua_register_mob() {
 	.def("IsWarriorClass", &Lua_Mob::IsWarriorClass)
 	.def("IsWisdomCasterClass", &Lua_Mob::IsWisdomCasterClass)
 	.def("Kill", (void(Lua_Mob::*)(void))&Lua_Mob::Kill)
-	.def("MassGroupBuff", (void(Lua_Mob::*)(Lua_Mob, uint16))&Lua_Mob::MassGroupBuff)
-	.def("MassGroupBuff", (void(Lua_Mob::*)(Lua_Mob, uint16, bool))&Lua_Mob::MassGroupBuff)
+	.def("MassGroupBuff", (void(Lua_Mob::*)(Lua_Mob, int32))&Lua_Mob::MassGroupBuff)
+	.def("MassGroupBuff", (void(Lua_Mob::*)(Lua_Mob, int32, bool))&Lua_Mob::MassGroupBuff)
 	.def("Mesmerize", (void(Lua_Mob::*)(void))&Lua_Mob::Mesmerize)
 	.def("Message", &Lua_Mob::Message)
 	.def("MessageString", &Lua_Mob::MessageString)

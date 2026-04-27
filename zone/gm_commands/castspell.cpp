@@ -38,7 +38,7 @@ void command_castspell(Client *c, const Seperator *sep)
 		t = c->GetTarget();
 	}
 
-	const uint16 spell_id = Strings::ToUnsignedInt(sep->arg[1]);
+	const int32 spell_id = Strings::ToInt(sep->arg[1]);
 
 	if (spell_id >= SPDAT_RECORDS) {
 		c->Message(Chat::White, "Invalid Spell ID.");

@@ -810,7 +810,7 @@ bool Group::DelMember(Mob* oldmember, bool ignoresender)
 	return true;
 }
 
-void Group::CastGroupSpell(Mob* caster, uint16 spell_id) {
+void Group::CastGroupSpell(Mob* caster, int32 spell_id) {
 	uint32 z;
 	float range, distance;
 

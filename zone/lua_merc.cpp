@@ -203,7 +203,7 @@ bool Lua_Merc::Suspend()
 	return self->Suspend();
 }
 
-bool Lua_Merc::UseDiscipline(uint16 spell_id, uint16 target_id)
+bool Lua_Merc::UseDiscipline(int32 spell_id, uint16 target_id)
 {
 	Lua_Safe_Call_Bool();
 	return self->UseDiscipline(spell_id, target_id);

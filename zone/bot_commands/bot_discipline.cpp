@@ -85,7 +85,7 @@ void bot_command_discipline(Client* c, const Seperator* sep)
 	bool aggressive = false;
 	bool defensive = false;
 	Mob* tar = c->GetTarget();
-	uint16 spell_id = UINT16_MAX;
+	int32 spell_id = -1;
 
 	if (!arg1.compare("aggressive")) {
 		aggressive = true;

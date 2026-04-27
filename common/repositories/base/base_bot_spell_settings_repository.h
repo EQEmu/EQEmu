@@ -38,7 +38,7 @@ public:
 	struct BotSpellSettings {
 		uint32_t id;
 		int32_t  bot_id;
-		int16_t  spell_id;
+		int32_t  spell_id;
 		int16_t  priority;
 		int16_t  min_hp;
 		int16_t  max_hp;

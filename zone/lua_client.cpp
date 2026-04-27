@@ -647,7 +647,7 @@ uint16 Lua_Client::FindMemmedSpellBySlot(int slot) {
 	return self->FindMemmedSpellBySlot(slot);
 }
 
-int Lua_Client::FindMemmedSpellBySpellID(uint16 spell_id) {
+int Lua_Client::FindMemmedSpellBySpellID(int32 spell_id) {
 	Lua_Safe_Call_Int();
 	return self->FindMemmedSpellBySpellID(spell_id);
 }
@@ -1083,7 +1083,7 @@ bool Lua_Client::UseDiscipline(int spell_id, int target_id) {
 	return self->UseDiscipline(spell_id, target_id);
 }
 
-bool Lua_Client::HasDisciplineLearned(uint16 spell_id) {
+bool Lua_Client::HasDisciplineLearned(int32 spell_id) {
 	Lua_Safe_Call_Bool();
 	return self->HasDisciplineLearned(spell_id);
 }
@@ -1377,7 +1377,7 @@ int Lua_Client::GetNextAvailableSpellBookSlot() {
 	return self->GetNextAvailableSpellBookSlot();
 }
 
-uint32 Lua_Client::GetSpellIDByBookSlot(int slot_id) {
+int32 Lua_Client::GetSpellIDByBookSlot(int slot_id) {
 	Lua_Safe_Call_Int();
 	return self->GetSpellIDByBookSlot(slot_id);
 }
@@ -2320,12 +2320,12 @@ int16 Lua_Client::GetGMStatus() {
 	return self->Admin();
 }
 
-void Lua_Client::UntrainDiscBySpellID(uint16 spell_id) {
+void Lua_Client::UntrainDiscBySpellID(int32 spell_id) {
 	Lua_Safe_Call_Void();
 	self->UntrainDiscBySpellID(spell_id);
 }
 
-void Lua_Client::UntrainDiscBySpellID(uint16 spell_id, bool update_client) {
+void Lua_Client::UntrainDiscBySpellID(int32 spell_id, bool update_client) {
 	Lua_Safe_Call_Void();
 	self->UntrainDiscBySpellID(spell_id, update_client);
 }
@@ -2422,17 +2422,17 @@ void Lua_Client::ResetAllCastbarCooldowns() {
 	self->ResetAllCastbarCooldowns();
 }
 
-void Lua_Client::ResetCastbarCooldownBySpellID(uint32 spell_id) {
+void Lua_Client::ResetCastbarCooldownBySpellID(int32 spell_id) {
 	Lua_Safe_Call_Void();
 	self->ResetCastbarCooldownBySpellID(spell_id);
 }
 
-void Lua_Client::UnscribeSpellBySpellID(uint16 spell_id) {
+void Lua_Client::UnscribeSpellBySpellID(int32 spell_id) {
 	Lua_Safe_Call_Void();
 	self->UnscribeSpellBySpellID(spell_id);
 }
 
-void Lua_Client::UnscribeSpellBySpellID(uint16 spell_id, bool update_client) {
+void Lua_Client::UnscribeSpellBySpellID(int32 spell_id, bool update_client) {
 	Lua_Safe_Call_Void();
 	self->UnscribeSpellBySpellID(spell_id, update_client);
 }
@@ -3760,7 +3760,7 @@ luabind::scope lua_register_client() {
 	.def("FilteredMessage", &Lua_Client::FilteredMessage)
 	.def("FindEmptyMemSlot", (int(Lua_Client::*)(void))&Lua_Client::FindEmptyMemSlot)
 	.def("FindMemmedSpellBySlot", (uint16(Lua_Client::*)(int))&Lua_Client::FindMemmedSpellBySlot)
-	.def("FindMemmedSpellBySpellID", (int(Lua_Client::*)(uint16))&Lua_Client::FindMemmedSpellBySpellID)
+	.def("FindMemmedSpellBySpellID", (int(Lua_Client::*)(int32 ))&Lua_Client::FindMemmedSpellBySpellID)
 	.def("FindSpellBookSlotBySpellID", (int(Lua_Client::*)(int))&Lua_Client::FindSpellBookSlotBySpellID)
 	.def("Fling", (void(Lua_Client::*)(float,float,float))&Lua_Client::Fling)
 	.def("Fling", (void(Lua_Client::*)(float,float,float,bool))&Lua_Client::Fling)
@@ -3914,7 +3914,7 @@ luabind::scope lua_register_client() {
 	.def("GetSkillPoints", (int(Lua_Client::*)(void))&Lua_Client::GetSkillPoints)
 	.def("GetSkillTrainLevel", (uint8(Lua_Client::*)(int))&Lua_Client::GetSkillTrainLevel)
 	.def("GetSpellDamage", (int(Lua_Client::*)(void))&Lua_Client::GetSpellDamage)
-	.def("GetSpellIDByBookSlot", (uint32(Lua_Client::*)(int))&Lua_Client::GetSpellIDByBookSlot)
+	.def("GetSpellIDByBookSlot", (int32 (Lua_Client::*)(int))&Lua_Client::GetSpellIDByBookSlot)
 	.def("GetSpentAA", (int(Lua_Client::*)(void))&Lua_Client::GetSpentAA)
 	.def("GetStartZone", (int(Lua_Client::*)(void))&Lua_Client::GetStartZone)
 	.def("GetTargetRingX", (float(Lua_Client::*)(void))&Lua_Client::GetTargetRingX)
@@ -4065,7 +4065,7 @@ luabind::scope lua_register_client() {
 	.def("ResetAllCastbarCooldowns", (void(Lua_Client::*)(void))&Lua_Client::ResetAllCastbarCooldowns)
 	.def("ResetAlternateAdvancementRank", &Lua_Client::ResetAlternateAdvancementRank)
 	.def("ResetCastbarCooldownBySlot", (void(Lua_Client::*)(int))&Lua_Client::ResetCastbarCooldownBySlot)
-	.def("ResetCastbarCooldownBySpellID", (void(Lua_Client::*)(uint32))&Lua_Client::ResetCastbarCooldownBySpellID)
+	.def("ResetCastbarCooldownBySpellID", (void(Lua_Client::*)(int32 ))&Lua_Client::ResetCastbarCooldownBySpellID)
 	.def("ResetDisciplineTimer", (void(Lua_Client::*)(uint32))&Lua_Client::ResetDisciplineTimer)
 	.def("ResetItemCooldown", (void(Lua_Client::*)(uint32))&Lua_Client::ResetItemCooldown)
 	.def("ResetLeadershipAA", (void(Lua_Client::*)(void))&Lua_Client::ResetLeadershipAA)
@@ -4229,14 +4229,14 @@ luabind::scope lua_register_client() {
 	.def("UnscribeSpell", (void(Lua_Client::*)(int,bool))&Lua_Client::UnscribeSpell)
 	.def("UnscribeSpellAll", (void(Lua_Client::*)(bool))&Lua_Client::UnscribeSpellAll)
 	.def("UnscribeSpellAll", (void(Lua_Client::*)(void))&Lua_Client::UnscribeSpellAll)
-	.def("UnscribeSpellBySpellID", (void(Lua_Client::*)(uint16))&Lua_Client::UnscribeSpellBySpellID)
-	.def("UnscribeSpellBySpellID", (void(Lua_Client::*)(uint16,bool))&Lua_Client::UnscribeSpellBySpellID)
+	.def("UnscribeSpellBySpellID", (void(Lua_Client::*)(int32 ))&Lua_Client::UnscribeSpellBySpellID)
+	.def("UnscribeSpellBySpellID", (void(Lua_Client::*)(int32 ,bool))&Lua_Client::UnscribeSpellBySpellID)
 	.def("UntrainDisc", (void(Lua_Client::*)(int))&Lua_Client::UntrainDisc)
 	.def("UntrainDisc", (void(Lua_Client::*)(int,bool))&Lua_Client::UntrainDisc)
 	.def("UntrainDiscAll", (void(Lua_Client::*)(bool))&Lua_Client::UntrainDiscAll)
 	.def("UntrainDiscAll", (void(Lua_Client::*)(void))&Lua_Client::UntrainDiscAll)
-	.def("UntrainDiscBySpellID", (void(Lua_Client::*)(uint16))&Lua_Client::UntrainDiscBySpellID)
-	.def("UntrainDiscBySpellID", (void(Lua_Client::*)(uint16,bool))&Lua_Client::UntrainDiscBySpellID)
+	.def("UntrainDiscBySpellID", (void(Lua_Client::*)(int32 ))&Lua_Client::UntrainDiscBySpellID)
+	.def("UntrainDiscBySpellID", (void(Lua_Client::*)(int32 ,bool))&Lua_Client::UntrainDiscBySpellID)
 	.def("UpdateAdmin", (void(Lua_Client::*)(void))&Lua_Client::UpdateAdmin)
 	.def("UpdateAdmin", (void(Lua_Client::*)(bool))&Lua_Client::UpdateAdmin)
 	.def("UpdateGroupAAs", (void(Lua_Client::*)(int,uint32))&Lua_Client::UpdateGroupAAs)

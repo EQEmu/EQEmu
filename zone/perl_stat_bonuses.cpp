@@ -268,7 +268,7 @@ int32 Perl_StatBonuses_GetHeroicCorrup(StatBonuses* self)
 	return self->HeroicCorrup;
 }
 
-uint16 Perl_StatBonuses_GetDamageShieldSpellID(StatBonuses* self)
+int32 Perl_StatBonuses_GetDamageShieldSpellID(StatBonuses* self)
 {
 	return self->DamageShieldSpellID;
 }
@@ -298,7 +298,7 @@ int Perl_StatBonuses_GetReverseDamageShield(StatBonuses* self)
 	return self->ReverseDamageShield;
 }
 
-uint16 Perl_StatBonuses_GetReverseDamageShieldSpellID(StatBonuses* self)
+int32 Perl_StatBonuses_GetReverseDamageShieldSpellID(StatBonuses* self)
 {
 	return self->ReverseDamageShieldSpellID;
 }

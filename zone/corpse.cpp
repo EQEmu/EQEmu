@@ -2304,7 +2304,7 @@ void Corpse::CheckIsOwnerOnline()
 	}
 }
 
-void Corpse::CastRezz(uint16 spell_id, Mob *caster)
+void Corpse::CastRezz(int32 spell_id, Mob *caster)
 {
 	LogSpells(
 		"spell_id [{}] IsRezzed() [{}], rez_experience [{}], rez_timer enabled [{}]",

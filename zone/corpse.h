@@ -83,7 +83,7 @@ public:
 	virtual bool Death(
 		Mob *killer_mob,
 		int64 damage,
-		uint16 spell_id,
+		int32 spell_id,
 		EQ::skills::SkillType attack_skill,
 		KilledByTypes killed_by = KilledByTypes::Killed_NPC,
 		bool is_buff_tic = false
@@ -92,7 +92,7 @@ public:
 	virtual void Damage(
 		Mob *from,
 		int64 damage,
-		uint16 spell_id,
+		int32 spell_id,
 		EQ::skills::SkillType attack_skill,
 		bool avoidable = true,
 		int8 buffslot = -1,
@@ -205,7 +205,7 @@ public:
 	/* Corpse: Resurrection */
 	bool IsRezzed() { return m_rez; }
 	void IsRezzed(bool in_rez) { m_rez = in_rez; }
-	void CastRezz(uint16 spell_id, Mob *caster);
+	void CastRezz(int32 spell_id, Mob *caster);
 	void CompleteResurrection(bool timer_expired = false);
 	bool IsRezzable() { return m_is_rezzable; }
 	void SetRezTimer(bool initial_timer = false);

@@ -37,7 +37,7 @@ class BaseBotBlockedBuffsRepository {
 public:
 	struct BotBlockedBuffs {
 		uint32_t bot_id;
-		uint32_t spell_id;
+		int32_t  spell_id;
 		uint8_t  blocked;
 		uint8_t  blocked_pet;
 	};

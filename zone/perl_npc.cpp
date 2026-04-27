@@ -476,17 +476,17 @@ float Perl_NPC_GetNPCStat(NPC* self, std::string stat) // @categories Stats and 
 	return self->GetNPCStat(stat);
 }
 
-void Perl_NPC_AddSpellToNPCList(NPC* self, int16 priority, uint16_t spell_id, uint32 type, int mana_cost, int recast_delay, int16 resist_adjust) // @categories Spells and Disciplines, Script Utility
+void Perl_NPC_AddSpellToNPCList(NPC* self, int16 priority, int32_t spell_id, uint32 type, int mana_cost, int recast_delay, int16 resist_adjust) // @categories Spells and Disciplines, Script Utility
 {
 	self->AddSpellToNPCList(priority, spell_id, type, mana_cost, recast_delay, resist_adjust, 0, 0);
 }
 
-void Perl_NPC_AddSpellToNPCList(NPC* self, int16 priority, uint16_t spell_id, uint32 type, int mana_cost, int recast_delay, int16 resist_adjust, int8 min_hp, int8 max_hp) // @categories Spells and Disciplines, Script Utility
+void Perl_NPC_AddSpellToNPCList(NPC* self, int16 priority, int32_t spell_id, uint32 type, int mana_cost, int recast_delay, int16 resist_adjust, int8 min_hp, int8 max_hp) // @categories Spells and Disciplines, Script Utility
 {
 	self->AddSpellToNPCList(priority, spell_id, type, mana_cost, recast_delay, resist_adjust, min_hp, max_hp);
 }
 
-void Perl_NPC_RemoveSpellFromNPCList(NPC* self, uint16_t spell_id) // @categories Spells and Disciplines
+void Perl_NPC_RemoveSpellFromNPCList(NPC* self, int32_t spell_id) // @categories Spells and Disciplines
 {
 	self->RemoveSpellFromNPCList(spell_id);
 }
@@ -556,32 +556,32 @@ void Perl_NPC_MerchantCloseShop(NPC* self) // @categories Script Utility
 	self->MerchantCloseShop();
 }
 
-void Perl_NPC_AddMeleeProc(NPC* self, uint16_t spell_id, uint16_t chance) // @categories Script Utility
+void Perl_NPC_AddMeleeProc(NPC* self, int32_t spell_id, uint16_t chance) // @categories Script Utility
 {
 	self->AddProcToWeapon(spell_id, true, chance);
 }
 
-void Perl_NPC_AddRangedProc(NPC* self, uint16_t spell_id, uint16_t chance) // @categories Script Utility
+void Perl_NPC_AddRangedProc(NPC* self, int32_t spell_id, uint16_t chance) // @categories Script Utility
 {
 	self->AddRangedProc(spell_id, chance);
 }
 
-void Perl_NPC_AddDefensiveProc(NPC* self, uint16_t spell_id, uint16_t chance) // @categories Script Utility
+void Perl_NPC_AddDefensiveProc(NPC* self, int32_t spell_id, uint16_t chance) // @categories Script Utility
 {
 	self->AddDefensiveProc(spell_id, chance);
 }
 
-void Perl_NPC_RemoveMeleeProc(NPC* self, uint16_t spell_id) // @categories Script Utility
+void Perl_NPC_RemoveMeleeProc(NPC* self, int32_t spell_id) // @categories Script Utility
 {
 	self->RemoveProcFromWeapon(spell_id, false);
 }
 
-void Perl_NPC_RemoveRangedProc(NPC* self, uint16_t spell_id) // @categories Script Utility
+void Perl_NPC_RemoveRangedProc(NPC* self, int32_t spell_id) // @categories Script Utility
 {
 	self->RemoveRangedProc(spell_id, false);
 }
 
-void Perl_NPC_RemoveDefensiveProc(NPC* self, uint16_t spell_id) // @categories Script Utility
+void Perl_NPC_RemoveDefensiveProc(NPC* self, int32_t spell_id) // @categories Script Utility
 {
 	self->RemoveDefensiveProc(spell_id, false);
 }
@@ -732,12 +732,12 @@ void Perl_NPC_SetLDoNTrapType(NPC* self, uint8 trap_type)
 	self->SetLDoNTrapType(trap_type);
 }
 
-uint16 Perl_NPC_GetLDoNTrapSpellID(NPC* self)
+int32 Perl_NPC_GetLDoNTrapSpellID(NPC* self)
 {
 	return self->GetLDoNTrapSpellID();
 }
 
-void Perl_NPC_SetLDoNTrapSpellID(NPC* self, uint16 spell_id)
+void Perl_NPC_SetLDoNTrapSpellID(NPC* self, int32 spell_id)
 {
 	self->SetLDoNTrapSpellID(spell_id);
 }
@@ -920,8 +920,8 @@ void perl_register_npc()
 	package.add("AI_SetRoambox", (void(*)(NPC*, float, float, float, float, float))&Perl_NPC_AI_SetRoambox);
 	package.add("AI_SetRoambox", (void(*)(NPC*, float, float, float, float, float, uint32))&Perl_NPC_AI_SetRoambox);
 	package.add("AI_SetRoambox", (void(*)(NPC*, float, float, float, float, float, uint32, uint32))&Perl_NPC_AI_SetRoambox);
-	package.add("AddAISpell", (void(*)(NPC*, int16, uint16, uint32, int, int, int16))&Perl_NPC_AddSpellToNPCList);
-	package.add("AddAISpell", (void(*)(NPC*, int16, uint16, uint32, int, int, int16, int8, int8))&Perl_NPC_AddSpellToNPCList);
+	package.add("AddAISpell", (void(*)(NPC*, int16, int32, uint32, int, int, int16))&Perl_NPC_AddSpellToNPCList);
+	package.add("AddAISpell", (void(*)(NPC*, int16, int32, uint32, int, int, int16, int8, int8))&Perl_NPC_AddSpellToNPCList);
 	package.add("AddAISpellEffect", &Perl_NPC_AddAISpellEffect);
 	package.add("AddCash", &Perl_NPC_AddLootCash);
 	package.add("AddDefensiveProc", &Perl_NPC_AddDefensiveProc);

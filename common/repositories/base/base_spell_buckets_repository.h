@@ -36,7 +36,7 @@
 class BaseSpellBucketsRepository {
 public:
 	struct SpellBuckets {
-		uint32_t    spell_id;
+		int32_t     spell_id;
 		std::string bucket_name;
 		std::string bucket_value;
 		uint8_t     bucket_comparison;

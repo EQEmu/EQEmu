@@ -38,7 +38,7 @@ public:
 	struct CharacterSpells {
 		uint32_t id;
 		uint16_t slot_id;
-		uint16_t spell_id;
+		int32_t  spell_id;
 	};
 
 	static std::string PrimaryKey()

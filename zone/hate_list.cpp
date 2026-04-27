@@ -800,7 +800,7 @@ int HateList::AreaRampage(Mob *caster, Mob *target, int count, ExtraAttackOption
 	return hit_count;
 }
 
-void HateList::SpellCast(Mob *caster, uint32 spell_id, float range, Mob* ae_center)
+void HateList::SpellCast(Mob *caster, int32 spell_id, float range, Mob* ae_center)
 {
 	if (!caster)
 		return;

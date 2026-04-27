@@ -810,7 +810,7 @@ void LuaMod::GetExperienceForKill(Client *self, Mob *against, uint64 &returnValu
 	}
 }
 
-void LuaMod::IsImmuneToSpell(Mob *self, Mob* caster, uint16 spell_id, bool &return_value, bool &ignore_default)
+void LuaMod::IsImmuneToSpell(Mob *self, Mob* caster, int32 spell_id, bool &return_value, bool &ignore_default)
 {
 	int start = lua_gettop(L);
 
@@ -862,7 +862,7 @@ void LuaMod::IsImmuneToSpell(Mob *self, Mob* caster, uint16 spell_id, bool &retu
 	}
 }
 
-void LuaMod::CalcSpellEffectValue_formula(Mob *self, uint32 formula, int64 base_value, int64 max_value, int caster_level, uint16 spell_id, int ticsremaining, int64 &returnValue, bool &ignoreDefault)
+void LuaMod::CalcSpellEffectValue_formula(Mob *self, uint32 formula, int64 base_value, int64 max_value, int caster_level, int32 spell_id, int ticsremaining, int64 &returnValue, bool &ignoreDefault)
 {
 	int start = lua_gettop(L);
 	int64 retval = 0;
@@ -989,7 +989,7 @@ void LuaMod::RegisterBug(Client *self, BaseBugReportsRepository::BugReports bug,
 }
 
 
-void LuaMod::CommonDamage(Mob *self, Mob* attacker, int64 value, uint16 spell_id, int skill_used, bool avoidable, int8 buff_slot, bool buff_tic, int special, int64 &return_value, bool &ignore_default)
+void LuaMod::CommonDamage(Mob *self, Mob* attacker, int64 value, int32 spell_id, int skill_used, bool avoidable, int8 buff_slot, bool buff_tic, int special, int64 &return_value, bool &ignore_default)
 {
 	int start = lua_gettop(L);
 
@@ -1048,7 +1048,7 @@ void LuaMod::CommonDamage(Mob *self, Mob* attacker, int64 value, uint16 spell_id
 }
 
 
-void LuaMod::HealDamage(Mob *self, Mob* caster, uint64 value, uint16 spell_id, uint64 &return_value, bool &ignore_default)
+void LuaMod::HealDamage(Mob *self, Mob* caster, uint64 value, int32 spell_id, uint64 &return_value, bool &ignore_default)
 {
 	int start = lua_gettop(L);
 

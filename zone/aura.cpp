@@ -871,7 +871,7 @@ void Aura::Depop(bool skip_strip)
 	p_depop = true;
 }
 
-void Mob::MakeAura(uint16 spell_id)
+void Mob::MakeAura(int32 spell_id)
 {
 	// TODO: verify room in AuraMgr
 	if (!IsValidSpell(spell_id)) {
@@ -944,7 +944,7 @@ void Mob::MakeAura(uint16 spell_id)
 	}
 }
 
-bool ZoneDatabase::GetAuraEntry(uint16 spell_id, AuraRecord& r)
+bool ZoneDatabase::GetAuraEntry(int32 spell_id, AuraRecord& r)
 {
 	const auto& l = AurasRepository::GetWhere(
 		*this,

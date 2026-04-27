@@ -39,7 +39,7 @@ public:
 	struct MercSpellListEntries {
 		uint32_t merc_spell_list_entry_id;
 		uint32_t merc_spell_list_id;
-		uint32_t spell_id;
+		int32_t  spell_id;
 		uint32_t spell_type;
 		uint8_t  stance_id;
 		uint8_t  minlevel;

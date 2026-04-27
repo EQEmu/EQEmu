@@ -45,7 +45,7 @@ struct NPCProximity {
 
 struct AISpells_Struct {
 	uint32	type;			// 0 = never, must be one (and only one) of the defined values
-	uint16	spellid;		// <= 0 = no spell
+	int32 spellid;		// <= 0 = no spell
 	int16	manacost;		// -1 = use spdat, -2 = no cast time
 	uint32	time_cancast;	// when we can cast this spell next
 	int32	recast_delay;
@@ -123,8 +123,8 @@ public:
 	static NPC * SpawnZonePointNodeNPC(std::string name, const glm::vec4 &position);
 
 	//abstract virtual function implementations requird by base abstract class
-	virtual bool Death(Mob* killer_mob, int64 damage, uint16 spell_id, EQ::skills::SkillType attack_skill, KilledByTypes killed_by = KilledByTypes::Killed_NPC, bool is_buff_tic = false);
-	virtual void Damage(Mob* from, int64 damage, uint16 spell_id, EQ::skills::SkillType attack_skill, bool avoidable = true, int8 buffslot = -1, bool iBuffTic = false, eSpecialAttacks special = eSpecialAttacks::None);
+	virtual bool Death(Mob* killer_mob, int64 damage, int32 spell_id, EQ::skills::SkillType attack_skill, KilledByTypes killed_by = KilledByTypes::Killed_NPC, bool is_buff_tic = false);
+	virtual void Damage(Mob* from, int64 damage, int32 spell_id, EQ::skills::SkillType attack_skill, bool avoidable = true, int8 buffslot = -1, bool iBuffTic = false, eSpecialAttacks special = eSpecialAttacks::None);
 	bool Attack(Mob* other, int Hand = EQ::invslot::slotPrimary, bool FromRiposte = false, bool IsStrikethrough = false,
 		bool IsFromSpell = false, ExtraAttackOptions *opts = nullptr) override;
 	virtual bool HasRaid() { return false; }
@@ -308,7 +308,7 @@ public:
 	float	GetAttackSpeed() const {return attack_speed;}
 	int		GetAttackDelay() const {return attack_delay;}
 	bool	IsAnimal() const { return(bodytype == BodyType::Animal); }
-	uint16	GetPetSpellID() const {return pet_spell_id;}
+	int32 GetPetSpellID() const {return pet_spell_id;}
 	void	SetPetSpellID(uint16 amt) {pet_spell_id = amt;}
 	uint32	GetMaxDamage(uint8 tlevel);
 	void	SetTaunting(bool is_taunting);
@@ -433,7 +433,7 @@ public:
 	uint8 GetLDoNTrapType() const { return ldon_trap_type; }
 	void SetLDoNTrapType(uint8 n) { ldon_trap_type = n; }
 
-	uint16 GetLDoNTrapSpellID() const { return ldon_spell_id; }
+	int32 GetLDoNTrapSpellID() const { return ldon_spell_id; }
 	void SetLDoNTrapSpellID(uint16 n) { ldon_spell_id = n; }
 
 	bool IsLDoNLocked() const { return ldon_locked; }
@@ -465,9 +465,9 @@ public:
 	void NPCSlotTexture(uint8 slot, uint32 texture);	// Sets new material values for slots
 
 	uint32 GetAdventureTemplate() const { return adventure_template_id; }
-	void AddSpellToNPCList(int16 iPriority, uint16 iSpellID, uint32 iType, int16 iManaCost, int32 iRecastDelay, int16 iResistAdjust, int8 min_hp, int8 max_hp);
+	void AddSpellToNPCList(int16 iPriority, int32 iSpellID, uint32 iType, int16 iManaCost, int32 iRecastDelay, int16 iResistAdjust, int8 min_hp, int8 max_hp);
 	void AddSpellEffectToNPCList(uint16 iSpellEffectID, int32 base_value, int32 limit, int32 max_value, bool apply_bonus = false);
-	void RemoveSpellFromNPCList(uint16 spell_id);
+	void RemoveSpellFromNPCList(int32 spell_id);
 	void RemoveSpellEffectFromNPCList(uint16 iSpellEffectID, bool apply_bonus = false);
 	bool HasAISpellEffect(uint16 spell_effect_id);
 	Timer *GetRefaceTimer() const { return reface_timer; }
@@ -494,7 +494,7 @@ public:
 	uint32	GetSpawnKillCount();
 	int	GetScore();
 	void	AISpellsList(Client *c);
-	uint16 GetInnateProcSpellID() const { return innate_proc_spell_id; }
+	int32 GetInnateProcSpellID() const { return innate_proc_spell_id; }
 
 	uint32	GetHeroForgeModel() const { return herosforgemodel; }
 	void	SetHeroForgeModel(uint32 model) { herosforgemodel = model; }
@@ -680,7 +680,7 @@ protected:
 	Timer	enraged_timer;
 	Timer *reface_timer;
 
-	uint32	npc_spells_id;
+	int32	npc_spells_id;
 	uint8	casting_spell_AIindex;
 
 	std::vector<AISpells_Struct> AIspells;
@@ -688,8 +688,8 @@ protected:
 	virtual bool AICastSpell(Mob* tar, uint8 iChance, uint32 iSpellTypes, bool bInnates = false);
 	virtual bool AIDoSpellCast(int32 i, Mob* tar, int32 mana_cost, uint32* oDontDoAgainBefore = 0);
 	AISpellsVar_Struct AISpellVar;
-	int64 GetFocusEffect(focusType type, uint16 spell_id, Mob *caster = nullptr, bool from_buff_tic = false) override;
-	uint16 innate_proc_spell_id;
+	int64 GetFocusEffect(focusType type, int32 spell_id, Mob *caster = nullptr, bool from_buff_tic = false) override;
+	int32 innate_proc_spell_id;
 
 	uint32	npc_spells_effects_id;
 	std::vector<AISpellsEffects_Struct> AIspellsEffects;
@@ -729,7 +729,7 @@ protected:
 	int charm_atk;
 
 	//pet crap:
-	uint16	pet_spell_id;
+	int32 pet_spell_id;
 	bool	taunting;
 	Timer	taunt_timer;		//for pet taunting
 
@@ -764,7 +764,7 @@ protected:
 
 	bool ldon_trapped;
 	uint8 ldon_trap_type;
-	uint16 ldon_spell_id;
+	int32 ldon_spell_id;
 	bool ldon_locked;
 	uint16 ldon_locked_skill;
 	bool ldon_trap_detected;

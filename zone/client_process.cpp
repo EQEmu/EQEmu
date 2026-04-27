@@ -1033,7 +1033,7 @@ uint8 Client::WithCustomer(uint16 NewCustomer){
 	return 0;
 }
 
-void Client::OPRezzAnswer(uint32 Action, uint32 SpellID, uint16 ZoneID, uint16 InstanceID, float x, float y, float z)
+void Client::OPRezzAnswer(uint32 Action, int32 SpellID, uint16 ZoneID, uint16 InstanceID, float x, float y, float z)
 {
 	if(PendingRezzXP < 0) {
 		// pendingrezexp is set to -1 if we are not expecting an OP_RezzAnswer
@@ -1048,7 +1048,7 @@ void Client::OPRezzAnswer(uint32 Action, uint32 SpellID, uint16 ZoneID, uint16 I
 		// corpse is in has shutdown since the rez spell was cast.
 		database.MarkCorpseAsResurrected(PendingRezzDBID);
 		LogSpells("Player [{}] got a [{}] Rezz spellid [{}] in zone[{}] instance id [{}]",
-				name, (uint16)spells[SpellID].base_value[0],
+				name, spells[SpellID].base_value[0],
 				SpellID, ZoneID, InstanceID);
 
 		const bool use_old_resurrection = (
@@ -1061,7 +1061,7 @@ void Client::OPRezzAnswer(uint32 Action, uint32 SpellID, uint16 ZoneID, uint16 I
 			)
 		);
 
-		const uint16 resurrection_sickness_spell_id = (
+		const int32 resurrection_sickness_spell_id = (
 			use_old_resurrection ?
 			RuleI(Character, OldResurrectionSicknessSpellID) :
 			RuleI(Character, ResurrectionSicknessSpellID)

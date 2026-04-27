@@ -128,7 +128,7 @@ struct LDoNTrapTemplate
 {
 	uint32 id;
 	LDoNChestTypes type;
-	uint32 spell_id;
+	int32 spell_id;
 	uint16 skill;
 	uint8 locked;
 };
@@ -422,7 +422,7 @@ struct NewZone_Struct {
 */
 struct MemorizeSpell_Struct {
 uint32 slot;		// Spot in the spell book/memorized slot
-uint32 spell_id;	// Spell id (200 or c8 is minor healing, etc)
+int32  spell_id;	// Spell id (200 or c8 is minor healing, etc)
 uint32 scribing;	// 1 if memorizing a spell, set to 0 if scribing to book, 2 if un-memming
 uint32 reduction;	// lower reuse
 };
@@ -471,7 +471,7 @@ struct ManaChange_Struct
 {
 /*00*/	uint32	new_mana;		// New Mana AMount
 /*04*/	uint32	stamina;
-/*08*/	uint32	spell_id;
+/*08*/	int32   spell_id;
 /*12*/	uint8	keepcasting;	// won't stop the cast. Change mana while casting?
 /*13*/	uint8	padding[3];		// client doesn't read it, garbage data seems like
 /*16*/	int32	slot;			// -1 normal, otherwise clear ETA and GCD
@@ -489,14 +489,14 @@ struct BeginCast_Struct
 {
 	// len = 8
 /*000*/	uint16	caster_id;
-/*002*/	uint16	spell_id;
+/*002*/	int16 spell_id;
 /*004*/	uint32	cast_time;		// in miliseconds
 };
 
 struct CastSpell_Struct
 {
 	uint32	slot;
-	uint32	spell_id;
+	int32   spell_id;
 	uint32	inventoryslot; // slot for clicky item, 0xFFFF = normal cast
 	uint32	target_id;
 	uint32  cs_unknown1;
@@ -544,7 +544,7 @@ struct SpellBuff_Struct
 /*001*/	uint8	level;
 /*002*/	uint8	bard_modifier;
 /*003*/	uint8	unknown003;		// MQ2 used to call this "damage shield" -- don't see client referencing it, so maybe server side DS type tracking? -- OSX client calls this "activated"
-/*004*/	uint32	spellid;
+/*004*/	int32   spellid;
 /*008*/	int32	duration;
 /*012*/	uint32	counters;	// single book keeping value (counters, rune/vie)
 /*016*/	uint32	player_id;	// caster ID, pretty sure just zone ID
@@ -574,7 +574,7 @@ struct BuffRemoveRequest_Struct
 
 struct PetBuff_Struct {
 /*000*/ uint32 petid;
-/*004*/ uint32 spellid[PET_BUFF_COUNT];
+/*004*/ int32 spellid[PET_BUFF_COUNT];
 /*124*/ int32 ticsremaining[PET_BUFF_COUNT];
 /*244*/ uint32 buffcount;
 };
@@ -875,7 +875,7 @@ struct BindStruct {
 
 struct SuspendedMinion_Struct
 {
-	/*000*/	uint16 SpellID;
+	/*000*/	int16 SpellID;
 	/*002*/	uint32 HP;
 	/*006*/	uint32 Mana;
 	/*010*/	SpellBuff_Struct Buffs[BUFF_COUNT];
@@ -1010,7 +1010,7 @@ struct PlayerProfile_Struct
 /*2505*/	uint8				unknown2541[47];	// ?
 /*2552*/	uint8				languages[MAX_PP_LANGUAGE];
 /*2580*/	uint8				unknown2616[4];
-/*2584*/	uint32				spell_book[EQ::spells::SPELLBOOK_SIZE];
+/*2584*/	int32				spell_book[EQ::spells::SPELLBOOK_SIZE];
 /*4504*/	uint8				unknown4540[128];	// Was [428] all 0xff
 /*4632*/	uint32				mem_spells[EQ::spells::SPELL_GEM_COUNT];
 /*4668*/	uint8				unknown4704[32];	//
@@ -1344,7 +1344,7 @@ struct CombatDamage_Struct
 /* 00 */	uint16	target;
 /* 02 */	uint16	source;
 /* 04 */	uint8	type; //slashing, etc. 231 (0xE7) for spells, skill
-/* 05 */	uint16	spellid;
+/* 05 */	int16   spellid;
 /* 07 */	uint32	damage;
 /* 11 */	float force;
 /* 15 */	float hit_heading;	// see above notes in Action_Struct
@@ -1377,7 +1377,7 @@ struct Death_Struct
 /*004*/	uint32	killer_id;
 /*008*/	uint32	corpseid;	// was corpseid
 /*012*/	uint32	bindzoneid;
-/*016*/	uint32	spell_id;
+/*016*/	int32   spell_id;
 /*020*/	uint32	attack_skill;
 /*024*/	uint32	damage;
 /*028*/	uint32	unknown028;
@@ -2983,7 +2983,7 @@ struct Resurrect_Struct	{
 /*024*/	char	your_name[64];
 /*088*/	uint32	unknown088;
 /*092*/	char	rezzer_name[64];
-/*156*/	uint32	spellid;
+/*156*/	int32   spellid;
 /*160*/	char	corpse_name[64];
 /*224*/	uint32	action;
 /* 228 */
@@ -2991,7 +2991,7 @@ struct Resurrect_Struct	{
 
 struct Translocate_Struct {
 /*000*/	uint32	ZoneID;
-/*004*/	uint32	SpellID;
+/*004*/	int32   SpellID;
 /*008*/	uint32	unknown008; //Heading ?
 /*012*/	char	Caster[64];
 /*076*/	float	y;
@@ -3008,7 +3008,7 @@ struct PendingTranslocate_Struct
 	float x;
 	float y;
 	float z;
-	uint32 spell_id;
+	int32 spell_id;
 };
 
 struct Sacrifice_Struct {
@@ -4875,7 +4875,7 @@ struct MarkNPC_Struct
 };
 
 struct InspectBuffs_Struct {
-/*000*/ uint32 spell_id[BUFF_COUNT];
+/*000*/ int32 spell_id[BUFF_COUNT];
 /*100*/ int32 tics_remaining[BUFF_COUNT];
 };
 
@@ -5144,7 +5144,7 @@ struct SendAA_Struct {
 /*0040*/	uint32 prereq_skill;		//is < 0, abs() is category #
 /*0044*/	uint32 prereq_minpoints; //min points in the prereq
 /*0048*/	uint32 type;
-/*0052*/	uint32 spellid;
+/*0052*/	int32  spellid;
 /*0056*/	uint32 spell_type;
 /*0060*/	uint32 spell_refresh;
 /*0064*/	uint16 classes;
@@ -5645,7 +5645,7 @@ struct HideCorpse_Struct
 struct BuffIconEntry_Struct
 {
 	uint32 buff_slot;
-	uint32 spell_id;
+	int32 spell_id;
 	int32 tics_remaining;
 	uint32 num_hits;
 	char caster[64];

@@ -70,7 +70,7 @@ public:
 	void RemoveBotItem(uint32 item_id);
 	void SetExpansionBitmask(int expansion_bitmask);
 	void Signal(int signal_id);
-	bool HasBotSpellEntry(uint16 spellid);
+	bool HasBotSpellEntry(int32 spellid);
 	void SendPayload(int payload_id);
 	void SendPayload(int payload_id, std::string payload_value);
 	uint32 GetBotID();
@@ -82,7 +82,7 @@ public:
 	luabind::object GetAugmentIDsBySlotID(lua_State* L, int16 slot_id) const;
 	Lua_ItemInst GetItemAt(int16 slot_id);
 	int GetItemIDAt(int16 slot_id);
-	void SendSpellAnim(uint16 target_id, uint16 spell_id);
+	void SendSpellAnim(uint16 target_id, int32 spell_id);
 	std::string GetClassAbbreviation();
 	std::string GetRaceAbbreviation();
 	void DeleteBucket(std::string bucket_name);
@@ -125,23 +125,23 @@ public:
 	void SetSpellDurationRaid(int spell_id, int duration, int level, bool allow_pets, bool is_raid_group_only);
 
 	void ClearDisciplineReuseTimer();
-	void ClearDisciplineReuseTimer(uint16 spell_id);
+	void ClearDisciplineReuseTimer(int32 spell_id);
 	void ClearItemReuseTimer();
 	void ClearItemReuseTimer(uint32 item_id);
 	void ClearSpellRecastTimer();
-	void ClearSpellRecastTimer(uint16 spell_id);
+	void ClearSpellRecastTimer(int32 spell_id);
 	uint32 GetDisciplineReuseTimer();
-	uint32 GetDisciplineReuseTimer(uint16 spell_id);
+	uint32 GetDisciplineReuseTimer(int32 spell_id);
 	uint32 GetItemReuseTimer();
 	uint32 GetItemReuseTimer(uint32 item_id);
 	uint32 GetSpellRecastTimer();
-	uint32 GetSpellRecastTimer(uint16 spell_id);
-	void SetDisciplineReuseTimer(uint16 spell_id);
-	void SetDisciplineReuseTimer(uint16 spell_id, uint32 reuse_timer);
+	uint32 GetSpellRecastTimer(int32 spell_id);
+	void SetDisciplineReuseTimer(int32 spell_id);
+	void SetDisciplineReuseTimer(int32 spell_id, uint32 reuse_timer);
 	void SetItemReuseTimer(uint32 item_id);
 	void SetItemReuseTimer(uint32 item_id, uint32 reuse_timer);
-	void SetSpellRecastTimer(uint16 spell_id);
-	void SetSpellRecastTimer(uint16 spell_id, uint32 reuse_timer);
+	void SetSpellRecastTimer(int32 spell_id);
+	void SetSpellRecastTimer(int32 spell_id, uint32 reuse_timer);
 
 	uint32 CountAugmentEquippedByID(uint32 item_id);
 	uint32 CountItemEquippedByID(uint32 item_id);

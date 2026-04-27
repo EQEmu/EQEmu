@@ -146,7 +146,7 @@ public:
 	bool IsHotzone() const { return (is_hotzone); }
 	bool IsLoaded();
 	bool IsPVPZone() { return pvpzone; }
-	bool IsSpellBlocked(uint32 spell_id, const glm::vec3 &location);
+	bool IsSpellBlocked(int32 spell_id, const glm::vec3 &location);
 	bool IsUCSServerAvailable() { return m_ucss_available; }
 	bool IsZone(uint32 zone_id, uint16 instance_id) const;
 	bool LoadGroundSpawns();
@@ -160,7 +160,7 @@ public:
 
 	char *adv_data;
 
-	const char *GetSpellBlockedMessage(uint32 spell_id, const glm::vec3 &location);
+	const char *GetSpellBlockedMessage(int32 spell_id, const glm::vec3 &location);
 
 	EQ::Random random;
 	EQTime     zone_time;

@@ -624,7 +624,7 @@ bool Lua_Zone::IsSpecialBindLocation(float x, float y, float z, float heading)
 	return self->IsSpecialBindLocation(glm::vec4(x, y, z, heading));
 }
 
-bool Lua_Zone::IsSpellBlocked(uint32 spell_id, float x, float y, float z)
+bool Lua_Zone::IsSpellBlocked(int32 spell_id, float x, float y, float z)
 {
 	Lua_Safe_Call_Bool();
 	return self->IsSpellBlocked(spell_id, glm::vec3(x, y, z));

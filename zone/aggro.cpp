@@ -1348,7 +1348,7 @@ bool Mob::CheckPositioningLosFN(Mob* other, float x, float y, float z) {
 }
 
 //offensive spell aggro
-int32 Mob::CheckAggroAmount(uint16 spell_id, Mob *target, bool is_proc)
+int32 Mob::CheckAggroAmount(int32 spell_id, Mob *target, bool is_proc)
 {
 	if (IsNoDetrimentalSpellAggroSpell(spell_id)) {
 		return 0;
@@ -1536,7 +1536,7 @@ int32 Mob::CheckAggroAmount(uint16 spell_id, Mob *target, bool is_proc)
 }
 
 //healing and buffing aggro
-int32 Mob::CheckHealAggroAmount(uint16 spell_id, Mob *target, uint32 heal_possible)
+int32 Mob::CheckHealAggroAmount(int32 spell_id, Mob *target, uint32 heal_possible)
 {
 	int32 AggroAmount = 0;
 	auto target_level = target ? target->GetLevel() : 1;
@@ -1662,7 +1662,7 @@ bool Mob::IsOnFeignMemory(Mob *attacker) const
 	return feign_memory_list.find(attacker->GetID()) != feign_memory_list.end();
 }
 
-bool Mob::PassCharismaCheck(Mob* caster, uint16 spell_id) {
+bool Mob::PassCharismaCheck(Mob* caster, int32 spell_id) {
 
 	/*
 	Charm formula is correct based on over 50 hours of personal live parsing - Kayen

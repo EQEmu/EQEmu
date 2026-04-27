@@ -68,7 +68,7 @@ void GetRandPetName(char *name)
 	strn0cpy(name, temp.c_str(), 64);
 }
 
-void Mob::MakePet(uint16 spell_id, const char* pettype, const char *petname) {
+void Mob::MakePet(int32 spell_id, const char* pettype, const char *petname) {
 	// petpower of -1 is used to get the petpower based on whichever focus is currently
 	// equipped. This should replicate the old functionality for the most part.
 	MakePoweredPet(spell_id, pettype, -1, petname);
@@ -78,7 +78,7 @@ void Mob::MakePet(uint16 spell_id, const char* pettype, const char *petname) {
 // making it possible for petpower to be retained without the focus item having to
 // stay equipped when the character zones. petpower of -1 means that the currently equipped petfocus
 // of a client is searched for and used instead.
-void Mob::MakePoweredPet(uint16 spell_id, const char* pettype, int16 petpower,
+void Mob::MakePoweredPet(int32 spell_id, const char* pettype, int16 petpower,
 		const char *petname, float in_size) {
 	// Sanity and early out checking first.
 	if(HasPet() || pettype == nullptr)
@@ -345,7 +345,7 @@ void NPC::TryDepopTargetLockedPets(Mob* current_target) {
 /* This is why the pets ghost - pets were being spawned too far away from its npc owner and some
 into walls or objects (+10), this sometimes creates the "ghost" effect. I changed to +2 (as close as I
 could get while it still looked good). I also noticed this can happen if an NPC is spawned on the same spot of another or in a related bad spot.*/
-Pet::Pet(NPCType *type_data, Mob *owner, uint8 pet_type, uint16 spell_id, int16 power)
+Pet::Pet(NPCType *type_data, Mob *owner, uint8 pet_type, int32 spell_id, int16 power)
 : NPC(type_data, 0, owner->GetPosition() + glm::vec4(2.0f, 2.0f, 0.0f, 0.0f), GravityBehavior::Water)
 {
 	GiveNPCTypeData(type_data);
@@ -553,7 +553,7 @@ void NPC::SetPetState(SpellBuff_Struct *pet_buffs, uint32 *items) {
 					case SpellEffect::NegateAttacks:
 					case SpellEffect::Illusion:
 						buffs[j1].spellid = SPELL_UNKNOWN;
-						pet_buffs[j1].spellid = SPELLBOOK_UNKNOWN;
+						pet_buffs[j1].spellid = SPELL_UNKNOWN;
 						pet_buffs[j1].effect_type = 0;
 						pet_buffs[j1].level = 0;
 						pet_buffs[j1].duration = 0;
@@ -649,7 +649,7 @@ bool ZoneDatabase::GetBasePetItems(int32 equipmentset, uint32 *items) {
 	return true;
 }
 
-bool Pet::CheckSpellLevelRestriction(Mob *caster, uint16 spell_id)
+bool Pet::CheckSpellLevelRestriction(Mob *caster, int32 spell_id)
 {
 	auto owner = GetOwner();
 	if (owner)

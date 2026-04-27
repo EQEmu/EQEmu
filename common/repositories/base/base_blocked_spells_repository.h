@@ -37,7 +37,7 @@ class BaseBlockedSpellsRepository {
 public:
 	struct BlockedSpells {
 		int32_t     id;
-		uint32_t    spellid;
+		int32_t     spellid;
 		int8_t      type;
 		int32_t     zoneid;
 		float       x;

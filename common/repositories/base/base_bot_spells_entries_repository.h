@@ -38,7 +38,7 @@ public:
 	struct BotSpellsEntries {
 		uint32_t    id;
 		int32_t     npc_spells_id;
-		uint16_t    spell_id;
+		int32_t     spell_id;
 		uint32_t    type;
 		uint8_t     minlevel;
 		uint8_t     maxlevel;

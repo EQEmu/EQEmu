@@ -466,7 +466,7 @@ namespace RoF
 		for (int i = 0; i < emu->count; ++i)
 		{
 			__packet->WriteUInt32(emu->type == 0 ? ServerToRoFBuffSlot(emu->entries[i].buff_slot) : emu->entries[i].buff_slot);
-			__packet->WriteUInt32(emu->entries[i].spell_id);
+			__packet->WriteSInt32 (emu->entries[i].spell_id);
 			__packet->WriteUInt32(emu->entries[i].tics_remaining);
 			__packet->WriteUInt32(emu->entries[i].num_hits); // Unknown
 			__packet->WriteString(emu->entries[i].caster);
@@ -1879,7 +1879,7 @@ namespace RoF
 			if (emu->spellid[i])
 			{
 				__packet->WriteUInt32(i);
-				__packet->WriteUInt32(emu->spellid[i]);
+				__packet->WriteSInt32 (emu->spellid[i]);
 				__packet->WriteUInt32(emu->ticsremaining[i]);
 				__packet->WriteUInt32(0); // numhits
 				__packet->WriteString("");
@@ -2179,7 +2179,7 @@ namespace RoF
 			outapp->WriteUInt32(emu->buffs[r].counters);
 			outapp->WriteUInt32(emu->buffs[r].duration);
 			outapp->WriteUInt8(emu->buffs[r].level);
-			outapp->WriteUInt32(emu->buffs[r].spellid);
+			outapp->WriteSInt32 (emu->buffs[r].spellid);
 			outapp->WriteUInt8(effect_type);			// Only ever seen 2
 			outapp->WriteUInt32(emu->buffs[r].num_hits);
 			outapp->WriteUInt32(0);

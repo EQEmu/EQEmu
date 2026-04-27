@@ -92,7 +92,7 @@ int16 Perl_Buff_GetRootBreakChance(Buffs_Struct* self)
 	return self->RootBreakChance;
 }
 
-uint16 Perl_Buff_GetSpellID(Buffs_Struct* self)
+int32 Perl_Buff_GetSpellID(Buffs_Struct* self)
 {
 	return self->spellid;
 }

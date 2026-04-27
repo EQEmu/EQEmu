@@ -729,25 +729,25 @@ void Lua_EntityList::AreaAttack(Lua_Mob attacker, float distance, int16 slot_id,
 	self->AEAttack(attacker, distance, slot_id, count, is_from_spell, attack_rounds);
 }
 
-void Lua_EntityList::AreaSpell(Lua_Mob caster, Lua_Mob center, uint16 spell_id)
+void Lua_EntityList::AreaSpell(Lua_Mob caster, Lua_Mob center, int32 spell_id)
 {
 	Lua_Safe_Call_Void();
 	self->AESpell(caster, center, spell_id);
 }
 
-void Lua_EntityList::AreaSpell(Lua_Mob caster, Lua_Mob center, uint16 spell_id, bool affect_caster)
+void Lua_EntityList::AreaSpell(Lua_Mob caster, Lua_Mob center, int32 spell_id, bool affect_caster)
 {
 	Lua_Safe_Call_Void();
 	self->AESpell(caster, center, spell_id, affect_caster);
 }
 
-void Lua_EntityList::AreaSpell(Lua_Mob caster, Lua_Mob center, uint16 spell_id, bool affect_caster, int16 resist_adjust)
+void Lua_EntityList::AreaSpell(Lua_Mob caster, Lua_Mob center, int32 spell_id, bool affect_caster, int16 resist_adjust)
 {
 	Lua_Safe_Call_Void();
 	self->AESpell(caster, center, spell_id, affect_caster, resist_adjust);
 }
 
-void Lua_EntityList::AreaSpell(Lua_Mob caster, Lua_Mob center, uint16 spell_id, bool affect_caster, int16 resist_adjust, int max_targets)
+void Lua_EntityList::AreaSpell(Lua_Mob caster, Lua_Mob center, int32 spell_id, bool affect_caster, int16 resist_adjust, int max_targets)
 {
 	Lua_Safe_Call_Void();
 	self->AESpell(caster, center, spell_id, affect_caster, resist_adjust, &max_targets);
@@ -771,13 +771,13 @@ void Lua_EntityList::AreaTaunt(Lua_Client caster, float range, int bonus_hate)
 	self->AETaunt(caster, range, bonus_hate);
 }
 
-void Lua_EntityList::MassGroupBuff(Lua_Mob caster, Lua_Mob center, uint16 spell_id)
+void Lua_EntityList::MassGroupBuff(Lua_Mob caster, Lua_Mob center, int32 spell_id)
 {
 	Lua_Safe_Call_Void();
 	self->MassGroupBuff(caster, center, spell_id);
 }
 
-void Lua_EntityList::MassGroupBuff(Lua_Mob caster, Lua_Mob center, uint16 spell_id, bool affect_caster)
+void Lua_EntityList::MassGroupBuff(Lua_Mob caster, Lua_Mob center, int32 spell_id, bool affect_caster)
 {
 	Lua_Safe_Call_Void();
 	self->MassGroupBuff(caster, center, spell_id, affect_caster);
@@ -853,10 +853,10 @@ luabind::scope lua_register_entity_list() {
 	.def("AreaAttack", (void(Lua_EntityList::*)(Lua_Mob, float, int16, int))&Lua_EntityList::AreaAttack)
 	.def("AreaAttack", (void(Lua_EntityList::*)(Lua_Mob, float, int16, int, bool))&Lua_EntityList::AreaAttack)
 	.def("AreaAttack", (void(Lua_EntityList::*)(Lua_Mob, float, int16, int, bool, int))&Lua_EntityList::AreaAttack)
-	.def("AreaSpell", (void(Lua_EntityList::*)(Lua_Mob, Lua_Mob, uint16))&Lua_EntityList::AreaSpell)
-	.def("AreaSpell", (void(Lua_EntityList::*)(Lua_Mob, Lua_Mob, uint16, bool))&Lua_EntityList::AreaSpell)
-	.def("AreaSpell", (void(Lua_EntityList::*)(Lua_Mob, Lua_Mob, uint16, bool, int16))&Lua_EntityList::AreaSpell)
-	.def("AreaSpell", (void(Lua_EntityList::*)(Lua_Mob, Lua_Mob, uint16, bool, int16, int))&Lua_EntityList::AreaSpell)
+	.def("AreaSpell", (void(Lua_EntityList::*)(Lua_Mob, Lua_Mob, int32))&Lua_EntityList::AreaSpell)
+	.def("AreaSpell", (void(Lua_EntityList::*)(Lua_Mob, Lua_Mob, int32, bool))&Lua_EntityList::AreaSpell)
+	.def("AreaSpell", (void(Lua_EntityList::*)(Lua_Mob, Lua_Mob, int32, bool, int16))&Lua_EntityList::AreaSpell)
+	.def("AreaSpell", (void(Lua_EntityList::*)(Lua_Mob, Lua_Mob, int32, bool, int16, int))&Lua_EntityList::AreaSpell)
 	.def("AreaTaunt", (void(Lua_EntityList::*)(Lua_Client))&Lua_EntityList::AreaTaunt)
 	.def("AreaTaunt", (void(Lua_EntityList::*)(Lua_Client, float))&Lua_EntityList::AreaTaunt)
 	.def("AreaTaunt", (void(Lua_EntityList::*)(Lua_Client, float, int))&Lua_EntityList::AreaTaunt)
@@ -936,8 +936,8 @@ luabind::scope lua_register_entity_list() {
 	.def("Marquee", (void(Lua_EntityList::*)(uint32, std::string))&Lua_EntityList::Marquee)
 	.def("Marquee", (void(Lua_EntityList::*)(uint32, std::string, uint32))&Lua_EntityList::Marquee)
 	.def("Marquee", (void(Lua_EntityList::*)(uint32, uint32, uint32, uint32, uint32, std::string))&Lua_EntityList::Marquee)
-	.def("MassGroupBuff", (void(Lua_EntityList::*)(Lua_Mob, Lua_Mob, uint16))&Lua_EntityList::MassGroupBuff)
-	.def("MassGroupBuff", (void(Lua_EntityList::*)(Lua_Mob, Lua_Mob, uint16, bool))&Lua_EntityList::MassGroupBuff)
+	.def("MassGroupBuff", (void(Lua_EntityList::*)(Lua_Mob, Lua_Mob, int32))&Lua_EntityList::MassGroupBuff)
+	.def("MassGroupBuff", (void(Lua_EntityList::*)(Lua_Mob, Lua_Mob, int32, bool))&Lua_EntityList::MassGroupBuff)
 	.def("Message", (void(Lua_EntityList::*)(uint32, uint32, const char*))&Lua_EntityList::Message)
 	.def("MessageClose", (void(Lua_EntityList::*)(Lua_Mob, bool, float, uint32, const char*))&Lua_EntityList::MessageClose)
 	.def("MessageGroup", (void(Lua_EntityList::*)(Lua_Mob, bool, uint32, const char*))&Lua_EntityList::MessageGroup)

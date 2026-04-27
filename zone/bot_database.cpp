@@ -1252,7 +1252,7 @@ bool BotDatabase::LoadPetIndex(const uint32 bot_id, uint32& pet_index)
 	return true;
 }
 
-bool BotDatabase::LoadPetSpellID(const uint32 bot_id, uint32& pet_spell_id)
+bool BotDatabase::LoadPetSpellID(const uint32 bot_id, int32& pet_spell_id)
 {
 	if (!bot_id) {
 		return false;
@@ -1277,7 +1277,7 @@ bool BotDatabase::LoadPetSpellID(const uint32 bot_id, uint32& pet_spell_id)
 	return true;
 }
 
-bool BotDatabase::LoadPetStats(const uint32 bot_id, std::string& pet_name, uint32& pet_mana, uint32& pet_hp, uint32& pet_spell_id)
+bool BotDatabase::LoadPetStats(const uint32 bot_id, std::string& pet_name, uint32& pet_mana, uint32& pet_hp, int32& pet_spell_id)
 {
 	if (!bot_id) {
 		return false;
@@ -1315,7 +1315,7 @@ bool BotDatabase::LoadPetStats(const uint32 bot_id, std::string& pet_name, uint3
 	return true;
 }
 
-bool BotDatabase::SavePetStats(const uint32 bot_id, const std::string& pet_name, const uint32 pet_mana, const uint32 pet_hp, const uint32 pet_spell_id)
+bool BotDatabase::SavePetStats(const uint32 bot_id, const std::string& pet_name, const uint32 pet_mana, const uint32 pet_hp, const int32 pet_spell_id)
 {
 	if (!bot_id || pet_name.empty() || !pet_spell_id || pet_spell_id > SPDAT_RECORDS) {
 		return false;
@@ -2572,7 +2572,7 @@ bool BotDatabase::DeleteBotBlockedBuffs(const uint32 bot_id)
 
 void BotDatabase::CheckBotSpells() {
 	auto spell_list = BotSpellsEntriesRepository::All(content_db);
-	uint16 spell_id;
+	int32 spell_id;
 	SPDat_Spell_Struct spell;
 
 	for (const auto& s : spell_list) {

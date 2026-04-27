@@ -2277,7 +2277,7 @@ void Zone::ClearBlockedSpells()
 	zone_total_blocked_spells = 0;
 }
 
-bool Zone::IsSpellBlocked(uint32 spell_id, const glm::vec3 &location)
+bool Zone::IsSpellBlocked(int32 spell_id, const glm::vec3 &location)
 {
 	if (blocked_spells) {
 		bool exception = false;
@@ -2330,7 +2330,7 @@ bool Zone::IsSpellBlocked(uint32 spell_id, const glm::vec3 &location)
 	return false;
 }
 
-const char *Zone::GetSpellBlockedMessage(uint32 spell_id, const glm::vec3 &location)
+const char *Zone::GetSpellBlockedMessage(int32 spell_id, const glm::vec3 &location)
 {
 	if (blocked_spells) {
 		for (int x = 0; x < GetZoneTotalBlockedSpells(); x++) {
@@ -2379,7 +2379,7 @@ void Zone::LoadLDoNTraps()
 
 		t->id       = e.id;
 		t->type     = static_cast<LDoNChestTypes>(e.type);
-		t->spell_id = static_cast<uint32>(e.spell_id);
+		t->spell_id = e.spell_id;
 		t->skill    = e.skill;
 		t->locked   = e.locked;
 

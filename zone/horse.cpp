@@ -30,7 +30,7 @@ std::map<uint16, const NPCType *> Horse::horse_types;
 
 Horse::Horse(
 	Client *c,
-	uint16 spell_id,
+	int32 spell_id,
 	const glm::vec4& position
 ) : NPC(
 	GetHorseType(spell_id),
@@ -52,12 +52,12 @@ void Horse::FillSpawnStruct(NewSpawn_Struct* ns, Mob* m) {
 	ns->spawn.runspeed   = NPCTypedata->runspeed;
 }
 
-bool Horse::IsHorseSpell(uint16 spell_id)
+bool Horse::IsHorseSpell(int32 spell_id)
 {
 	return GetHorseType(spell_id);
 }
 
-const NPCType *Horse::GetHorseType(uint16 spell_id)
+const NPCType *Horse::GetHorseType(int32 spell_id)
 {
 	if (horse_types.count(spell_id)) {
 		return horse_types[spell_id];
@@ -70,7 +70,7 @@ const NPCType *Horse::GetHorseType(uint16 spell_id)
 	return n;
 }
 
-const NPCType *Horse::BuildHorseType(uint16 spell_id)
+const NPCType *Horse::BuildHorseType(int32 spell_id)
 {
 	const auto& l = HorsesRepository::GetWhere(
 		content_db,
@@ -119,7 +119,7 @@ const NPCType *Horse::BuildHorseType(uint16 spell_id)
 	return n;
 }
 
-void Client::SummonHorse(uint16 spell_id)
+void Client::SummonHorse(int32 spell_id)
 {
 	if (GetHorseId()) {
 		MessageString(Chat::Red, ALREADY_ON_A_MOUNT);

@@ -22,6 +22,6 @@ struct NPCType;
 
 class Pet : public NPC {
 public:
-	Pet(NPCType *type_data, Mob *owner, uint8 pet_type, uint16 spell_id, int16 power);
-	virtual bool CheckSpellLevelRestriction(Mob *caster, uint16 spell_id);
+	Pet(NPCType *type_data, Mob *owner, uint8 pet_type, int32 spell_id, int16 power);
+	virtual bool CheckSpellLevelRestriction(Mob *caster, int32 spell_id);
 };

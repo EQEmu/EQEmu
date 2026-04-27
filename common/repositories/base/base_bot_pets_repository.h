@@ -37,7 +37,7 @@ class BaseBotPetsRepository {
 public:
 	struct BotPets {
 		uint32_t    pets_index;
-		uint32_t    spell_id;
+		int32_t     spell_id;
 		uint32_t    bot_id;
 		std::string name;
 		int32_t     mana;

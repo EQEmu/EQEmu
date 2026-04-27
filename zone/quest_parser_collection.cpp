@@ -238,13 +238,13 @@ bool QuestParserCollection::PlayerHasQuestSubGlobal(QuestEventID event_id)
 	return false;
 }
 
-bool QuestParserCollection::SpellHasEncounterSub(uint32 spell_id, QuestEventID event_id)
+bool QuestParserCollection::SpellHasEncounterSub(int32 spell_id, QuestEventID event_id)
 {
 	return HasEncounterSub(event_id, fmt::format("spell_{}", spell_id)) ||
 		   HasEncounterSub(event_id, "spell_" + ENCOUNTER_NO_ENTITY_ID);
 }
 
-bool QuestParserCollection::SpellHasQuestSub(uint32 spell_id, QuestEventID event_id)
+bool QuestParserCollection::SpellHasQuestSub(int32 spell_id, QuestEventID event_id)
 {
 	if (SpellHasEncounterSub(spell_id, event_id)) {
 		return true;
@@ -716,7 +716,7 @@ int QuestParserCollection::EventSpell(
 	QuestEventID event_id,
 	Mob* mob,
 	Client* client,
-	uint32 spell_id,
+	int32 spell_id,
 	std::string data,
 	uint32 extra_data,
 	std::vector<std::any>* extra_pointers
@@ -1229,7 +1229,7 @@ QuestInterface* QuestParserCollection::GetQIByGlobalPlayerQuest(std::string& fil
 	return nullptr;
 }
 
-QuestInterface* QuestParserCollection::GetQIBySpellQuest(uint32 spell_id, std::string& filename)
+QuestInterface* QuestParserCollection::GetQIBySpellQuest(int32 spell_id, std::string& filename)
 {
 	if (!zone) {
 		return nullptr;
@@ -1703,7 +1703,7 @@ int QuestParserCollection::DispatchEventSpell(
 	QuestEventID event_id,
 	Mob* mob,
 	Client* client,
-	uint32 spell_id,
+	int32 spell_id,
 	std::string data,
 	uint32 extra_data,
 	std::vector<std::any>* extra_pointers

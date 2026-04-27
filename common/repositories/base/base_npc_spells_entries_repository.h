@@ -38,7 +38,7 @@ public:
 	struct NpcSpellsEntries {
 		uint32_t    id;
 		int32_t     npc_spells_id;
-		uint16_t    spellid;
+		int32_t     spellid;
 		uint32_t    type;
 		uint8_t     minlevel;
 		uint8_t     maxlevel;

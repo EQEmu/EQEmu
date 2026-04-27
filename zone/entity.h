@@ -445,13 +445,13 @@ public:
 	void AESpell(
 		Mob* caster,
 		Mob* center,
-		uint16 spell_id,
+		int32 spell_id,
 		bool affect_caster = true,
 		int16 resist_adjust = 0,
 		int* max_targets = nullptr,
 		bool is_scripted = false
 	);
-	void MassGroupBuff(Mob* caster, Mob* center, uint16 spell_id, bool affect_caster = true);
+	void MassGroupBuff(Mob* caster, Mob* center, int32 spell_id, bool affect_caster = true);
 
 	//trap stuff
 	Mob*	GetTrapTrigger(Trap* trap);

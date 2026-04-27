@@ -143,7 +143,7 @@ void Lua_Bot::ReloadBotSpellSettings() {
 	self->LoadBotSpellSettings();
 }
 
-bool Lua_Bot::HasBotSpellEntry(uint16 spellid) {
+bool Lua_Bot::HasBotSpellEntry(int32 spellid) {
 	Lua_Safe_Call_Bool();
 	return self->HasBotSpellEntry(spellid);
 }
@@ -407,7 +407,7 @@ void Lua_Bot::ClearDisciplineReuseTimer() {
 	return self->ClearDisciplineReuseTimer();
 }
 
-void Lua_Bot::ClearDisciplineReuseTimer(uint16 spell_id) {
+void Lua_Bot::ClearDisciplineReuseTimer(int32 spell_id) {
 	Lua_Safe_Call_Void();
 	return self->ClearDisciplineReuseTimer(spell_id);
 }
@@ -427,7 +427,7 @@ void Lua_Bot::ClearSpellRecastTimer() {
 	return self->ClearSpellRecastTimer();
 }
 
-void Lua_Bot::ClearSpellRecastTimer(uint16 spell_id) {
+void Lua_Bot::ClearSpellRecastTimer(int32 spell_id) {
 	Lua_Safe_Call_Void();
 	return self->ClearSpellRecastTimer(spell_id);
 }
@@ -437,7 +437,7 @@ uint32 Lua_Bot::GetDisciplineReuseTimer() {
 	return self->GetDisciplineReuseRemainingTime();
 }
 
-uint32 Lua_Bot::GetDisciplineReuseTimer(uint16 spell_id) {
+uint32 Lua_Bot::GetDisciplineReuseTimer(int32 spell_id) {
 	Lua_Safe_Call_Int();
 	return self->GetDisciplineReuseRemainingTime(spell_id);
 }
@@ -457,17 +457,17 @@ uint32 Lua_Bot::GetSpellRecastTimer() {
 	return self->GetSpellRecastRemainingTime();
 }
 
-uint32 Lua_Bot::GetSpellRecastTimer(uint16 spell_id) {
+uint32 Lua_Bot::GetSpellRecastTimer(int32 spell_id) {
 	Lua_Safe_Call_Int();
 	return self->GetSpellRecastRemainingTime(spell_id);
 }
 
-void Lua_Bot::SetDisciplineReuseTimer(uint16 spell_id) {
+void Lua_Bot::SetDisciplineReuseTimer(int32 spell_id) {
 	Lua_Safe_Call_Void();
 	return self->SetDisciplineReuseTimer(spell_id);
 }
 
-void Lua_Bot::SetDisciplineReuseTimer(uint16 spell_id, uint32 reuse_timer) {
+void Lua_Bot::SetDisciplineReuseTimer(int32 spell_id, uint32 reuse_timer) {
 	Lua_Safe_Call_Void();
 	return self->SetDisciplineReuseTimer(spell_id, reuse_timer);
 }
@@ -482,12 +482,12 @@ void Lua_Bot::SetItemReuseTimer(uint32 item_id, uint32 reuse_timer) {
 	return self->SetItemReuseTimer(item_id, reuse_timer);
 }
 
-void Lua_Bot::SetSpellRecastTimer(uint16 spell_id) {
+void Lua_Bot::SetSpellRecastTimer(int32 spell_id) {
 	Lua_Safe_Call_Void();
 	return self->SetSpellRecastTimer(spell_id);
 }
 
-void Lua_Bot::SetSpellRecastTimer(uint16 spell_id, uint32 recast_delay) {
+void Lua_Bot::SetSpellRecastTimer(int32 spell_id, uint32 recast_delay) {
 	Lua_Safe_Call_Void();
 	return self->SetSpellRecastTimer(spell_id, recast_delay);
 }
@@ -560,7 +560,7 @@ Lua_ItemInst Lua_Bot::GetItemAt(int16 slot_id) // @categories Inventory and Item
 	return Lua_ItemInst(self->GetInv().GetItem(slot_id));
 }
 
-void Lua_Bot::SendSpellAnim(uint16 target_id, uint16 spell_id)
+void Lua_Bot::SendSpellAnim(uint16 target_id, int32 spell_id)
 {
 	Lua_Safe_Call_Void();
 	self->SendSpellAnim(target_id, spell_id);
@@ -715,11 +715,11 @@ luabind::scope lua_register_bot() {
 	.def("Camp", (void(Lua_Bot::*)(void))&Lua_Bot::Camp)
 	.def("Camp", (void(Lua_Bot::*)(bool))&Lua_Bot::Camp)
 	.def("ClearDisciplineReuseTimer", (void(Lua_Bot::*)())&Lua_Bot::ClearDisciplineReuseTimer)
-	.def("ClearDisciplineReuseTimer", (void(Lua_Bot::*)(uint16))&Lua_Bot::ClearDisciplineReuseTimer)
+	.def("ClearDisciplineReuseTimer", (void(Lua_Bot::*)(int32))&Lua_Bot::ClearDisciplineReuseTimer)
 	.def("ClearItemReuseTimer", (void(Lua_Bot::*)())&Lua_Bot::ClearItemReuseTimer)
 	.def("ClearItemReuseTimer", (void(Lua_Bot::*)(uint32))&Lua_Bot::ClearItemReuseTimer)
 	.def("ClearSpellRecastTimer", (void(Lua_Bot::*)())&Lua_Bot::ClearSpellRecastTimer)
-	.def("ClearSpellRecastTimer", (void(Lua_Bot::*)(uint16))&Lua_Bot::ClearSpellRecastTimer)
+	.def("ClearSpellRecastTimer", (void(Lua_Bot::*)(int32))&Lua_Bot::ClearSpellRecastTimer)
 	.def("CountAugmentEquippedByID", (uint32(Lua_Bot::*)(uint32))&Lua_Bot::CountAugmentEquippedByID)
 	.def("CountBotItem", (uint32(Lua_Bot::*)(uint32))&Lua_Bot::CountBotItem)
 	.def("CountItemEquippedByID", (uint32(Lua_Bot::*)(uint32))&Lua_Bot::CountItemEquippedByID)
@@ -746,7 +746,7 @@ luabind::scope lua_register_bot() {
 	.def("GetBotItem", (Lua_ItemInst(Lua_Bot::*)(uint16))&Lua_Bot::GetBotItem)
 	.def("GetBotItemIDBySlot", (uint32(Lua_Bot::*)(uint16))&Lua_Bot::GetBotItemIDBySlot)
 	.def("GetDisciplineReuseTimer", (uint32(Lua_Bot::*)())&Lua_Bot::GetDisciplineReuseTimer)
-	.def("GetDisciplineReuseTimer", (uint32(Lua_Bot::*)(uint16))&Lua_Bot::GetDisciplineReuseTimer)
+	.def("GetDisciplineReuseTimer", (uint32(Lua_Bot::*)(int32))&Lua_Bot::GetDisciplineReuseTimer)
 	.def("GetBucket", (std::string(Lua_Bot::*)(std::string))&Lua_Bot::GetBucket)
 	.def("GetBucketExpires", (std::string(Lua_Bot::*)(std::string))&Lua_Bot::GetBucketExpires)
 	.def("GetBucketRemaining", (std::string(Lua_Bot::*)(std::string))&Lua_Bot::GetBucketRemaining)
@@ -764,7 +764,7 @@ luabind::scope lua_register_bot() {
 	.def("GetRawItemAC", (int(Lua_Bot::*)(void))&Lua_Bot::GetRawItemAC)
 	.def("GetSpellDamage", (int(Lua_Bot::*)(void))&Lua_Bot::GetSpellDamage)
 	.def("GetSpellRecastTimer", (uint32(Lua_Bot::*)())&Lua_Bot::GetSpellRecastTimer)
-	.def("GetSpellRecastTimer", (uint32(Lua_Bot::*)(uint16))&Lua_Bot::GetSpellRecastTimer)
+	.def("GetSpellRecastTimer", (uint32(Lua_Bot::*)(int32))&Lua_Bot::GetSpellRecastTimer)
 	.def("HasAugmentEquippedByID", (bool(Lua_Bot::*)(uint32))&Lua_Bot::HasAugmentEquippedByID)
 	.def("HasBotItem", (int16(Lua_Bot::*)(uint32))&Lua_Bot::HasBotItem)
 	.def("HasBotSpellEntry", (bool(Lua_Bot::*)(uint16))&Lua_Bot::HasBotSpellEntry)
@@ -782,8 +782,8 @@ luabind::scope lua_register_bot() {
 	.def("SetBucket", (void(Lua_Bot::*)(std::string,std::string))&Lua_Bot::SetBucket)
 	.def("SetBucket", (void(Lua_Bot::*)(std::string,std::string,std::string))&Lua_Bot::SetBucket)
 	.def("SetExpansionBitmask", (void(Lua_Bot::*)(int))&Lua_Bot::SetExpansionBitmask)
-	.def("SetDisciplineReuseTimer", (void(Lua_Bot::*)(uint16))&Lua_Bot::SetDisciplineReuseTimer)
-	.def("SetDisciplineReuseTimer", (void(Lua_Bot::*)(uint16, uint32))&Lua_Bot::SetDisciplineReuseTimer)
+	.def("SetDisciplineReuseTimer", (void(Lua_Bot::*)(int32))&Lua_Bot::SetDisciplineReuseTimer)
+	.def("SetDisciplineReuseTimer", (void(Lua_Bot::*)(int32, uint32))&Lua_Bot::SetDisciplineReuseTimer)
 	.def("SetItemReuseTimer", (void(Lua_Bot::*)(uint32))&Lua_Bot::SetItemReuseTimer)
 	.def("SetItemReuseTimer", (void(Lua_Bot::*)(uint32, uint32))&Lua_Bot::SetItemReuseTimer)
 	.def("SetSpellDuration", (void(Lua_Bot::*)(int))&Lua_Bot::SetSpellDuration)
@@ -799,8 +799,8 @@ luabind::scope lua_register_bot() {
 	.def("SetSpellDurationRaid", (void(Lua_Bot::*)(int,int,int))&Lua_Bot::SetSpellDurationRaid)
 	.def("SetSpellDurationRaid", (void(Lua_Bot::*)(int,int,int,bool))&Lua_Bot::SetSpellDurationRaid)
 	.def("SetSpellDurationRaid", (void(Lua_Bot::*)(int,int,int,bool,bool))&Lua_Bot::SetSpellDurationRaid)
-	.def("SetSpellRecastTimer", (void(Lua_Bot::*)(uint16))&Lua_Bot::SetSpellRecastTimer)
-	.def("SetSpellRecastTimer", (void(Lua_Bot::*)(uint16, uint32))&Lua_Bot::SetSpellRecastTimer)
+	.def("SetSpellRecastTimer", (void(Lua_Bot::*)(int32))&Lua_Bot::SetSpellRecastTimer)
+	.def("SetSpellRecastTimer", (void(Lua_Bot::*)(int32, uint32))&Lua_Bot::SetSpellRecastTimer)
 	.def("SendPayload", (void(Lua_Bot::*)(int))&Lua_Bot::SendPayload)
 	.def("SendPayload", (void(Lua_Bot::*)(int,std::string))&Lua_Bot::SendPayload)
 	.def("Signal", (void(Lua_Bot::*)(int))&Lua_Bot::Signal)

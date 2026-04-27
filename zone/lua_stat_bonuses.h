@@ -91,13 +91,13 @@ public:
 	int32 GetCorrup() const;
 	int32 GetCorrupCapMod() const;
 	int32 GetHeroicCorrup() const;
-	uint16 GetDamageShieldSpellID() const;
+	int32 GetDamageShieldSpellID() const;
 	int GetDamageShield() const;
 	int GetDamageShieldType() const;
 	int GetSpellDamageShield() const;
 	int GetSpellShield() const;
 	int GetReverseDamageShield() const;
-	uint16 GetReverseDamageShieldSpellID() const;
+	int32 GetReverseDamageShieldSpellID() const;
 	int GetReverseDamageShieldType() const;
 	int Getmovementspeed() const;
 	int32 Gethaste() const;

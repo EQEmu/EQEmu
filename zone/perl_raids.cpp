@@ -34,7 +34,7 @@ bool Perl_Raid_IsRaidMember(Raid* self, Client* c) // @categories Raid
 	return self->IsRaidMember(c);
 }
 
-void Perl_Raid_CastGroupSpell(Raid* self, Mob* caster, uint16 spell_id, uint32 group_id) // @categories Group, Raid
+void Perl_Raid_CastGroupSpell(Raid* self, Mob* caster, int32 spell_id, uint32 group_id) // @categories Group, Raid
 {
 	self->CastGroupSpell(caster, spell_id, group_id);
 }

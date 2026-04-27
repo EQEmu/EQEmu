@@ -31,7 +31,7 @@ void command_unscribespell(Client *c, const Seperator *sep)
 		t = c->GetTarget()->CastToClient();
 	}
 
-	const uint16 spell_id = EQ::Clamp(Strings::ToInt(sep->arg[1]), 0, 65535);
+	const int32 spell_id = Strings::ToInt(sep->arg[1]);
 
 	if (!IsValidSpell(spell_id)) {
 		c->Message(

@@ -27,7 +27,7 @@ void command_npccast(Client *c, const Seperator *sep)
 	auto target = c->GetTarget()->CastToNPC();
 	if (!sep->IsNumber(1) && sep->arg[1] && sep->IsNumber(2)) {
 		std::string entity_name = sep->arg[1] ? sep->arg[1] : 0;
-		auto spell_id = sep->arg[2] ? Strings::ToUnsignedInt(sep->arg[2]) : 0;
+		int32 spell_id = sep->arg[2] ? Strings::ToInt(sep->arg[2]) : 0;
 		auto spell_target = entity_list.GetMob(entity_name.c_str());
 		if (spell_target && IsValidSpell(spell_id) && spell_id < SPDAT_RECORDS) {
 			c->Message(
@@ -35,7 +35,7 @@ void command_npccast(Client *c, const Seperator *sep)
 				fmt::format(
 					"{} casting {} ({}) on {}.",
 					c->GetTargetDescription(target),
-					GetSpellName(static_cast<uint16>(spell_id)),
+					GetSpellName(spell_id),
 					spell_id,
 					c->GetTargetDescription(spell_target)
 				).c_str()
@@ -63,7 +63,7 @@ void command_npccast(Client *c, const Seperator *sep)
 		}
 	} else if (sep->IsNumber(1) && sep->IsNumber(2)) {
 		uint16 entity_id = static_cast<uint16>(Strings::ToUnsignedInt(sep->arg[1]));
-		auto spell_id = Strings::ToUnsignedInt(sep->arg[2]);
+		int32 spell_id = Strings::ToInt(sep->arg[2]);
 		auto spell_target = entity_list.GetMob(entity_id);
 		if (spell_target && IsValidSpell(spell_id) && spell_id < SPDAT_RECORDS) {
 			c->Message(
@@ -71,7 +71,7 @@ void command_npccast(Client *c, const Seperator *sep)
 				fmt::format(
 					"{} casting {} ({}) on {}.",
 					c->GetTargetDescription(target),
-					GetSpellName(static_cast<uint16>(spell_id)),
+					GetSpellName(spell_id),
 					spell_id,
 					c->GetTargetDescription(spell_target)
 				).c_str()

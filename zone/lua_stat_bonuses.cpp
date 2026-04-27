@@ -269,7 +269,7 @@ int32 Lua_StatBonuses::GetHeroicCorrup() const {
 	return self->HeroicCorrup;
 }
 
-uint16 Lua_StatBonuses::GetDamageShieldSpellID() const {
+int32 Lua_StatBonuses::GetDamageShieldSpellID() const {
 	Lua_Safe_Call_Int();
 	return self->DamageShieldSpellID;
 }
@@ -299,7 +299,7 @@ int Lua_StatBonuses::GetReverseDamageShield() const {
 	return self->ReverseDamageShield;
 }
 
-uint16 Lua_StatBonuses::GetReverseDamageShieldSpellID() const {
+int32 Lua_StatBonuses::GetReverseDamageShieldSpellID() const {
 	Lua_Safe_Call_Int();
 	return self->ReverseDamageShieldSpellID;
 }

@@ -177,7 +177,7 @@ void bot_command_cast(Client* c, const Seperator* sep)
 	bool aa_type = false;
 	int aa_id = 0;
 	bool by_spell_id = false;
-	uint16 chosen_spell_id = UINT16_MAX;
+	int32 chosen_spell_id = -1;
 
 	if (!arg1.compare("aa") || !arg1.compare("harmtouch") || !arg1.compare("layonhands")) {
 		if (!RuleB(Bots, AllowCastAAs)) {
@@ -536,7 +536,7 @@ void bot_command_cast(Client* c, const Seperator* sep)
 
 			AA::Rank* temp_rank = nullptr;
 			AA::Rank*& rank = temp_rank;
-			uint16 spell_id = bot_iter->GetSpellByAA(aa_id, rank);
+			int32 spell_id = bot_iter->GetSpellByAA(aa_id, rank);
 
 			if (!IsValidSpell(spell_id)) {
 				continue;

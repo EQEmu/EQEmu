@@ -142,7 +142,7 @@ void Perl_Corpse_Summon(Corpse* self, Client* client, bool is_spell) // @categor
 	self->Summon(client, is_spell, true);
 }
 
-void Perl_Corpse_CastRezz(Corpse* self, uint16_t spell_id, Mob* caster) // @categories Spells and Disciplines, Corpse
+void Perl_Corpse_CastRezz(Corpse* self, int32_t spell_id, Mob* caster) // @categories Spells and Disciplines, Corpse
 {
 	self->CastRezz(spell_id, caster);
 }

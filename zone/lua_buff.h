@@ -56,7 +56,7 @@ public:
 	uint32 GetMeleeRune();
 	uint32 GetNumberOfHits();
 	int16 GetRootBreakChance();
-	uint16 GetSpellID();
+	int32 GetSpellID();
 	int GetTicsRemaining();
 	int GetVirusSpreadTime();
 	bool IsCasterClient();

@@ -38,7 +38,7 @@ bool Perl_Group_IsGroupMember(Group* self, const char* name) // @categories Acco
 	return self->IsGroupMember(name);
 }
 
-void Perl_Group_CastGroupSpell(Group* self, Mob* caster, uint16 spell_id) // @categories Account and Character, Script Utility, Group
+void Perl_Group_CastGroupSpell(Group* self, Mob* caster, int32 spell_id) // @categories Account and Character, Script Utility, Group
 {
 	self->CastGroupSpell(caster, spell_id);
 }

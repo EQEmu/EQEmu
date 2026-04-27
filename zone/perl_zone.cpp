@@ -477,7 +477,7 @@ bool Perl_Zone_IsSpecialBindLocation(Zone* self, float x, float y, float z, floa
 	return self->IsSpecialBindLocation(glm::vec4(x, y, z, heading));
 }
 
-bool Perl_Zone_IsSpellBlocked(Zone* self, uint32 spell_id, float x, float y, float z)
+bool Perl_Zone_IsSpellBlocked(Zone* self, int32 spell_id, float x, float y, float z)
 {
 	return self->IsSpellBlocked(spell_id, glm::vec3(x, y, z));
 }

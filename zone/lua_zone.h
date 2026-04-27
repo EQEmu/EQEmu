@@ -144,7 +144,7 @@ public:
 	bool IsRaining();
 	bool IsSnowing();
 	bool IsSpecialBindLocation(float x, float y, float z, float heading);
-	bool IsSpellBlocked(uint32 spell_id, float x, float y, float z);
+	bool IsSpellBlocked(int32 spell_id, float x, float y, float z);
 	bool IsStaticZone();
 	bool IsUCSServerAvailable();
 	bool IsWaterZone(float z);

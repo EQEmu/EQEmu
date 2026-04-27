@@ -49,7 +49,7 @@ void FormatItemLink(char* Buffer, size_t BufferSize, const EQ::ItemInstance* ite
 
 // Create a spell link for the given spell, with optional spell name override. Spells on items often have
 // spell name overrides that changes the display name of the spell.
-void FormatSpellLink(char* Buffer, size_t BufferSize, uint32_t SpellID,
+void FormatSpellLink(char* Buffer, size_t BufferSize, int32_t SpellID,
     const char* spellNameOverride = nullptr);
 
 // Format text into a clickable dialog link. The keyword is the text that will be displayed in the chat window,

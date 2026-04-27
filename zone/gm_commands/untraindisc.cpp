@@ -31,7 +31,7 @@ void command_untraindisc(Client *c, const Seperator *sep)
 		target = c->GetTarget()->CastToClient();
 	}
 
-	uint16 spell_id = EQ::Clamp(Strings::ToInt(sep->arg[1]), 0, 65535);
+	int32 spell_id = Strings::ToInt(sep->arg[1]);
 
 	if (!IsValidSpell(spell_id)) {
 		c->Message(

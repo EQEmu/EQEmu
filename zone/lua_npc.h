@@ -183,8 +183,8 @@ public:
 	void SetLDoNTrapped(bool is_trapped);
 	uint8 GetLDoNTrapType();
 	void SetLDoNTrapType(uint8 trap_type);
-	uint16 GetLDoNTrapSpellID();
-	void SetLDoNTrapSpellID(uint16 spell_id);
+	int32 GetLDoNTrapSpellID();
+	void SetLDoNTrapSpellID(int32 spell_id);
 	bool IsLDoNLocked();
 	void SetLDoNLocked(bool is_locked);
 	uint16 GetLDoNLockedSkill();

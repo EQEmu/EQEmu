@@ -1441,7 +1441,7 @@ int32 Client::CalcATK()
 	return (ATK);
 }
 
-uint32 Mob::GetInstrumentMod(uint16 spell_id)
+uint32 Mob::GetInstrumentMod(int32 spell_id)
 {
 	if (GetClass() != Class::Bard || spells[spell_id].is_discipline || spell_id == SPELL_AMPLIFICATION) {
 		//Other classes can get a base effects mod using SPA 413

@@ -312,12 +312,12 @@ int Perl__getinventoryslotid(std::string identifier)
 	return result;
 }
 
-void Perl__castspell(uint16 spell_id, uint16 target_id)
+void Perl__castspell(int32 spell_id, uint16 target_id)
 {
 	quest_manager.castspell(spell_id, target_id);
 }
 
-void Perl__selfcast(uint16 spell_id)
+void Perl__selfcast(int32 spell_id)
 {
 	quest_manager.selfcast(spell_id);
 }
@@ -542,12 +542,12 @@ std::string Perl__getracename(uint16 race_id)
 	return quest_manager.getracename(race_id);
 }
 
-std::string Perl__getspellname(uint32 spell_id)
+std::string Perl__getspellname(int32 spell_id)
 {
 	return quest_manager.getspellname(spell_id);
 }
 
-uint8 Perl__get_spell_level(uint16 spell_id, uint8 class_id)
+uint8 Perl__get_spell_level(int32 spell_id, uint8 class_id)
 {
 	const auto spell_level = GetSpellLevel(spell_id, class_id);
 	return spell_level > RuleI(Character, MaxLevel) ? UINT8_MAX : spell_level;
@@ -1736,437 +1736,437 @@ bool Perl__IsRunning()
 	return quest_manager.IsRunning();
 }
 
-bool Perl__IsEffectInSpell(uint16 spell_id, int effect_id)
+bool Perl__IsEffectInSpell(int32 spell_id, int effect_id)
 {
 	return IsEffectInSpell(spell_id, effect_id);
 }
 
-bool Perl__IsBeneficialSpell(uint16 spell_id)
+bool Perl__IsBeneficialSpell(int32 spell_id)
 {
 	return IsBeneficialSpell(spell_id);
 }
 
-bool Perl__IsDetrimentalSpell(uint16 spell_id)
+bool Perl__IsDetrimentalSpell(int32 spell_id)
 {
 	return IsDetrimentalSpell(spell_id);
 }
 
-bool Perl__IsTargetableAESpell(uint16 spell_id)
+bool Perl__IsTargetableAESpell(int32 spell_id)
 {
 	return IsTargetableAESpell(spell_id);
 }
 
-bool Perl__IsSacrificeSpell(uint16 spell_id)
+bool Perl__IsSacrificeSpell(int32 spell_id)
 {
 	return IsSacrificeSpell(spell_id);
 }
 
-bool Perl__IsLifetapSpell(uint16 spell_id)
+bool Perl__IsLifetapSpell(int32 spell_id)
 {
 	return IsLifetapSpell(spell_id);
 }
 
-bool Perl__IsMesmerizeSpell(uint16 spell_id)
+bool Perl__IsMesmerizeSpell(int32 spell_id)
 {
 	return IsMesmerizeSpell(spell_id);
 }
 
-bool Perl__IsStunSpell(uint16 spell_id)
+bool Perl__IsStunSpell(int32 spell_id)
 {
 	return IsStunSpell(spell_id);
 }
 
-bool Perl__IsSummonSpell(uint16 spell_id)
+bool Perl__IsSummonSpell(int32 spell_id)
 {
 	return IsSummonSpell(spell_id);
 }
 
-bool Perl__IsDamageSpell(uint16 spell_id)
+bool Perl__IsDamageSpell(int32 spell_id)
 {
 	return IsDamageSpell(spell_id);
 }
 
-bool Perl__IsFearSpell(uint16 spell_id)
+bool Perl__IsFearSpell(int32 spell_id)
 {
 	return IsFearSpell(spell_id);
 }
 
-bool Perl__IsCureSpell(uint16 spell_id)
+bool Perl__IsCureSpell(int32 spell_id)
 {
 	return IsCureSpell(spell_id);
 }
 
-bool Perl__IsHasteSpell(uint16 spell_id)
+bool Perl__IsHasteSpell(int32 spell_id)
 {
 	return IsHasteSpell(spell_id);
 }
 
-bool Perl__IsHarmonySpell(uint16 spell_id)
+bool Perl__IsHarmonySpell(int32 spell_id)
 {
 	return IsHarmonySpell(spell_id);
 }
 
-bool Perl__IsPercentalHealSpell(uint16 spell_id)
+bool Perl__IsPercentalHealSpell(int32 spell_id)
 {
 	return IsPercentalHealSpell(spell_id);
 }
 
-bool Perl__IsGroupOnlySpell(uint16 spell_id)
+bool Perl__IsGroupOnlySpell(int32 spell_id)
 {
 	return IsGroupOnlySpell(spell_id);
 }
 
-bool Perl__IsInvisibleSpell(uint16 spell_id)
+bool Perl__IsInvisibleSpell(int32 spell_id)
 {
 	return IsInvisibleSpell(spell_id);
 }
 
-bool Perl__IsInvulnerabilitySpell(uint16 spell_id)
+bool Perl__IsInvulnerabilitySpell(int32 spell_id)
 {
 	return IsInvulnerabilitySpell(spell_id);
 }
 
-bool Perl__IsCompleteHealDurationSpell(uint16 spell_id)
+bool Perl__IsCompleteHealDurationSpell(int32 spell_id)
 {
 	return IsCompleteHealDurationSpell(spell_id);
 }
 
-bool Perl__IsPoisonCounterSpell(uint16 spell_id)
+bool Perl__IsPoisonCounterSpell(int32 spell_id)
 {
 	return IsPoisonCounterSpell(spell_id);
 }
 
-bool Perl__IsDiseaseCounterSpell(uint16 spell_id)
+bool Perl__IsDiseaseCounterSpell(int32 spell_id)
 {
 	return IsDiseaseCounterSpell(spell_id);
 }
 
-bool Perl__IsSummonItemSpell(uint16 spell_id)
+bool Perl__IsSummonItemSpell(int32 spell_id)
 {
 	return IsSummonItemSpell(spell_id);
 }
 
-bool Perl__IsSummonSkeletonSpell(uint16 spell_id)
+bool Perl__IsSummonSkeletonSpell(int32 spell_id)
 {
 	return IsSummonSkeletonSpell(spell_id);
 }
 
-bool Perl__IsSummonPetSpell(uint16 spell_id)
+bool Perl__IsSummonPetSpell(int32 spell_id)
 {
 	return IsSummonPetSpell(spell_id);
 }
 
-bool Perl__IsPetSpell(uint16 spell_id)
+bool Perl__IsPetSpell(int32 spell_id)
 {
 	return IsPetSpell(spell_id);
 }
 
-bool Perl__IsSummonPCSpell(uint16 spell_id)
+bool Perl__IsSummonPCSpell(int32 spell_id)
 {
 	return IsSummonPCSpell(spell_id);
 }
 
-bool Perl__IsCharmSpell(uint16 spell_id)
+bool Perl__IsCharmSpell(int32 spell_id)
 {
 	return IsCharmSpell(spell_id);
 }
 
-bool Perl__IsBlindSpell(uint16 spell_id)
+bool Perl__IsBlindSpell(int32 spell_id)
 {
 	return IsBlindSpell(spell_id);
 }
 
-bool Perl__IsHealthSpell(uint16 spell_id)
+bool Perl__IsHealthSpell(int32 spell_id)
 {
 	return IsHealthSpell(spell_id);
 }
 
-bool Perl__IsCastTimeReductionSpell(uint16 spell_id)
+bool Perl__IsCastTimeReductionSpell(int32 spell_id)
 {
 	return IsCastTimeReductionSpell(spell_id);
 }
 
-bool Perl__IsIncreaseDurationSpell(uint16 spell_id)
+bool Perl__IsIncreaseDurationSpell(int32 spell_id)
 {
 	return IsIncreaseDurationSpell(spell_id);
 }
 
-bool Perl__IsManaCostReductionSpell(uint16 spell_id)
+bool Perl__IsManaCostReductionSpell(int32 spell_id)
 {
 	return IsManaCostReductionSpell(spell_id);
 }
 
-bool Perl__IsIncreaseRangeSpell(uint16 spell_id)
+bool Perl__IsIncreaseRangeSpell(int32 spell_id)
 {
 	return IsIncreaseRangeSpell(spell_id);
 }
 
-bool Perl__IsImprovedHealingSpell(uint16 spell_id)
+bool Perl__IsImprovedHealingSpell(int32 spell_id)
 {
 	return IsImprovedHealingSpell(spell_id);
 }
 
-bool Perl__IsImprovedDamageSpell(uint16 spell_id)
+bool Perl__IsImprovedDamageSpell(int32 spell_id)
 {
 	return IsImprovedDamageSpell(spell_id);
 }
 
-bool Perl__IsAEDurationSpell(uint16 spell_id)
+bool Perl__IsAEDurationSpell(int32 spell_id)
 {
 	return IsAEDurationSpell(spell_id);
 }
 
-bool Perl__IsPureNukeSpell(uint16 spell_id)
+bool Perl__IsPureNukeSpell(int32 spell_id)
 {
 	return IsPureNukeSpell(spell_id);
 }
 
-bool Perl__IsAENukeSpell(uint16 spell_id)
+bool Perl__IsAENukeSpell(int32 spell_id)
 {
 	return IsAENukeSpell(spell_id);
 }
 
-bool Perl__IsPBAENukeSpell(uint16 spell_id)
+bool Perl__IsPBAENukeSpell(int32 spell_id)
 {
 	return IsPBAENukeSpell(spell_id);
 }
 
-bool Perl__IsAERainNukeSpell(uint16 spell_id)
+bool Perl__IsAERainNukeSpell(int32 spell_id)
 {
 	return IsAERainNukeSpell(spell_id);
 }
 
-bool Perl__IsPartialResistableSpell(uint16 spell_id)
+bool Perl__IsPartialResistableSpell(int32 spell_id)
 {
 	return IsPartialResistableSpell(spell_id);
 }
 
-bool Perl__IsResistableSpell(uint16 spell_id)
+bool Perl__IsResistableSpell(int32 spell_id)
 {
 	return IsResistableSpell(spell_id);
 }
 
-bool Perl__IsGroupSpell(uint16 spell_id)
+bool Perl__IsGroupSpell(int32 spell_id)
 {
 	return IsGroupSpell(spell_id);
 }
 
-bool Perl__IsTGBCompatibleSpell(uint16 spell_id)
+bool Perl__IsTGBCompatibleSpell(int32 spell_id)
 {
 	return IsTGBCompatibleSpell(spell_id);
 }
 
-bool Perl__IsBardSong(uint16 spell_id)
+bool Perl__IsBardSong(int32 spell_id)
 {
 	return IsBardSong(spell_id);
 }
 
-bool Perl__IsPulsingBardSong(uint16 spell_id)
+bool Perl__IsPulsingBardSong(int32 spell_id)
 {
 	return IsPulsingBardSong(spell_id);
 }
 
-bool Perl__IsDisciplineBuff(uint16 spell_id)
+bool Perl__IsDisciplineBuff(int32 spell_id)
 {
 	return IsDisciplineBuff(spell_id);
 }
 
-bool Perl__IsDiscipline(uint16 spell_id)
+bool Perl__IsDiscipline(int32 spell_id)
 {
 	return IsDiscipline(spell_id);
 }
 
-bool Perl__IsCombatSkill(uint16 spell_id)
+bool Perl__IsCombatSkill(int32 spell_id)
 {
 	return IsCombatSkill(spell_id);
 }
 
-bool Perl__IsResurrectionEffects(uint16 spell_id)
+bool Perl__IsResurrectionEffects(int32 spell_id)
 {
 	return IsResurrectionEffects(spell_id);
 }
 
-bool Perl__IsRuneSpell(uint16 spell_id)
+bool Perl__IsRuneSpell(int32 spell_id)
 {
 	return IsRuneSpell(spell_id);
 }
 
-bool Perl__IsMagicRuneSpell(uint16 spell_id)
+bool Perl__IsMagicRuneSpell(int32 spell_id)
 {
 	return IsMagicRuneSpell(spell_id);
 }
 
-bool Perl__IsManaTapSpell(uint16 spell_id)
+bool Perl__IsManaTapSpell(int32 spell_id)
 {
 	return IsManaTapSpell(spell_id);
 }
 
-bool Perl__IsAllianceSpell(uint16 spell_id)
+bool Perl__IsAllianceSpell(int32 spell_id)
 {
 	return IsAllianceSpell(spell_id);
 }
 
-bool Perl__IsDeathSaveSpell(uint16 spell_id)
+bool Perl__IsDeathSaveSpell(int32 spell_id)
 {
 	return IsDeathSaveSpell(spell_id);
 }
 
-bool Perl__IsPartialDeathSaveSpell(uint16 spell_id)
+bool Perl__IsPartialDeathSaveSpell(int32 spell_id)
 {
 	return IsPartialDeathSaveSpell(spell_id);
 }
 
-bool Perl__IsFullDeathSaveSpell(uint16 spell_id)
+bool Perl__IsFullDeathSaveSpell(int32 spell_id)
 {
 	return IsFullDeathSaveSpell(spell_id);
 }
 
-bool Perl__IsShadowStepSpell(uint16 spell_id)
+bool Perl__IsShadowStepSpell(int32 spell_id)
 {
 	return IsShadowStepSpell(spell_id);
 }
 
-bool Perl__IsSuccorSpell(uint16 spell_id)
+bool Perl__IsSuccorSpell(int32 spell_id)
 {
 	return IsSuccorSpell(spell_id);
 }
 
-bool Perl__IsTeleportSpell(uint16 spell_id)
+bool Perl__IsTeleportSpell(int32 spell_id)
 {
 	return IsTeleportSpell(spell_id);
 }
 
-bool Perl__IsTranslocateSpell(uint16 spell_id)
+bool Perl__IsTranslocateSpell(int32 spell_id)
 {
 	return IsTranslocateSpell(spell_id);
 }
 
-bool Perl__IsGateSpell(uint16 spell_id)
+bool Perl__IsGateSpell(int32 spell_id)
 {
 	return IsGateSpell(spell_id);
 }
 
-bool Perl__IsIllusionSpell(uint16 spell_id)
+bool Perl__IsIllusionSpell(int32 spell_id)
 {
 	return IsIllusionSpell(spell_id);
 }
 
-bool Perl__IsLDoNObjectSpell(uint16 spell_id)
+bool Perl__IsLDoNObjectSpell(int32 spell_id)
 {
 	return IsLDoNObjectSpell(spell_id);
 }
 
-bool Perl__IsHealOverTimeSpell(uint16 spell_id)
+bool Perl__IsHealOverTimeSpell(int32 spell_id)
 {
 	return IsHealOverTimeSpell(spell_id);
 }
 
-bool Perl__IsCompleteHealSpell(uint16 spell_id)
+bool Perl__IsCompleteHealSpell(int32 spell_id)
 {
 	return IsCompleteHealSpell(spell_id);
 }
 
-bool Perl__IsFastHealSpell(uint16 spell_id)
+bool Perl__IsFastHealSpell(int32 spell_id)
 {
 	return IsFastHealSpell(spell_id);
 }
 
-bool Perl__IsVeryFastHealSpell(uint16 spell_id)
+bool Perl__IsVeryFastHealSpell(int32 spell_id)
 {
 	return IsVeryFastHealSpell(spell_id);
 }
 
-bool Perl__IsRegularSingleTargetHealSpell(uint16 spell_id)
+bool Perl__IsRegularSingleTargetHealSpell(int32 spell_id)
 {
 	return IsRegularSingleTargetHealSpell(spell_id);
 }
 
-bool Perl__IsRegularGroupHealSpell(uint16 spell_id)
+bool Perl__IsRegularGroupHealSpell(int32 spell_id)
 {
 	return IsRegularGroupHealSpell(spell_id);
 }
 
-bool Perl__IsGroupCompleteHealSpell(uint16 spell_id)
+bool Perl__IsGroupCompleteHealSpell(int32 spell_id)
 {
 	return IsGroupCompleteHealSpell(spell_id);
 }
 
-bool Perl__IsGroupHealOverTimeSpell(uint16 spell_id)
+bool Perl__IsGroupHealOverTimeSpell(int32 spell_id)
 {
 	return IsGroupHealOverTimeSpell(spell_id);
 }
 
-bool Perl__IsDebuffSpell(uint16 spell_id)
+bool Perl__IsDebuffSpell(int32 spell_id)
 {
 	return IsDebuffSpell(spell_id);
 }
 
-bool Perl__IsResistDebuffSpell(uint16 spell_id)
+bool Perl__IsResistDebuffSpell(int32 spell_id)
 {
 	return IsResistDebuffSpell(spell_id);
 }
 
-bool Perl__IsSelfConversionSpell(uint16 spell_id)
+bool Perl__IsSelfConversionSpell(int32 spell_id)
 {
 	return IsSelfConversionSpell(spell_id);
 }
 
-bool Perl__IsBuffSpell(uint16 spell_id)
+bool Perl__IsBuffSpell(int32 spell_id)
 {
 	return IsBuffSpell(spell_id);
 }
 
-bool Perl__IsPersistDeathSpell(uint16 spell_id)
+bool Perl__IsPersistDeathSpell(int32 spell_id)
 {
 	return IsPersistDeathSpell(spell_id);
 }
 
-bool Perl__IsSuspendableSpell(uint16 spell_id)
+bool Perl__IsSuspendableSpell(int32 spell_id)
 {
 	return IsSuspendableSpell(spell_id);
 }
 
-bool Perl__IsCastOnFadeDurationSpell(uint16 spell_id)
+bool Perl__IsCastOnFadeDurationSpell(int32 spell_id)
 {
 	return IsCastOnFadeDurationSpell(spell_id);
 }
 
-bool Perl__IsDistanceModifierSpell(uint16 spell_id)
+bool Perl__IsDistanceModifierSpell(int32 spell_id)
 {
 	return IsDistanceModifierSpell(spell_id);
 }
 
-bool Perl__IsRestAllowedSpell(uint16 spell_id)
+bool Perl__IsRestAllowedSpell(int32 spell_id)
 {
 	return IsRestAllowedSpell(spell_id);
 }
 
-bool Perl__IsNoDetrimentalSpellAggroSpell(uint16 spell_id)
+bool Perl__IsNoDetrimentalSpellAggroSpell(int32 spell_id)
 {
 	return IsNoDetrimentalSpellAggroSpell(spell_id);
 }
 
-bool Perl__IsStackableDOT(uint16 spell_id)
+bool Perl__IsStackableDOT(int32 spell_id)
 {
 	return IsStackableDOT(spell_id);
 }
 
-bool Perl__IsShortDurationBuff(uint16 spell_id)
+bool Perl__IsShortDurationBuff(int32 spell_id)
 {
 	return IsShortDurationBuff(spell_id);
 }
 
-bool Perl__IsTargetRequiredForSpell(uint16 spell_id)
+bool Perl__IsTargetRequiredForSpell(int32 spell_id)
 {
 	return IsTargetRequiredForSpell(spell_id);
 }
 
-bool Perl__IsVirusSpell(uint16 spell_id)
+bool Perl__IsVirusSpell(int32 spell_id)
 {
 	return IsVirusSpell(spell_id);
 }
 
-bool Perl__IsValidSpell(uint16 spell_id)
+bool Perl__IsValidSpell(int32 spell_id)
 {
 	return IsValidSpell(spell_id);
 }
@@ -2186,147 +2186,147 @@ bool Perl__IsBardOnlyStackEffect(int effect_id)
 	return IsBardOnlyStackEffect(effect_id);
 }
 
-bool Perl__IsCastWhileInvisibleSpell(uint16 spell_id)
+bool Perl__IsCastWhileInvisibleSpell(int32 spell_id)
 {
 	return IsCastWhileInvisibleSpell(spell_id);
 }
 
-bool Perl__IsCastRestrictedSpell(uint16 spell_id)
+bool Perl__IsCastRestrictedSpell(int32 spell_id)
 {
 	return IsCastRestrictedSpell(spell_id);
 }
 
-bool Perl__IsCastNotStandingSpell(uint16 spell_id)
+bool Perl__IsCastNotStandingSpell(int32 spell_id)
 {
 	return IsCastNotStandingSpell(spell_id);
 }
 
-bool Perl__IsInstrumentModifierAppliedToSpellEffect(uint16 spell_id, int effect_id)
+bool Perl__IsInstrumentModifierAppliedToSpellEffect(int32 spell_id, int effect_id)
 {
 	return IsInstrumentModifierAppliedToSpellEffect(spell_id, effect_id);
 }
 
-bool Perl__IsBlankSpellEffect(uint16 spell_id, int effect_index)
+bool Perl__IsBlankSpellEffect(int32 spell_id, int effect_index)
 {
 	return IsBlankSpellEffect(spell_id, effect_index);
 }
 
-uint16 Perl__GetSpellTriggerSpellID(uint16 spell_id, int effect_id)
+int32 Perl__GetSpellTriggerSpellID(int32 spell_id, int effect_id)
 {
 	return GetSpellTriggerSpellID(spell_id, effect_id);
 }
 
-uint8 Perl__GetSpellMinimumLevel(uint16 spell_id)
+uint8 Perl__GetSpellMinimumLevel(int32 spell_id)
 {
 	return GetSpellMinimumLevel(spell_id);
 }
 
-int Perl__GetSpellResistType(uint16 spell_id)
+int Perl__GetSpellResistType(int32 spell_id)
 {
 	return GetSpellResistType(spell_id);
 }
 
-int Perl__GetSpellTargetType(uint16 spell_id)
+int Perl__GetSpellTargetType(int32 spell_id)
 {
 	return GetSpellTargetType(spell_id);
 }
 
-int Perl__GetSpellPartialMeleeRuneReduction(uint16 spell_id)
+int Perl__GetSpellPartialMeleeRuneReduction(int32 spell_id)
 {
 	return GetSpellPartialMeleeRuneReduction(spell_id);
 }
 
-int Perl__GetSpellPartialMagicRuneReduction(uint16 spell_id)
+int Perl__GetSpellPartialMagicRuneReduction(int32 spell_id)
 {
 	return GetSpellPartialMagicRuneReduction(spell_id);
 }
 
-int Perl__GetSpellPartialMeleeRuneAmount(uint16 spell_id)
+int Perl__GetSpellPartialMeleeRuneAmount(int32 spell_id)
 {
 	return GetSpellPartialMeleeRuneAmount(spell_id);
 }
 
-int Perl__GetSpellPartialMagicRuneAmount(uint16 spell_id)
+int Perl__GetSpellPartialMagicRuneAmount(int32 spell_id)
 {
 	return GetSpellPartialMagicRuneAmount(spell_id);
 }
 
-int Perl__GetSpellViralMinimumSpreadTime(uint16 spell_id)
+int Perl__GetSpellViralMinimumSpreadTime(int32 spell_id)
 {
 	return GetSpellViralMinimumSpreadTime(spell_id);
 }
 
-int Perl__GetSpellViralMaximumSpreadTime(uint16 spell_id)
+int Perl__GetSpellViralMaximumSpreadTime(int32 spell_id)
 {
 	return GetSpellViralMaximumSpreadTime(spell_id);
 }
 
-int Perl__GetSpellViralSpreadRange(uint16 spell_id)
+int Perl__GetSpellViralSpreadRange(int32 spell_id)
 {
 	return GetSpellViralSpreadRange(spell_id);
 }
 
-int Perl__GetSpellProcLimitTimer(uint16 spell_id, int proc_type)
+int Perl__GetSpellProcLimitTimer(int32 spell_id, int proc_type)
 {
 	return GetSpellProcLimitTimer(spell_id, proc_type);
 }
 
-int Perl__GetSpellEffectDescriptionNumber(uint16 spell_id)
+int Perl__GetSpellEffectDescriptionNumber(int32 spell_id)
 {
 	return GetSpellEffectDescriptionNumber(spell_id);
 }
 
-int Perl__GetSpellFuriousBash(uint16 spell_id)
+int Perl__GetSpellFuriousBash(int32 spell_id)
 {
 	return GetSpellFuriousBash(spell_id);
 }
 
-bool Perl__IsSpellUsableInThisZoneType(uint16 spell_id)
+bool Perl__IsSpellUsableInThisZoneType(int32 spell_id)
 {
 	return IsSpellUsableInThisZoneType(spell_id, zone->GetZoneType());
 }
 
-bool Perl__IsSpellUsableInThisZoneType(uint16 spell_id, uint8 zone_type)
+bool Perl__IsSpellUsableInThisZoneType(int32 spell_id, uint8 zone_type)
 {
 	return IsSpellUsableInThisZoneType(spell_id, zone_type);
 }
 
-int Perl__GetSpellEffectIndex(uint16 spell_id, int effect_id)
+int Perl__GetSpellEffectIndex(int32 spell_id, int effect_id)
 {
 	return GetSpellEffectIndex(spell_id, effect_id);
 }
 
-int Perl__CalculatePoisonCounters(uint16 spell_id)
+int Perl__CalculatePoisonCounters(int32 spell_id)
 {
 	return CalculatePoisonCounters(spell_id);
 }
 
-int Perl__CalculateDiseaseCounters(uint16 spell_id)
+int Perl__CalculateDiseaseCounters(int32 spell_id)
 {
 	return CalculateDiseaseCounters(spell_id);
 }
 
-int Perl__CalculateCurseCounters(uint16 spell_id)
+int Perl__CalculateCurseCounters(int32 spell_id)
 {
 	return CalculateCurseCounters(spell_id);
 }
 
-int Perl__CalculateCorruptionCounters(uint16 spell_id)
+int Perl__CalculateCorruptionCounters(int32 spell_id)
 {
 	return CalculateCorruptionCounters(spell_id);
 }
 
-int Perl__CalculateCounters(uint16 spell_id)
+int Perl__CalculateCounters(int32 spell_id)
 {
 	return CalculateCounters(spell_id);
 }
 
-int8 Perl__GetSpellResurrectionSicknessCheck(uint16 spell_id_one, uint16 spell_id_two)
+int8 Perl__GetSpellResurrectionSicknessCheck(int32 spell_id_one, int32 spell_id_two)
 {
 	return GetSpellResurrectionSicknessCheck(spell_id_one, spell_id_two);
 }
 
-int Perl__GetSpellNimbusEffect(uint16 spell_id)
+int Perl__GetSpellNimbusEffect(int32 spell_id)
 {
 	return GetSpellNimbusEffect(spell_id);
 }
@@ -3049,12 +3049,12 @@ const int Perl__getitemstat(uint32 item_id, std::string identifier)
 	return quest_manager.getitemstat(item_id, identifier);
 }
 
-int Perl__getspellstat(uint32 spell_id, std::string stat_identifier)
+int Perl__getspellstat(int32 spell_id, std::string stat_identifier)
 {
 	return quest_manager.getspellstat(spell_id, stat_identifier);
 }
 
-int Perl__getspellstat(uint32 spell_id, std::string stat_identifier, uint8 slot)
+int Perl__getspellstat(int32 spell_id, std::string stat_identifier, uint8 slot)
 {
 	return quest_manager.getspellstat(spell_id, stat_identifier, slot);
 }
@@ -3246,32 +3246,32 @@ void Perl__crosszoneassigntaskbyclientname(const char* client_name, uint32 task_
 	quest_manager.CrossZoneTaskUpdate(CZUpdateType_ClientName, CZTaskUpdateSubtype_AssignTask, update_identifier, task_id, task_subidentifier, update_count, enforce_level_requirement, client_name);
 }
 
-void Perl__crosszonecastspellbycharid(int character_id, uint32 spell_id)
+void Perl__crosszonecastspellbycharid(int character_id, int32 spell_id)
 {
 	quest_manager.CrossZoneSpell(CZUpdateType_Character, CZSpellUpdateSubtype_Cast, character_id, spell_id);
 }
 
-void Perl__crosszonecastspellbygroupid(int group_id, uint32 spell_id)
+void Perl__crosszonecastspellbygroupid(int group_id, int32 spell_id)
 {
 	quest_manager.CrossZoneSpell(CZUpdateType_Group, CZSpellUpdateSubtype_Cast, group_id, spell_id);
 }
 
-void Perl__crosszonecastspellbyraidid(int raid_id, uint32 spell_id)
+void Perl__crosszonecastspellbyraidid(int raid_id, int32 spell_id)
 {
 	quest_manager.CrossZoneSpell(CZUpdateType_Raid, CZSpellUpdateSubtype_Cast, raid_id, spell_id);
 }
 
-void Perl__crosszonecastspellbyguildid(int guild_id, uint32 spell_id)
+void Perl__crosszonecastspellbyguildid(int guild_id, int32 spell_id)
 {
 	quest_manager.CrossZoneSpell(CZUpdateType_Guild, CZSpellUpdateSubtype_Cast, guild_id, spell_id);
 }
 
-void Perl__crosszonecastspellbyexpeditionid(uint32 expedition_id, uint32 spell_id)
+void Perl__crosszonecastspellbyexpeditionid(uint32 expedition_id, int32 spell_id)
 {
 	quest_manager.CrossZoneSpell(CZUpdateType_Expedition, CZSpellUpdateSubtype_Cast, expedition_id, spell_id);
 }
 
-void Perl__crosszonecastspellbyclientname(const char* client_name, uint32 spell_id)
+void Perl__crosszonecastspellbyclientname(const char* client_name, int32 spell_id)
 {
 	int update_identifier = 0;
 	quest_manager.CrossZoneSpell(CZUpdateType_ClientName, CZSpellUpdateSubtype_Cast, update_identifier, spell_id, client_name);
@@ -4037,32 +4037,32 @@ void Perl__crosszoneremoveldonwinbyclientname(const char* client_name, uint32 th
 	quest_manager.CrossZoneLDoNUpdate(CZUpdateType_ClientName, CZLDoNUpdateSubtype_RemoveWin, update_identifier, theme_id, points, client_name);
 }
 
-void Perl__crosszoneremovespellbycharid(int character_id, uint32 spell_id)
+void Perl__crosszoneremovespellbycharid(int character_id, int32 spell_id)
 {
 	quest_manager.CrossZoneSpell(CZUpdateType_Character, CZSpellUpdateSubtype_Remove, character_id, spell_id);
 }
 
-void Perl__crosszoneremovespellbygroupid(int group_id, uint32 spell_id)
+void Perl__crosszoneremovespellbygroupid(int group_id, int32 spell_id)
 {
 	quest_manager.CrossZoneSpell(CZUpdateType_Group, CZSpellUpdateSubtype_Remove, group_id, spell_id);
 }
 
-void Perl__crosszoneremovespellbyraidid(int raid_id, uint32 spell_id)
+void Perl__crosszoneremovespellbyraidid(int raid_id, int32 spell_id)
 {
 	quest_manager.CrossZoneSpell(CZUpdateType_Raid, CZSpellUpdateSubtype_Remove, raid_id, spell_id);
 }
 
-void Perl__crosszoneremovespellbyguildid(int guild_id, uint32 spell_id)
+void Perl__crosszoneremovespellbyguildid(int guild_id, int32 spell_id)
 {
 	quest_manager.CrossZoneSpell(CZUpdateType_Guild, CZSpellUpdateSubtype_Remove, guild_id, spell_id);
 }
 
-void Perl__crosszoneremovespellbyexpeditionid(uint32 expedition_id, uint32 spell_id)
+void Perl__crosszoneremovespellbyexpeditionid(uint32 expedition_id, int32 spell_id)
 {
 	quest_manager.CrossZoneSpell(CZUpdateType_Expedition, CZSpellUpdateSubtype_Remove, expedition_id, spell_id);
 }
 
-void Perl__crosszoneremovespellbyclientname(const char* client_name, uint32 spell_id)
+void Perl__crosszoneremovespellbyclientname(const char* client_name, int32 spell_id)
 {
 	int update_identifier = 0;
 	quest_manager.CrossZoneSpell(CZUpdateType_ClientName, CZSpellUpdateSubtype_Remove, update_identifier, spell_id, client_name);
@@ -4394,17 +4394,17 @@ void Perl__worldwideassigntask(uint32 task_id, bool enforce_level_requirement, u
 	quest_manager.WorldWideTaskUpdate(WWTaskUpdateType_AssignTask, task_id, task_subidentifier, update_count, enforce_level_requirement, min_status, max_status);
 }
 
-void Perl__worldwidecastspell(uint32 spell_id)
+void Perl__worldwidecastspell(int32 spell_id)
 {
 	quest_manager.WorldWideSpell(WWSpellUpdateType_Cast, spell_id);
 }
 
-void Perl__worldwidecastspell(uint32 spell_id, uint8 min_status)
+void Perl__worldwidecastspell(int32 spell_id, uint8 min_status)
 {
 	quest_manager.WorldWideSpell(WWSpellUpdateType_Cast, spell_id, min_status);
 }
 
-void Perl__worldwidecastspell(uint32 spell_id, uint8 min_status, uint8 max_status)
+void Perl__worldwidecastspell(int32 spell_id, uint8 min_status, uint8 max_status)
 {
 	quest_manager.WorldWideSpell(WWSpellUpdateType_Cast, spell_id, min_status, max_status);
 }
@@ -4586,17 +4586,17 @@ void Perl__worldwideremoveldonwin(uint32 theme_id, uint8 min_status, uint8 max_s
 	quest_manager.WorldWideLDoNUpdate(CZLDoNUpdateSubtype_RemoveWin, theme_id, points, min_status, max_status);
 }
 
-void Perl__worldwideremovespell(uint32 spell_id)
+void Perl__worldwideremovespell(int32 spell_id)
 {
 	quest_manager.WorldWideSpell(WWSpellUpdateType_Remove, spell_id);
 }
 
-void Perl__worldwideremovespell(uint32 spell_id, uint8 min_status)
+void Perl__worldwideremovespell(int32 spell_id, uint8 min_status)
 {
 	quest_manager.WorldWideSpell(WWSpellUpdateType_Remove, spell_id, min_status);
 }
 
-void Perl__worldwideremovespell(uint32 spell_id, uint8 min_status, uint8 max_status)
+void Perl__worldwideremovespell(int32 spell_id, uint8 min_status, uint8 max_status)
 {
 	quest_manager.WorldWideSpell(WWSpellUpdateType_Remove, spell_id, min_status, max_status);
 }
@@ -4723,7 +4723,7 @@ uint32_t Perl__countspawnednpcs(perl::array npc_id_array)
 	return entity_list.CountSpawnedNPCs(npc_ids);
 }
 
-SPDat_Spell_Struct* Perl__getspell(uint32 spell_id)
+SPDat_Spell_Struct* Perl__getspell(int32 spell_id)
 {
 	// should be safe, it's read only in perl (could also use proxy lika lua)
 	return const_cast<SPDat_Spell_Struct*>(quest_manager.getspell(spell_id));
@@ -6320,8 +6320,8 @@ void perl_register_quest()
 	package.add("IsShadowStepSpell", &Perl__IsShadowStepSpell);
 	package.add("IsShortDurationBuff", &Perl__IsShortDurationBuff);
 	package.add("IsSnowing", &Perl__IsSnowing);
-	package.add("IsSpellUsableInThisZoneType", (bool(*)(uint16))&Perl__IsSpellUsableInThisZoneType);
-	package.add("IsSpellUsableInThisZoneType", (bool(*)(uint16, uint8))&Perl__IsSpellUsableInThisZoneType);
+	package.add("IsSpellUsableInThisZoneType", (bool(*)(int32))&Perl__IsSpellUsableInThisZoneType);
+	package.add("IsSpellUsableInThisZoneType", (bool(*)(int32, uint8))&Perl__IsSpellUsableInThisZoneType);
 	package.add("IsStackableDOT", &Perl__IsStackableDOT);
 	package.add("IsStunSpell", &Perl__IsStunSpell);
 	package.add("IsSuccorSpell", &Perl__IsSuccorSpell);
@@ -6585,9 +6585,9 @@ void perl_register_quest()
 	package.add("worldwideassigntask", (void(*)(uint32, bool))&Perl__worldwideassigntask);
 	package.add("worldwideassigntask", (void(*)(uint32, bool, uint8))&Perl__worldwideassigntask);
 	package.add("worldwideassigntask", (void(*)(uint32, bool, uint8, uint8))&Perl__worldwideassigntask);
-	package.add("worldwidecastspell", (void(*)(uint32))&Perl__worldwidecastspell);
-	package.add("worldwidecastspell", (void(*)(uint32, uint8))&Perl__worldwidecastspell);
-	package.add("worldwidecastspell", (void(*)(uint32, uint8, uint8 max_status))&Perl__worldwidecastspell);
+	package.add("worldwidecastspell", (void(*)(int32))&Perl__worldwidecastspell);
+	package.add("worldwidecastspell", (void(*)(int32, uint8))&Perl__worldwidecastspell);
+	package.add("worldwidecastspell", (void(*)(int32, uint8, uint8 max_status))&Perl__worldwidecastspell);
 	package.add("worldwidedialoguewindow", (void(*)(const char*))&Perl__worldwidedialoguewindow);
 	package.add("worldwidedialoguewindow", (void(*)(const char*, uint8))&Perl__worldwidedialoguewindow);
 	package.add("worldwidedialoguewindow", (void(*)(const char*, uint8, uint8))&Perl__worldwidedialoguewindow);
@@ -6618,9 +6618,9 @@ void perl_register_quest()
 	package.add("worldwideremoveldonwin", (void(*)(uint32))&Perl__worldwideremoveldonwin);
 	package.add("worldwideremoveldonwin", (void(*)(uint32, uint8))&Perl__worldwideremoveldonwin);
 	package.add("worldwideremoveldonwin", (void(*)(uint32, uint8, uint8))&Perl__worldwideremoveldonwin);
-	package.add("worldwideremovespell", (void(*)(uint32))&Perl__worldwideremovespell);
-	package.add("worldwideremovespell", (void(*)(uint32, uint8))&Perl__worldwideremovespell);
-	package.add("worldwideremovespell", (void(*)(uint32, uint8, uint8))&Perl__worldwideremovespell);
+	package.add("worldwideremovespell", (void(*)(int32))&Perl__worldwideremovespell);
+	package.add("worldwideremovespell", (void(*)(int32, uint8))&Perl__worldwideremovespell);
+	package.add("worldwideremovespell", (void(*)(int32, uint8, uint8))&Perl__worldwideremovespell);
 	package.add("worldwideremovetask", (void(*)(uint32))&Perl__worldwideremovetask);
 	package.add("worldwideremovetask", (void(*)(uint32, uint8))&Perl__worldwideremovetask);
 	package.add("worldwideremovetask", (void(*)(uint32, uint8, uint8))&Perl__worldwideremovetask);
@@ -6753,8 +6753,8 @@ void perl_register_quest()
 	package.add("getspell", &Perl__getspell);
 	package.add("getspellname", &Perl__getspellname);
 	package.add("get_spell_level", &Perl__get_spell_level);
-	package.add("getspellstat", (int(*)(uint32, std::string))&Perl__getspellstat);
-	package.add("getspellstat", (int(*)(uint32, std::string, uint8))&Perl__getspellstat);
+	package.add("getspellstat", (int(*)(int32, std::string))&Perl__getspellstat);
+	package.add("getspellstat", (int(*)(int32, std::string, uint8))&Perl__getspellstat);
 	package.add("getskillname", &Perl__getskillname);
 	package.add("get_timers", &Perl__get_timers);
 	package.add("getlevel", &Perl__getlevel);

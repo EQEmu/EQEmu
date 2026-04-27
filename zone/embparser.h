@@ -111,7 +111,7 @@ public:
 		QuestEventID event_id,
 		Mob* mob,
 		Client* client,
-		uint32 spell_id,
+		int32 spell_id,
 		std::string data,
 		uint32 extra_data,
 		std::vector<std::any>* extra_pointers
@@ -173,7 +173,7 @@ public:
 	virtual bool HasGlobalQuestSub(QuestEventID event_id);
 	virtual bool PlayerHasQuestSub(QuestEventID event_id);
 	virtual bool GlobalPlayerHasQuestSub(QuestEventID event_id);
-	virtual bool SpellHasQuestSub(uint32 spell_id, QuestEventID event_id);
+	virtual bool SpellHasQuestSub(int32 spell_id, QuestEventID event_id);
 	virtual bool ItemHasQuestSub(EQ::ItemInstance* inst, QuestEventID event_id);
 	virtual bool BotHasQuestSub(QuestEventID event_id);
 	virtual bool GlobalBotHasQuestSub(QuestEventID event_id);
@@ -187,7 +187,7 @@ public:
 	virtual void LoadPlayerScript(std::string filename);
 	virtual void LoadGlobalPlayerScript(std::string filename);
 	virtual void LoadItemScript(std::string filename, EQ::ItemInstance* inst);
-	virtual void LoadSpellScript(std::string filename, uint32 spell_id);
+	virtual void LoadSpellScript(std::string filename, int32 spell_id);
 	virtual void LoadBotScript(std::string filename);
 	virtual void LoadGlobalBotScript(std::string filename);
 	virtual void LoadMercScript(std::string filename);
@@ -228,7 +228,7 @@ private:
 	int SendCommands(
 		const char* prefix,
 		const char* event,
-		uint32 spell_id,
+		int32 spell_id,
 		Mob* other,
 		Mob* mob,
 		EQ::ItemInstance* inst,

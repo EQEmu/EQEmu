@@ -38,7 +38,7 @@ public:
 	struct CharacterBuffs {
 		uint32_t    character_id;
 		uint8_t     slot_id;
-		uint16_t    spell_id;
+		int32_t     spell_id;
 		uint8_t     caster_level;
 		std::string caster_name;
 		int32_t     ticsremaining;

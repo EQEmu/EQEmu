@@ -5262,7 +5262,7 @@ uint32 Mob::GetLevelHP(uint8 tlevel)
 	return multiplier;
 }
 
-int32 Mob::GetActSpellCasttime(uint16 spell_id, int32 casttime)
+int32 Mob::GetActSpellCasttime(int32 spell_id, int32 casttime)
 {
 	int32 cast_reducer = GetFocusEffect(focusSpellHaste, spell_id);
 	int32 cast_reducer_amt = GetFocusEffect(focusFcCastTimeAmt, spell_id);
@@ -5283,7 +5283,7 @@ int32 Mob::GetActSpellCasttime(uint16 spell_id, int32 casttime)
 
 }
 
-void Mob::ExecWeaponProc(const EQ::ItemInstance* inst, uint16 spell_id, Mob* on, int level_override)
+void Mob::ExecWeaponProc(const EQ::ItemInstance* inst, int32 spell_id, Mob* on, int level_override)
 {
 	// Changed proc targets to look up based on the spells goodEffect flag.
 	// This should work for the majority of weapons.
@@ -5828,7 +5828,7 @@ void Mob::SetNimbusEffect(uint32 nimbus_effect)
 	}
 }
 
-bool Mob::TrySpellTrigger(Mob *target, uint32 spell_id, int effect)
+bool Mob::TrySpellTrigger(Mob *target, int32 spell_id, int effect)
 {
 	if (!target || !IsValidSpell(spell_id))
 		return false;
@@ -5886,7 +5886,7 @@ bool Mob::TrySpellTrigger(Mob *target, uint32 spell_id, int effect)
 			return true;
 		}
 		else if (IsClient() && spells[spell_id].effect_id[effect_slot] == SpellEffect::Chance_Best_in_Spell_Grp) {
-			uint32 best_spell_id = CastToClient()->GetHighestScribedSpellinSpellGroup(spells[spell_id].limit_value[effect_slot]);
+			int32 best_spell_id = CastToClient()->GetHighestScribedSpellinSpellGroup(spells[spell_id].limit_value[effect_slot]);
 			if (IsValidSpell(best_spell_id)) {
 				SpellFinished(best_spell_id, target, EQ::spells::CastingSlot::Item, 0, -1, spells[best_spell_id].resist_difficulty);
 			}
@@ -5920,7 +5920,7 @@ void Mob::TryTriggerOnCastRequirement()
 }
 
 //Twincast Focus effects should stack across different types (Spell, AA - when implemented ect)
-void Mob::TryTwincast(Mob *caster, Mob *target, uint32 spell_id)
+void Mob::TryTwincast(Mob *caster, Mob *target, int32 spell_id)
 {
 	if (!IsValidSpell(spell_id)) {
 		return;
@@ -5964,7 +5964,7 @@ void Mob::TryTwincast(Mob *caster, Mob *target, uint32 spell_id)
 }
 
 //Used for effects that should occur after the completion of the spell
-void Mob::ApplyHealthTransferDamage(Mob *caster, Mob *target, uint16 spell_id)
+void Mob::ApplyHealthTransferDamage(Mob *caster, Mob *target, int32 spell_id)
 {
 	if (!IsValidSpell(spell_id))
 		return;
@@ -5992,7 +5992,7 @@ void Mob::ApplyHealthTransferDamage(Mob *caster, Mob *target, uint16 spell_id)
 	}
 }
 
-int32 Mob::GetVulnerability(Mob *caster, uint32 spell_id, uint32 ticsremaining, bool from_buff_tic)
+int32 Mob::GetVulnerability(Mob *caster, int32 spell_id, uint32 ticsremaining, bool from_buff_tic)
 {
 	/*
 	Modifies incoming spell damage by percent, to increase or decrease damage, can be limited to specific resists.
@@ -6184,7 +6184,7 @@ bool Mob::TryFadeEffect(int slot)
 			if (spells[buffs[slot].spellid].effect_id[i] == SpellEffect::CastOnFadeEffectAlways ||
 				spells[buffs[slot].spellid].effect_id[i] == SpellEffect::CastOnRuneFadeEffect)
 			{
-				uint16 spell_id = spells[buffs[slot].spellid].base_value[i];
+				int32 spell_id = spells[buffs[slot].spellid].base_value[i];
 				BuffFadeBySlot(slot);
 
 				if(spell_id)
@@ -6210,7 +6210,7 @@ bool Mob::TryFadeEffect(int slot)
 	return false;
 }
 
-void Mob::TrySympatheticProc(Mob* target, uint32 spell_id)
+void Mob::TrySympatheticProc(Mob* target, int32 spell_id)
 {
 	if (!target || !IsValidSpell(spell_id) || !IsOfClientBotMerc()) {
 		return;
@@ -6562,7 +6562,7 @@ void Mob::DoKnockback(Mob *caster, uint32 push_back, uint32 push_up)
 	}
 }
 
-void Mob::TrySpellOnKill(uint8 level, uint16 spell_id)
+void Mob::TrySpellOnKill(uint8 level, int32 spell_id)
 {
 	if (IsValidSpell(spell_id))
 	{
@@ -7110,7 +7110,7 @@ int16 Mob::GetModVulnerability(const uint8 resist)
 	return 0;
 }
 
-void Mob::CastOnCurer(uint32 spell_id)
+void Mob::CastOnCurer(int32 spell_id)
 {
 	for(int i = 0; i < EFFECT_COUNT; i++)
 	{
@@ -7124,7 +7124,7 @@ void Mob::CastOnCurer(uint32 spell_id)
 	}
 }
 
-void Mob::CastOnCure(uint32 spell_id)
+void Mob::CastOnCure(int32 spell_id)
 {
 	for(int i = 0; i < EFFECT_COUNT; i++)
 	{
@@ -7138,7 +7138,7 @@ void Mob::CastOnCure(uint32 spell_id)
 	}
 }
 
-void Mob::CastOnNumHitFade(uint32 spell_id)
+void Mob::CastOnNumHitFade(int32 spell_id)
 {
 	if(!IsValidSpell(spell_id))
 		return;
@@ -7250,7 +7250,7 @@ uint16 Mob::GetWeaponSpeedbyHand(uint16 hand) {
 	return weapon_speed;
 }
 
-int8 Mob::GetDecayEffectValue(uint16 spell_id, uint16 spelleffect) {
+int8 Mob::GetDecayEffectValue(int32 spell_id, uint16 spelleffect) {
 
 	if (!IsValidSpell(spell_id))
 		return false;
@@ -7674,7 +7674,7 @@ uint8 Mob::GetSeeInvisibleLevelFromNPCStat(uint16 in_see_invis)
 	return std::min((see_invis_level - 1), MAX_INVISIBILTY_LEVEL);
 }
 
-int32 Mob::GetSpellStat(uint32 spell_id, const char *identifier, uint8 slot)
+int32 Mob::GetSpellStat(int32 spell_id, const char *identifier, uint8 slot)
 {
 	return GetSpellStatValue(spell_id, identifier, slot);
 }

@@ -68,7 +68,7 @@ struct wplist {
 
 #pragma pack(1)
 struct DBnpcspells_entries_Struct {
-	uint16	spellid;
+	int32   spellid;
 	uint8	minlevel;
 	uint8	maxlevel;
 	uint32	type;
@@ -123,7 +123,7 @@ struct DBnpcspellseffects_Struct {
 
 #pragma pack(1)
 struct DBbotspells_entries_Struct {
-	uint16		spellid;
+	int32       spellid;
 	uint8		minlevel;
 	uint8		maxlevel;
 	uint32		type;
@@ -204,7 +204,7 @@ struct AuraRecord {
 
 // Actual pet info for a client.
 struct PetInfo {
-	uint16	SpellID;
+	int32   SpellID;
 	int16	petpower;
 	uint32	HP;
 	uint32	Mana;
@@ -216,7 +216,7 @@ struct PetInfo {
 };
 
 struct ZoneSpellsBlocked {
-	uint32 spellid;
+	int32 spellid;
 	int8 type;
 	glm::vec3 m_Location;
 	glm::vec3 m_Difference;
@@ -286,7 +286,7 @@ struct MercInfo {
 
 struct MercSpellEntry {
 	uint8	proficiencyid;
-	uint16	spellid;		// <= 0 = no spell
+	int32   spellid;		// <= 0 = no spell
 	uint32	type;			// 0 = never, must be one (and only one) of the defined values
 	int16	stance;			// 0 = all, + = only this stance, - = all except this stance
 	uint8	minlevel;
@@ -470,10 +470,10 @@ public:
 	bool SaveCharacterLanguage(uint32 character_id, uint32 lang_id, uint32 value);
 	bool SaveCharacterLeadershipAbilities(uint32 character_id, PlayerProfile_Struct* pp);
 	bool SaveCharacterMaterialColor(uint32 character_id, uint8 slot_id, uint32 color);
-	bool SaveCharacterMemorizedSpell(uint32 character_id, uint32 spell_id, uint32 slot_id);
+	bool SaveCharacterMemorizedSpell(uint32 character_id, int32 spell_id, uint32 slot_id);
 	bool SaveCharacterPotionBelt(uint32 character_id, uint8 potion_id, uint32 item_id, uint32 icon);
 	bool SaveCharacterSkill(uint32 character_id, uint32 skill_id, uint32 value);
-	bool SaveCharacterSpell(uint32 character_id, uint32 spell_id, uint32 slot_id);
+	bool SaveCharacterSpell(uint32 character_id, int32 spell_id, uint32 slot_id);
 
 	void ZeroPlayerProfileCurrency(PlayerProfile_Struct* pp);
 
@@ -582,7 +582,7 @@ public:
 	bool		GetBasePetItems(int32 equipmentset, uint32 *items);
 	BeastlordPetData::PetStruct GetBeastlordPetData(uint16 race_id);
 	uint32		GetMaxNPCSpellsEffectsID();
-	bool GetAuraEntry(uint16 spell_id, AuraRecord &record);
+	bool GetAuraEntry(int32 spell_id, AuraRecord &record);
 	void LoadGlobalLoot();
 
 	DBnpcspells_Struct*				GetNPCSpells(uint32 npc_spells_id);
@@ -591,7 +591,7 @@ public:
 	const NPCType* LoadNPCTypesData(uint32 id, bool bulk_load = false);
 
 	/*Bots	*/
-	DBbotspells_Struct*	GetBotSpells(uint32 bot_spell_id);
+	DBbotspells_Struct*	GetBotSpells(int32 bot_spell_id);
 	void ClearBotSpells() { bot_spells_cache.clear(); bot_spells_loadtried.clear(); }
 
 	/* Mercs   */

@@ -92,7 +92,7 @@ public:
 	void PrintHateListToClient(Client *c);
 	void SetHateAmountOnEnt(Mob *other, int64 in_hate, uint64 in_damage);
 	void SetHateOwner(Mob *new_hate_owner) { hate_owner = new_hate_owner; }
-	void SpellCast(Mob *caster, uint32 spell_id, float range, Mob *ae_center = nullptr);
+	void SpellCast(Mob *caster, int32 spell_id, float range, Mob *ae_center = nullptr);
 	void WipeHateList(bool npc_only = false);
 	void RemoveStaleEntries(int time_ms, float dist);
 

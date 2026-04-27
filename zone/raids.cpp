@@ -655,7 +655,7 @@ Client *Raid::GetClientByIndex(uint16 index)
 	return members[index].member;
 }
 
-void Raid::CastGroupSpell(Mob* caster, uint16 spellid, uint32 gid)
+void Raid::CastGroupSpell(Mob* caster, int32 spellid, uint32 gid)
 {
 	float range, distance;
 

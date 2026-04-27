@@ -960,7 +960,7 @@ namespace PlayerEvent {
 	struct ResurrectAcceptEvent {
 		std::string resurrecter_name;
 		std::string spell_name;
-		uint32      spell_id;
+		int32 spell_id;
 
 		// cereal
 		template <class Archive>
@@ -1058,7 +1058,7 @@ namespace PlayerEvent {
 		uint32      killer_id;
 		std::string killer_name;
 		int64       damage;
-		uint32      spell_id;
+		int32 spell_id;
 		std::string spell_name;
 		int         skill_id;
 		std::string skill_name;

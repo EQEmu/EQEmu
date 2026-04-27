@@ -515,7 +515,7 @@ void Perl_Client_AddSkill(Client* self, int skill_id, uint16 value) // @categori
 	self->AddSkill(static_cast<EQ::skills::SkillType>(skill_id), value);
 }
 
-void Perl_Client_CheckSpecializeIncrease(Client* self, uint16 spell_id) // @categories Spells and Disciplines
+void Perl_Client_CheckSpecializeIncrease(Client* self, int32 spell_id) // @categories Spells and Disciplines
 {
 	self->CheckSpecializeIncrease(spell_id);
 }
@@ -585,12 +585,12 @@ void Perl_Client_ResetAA(Client* self) // @categories Alternative Advancement
 	self->ResetAA();
 }
 
-void Perl_Client_MemSpell(Client* self, uint16 spell_id, int slot) // @categories Spells and Disciplines
+void Perl_Client_MemSpell(Client* self, int32 spell_id, int slot) // @categories Spells and Disciplines
 {
 	self->MemSpell(spell_id, slot);
 }
 
-void Perl_Client_MemSpell(Client* self, uint16 spell_id, int slot, bool update_client) // @categories Spells and Disciplines
+void Perl_Client_MemSpell(Client* self, int32 spell_id, int slot, bool update_client) // @categories Spells and Disciplines
 {
 	self->MemSpell(spell_id, slot, update_client);
 }
@@ -630,7 +630,7 @@ int Perl_Client_FindMemmedSpellBySlot(Client* self, int slot) // @categories Acc
 	return self->FindMemmedSpellBySlot(slot);
 }
 
-int Perl_Client_FindMemmedSpellBySpellID(Client* self, uint16 spell_id) // @categories Account and Character, Spells and Disciplines
+int Perl_Client_FindMemmedSpellBySpellID(Client* self, int32 spell_id) // @categories Account and Character, Spells and Disciplines
 {
 	return self->FindMemmedSpellBySpellID(spell_id);
 }
@@ -640,12 +640,12 @@ int Perl_Client_MemmedCount(Client* self) // @categories Spells and Disciplines
 	return self->MemmedCount();
 }
 
-void Perl_Client_ScribeSpell(Client* self, uint16 spell_id, int slot) // @categories Spells and Disciplines
+void Perl_Client_ScribeSpell(Client* self, int32 spell_id, int slot) // @categories Spells and Disciplines
 {
 	self->ScribeSpell(spell_id, slot);
 }
 
-void Perl_Client_ScribeSpell(Client* self, uint16 spell_id, int slot, bool update_client) // @categories Spells and Disciplines
+void Perl_Client_ScribeSpell(Client* self, int32 spell_id, int slot, bool update_client) // @categories Spells and Disciplines
 {
 	self->ScribeSpell(spell_id, slot, update_client);
 }
@@ -915,7 +915,7 @@ bool Perl_Client_Thirsty(Client* self) // @categories Script Utility
 	return self->Thirsty();
 }
 
-int Perl_Client_GetInstrumentMod(Client* self, uint16 spell_id) // @categories Spells and Disciplines
+int Perl_Client_GetInstrumentMod(Client* self, int32 spell_id) // @categories Spells and Disciplines
 {
 	return self->GetInstrumentMod(spell_id);
 }
@@ -970,7 +970,7 @@ void Perl_Client_ResetTrade(Client* self) // @categories Script Utility
 	self->ResetTrade();
 }
 
-bool Perl_Client_UseDiscipline(Client* self, uint32 spell_id, uint32 target) // @categories Spells and Disciplines
+bool Perl_Client_UseDiscipline(Client* self, int32 spell_id, uint32 target) // @categories Spells and Disciplines
 {
 	return self->UseDiscipline(spell_id, target);
 }
@@ -1262,7 +1262,7 @@ void Perl_Client_SetEndurance(Client* self, int endurance) // @categories Accoun
 	self->SetEndurance(endurance);
 }
 
-void Perl_Client_SendOPTranslocateConfirm(Client* self, Mob* caster, uint16 spell_id) // @categories Script Utility
+void Perl_Client_SendOPTranslocateConfirm(Client* self, Mob* caster, int32 spell_id) // @categories Script Utility
 {
 	self->SendOPTranslocateConfirm(caster, spell_id);
 }
@@ -1342,12 +1342,12 @@ int Perl_Client_GetFreeSpellBookSlot(Client* self, uint32 start_slot) // @catego
 	return self->GetNextAvailableSpellBookSlot(start_slot);
 }
 
-int Perl_Client_GetSpellBookSlotBySpellID(Client* self, uint32 spell_id) // @categories Spells and Disciplines
+int Perl_Client_GetSpellBookSlotBySpellID(Client* self, int32 spell_id) // @categories Spells and Disciplines
 {
 	return self->FindSpellBookSlotBySpellID(spell_id);
 }
 
-uint32_t Perl_Client_GetSpellIDByBookSlot(Client* self, int slot_id)
+int32_t Perl_Client_GetSpellIDByBookSlot(Client* self, int slot_id)
 {
 	return self->GetSpellIDByBookSlot(slot_id);
 }
@@ -1617,7 +1617,7 @@ void Perl_Client_SendColoredText(Client* self, uint32 color, std::string msg) //
 	self->SendColoredText(color, std::move(msg));
 }
 
-void Perl_Client_SendSpellAnim(Client* self, uint16 targetid, uint16 spell_id)
+void Perl_Client_SendSpellAnim(Client* self, uint16 targetid, int32 spell_id)
 {
 	self->SendSpellAnim(targetid, spell_id);
 }
@@ -2013,7 +2013,7 @@ void Perl_Client_Fling(Client* self, float value, float target_x, float target_y
 	self->Fling(value, target_x, target_y, target_z, ignore_los, clip_through_walls);
 }
 
-bool Perl_Client_HasDisciplineLearned(Client* self, uint16 spell_id)
+bool Perl_Client_HasDisciplineLearned(Client* self, int32 spell_id)
 {
 	return self->HasDisciplineLearned(spell_id);
 }
@@ -2267,12 +2267,12 @@ void Perl_Client_ReadBookByName(Client* self, std::string book_name, uint8 book_
 	self->ReadBookByName(book_name, book_type);
 }
 
-void Perl_Client_UntrainDiscBySpellID(Client* self, uint16 spell_id) // @categories Spells and Disciplines
+void Perl_Client_UntrainDiscBySpellID(Client* self, int32 spell_id) // @categories Spells and Disciplines
 {
 	self->UntrainDiscBySpellID(spell_id);
 }
 
-void Perl_Client_UntrainDiscBySpellID(Client* self, uint16 spell_id, bool update_client) // @categories Spells and Disciplines
+void Perl_Client_UntrainDiscBySpellID(Client* self, int32 spell_id, bool update_client) // @categories Spells and Disciplines
 {
 	self->UntrainDiscBySpellID(spell_id, update_client);
 }
@@ -2343,17 +2343,17 @@ void Perl_Client_ResetAllCastbarCooldowns(Client* self)
 	self->ResetAllCastbarCooldowns();
 }
 
-void Perl_Client_ResetCastbarCooldownBySpellID(Client* self, uint32 spell_id)
+void Perl_Client_ResetCastbarCooldownBySpellID(Client* self, int32 spell_id)
 {
 	self->ResetCastbarCooldownBySpellID(spell_id);
 }
 
-void Perl_Client_UnscribeSpellBySpellID(Client* self, uint16 spell_id)
+void Perl_Client_UnscribeSpellBySpellID(Client* self, int32 spell_id)
 {
 	self->UnscribeSpellBySpellID(spell_id);
 }
 
-void Perl_Client_UnscribeSpellBySpellID(Client* self, uint16 spell_id, bool update_client)
+void Perl_Client_UnscribeSpellBySpellID(Client* self, int32 spell_id, bool update_client)
 {
 	self->UnscribeSpellBySpellID(spell_id, update_client);
 }
@@ -3727,8 +3727,8 @@ void perl_register_client()
 	package.add("MaxSkill", (int(*)(Client*, uint16, uint16))&Perl_Client_MaxSkill);
 	package.add("MaxSkill", (int(*)(Client*, uint16, uint16, uint16))&Perl_Client_MaxSkill);
 	package.add("MaxSkills", &Perl_Client_MaxSkills);
-	package.add("MemSpell", (void(*)(Client*, uint16, int))&Perl_Client_MemSpell);
-	package.add("MemSpell", (void(*)(Client*, uint16, int, bool))&Perl_Client_MemSpell);
+	package.add("MemSpell", (void(*)(Client*, int32, int))&Perl_Client_MemSpell);
+	package.add("MemSpell", (void(*)(Client*, int32, int, bool))&Perl_Client_MemSpell);
 	package.add("MemmedCount", &Perl_Client_MemmedCount);
 	package.add("MovePC", &Perl_Client_MovePC);
 	package.add("MovePCDynamicZone", (void(*)(Client*, perl::scalar))&Perl_Client_MovePCDynamicZone);
@@ -3804,8 +3804,8 @@ void perl_register_client()
 	package.add("ResetLeadershipAA", &Perl_Client_ResetLeadershipAA);
 	package.add("ResetTrade", &Perl_Client_ResetTrade);
 	package.add("Save", &Perl_Client_Save);
-	package.add("ScribeSpell", (void(*)(Client*, uint16, int))&Perl_Client_ScribeSpell);
-	package.add("ScribeSpell", (void(*)(Client*, uint16, int, bool))&Perl_Client_ScribeSpell);
+	package.add("ScribeSpell", (void(*)(Client*, int32, int))&Perl_Client_ScribeSpell);
+	package.add("ScribeSpell", (void(*)(Client*, int32, int, bool))&Perl_Client_ScribeSpell);
 	package.add("ScribeSpells", &Perl_Client_ScribeSpells);
 	package.add("SendColoredText", &Perl_Client_SendColoredText);
 	package.add("SendGMCommand", (bool(*)(Client*, std::string))&Perl_Client_SendGMCommand);
@@ -3966,14 +3966,14 @@ void perl_register_client()
 	package.add("UnscribeSpell", (void(*)(Client*, int, bool))&Perl_Client_UnscribeSpell);
 	package.add("UnscribeSpellAll", (void(*)(Client*))&Perl_Client_UnscribeSpellAll);
 	package.add("UnscribeSpellAll", (void(*)(Client*, bool))&Perl_Client_UnscribeSpellAll);
-	package.add("UnscribeSpellBySpellID", (void(*)(Client*, uint16))&Perl_Client_UnscribeSpellBySpellID);
-	package.add("UnscribeSpellBySpellID", (void(*)(Client*, uint16, bool))&Perl_Client_UnscribeSpellBySpellID);
+	package.add("UnscribeSpellBySpellID", (void(*)(Client*, int32 ))&Perl_Client_UnscribeSpellBySpellID);
+	package.add("UnscribeSpellBySpellID", (void(*)(Client*, int32, bool))&Perl_Client_UnscribeSpellBySpellID);
 	package.add("UntrainDisc", (void(*)(Client*, int))&Perl_Client_UntrainDisc);
 	package.add("UntrainDisc", (void(*)(Client*, int, bool))&Perl_Client_UntrainDisc);
 	package.add("UntrainDiscAll", (void(*)(Client*))&Perl_Client_UntrainDiscAll);
 	package.add("UntrainDiscAll", (void(*)(Client*, bool))&Perl_Client_UntrainDiscAll);
-	package.add("UntrainDiscBySpellID", (void(*)(Client*, uint16))&Perl_Client_UntrainDiscBySpellID);
-	package.add("UntrainDiscBySpellID", (void(*)(Client*, uint16, bool))&Perl_Client_UntrainDiscBySpellID);
+	package.add("UntrainDiscBySpellID", (void(*)(Client*, int32 ))&Perl_Client_UntrainDiscBySpellID);
+	package.add("UntrainDiscBySpellID", (void(*)(Client*, int32, bool))&Perl_Client_UntrainDiscBySpellID);
 	package.add("UpdateAdmin", (void(*)(Client*))&Perl_Client_UpdateAdmin);
 	package.add("UpdateAdmin", (void(*)(Client*, bool))&Perl_Client_UpdateAdmin);
 	package.add("UpdateGroupAAs", &Perl_Client_UpdateGroupAAs);

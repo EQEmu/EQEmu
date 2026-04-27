@@ -90,10 +90,10 @@ public:
 
 	/* Bot pet functions   */
 	bool LoadPetIndex(const uint32 bot_id, uint32& pet_index);
-	bool LoadPetSpellID(const uint32 bot_id, uint32& pet_spell_id);
+	bool LoadPetSpellID(const uint32 bot_id, int32& pet_spell_id);
 
-	bool LoadPetStats(const uint32 bot_id, std::string& pet_name, uint32& pet_mana, uint32& pet_hp, uint32& pet_spell_id);
-	bool SavePetStats(const uint32 bot_id, const std::string& pet_name, const uint32 pet_mana, const uint32 pet_hp, const uint32 pet_spell_id);
+	bool LoadPetStats(const uint32 bot_id, std::string& pet_name, uint32& pet_mana, uint32& pet_hp, int32& pet_spell_id);
+	bool SavePetStats(const uint32 bot_id, const std::string& pet_name, const uint32 pet_mana, const uint32 pet_hp, const int32 pet_spell_id);
 	bool DeletePetStats(const uint32 bot_id);
 
 	bool LoadPetBuffs(const uint32 bot_id, SpellBuff_Struct* pet_buffs);

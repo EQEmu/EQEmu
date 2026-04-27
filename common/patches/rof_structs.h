@@ -614,7 +614,7 @@ struct NewZone_Struct {
 */
 struct MemorizeSpell_Struct {
 uint32 slot;     // Spot in the spell book/memorized slot
-uint32 spell_id; // Spell id (200 or c8 is minor healing, etc)
+int32  spell_id; // Spell id (200 or c8 is minor healing, etc)
 uint32 scribing; // 1 if memorizing a spell, set to 0 if scribing to book, 2 if un-memming
 uint32 reduction; // lowers reuse
 };
@@ -651,7 +651,7 @@ struct ManaChange_Struct
 {
 /*00*/	uint32	new_mana;		// New Mana AMount
 /*04*/	uint32	stamina;
-/*08*/	uint32	spell_id;
+/*08*/	int32   spell_id;
 /*12*/	uint8	keepcasting;	// won't stop the cast. Change mana while casting?
 /*13*/	uint8	padding[3];		// client doesn't read it, garbage data seems like
 /*16*/	int32	slot;			// -1 for normal usage slot for when we want silent interrupt? I think it does timer stuff or something. Linked Spell Reuse interrupt uses it
@@ -665,7 +665,7 @@ struct SwapSpell_Struct
 
 struct BeginCast_Struct
 {
-/*000*/	uint32	spell_id;
+/*000*/	int32   spell_id;
 /*004*/	uint16	caster_id;
 /*006*/	uint32	cast_time;		// in miliseconds
 /*010*/
@@ -674,7 +674,7 @@ struct BeginCast_Struct
 struct CastSpell_Struct
 {
 /*00*/	uint32	slot;
-/*04*/	uint32	spell_id;
+/*04*/	int32   spell_id;
 /*08*/	InventorySlot_Struct inventory_slot;  // slot for clicky item, Seen unknown of 131 = normal cast
 /*20*/	uint32	target_id;
 /*24*/	uint32	cs_unknown[2];
@@ -706,7 +706,7 @@ struct SpellBuff_Struct
 /*002*/	uint8 unknown002;		//pretty sure padding now
 /*003*/	uint8 unknown003;   	// MQ2 used to call this "damage shield" -- don't see client referencing it, so maybe server side DS type tracking?
 /*004*/	float bard_modifier;
-/*008*/	uint32 spellid;
+/*008*/	int32 spellid;
 /*012*/	uint32 duration;
 /*016*/	uint32 player_id;		// caster ID, pretty sure just zone ID
 /*020*/	uint32 num_hits;
@@ -737,7 +737,7 @@ struct BuffRemoveRequest_Struct
 // not in use
 struct BuffIconEntry_Struct {
 /*000*/ uint32 buff_slot;
-/*004*/ uint32 spell_id;
+/*004*/ int32  spell_id;
 /*008*/ uint32 tics_remaining;
 /*012*/ uint32 num_hits;
 // char name[0]; caster name is also here sometimes
@@ -1500,7 +1500,7 @@ struct CombatDamage_Struct
 /* 00 */	uint16	target;
 /* 02 */	uint16	source;
 /* 04 */	uint8	type;			//slashing, etc.  231 (0xE7) for spells
-/* 05 */	uint32	spellid;
+/* 05 */	int32   spellid;
 /* 09 */	int32	damage;
 /* 13 */	float	force;		// cd cc cc 3d
 /* 17 */	float	hit_heading;		// see above notes in Action_Struct
@@ -1536,7 +1536,7 @@ struct Death_Struct
 /*004*/	uint32	killer_id;
 /*008*/	uint32	corpseid;	// was corpseid
 /*012*/	uint32	attack_skill;	// was type
-/*016*/	uint32	spell_id;
+/*016*/	int32   spell_id;
 /*020*/ uint32	bindzoneid;	//bindzoneid?
 /*024*/	uint32	damage;
 /*028*/	uint32	unknown028;
@@ -2603,7 +2603,7 @@ struct GroupFollow_Struct { // Live Follow Struct
 };
 
 struct InspectBuffs_Struct {
-/*000*/ uint32 spell_id[BUFF_COUNT];
+/*000*/ int32 spell_id[BUFF_COUNT];
 /*168*/ int32 tics_remaining[BUFF_COUNT];
 };
 
@@ -3013,7 +3013,7 @@ struct Resurrect_Struct
 /*024*/	char	your_name[64];
 /*088*/	uint32	unknown088;
 /*092*/	char	rezzer_name[64];
-/*156*/	uint32	spellid;
+/*156*/	int32   spellid;
 /*160*/	char	corpse_name[64];
 /*224*/	uint32	action;
 /*228*/	uint32	unknown228;
@@ -4333,7 +4333,7 @@ struct SendAA_Struct {
 /*0045*/	uint32 prereq_minpoints_count;	// mutliple prereqs at least 1, even no prereqs
 /*0049*/	uint32 prereq_minpoints; //min points in the prereq
 /*0053*/	uint32 type;
-/*0057*/	uint32 spellid;
+/*0057*/	int32  spellid;
 /*0061*/	uint32 unknown057;	// Introduced during HoT - Seen 1 - Maybe account status or enable/disable AA?
 /*0065*/	uint32 spell_type;
 /*0069*/	uint32 spell_refresh;

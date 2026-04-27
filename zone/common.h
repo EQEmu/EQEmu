@@ -334,13 +334,13 @@ struct StatBonuses {
 	int32	Corrup;
 	int32	CorrupCapMod;
 	int32	HeroicCorrup;
-	uint16	DamageShieldSpellID;
+	int32   DamageShieldSpellID;
 	int		DamageShield;						// this is damage done to mobs that attack this
 	DmgShieldType	DamageShieldType;
 	int		SpellDamageShield;
 	int		SpellShield;
 	int		ReverseDamageShield;				// this is damage done to the mob when it attacks
-	uint16	ReverseDamageShieldSpellID;
+	int32   ReverseDamageShieldSpellID;
 	DmgShieldType	ReverseDamageShieldType;
 	int		movementspeed;
 	int32	haste;
@@ -641,7 +641,7 @@ namespace SBIndex {
 	constexpr uint16 POSITION_FRONT							= 1; // SPA 503-506
 	constexpr uint16 PET_RAMPAGE_CHANCE                     = 0; // SPA 464,465
 	constexpr uint16 PET_RAMPAGE_DMG_MOD                    = 1; // SPA 465,465
-	constexpr uint16 SKILLATK_PROC_SPELL_ID                 = 0; // SPA 288
+	constexpr int32  SKILLATK_PROC_SPELL_ID                 = 0; // SPA 288
 	constexpr uint16 SKILLATK_PROC_CHANCE                   = 1; // SPA 288
 	constexpr uint16 SKILLATK_PROC_SKILL                    = 2; // SPA 288
 	constexpr uint16 SLAYUNDEAD_DMG_MOD                     = 0; // SPA 219
@@ -660,7 +660,7 @@ namespace SBIndex {
 	constexpr uint16 REFLECT_RESISTANCE_MOD                 = 1; // SPA 158
 	constexpr uint16 REFLECT_DMG_EFFECTIVENESS              = 2; // SPA 158
 	constexpr uint16 COMBAT_PROC_ORIGIN_ID                  = 0; // SPA
-	constexpr uint16 COMBAT_PROC_SPELL_ID                   = 1; // SPA
+	constexpr int32  COMBAT_PROC_SPELL_ID                   = 1; // SPA
 	constexpr uint16 COMBAT_PROC_RATE_MOD                   = 2; // SPA
 	constexpr uint16 COMBAT_PROC_REUSE_TIMER                = 3; // SPA
 	constexpr uint16 SHIELD_TARGET_MITIGATION_PERCENT       = 0; // SPA 463

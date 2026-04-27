@@ -432,7 +432,7 @@ bool IsPullingBotSpellType(uint16 spell_type) {
 	return false;
 }
 
-uint16 GetCorrectBotSpellType(uint16 spell_type, uint16 spell_id) {
+uint16 GetCorrectBotSpellType(uint16 spell_type, int32 spell_id) {
 	if (!IsValidSpell(spell_id)) {
 		return UINT16_MAX;
 	}
@@ -504,7 +504,7 @@ bool IsBotBuffSpellType(uint16 spell_type) {
 	return false;
 }
 
-bool BotRequiresLoSToCast(uint16 spell_type, uint16 spell_id) {
+bool BotRequiresLoSToCast(uint16 spell_type, int32 spell_id) {
 	if (!BotSpellTypeRequiresTarget(spell_type)) {
 		return false;
 	}

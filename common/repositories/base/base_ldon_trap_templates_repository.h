@@ -38,7 +38,7 @@ public:
 	struct LdonTrapTemplates {
 		uint32_t id;
 		uint8_t  type;
-		uint16_t spell_id;
+		int32_t  spell_id;
 		uint16_t skill;
 		uint8_t  locked;
 	};

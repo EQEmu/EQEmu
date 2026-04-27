@@ -107,7 +107,7 @@ int16 Lua_Buff::GetRootBreakChance()
 	return self->RootBreakChance;
 }
 
-uint16 Lua_Buff::GetSpellID()
+int32 Lua_Buff::GetSpellID()
 {
 	Lua_Safe_Call_Int();
 	return self->spellid;

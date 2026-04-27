@@ -43,7 +43,7 @@ public:
 	virtual bool IsTrap() const { return true; }
 	void	Trigger(Mob* trigger);
 
-	void	SpellOnTarget(Mob* trigger, uint32 spell_id);
+	void	SpellOnTarget(Mob* trigger, int32 spell_id);
 
 	NPC * GetHiddenTrigger() { return hiddenTrigger; }
 	void SetHiddenTrigger(NPC* n) { hiddenTrigger = n; }

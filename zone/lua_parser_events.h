@@ -43,7 +43,7 @@ namespace EQ
 typedef void(*NPCArgumentHandler)(QuestInterface*, lua_State*, NPC*, Mob*, std::string, uint32, std::vector<std::any>*);
 typedef void(*PlayerArgumentHandler)(QuestInterface*, lua_State*, Client*, std::string, uint32, std::vector<std::any>*);
 typedef void(*ItemArgumentHandler)(QuestInterface*, lua_State*, Client*, EQ::ItemInstance*, Mob*, std::string, uint32, std::vector<std::any>*);
-typedef void(*SpellArgumentHandler)(QuestInterface*, lua_State*, Mob*, Client*, uint32, std::string, uint32, std::vector<std::any>*);
+typedef void(*SpellArgumentHandler)(QuestInterface*, lua_State*, Mob*, Client*, int32, std::string, uint32, std::vector<std::any>*);
 typedef void(*EncounterArgumentHandler)(QuestInterface*, lua_State*, Encounter* encounter, std::string, uint32, std::vector<std::any>*);
 typedef void(*BotArgumentHandler)(QuestInterface*, lua_State*, Bot*, Mob*, std::string, uint32, std::vector<std::any>*);
 typedef void(*MercArgumentHandler)(QuestInterface*, lua_State*, Merc*, Mob*, std::string, uint32, std::vector<std::any>*);
@@ -1060,7 +1060,7 @@ void handle_spell_event(
 	lua_State* L,
 	Mob* mob,
 	Client* client,
-	uint32 spell_id,
+	int32 spell_id,
 	std::string data,
 	uint32 extra_data,
 	std::vector<std::any> *extra_pointers
@@ -1071,7 +1071,7 @@ void handle_translocate_finish(
 	lua_State* L,
 	Mob* mob,
 	Client* client,
-	uint32 spell_id,
+	int32 spell_id,
 	std::string data,
 	uint32 extra_data,
 	std::vector<std::any> *extra_pointers
@@ -1082,7 +1082,7 @@ void handle_spell_null(
 	lua_State* L,
 	Mob* mob,
 	Client* client,
-	uint32 spell_id,
+	int32 spell_id,
 	std::string data,
 	uint32 extra_data,
 	std::vector<std::any> *extra_pointers

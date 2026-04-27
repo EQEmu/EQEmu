@@ -38,7 +38,7 @@ public:
 	struct BotPetBuffs {
 		uint32_t pet_buffs_index;
 		uint32_t pets_index;
-		uint32_t spell_id;
+		int32_t  spell_id;
 		uint32_t caster_level;
 		uint32_t duration;
 	};

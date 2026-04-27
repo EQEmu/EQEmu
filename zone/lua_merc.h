@@ -73,7 +73,7 @@ public:
 	void Sit();
 	void Stand();
 	bool Suspend();
-	bool UseDiscipline(uint16 spell_id, uint16 target_id);
+	bool UseDiscipline(int32 spell_id, uint16 target_id);
 };
 
 #endif // LUA_EQEMU

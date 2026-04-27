@@ -42,7 +42,7 @@ public:
 		uint32_t recast_time;
 		uint8_t  is_spell;
 		uint8_t  is_disc;
-		uint32_t spell_id;
+		int32_t  spell_id;
 		uint8_t  is_item;
 		uint32_t item_id;
 	};

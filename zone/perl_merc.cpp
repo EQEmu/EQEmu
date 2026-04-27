@@ -167,7 +167,7 @@ bool Perl_Merc_Suspend(Merc* self)
 	return self->Suspend();
 }
 
-bool Perl_Merc_UseDiscipline(Merc* self, uint16 spell_id, uint16 target_id)
+bool Perl_Merc_UseDiscipline(Merc* self, int32 spell_id, uint16 target_id)
 {
 	return self->UseDiscipline(spell_id, target_id);
 }

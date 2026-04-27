@@ -38,7 +38,7 @@ public:
 	struct MercBuffs {
 		uint32_t MercBuffId;
 		uint32_t MercId;
-		uint32_t SpellId;
+		int32_t  SpellId;
 		uint32_t CasterLevel;
 		uint32_t DurationFormula;
 		int32_t  TicsRemaining;

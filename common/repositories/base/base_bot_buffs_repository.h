@@ -38,7 +38,7 @@ public:
 	struct BotBuffs {
 		uint32_t buffs_index;
 		uint32_t bot_id;
-		uint32_t spell_id;
+		int32_t  spell_id;
 		uint8_t  caster_level;
 		uint32_t duration_formula;
 		uint32_t tics_remaining;

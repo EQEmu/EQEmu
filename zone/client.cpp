@@ -3344,7 +3344,7 @@ void Client::GMKill() {
 	safe_delete(outapp);
 }
 
-void Client::MemorizeSpell(uint32 slot, uint32 spell_id, uint32 scribing, uint32 reduction){
+void Client::MemorizeSpell(uint32 slot, int32 spell_id, uint32 scribing, uint32 reduction){
 	if (
 		!EQ::ValueWithin(
 			slot,
@@ -4393,7 +4393,7 @@ void Client::Sacrifice(Mob *caster)
 	}
 }
 
-void Client::SendOPTranslocateConfirm(Mob *Caster, uint16 SpellID) {
+void Client::SendOPTranslocateConfirm(Mob *Caster, int32 SpellID) {
 
 	if(!Caster || PendingTranslocate)
 		return;
@@ -6362,7 +6362,7 @@ void Client::SuspendMinion(int value)
 	}
 	else
 	{
-		uint16 SpellID = CurrentPet->GetPetSpellID();
+		int32 SpellID = CurrentPet->GetPetSpellID();
 
 		if(SpellID)
 		{
@@ -7103,7 +7103,7 @@ void Client::ConsentCorpses(std::string consent_name, bool deny)
 	}
 }
 
-void Client::Doppelganger(uint16 spell_id, Mob *target, const char *name_override, int pet_count, int pet_duration)
+void Client::Doppelganger(int32 spell_id, Mob *target, const char *name_override, int pet_count, int pet_duration)
 {
 	if(!target || !IsValidSpell(spell_id) || GetID() == target->GetID())
 		return;
@@ -10714,7 +10714,7 @@ void Client::Fling(float value, float target_x, float target_y, float target_z, 
 
 std::vector<int> Client::GetLearnableDisciplines(uint8 min_level, uint8 max_level) {
 	std::vector<int> learnable_disciplines;
-	for (uint16 spell_id = 0; spell_id < SPDAT_RECORDS; ++spell_id) {
+	for (int32 spell_id = 0; spell_id < SPDAT_RECORDS; ++spell_id) {
 		bool learnable = true;
 		if (!IsValidSpell(spell_id)) {
 			continue;
@@ -10785,7 +10785,7 @@ std::vector<int> Client::GetScribeableSpells(uint8 min_level, uint8 max_level) {
 	std::vector<int> scribeable_spells;
 	std::unordered_map<uint32, std::vector<uint16>> spell_group_cache = LoadSpellGroupCache(min_level, max_level);
 
-	for (uint16 spell_id = 0; spell_id < SPDAT_RECORDS; ++spell_id) {
+	for (int32 spell_id = 0; spell_id < SPDAT_RECORDS; ++spell_id) {
 		bool scribeable = true;
 		if (!IsValidSpell(spell_id)) {
 			continue;

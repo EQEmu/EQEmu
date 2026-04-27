@@ -348,47 +348,47 @@ public:
 	void SendSpellEffect(uint32 effect_id, uint32 duration, uint32 finish_delay, bool zone_wide,
 		uint32 unk020, bool perm_effect = false, Client *c = nullptr, uint32 caster_id = 0, uint32 target_id = 0);
 	bool IsBeneficialAllowed(Mob *target);
-	virtual int GetCasterLevel(uint16 spell_id);
-	void ApplySpellsBonuses(uint16 spell_id, uint8 casterlevel, StatBonuses* newbon, uint16 casterID = 0,
+	virtual int GetCasterLevel(int32 spell_id);
+	void ApplySpellsBonuses(int32 spell_id, uint8 casterlevel, StatBonuses* newbon, uint16 casterID = 0,
 		uint8 WornType = 0, int32 ticsremaining = 0, int buffslot = -1, int instrument_mod = 10,
 		bool IsAISpellEffect = false, uint16 effect_id = 0, int32 se_base = 0, int32 se_limit = 0, int32 se_max = 0);
-	void NegateSpellEffectBonuses(uint16 spell_id);
-	bool NegateSpellEffect(uint16 spell_id, int effect_id);
-	float GetActSpellRange(uint16 spell_id, float range);
-	int64 GetActSpellDamage(uint16 spell_id, int64 value, Mob* target = nullptr);
-	int64 GetActDoTDamage(uint16 spell_id, int64 value, Mob* target, bool from_buff_tic = true);
-	int64 GetActSpellHealing(uint16 spell_id, int64 value, Mob* target = nullptr, bool from_buff_tic = false);
-	int32 GetActSpellCost(uint16 spell_id, int32 cost);
-	virtual int32 GetActSpellDuration(uint16 spell_id, int32 duration);
-	int32 GetActSpellCasttime(uint16 spell_id, int32 casttime);
-	virtual int64 GetActReflectedSpellDamage(uint16 spell_id, int64 value, int effectiveness);
-	float ResistSpell(uint8 resist_type, uint16 spell_id, Mob *caster, bool use_resist_override = false,
+	void NegateSpellEffectBonuses(int32 spell_id);
+	bool NegateSpellEffect(int32 spell_id, int effect_id);
+	float GetActSpellRange(int32 spell_id, float range);
+	int64 GetActSpellDamage(int32 spell_id, int64 value, Mob* target = nullptr);
+	int64 GetActDoTDamage(int32 spell_id, int64 value, Mob* target, bool from_buff_tic = true);
+	int64 GetActSpellHealing(int32 spell_id, int64 value, Mob* target = nullptr, bool from_buff_tic = false);
+	int32 GetActSpellCost(int32 spell_id, int32 cost);
+	virtual int32 GetActSpellDuration(int32 spell_id, int32 duration);
+	int32 GetActSpellCasttime(int32 spell_id, int32 casttime);
+	virtual int64 GetActReflectedSpellDamage(int32 spell_id, int64 value, int effectiveness);
+	float ResistSpell(uint8 resist_type, int32 spell_id, Mob *caster, bool use_resist_override = false,
 		int resist_override = 0, bool CharismaCheck = false, bool CharmTick = false, bool IsRoot = false,
 		int level_override = -1);
 	int GetResist(uint8 resist_type);
 	int ResistPhysical(int level_diff, uint8 caster_level);
 	int ResistElementalWeaponDmg(const EQ::ItemInstance *item);
 	int CheckBaneDamage(const EQ::ItemInstance *item);
-	uint16 GetSpecializeSkillValue(uint16 spell_id) const;
+	uint16 GetSpecializeSkillValue(int32 spell_id) const;
 	void SendSpellBarDisable();
-	void SendSpellBarEnable(uint16 spellid);
+	void SendSpellBarEnable(int32 spellid);
 	void ZeroCastingVars();
 	virtual void SpellProcess();
-	virtual bool CastSpell(uint16 spell_id, uint16 target_id, EQ::spells::CastingSlot slot = EQ::spells::CastingSlot::Item, int32 casttime = -1,
+	virtual bool CastSpell(int32 spell_id, uint16 target_id, EQ::spells::CastingSlot slot = EQ::spells::CastingSlot::Item, int32 casttime = -1,
 		int32 mana_cost = -1, uint32* oSpellWillFinish = 0, uint32 item_slot = 0xFFFFFFFF,
 		uint32 timer = 0xFFFFFFFF, uint32 timer_duration = 0, int16 *resist_adjust = nullptr,
 		uint32 aa_id = 0);
-	virtual bool DoCastSpell(uint16 spell_id, uint16 target_id, EQ::spells::CastingSlot slot = EQ::spells::CastingSlot::Item, int32 casttime = -1,
+	virtual bool DoCastSpell(int32 spell_id, uint16 target_id, EQ::spells::CastingSlot slot = EQ::spells::CastingSlot::Item, int32 casttime = -1,
 		int32 mana_cost = -1, uint32* oSpellWillFinish = 0, uint32 item_slot = 0xFFFFFFFF,
 		uint32 timer = 0xFFFFFFFF, uint32 timer_duration = 0, int16 resist_adjust = 0,
 		uint32 aa_id = 0);
-	void CastedSpellFinished(uint16 spell_id, uint32 target_id, EQ::spells::CastingSlot slot, int mana_used,
+	void CastedSpellFinished(int32 spell_id, uint32 target_id, EQ::spells::CastingSlot slot, int mana_used,
 		uint32 inventory_slot = 0xFFFFFFFF, int16 resist_adjust = 0);
-	bool SpellFinished(uint16 spell_id, Mob *target, EQ::spells::CastingSlot slot = EQ::spells::CastingSlot::Item, int mana_used = 0,
+	bool SpellFinished(int32 spell_id, Mob *target, EQ::spells::CastingSlot slot = EQ::spells::CastingSlot::Item, int mana_used = 0,
 		uint32 inventory_slot = 0xFFFFFFFF, int16 resist_adjust = 0, bool isproc = false, int level_override = -1, uint32 timer = 0xFFFFFFFF, uint32 timer_duration = 0, bool from_casted_spell = false, uint32 aa_id = 0);
-	void SendBeginCast(uint16 spell_id, uint32 casttime);
+	void SendBeginCast(int32 spell_id, uint32 casttime);
 	virtual bool SpellOnTarget(
-		uint16 spell_id,
+		int32 spell_id,
 		Mob* spelltar,
 		int reflect_effectiveness = 0,
 		bool use_resist_adjust = false,
@@ -398,31 +398,31 @@ public:
 		int duration_override = 0,
 		bool disable_buff_overwrite = false
 	);
-	virtual bool SpellEffect(Mob* caster, uint16 spell_id, float partial = 100, int level_override = -1, int reflect_effectiveness = 0, int32 duration_override = 0, bool disable_buff_overwrite = false);
-	virtual bool DetermineSpellTargets(uint16 spell_id, Mob *&spell_target, Mob *&ae_center,
+	virtual bool SpellEffect(Mob* caster, int32 spell_id, float partial = 100, int level_override = -1, int reflect_effectiveness = 0, int32 duration_override = 0, bool disable_buff_overwrite = false);
+	virtual bool DetermineSpellTargets(int32 spell_id, Mob *&spell_target, Mob *&ae_center,
 		CastAction_type &CastAction, EQ::spells::CastingSlot slot, bool isproc = false);
 	bool DoCastingChecksOnCaster(int32 spell_id, EQ::spells::CastingSlot slot);
 	bool DoCastingChecksZoneRestrictions(bool check_on_casting, int32 spell_id);
 	bool DoCastingChecksOnTarget(bool check_on_casting, int32 spell_id, Mob* spell_target);
-	virtual bool CheckFizzle(uint16 spell_id);
-	virtual bool CheckSpellLevelRestriction(Mob *caster, uint16 spell_id);
-	virtual bool IsImmuneToSpell(uint16 spell_id, Mob *caster);
+	virtual bool CheckFizzle(int32 spell_id);
+	virtual bool CheckSpellLevelRestriction(Mob *caster, int32 spell_id);
+	virtual bool IsImmuneToSpell(int32 spell_id, Mob *caster);
 
-	virtual float GetAOERange(uint16 spell_id);
-	void InterruptSpell(uint16 spellid = SPELL_UNKNOWN);
-	void InterruptSpell(uint16, uint16, uint16 spellid = SPELL_UNKNOWN);
+	virtual float GetAOERange(int32 spell_id);
+	void InterruptSpell(int32 spellid = SPELL_UNKNOWN);
+	void InterruptSpell(uint16, uint16, int32 spellid = SPELL_UNKNOWN);
 	void StopCasting();
 	void StopCastSpell(int32 spell_id, bool send_spellbar_enable);
 	inline bool IsCasting() const { return((casting_spell_id != 0)); }
-	uint16 CastingSpellID() const { return casting_spell_id; }
+	int32 CastingSpellID() const { return casting_spell_id; }
 	bool TryDispel(uint8 caster_level, uint8 buff_level, int level_modifier);
-	bool TrySpellProjectile(Mob* spell_target,  uint16 spell_id, float speed = 1.5f);
-	void ResourceTap(int64 damage, uint16 spell_id);
+	bool TrySpellProjectile(Mob* spell_target,  int32 spell_id, float speed = 1.5f);
+	void ResourceTap(int64 damage, int32 spell_id);
 	void TryTriggerThreshHold(int64 damage, int effect_id, Mob* attacker);
 	void CalcDestFromHeading(float heading, float distance, float MaxZDiff, float StartX, float StartY, float &dX, float &dY, float &dZ);
-	void BeamDirectional(uint16 spell_id, int16 resist_adjust);
-	void ConeDirectional(uint16 spell_id, int16 resist_adjust);
-	void ApplyHealthTransferDamage(Mob *caster, Mob *target, uint16 spell_id);
+	void BeamDirectional(int32 spell_id, int16 resist_adjust);
+	void ConeDirectional(int32 spell_id, int16 resist_adjust);
+	void ApplyHealthTransferDamage(Mob *caster, Mob *target, int32 spell_id);
 	void ApplySpellEffectIllusion(int32 spell_id, Mob* caster, int buffslot, int base, int limit, int max);
 	void ApplyIllusionToCorpse(int32 spell_id, Corpse* new_corpse);
 	void SendIllusionWearChange(Client* c);
@@ -437,13 +437,13 @@ public:
 	void ZeroBardPulseVars();
 	void DoBardCastingFromItemClick(bool is_casting_bard_song, uint32 cast_time, int32 spell_id, uint16 target_id, EQ::spells::CastingSlot slot, uint32 item_slot,
 		uint32 recast_type , uint32 recast_delay);
-	bool UseBardSpellLogic(uint16 spell_id = 0xffff, int slot = -1);
+	bool UseBardSpellLogic(int32 spell_id = 0xffff, int slot = -1);
 
 	//Buff
 	void BuffProcess();
 	virtual void DoBuffTic(const Buffs_Struct &buff, int slot, Mob* caster = nullptr);
-	void BuffFadeBySpellID(uint16 spell_id);
-	void BuffFadeBySpellIDAndCaster(uint16 spell_id, uint16 caster_id);
+	void BuffFadeBySpellID(int32 spell_id);
+	void BuffFadeBySpellIDAndCaster(int32 spell_id, uint16 caster_id);
 	void BuffFadeByEffect(int effect_id, int slot_to_skip = -1);
 	void BuffFadeAll();
 	void BuffFadeBeneficial();
@@ -455,10 +455,10 @@ public:
 	void BuffFadeSongs();
 	void BuffDetachCaster(Mob *caster);
 	bool IsAffectedByBuffByGlobalGroup(GlobalGroup group);
-	void BuffModifyDurationBySpellID(uint16 spell_id, int32 newDuration);
-	int AddBuff(Mob *caster, const uint16 spell_id, int duration = 0, int32 level_override = -1, bool disable_buff_overwrite = false);
-	int CanBuffStack(uint16 spellid, uint8 caster_level, bool iFailIfOverwrite = false);
-	int CalcBuffDuration(Mob *caster, Mob *target, uint16 spell_id, int32 caster_level_override = -1);
+	void BuffModifyDurationBySpellID(int32 spell_id, int32 newDuration);
+	int AddBuff(Mob *caster, const int32 spell_id, int duration = 0, int32 level_override = -1, bool disable_buff_overwrite = false);
+	int CanBuffStack(int32 spellid, uint8 caster_level, bool iFailIfOverwrite = false);
+	int CalcBuffDuration(Mob *caster, Mob *target, int32 spell_id, int32 caster_level_override = -1);
 	void SendPetBuffsToClient();
 	virtual int GetCurrentBuffSlots() const { return 0; }
 	virtual int GetCurrentSongSlots() const { return 0; }
@@ -477,14 +477,14 @@ public:
 	void DamageShield(Mob* other, bool spell_ds = false);
 	int32 RuneAbsorb(int64 damage, uint16 type);
 	std::vector<uint16> GetBuffSpellIDs();
-	bool FindBuff(uint16 spell_id, uint16 caster_id = 0);
+	bool FindBuff(int32 spell_id, uint16 caster_id = 0);
 	uint16 FindBuffBySlot(int slot);
 	uint32 BuffCount(bool is_beneficial = true, bool is_detrimental = true);
 	bool FindType(uint16 type, bool bOffensive = false, uint16 threshold = 100);
 	int16 GetBuffSlotFromType(uint16 type);
-	uint16 GetSpellIDFromSlot(uint8 slot);
+	int32 GetSpellIDFromSlot(uint8 slot);
 	int CountDispellableBuffs();
-	void CheckNumHitsRemaining(NumHit type, int32 buff_slot = -1, uint16 spell_id = SPELL_UNKNOWN);
+	void CheckNumHitsRemaining(NumHit type, int32 buff_slot = -1, int32 spell_id = SPELL_UNKNOWN);
 	bool HasNumhits() const { return has_numhits; }
 	inline void Numhits(bool val) { has_numhits = val; }
 	bool HasMGB() const { return has_MGB; }
@@ -547,12 +547,12 @@ public:
 	bool CanClassEquipItem(uint32 item_id);
 	bool CanRaceEquipItem(uint32 item_id);
 	bool AffectedBySpellExcludingSlot(int slot, int effect);
-	virtual bool Death(Mob* killer_mob, int64 damage, uint16 spell_id, EQ::skills::SkillType attack_skill, KilledByTypes killed_by = KilledByTypes::Killed_NPC, bool is_buff_tic = false) = 0;
-	virtual void Damage(Mob* from, int64 damage, uint16 spell_id, EQ::skills::SkillType attack_skill,
+	virtual bool Death(Mob* killer_mob, int64 damage, int32 spell_id, EQ::skills::SkillType attack_skill, KilledByTypes killed_by = KilledByTypes::Killed_NPC, bool is_buff_tic = false) = 0;
+	virtual void Damage(Mob* from, int64 damage, int32 spell_id, EQ::skills::SkillType attack_skill,
 		bool avoidable = true, int8 buffslot = -1, bool iBuffTic = false, eSpecialAttacks special = eSpecialAttacks::None) = 0;
 	void SetHP(int64 hp);
 	inline void SetOOCRegen(int64 new_ooc_regen) { ooc_regen = new_ooc_regen; }
-	virtual void HealDamage(uint64 ammount, Mob* caster = nullptr, uint16 spell_id = SPELL_UNKNOWN);
+	virtual void HealDamage(uint64 ammount, Mob* caster = nullptr, int32 spell_id = SPELL_UNKNOWN);
 	virtual void SetMaxHP() { current_hp = max_hp; }
 	virtual inline uint16 GetBaseRace() const { return base_race; }
 	virtual inline uint8 GetBaseGender() const { return base_gender; }
@@ -755,7 +755,7 @@ public:
 	static uint32 GetLevelCon(uint8 mylevel, uint8 iOtherLevel);
 	inline uint32 GetLevelCon(uint8 iOtherLevel) const { return GetLevelCon(GetLevel(), iOtherLevel); }
 	void AddToHateList(Mob* other, int64 hate = 0, int64 damage = 0, bool iYellForHelp = true,
-		bool bFrenzy = false, bool iBuffTic = false, uint16 spell_id = SPELL_UNKNOWN, bool pet_comand = false);
+		bool bFrenzy = false, bool iBuffTic = false, int32 spell_id = SPELL_UNKNOWN, bool pet_comand = false);
 	bool RemoveFromHateList(Mob* mob);
 	void SetHateAmountOnEnt(Mob* other, int64 hate = 0, int64 damage = 0) { hate_list.SetHateAmountOnEnt(other,hate,damage);}
 	void HalveAggro(Mob *other) { int64 in_hate = GetHateAmount(other); SetHateAmountOnEnt(other, (in_hate > 1 ? in_hate / 2 : 1)); }
@@ -851,8 +851,8 @@ public:
 	static uint8 GetDefaultGender(uint16 in_race, uint8 in_gender = 0xFF);
 	EQ::skills::SkillType GetSkillByItemType(int ItemType);
 	uint8 GetItemTypeBySkill(EQ::skills::SkillType skill);
-	virtual void MakePet(uint16 spell_id, const char* pettype, const char *petname = nullptr);
-	virtual void MakePoweredPet(uint16 spell_id, const char* pettype, int16 petpower, const char *petname = nullptr, float in_size = 0.0f);
+	virtual void MakePet(int32 spell_id, const char* pettype, const char *petname = nullptr);
+	virtual void MakePoweredPet(int32 spell_id, const char* pettype, int16 petpower, const char *petname = nullptr, float in_size = 0.0f);
 	bool IsWarriorClass() const;
 	bool IsIntelligenceCasterClass() const;
 	bool IsPureMeleeClass() const;
@@ -868,7 +868,7 @@ public:
 	virtual int GetKillExpMod() const { return 100; }
 
 	// aura functions
-	void MakeAura(uint16 spell_id);
+	void MakeAura(int32 spell_id);
 	inline int GetAuraSlots() { return 1 + aabonuses.aura_slots + itembonuses.aura_slots + spellbonuses.aura_slots; }
 	inline int GetTrapSlots() { return 1 + aabonuses.trap_slots + itembonuses.trap_slots + spellbonuses.trap_slots; }
 	inline bool HasFreeAuraSlots() { return aura_mgr.count < GetAuraSlots(); }
@@ -882,18 +882,18 @@ public:
 
 	//Procs
 	void TriggerDefensiveProcs(Mob *on, uint16 hand = EQ::invslot::slotPrimary, bool FromSkillProc = false, int64 damage = 0);
-	bool AddRangedProc(uint16 spell_id, uint16 iChance = 3, uint16 base_spell_id = SPELL_UNKNOWN, uint32 proc_reuse_time = 0);
-	bool RemoveRangedProc(uint16 spell_id, bool bAll = false);
+	bool AddRangedProc(int32 spell_id, uint16 iChance = 3, int32 base_spell_id = SPELL_UNKNOWN, uint32 proc_reuse_time = 0);
+	bool RemoveRangedProc(int32 spell_id, bool bAll = false);
 	bool HasRangedProcs() const;
-	bool AddDefensiveProc(uint16 spell_id, uint16 iChance = 3, uint16 base_spell_id = SPELL_UNKNOWN, uint32 proc_reuse_time = 0);
-	bool RemoveDefensiveProc(uint16 spell_id, bool bAll = false);
+	bool AddDefensiveProc(int32 spell_id, uint16 iChance = 3, int32 base_spell_id = SPELL_UNKNOWN, uint32 proc_reuse_time = 0);
+	bool RemoveDefensiveProc(int32 spell_id, bool bAll = false);
 	bool HasDefensiveProcs() const;
 	bool HasSkillProcs() const;
 	bool HasSkillProcSuccess() const;
-	bool AddProcToWeapon(uint16 spell_id, bool bPerma = false, uint16 iChance = 3, uint16 base_spell_id = SPELL_UNKNOWN, int level_override = -1, uint32 proc_reuse_time = 0);
-	bool RemoveProcFromWeapon(uint16 spell_id, bool bAll = false);
+	bool AddProcToWeapon(int32 spell_id, bool bPerma = false, uint16 iChance = 3, int32 base_spell_id = SPELL_UNKNOWN, int level_override = -1, uint32 proc_reuse_time = 0);
+	bool RemoveProcFromWeapon(int32 spell_id, bool bAll = false);
 	bool HasProcs() const;
-	bool IsCombatProc(uint16 spell_id);
+	bool IsCombatProc(int32 spell_id);
 
 	//More stuff to sort:
 	virtual bool IsRaidTarget() const { return false; };
@@ -935,8 +935,8 @@ public:
 	void QuestJournalledSay(Client *QuestInitiator, const char *str, Journal::Options &opts);
 	const int GetItemStat(uint32 item_id, std::string identifier);
 
-	int64 CalcFocusEffect(focusType type, uint16 focus_id, uint16 spell_id, bool best_focus=false, uint16 casterid = 0, Mob *caster = nullptr);
-	uint8 IsFocusEffect(uint16 spellid, int effect_index, bool AA=false,uint32 aa_effect=0);
+	int64 CalcFocusEffect(focusType type, uint16 focus_id, int32 spell_id, bool best_focus=false, uint16 casterid = 0, Mob *caster = nullptr);
+	uint8 IsFocusEffect(int32 spellid, int effect_index, bool AA=false,uint32 aa_effect=0);
 	void SendIllusionPacket(const AppearanceStruct& a);
 	void CloneAppearance(Mob* other, bool clone_name = false);
 	void SetFaceAppearance(const FaceChange_Struct& face, bool skip_sender = false);
@@ -945,38 +945,38 @@ public:
 	virtual void UnStun();
 	inline void Silence(bool newval) { silenced = newval; }
 	inline void Amnesia(bool newval) { amnesiad = newval; }
-	void TemporaryPets(uint16 spell_id, Mob *target, const char *name_override = nullptr, uint32 duration_override = 0, bool followme=true, bool sticktarg=false, uint16 *controlled_pet_id = nullptr);
+	void TemporaryPets(int32 spell_id, Mob *target, const char *name_override = nullptr, uint32 duration_override = 0, bool followme=true, bool sticktarg=false, uint16 *controlled_pet_id = nullptr);
 	void TypesTemporaryPets(uint32 typesid, Mob *target, const char *name_override = nullptr, uint32 duration_override = 0, bool followme=true, bool sticktarg=false);
-	void WakeTheDead(uint16 spell_id, Corpse *corpse_to_use, Mob *target, uint32 duration);
+	void WakeTheDead(int32 spell_id, Corpse *corpse_to_use, Mob *target, uint32 duration);
 	void Spin();
 	void Kill();
-	bool PassCharismaCheck(Mob* caster, uint16 spell_id);
+	bool PassCharismaCheck(Mob* caster, int32 spell_id);
 	bool TryDeathSave();
 	bool TryDivineSave();
-	void TryTriggerOnCastFocusEffect(focusType type, uint16 spell_id);
-	bool TryTriggerOnCastProc(uint16 focusspellid, uint16 spell_id, uint16 proc_spellid);
-	bool TrySpellTrigger(Mob *target, uint32 spell_id, int effect);
+	void TryTriggerOnCastFocusEffect(focusType type, int32 spell_id);
+	bool TryTriggerOnCastProc(int32 focusspellid, int32 spell_id, int32 proc_spellid);
+	bool TrySpellTrigger(Mob *target, int32 spell_id, int effect);
 	void TryTriggerOnCastRequirement();
-	void TryTwincast(Mob *caster, Mob *target, uint32 spell_id);
-	void TrySympatheticProc(Mob *target, uint32 spell_id);
-	uint16 GetSympatheticFocusEffect(focusType type, uint16 spell_id);
+	void TryTwincast(Mob *caster, Mob *target, int32 spell_id);
+	void TrySympatheticProc(Mob *target, int32 spell_id);
+	int32 GetSympatheticFocusEffect(focusType type, int32 spell_id);
 	bool TryFadeEffect(int slot);
-	void DispelMagic(Mob* casterm, uint16 spell_id, int effect_value);
-	bool TrySpellEffectResist(uint16 spell_id);
-	int32 GetVulnerability(Mob *caster, uint32 spell_id, uint32 ticsremaining, bool from_buff_tic = false);
+	void DispelMagic(Mob* casterm, int32 spell_id, int effect_value);
+	bool TrySpellEffectResist(int32 spell_id);
+	int32 GetVulnerability(Mob *caster, int32 spell_id, uint32 ticsremaining, bool from_buff_tic = false);
 	int64 GetFcDamageAmtIncoming(Mob *caster, int32 spell_id, bool from_buff_tic = false);
-	int64 GetFocusIncoming(focusType type, int effect, Mob *caster, uint32 spell_id); //**** This can be removed when bot healing focus code is updated ****
+	int64 GetFocusIncoming(focusType type, int effect, Mob *caster, int32 spell_id); //**** This can be removed when bot healing focus code is updated ****
 	int32 GetSkillDmgTaken(const EQ::skills::SkillType skill_used, ExtraAttackOptions *opts = nullptr);
 	int32 GetPositionalDmgTaken(Mob *attacker);
 	int32 GetPositionalDmgTakenAmt(Mob *attacker);
 	void DoKnockback(Mob *caster, uint32 push_back, uint32 push_up);
 	int16 CalcResistChanceBonus();
 	int16 CalcFearResistChance();
-	void TrySpellOnKill(uint8 level, uint16 spell_id);
+	void TrySpellOnKill(uint8 level, int32 spell_id);
 	bool TrySpellOnDeath();
-	void CastOnCurer(uint32 spell_id);
-	void CastOnCure(uint32 spell_id);
-	void CastOnNumHitFade(uint32 spell_id);
+	void CastOnCurer(int32 spell_id);
+	void CastOnCure(int32 spell_id);
+	void CastOnNumHitFade(int32 spell_id);
 	void SlowMitigation(Mob* caster);
 	int16 GetCritDmgMod(uint16 skill, Mob* owner = nullptr);
 	int16 GetMeleeDamageMod_SE(uint16 skill);
@@ -989,18 +989,18 @@ public:
 	int16 GetPositionalDmgAmt(Mob* defender);
 	inline bool CanBlockSpell() const { return(spellbonuses.FocusEffects[focusBlockNextSpell]); }
 	bool DoHPToManaCovert(int32 mana_cost = 0);
-	int8 GetDecayEffectValue(uint16 spell_id, uint16 spelleffect);
-	int64 GetExtraSpellAmt(uint16 spell_id, int64 extra_spell_amt, int64 base_spell_dmg);
+	int8 GetDecayEffectValue(int32 spell_id, uint16 spelleffect);
+	int64 GetExtraSpellAmt(int32 spell_id, int64 extra_spell_amt, int64 base_spell_dmg);
 	void MeleeLifeTap(int64 damage);
 	bool PassCastRestriction(int value);
 	void SendCastRestrictionMessage(int requirement_id, bool is_target_requirement = true, bool is_discipline = false);
 	bool ImprovedTaunt();
 	bool TryRootFadeByDamage(int buffslot, Mob* attacker);
 	float GetSlowMitigation() const { return slow_mitigation; }
-	void CalcSpellPowerDistanceMod(uint16 spell_id, float range, Mob* caster = nullptr);
+	void CalcSpellPowerDistanceMod(int32 spell_id, float range, Mob* caster = nullptr);
 	inline int16 GetSpellPowerDistanceMod() const { return SpellPowerDistanceMod; };
 	inline void SetSpellPowerDistanceMod(int16 value) { SpellPowerDistanceMod = value; };
-	int32 GetSpellStat(uint32 spell_id, const char *identifier, uint8 slot = 0);
+	int32 GetSpellStat(int32 spell_id, const char *identifier, uint8 slot = 0);
 	bool HarmonySpellLevelCheck(int32 spell_id, Mob* target = nullptr);
 	bool PassCharmTargetRestriction(Mob *target);
 	bool CanFocusUseRandomEffectivenessByType(focusType type);
@@ -1156,7 +1156,7 @@ public:
 	inline bool IsAmnesiad() const { return amnesiad; }
 
 	int64 ReduceDamage(int64 damage);
-	int64 AffectMagicalDamage(int64 damage, uint16 spell_id, const bool iBuffTic, Mob* attacker);
+	int64 AffectMagicalDamage(int64 damage, int32 spell_id, const bool iBuffTic, Mob* attacker);
 	int64 ReduceAllDamage(int64 damage);
 
 	void DoSpecialAttackDamage(Mob *who, EQ::skills::SkillType skill, int base_damage, int min_damage = 0, int32 hate_override = -1, int ReuseTime = 10);
@@ -1298,13 +1298,13 @@ public:
 	static uint32 GetLevelHP(uint8 tlevel);
 	uint32 GetZoneID() const; //for perl
 	uint16 GetInstanceVersion() const; //for perl
-	virtual int32 CheckAggroAmount(uint16 spell_id, Mob *target, bool isproc = false);
-	virtual int32 CheckHealAggroAmount(uint16 spell_id, Mob *target, uint32 heal_possible = 0);
+	virtual int32 CheckAggroAmount(int32 spell_id, Mob *target, bool isproc = false);
+	virtual int32 CheckHealAggroAmount(int32 spell_id, Mob *target, uint32 heal_possible = 0);
 
-	uint32 GetInstrumentMod(uint16 spell_id);
-	int64 CalcSpellEffectValue(uint16 spell_id, int effect_id, int caster_level = 1, uint32 instrument_mod = 10, Mob *caster = nullptr, int ticsremaining = 0,uint16 casterid=0);
-	int64 CalcSpellEffectValue_formula(uint32 formula, int64 base_value, int64 max_value, int caster_level, uint16 spell_id, int ticsremaining = 0);
-	virtual int CheckStackConflict(uint16 spellid1, int caster_level1, uint16 spellid2, int caster_level2, Mob* caster1 = nullptr, Mob* caster2 = nullptr, int buffslot = -1);
+	uint32 GetInstrumentMod(int32 spell_id);
+	int64 CalcSpellEffectValue(int32 spell_id, int effect_id, int caster_level = 1, uint32 instrument_mod = 10, Mob *caster = nullptr, int ticsremaining = 0,uint16 casterid=0);
+	int64 CalcSpellEffectValue_formula(uint32 formula, int64 base_value, int64 max_value, int caster_level, int32 spell_id, int ticsremaining = 0);
+	virtual int CheckStackConflict(int32 spellid1, int caster_level1, int32 spellid2, int caster_level2, Mob* caster1 = nullptr, Mob* caster2 = nullptr, int buffslot = -1);
 	uint32 GetCastedSpellInvSlot() const { return casting_spell_inventory_slot; }
 
 	// HP Event
@@ -1438,7 +1438,7 @@ public:
 	int GetAlternateAdvancementCooldownReduction(AA::Rank *rank_in);
 	void ExpendAlternateAdvancementCharge(uint32 aa_id);
 	void CalcAABonuses(StatBonuses* newbon);
-	int64 CalcAAFocus(focusType type, const AA::Rank &rank, uint16 spell_id);
+	int64 CalcAAFocus(focusType type, const AA::Rank &rank, int32 spell_id);
 	void ApplyAABonuses(const AA::Rank &rank, StatBonuses* newbon);
 	bool CheckAATimer(int timer);
 
@@ -1515,8 +1515,8 @@ public:
 	bool IsDestroying() const { return m_destroying; }
 
 protected:
-	void CommonDamage(Mob* other, int64 &damage, const uint16 spell_id, const EQ::skills::SkillType attack_skill, bool &avoidable, const int8 buffslot, const bool iBuffTic, eSpecialAttacks specal = eSpecialAttacks::None);
-	static uint16 GetProcID(uint16 spell_id, uint8 effect_index);
+	void CommonDamage(Mob* other, int64 &damage, const int32 spell_id, const EQ::skills::SkillType attack_skill, bool &avoidable, const int8 buffslot, const bool iBuffTic, eSpecialAttacks specal = eSpecialAttacks::None);
+	static int32 GetProcID(int32 spell_id, uint8 effect_index);
 	int _GetWalkSpeed() const;
 	int _GetRunSpeed() const;
 	int _GetFearSpeed() const;
@@ -1652,21 +1652,21 @@ protected:
 	void TryWeaponProc(const EQ::ItemInstance* inst, const EQ::ItemData* weapon, Mob *on, uint16 hand = EQ::invslot::slotPrimary);
 	void TrySpellProc(const EQ::ItemInstance* inst, const EQ::ItemData* weapon, Mob *on, uint16 hand = EQ::invslot::slotPrimary);
 	void TryCombatProcs(const EQ::ItemInstance* weapon, Mob *on, uint16 hand = EQ::invslot::slotPrimary, const EQ::ItemData* weapon_data = nullptr);
-	void ExecWeaponProc(const EQ::ItemInstance* weapon, uint16 spell_id, Mob *on, int level_override = -1);
+	void ExecWeaponProc(const EQ::ItemInstance* weapon, int32 spell_id, Mob *on, int level_override = -1);
 	virtual float GetProcChances(float ProcBonus, uint16 hand = EQ::invslot::slotPrimary);
 	virtual float GetDefensiveProcChances(float &ProcBonus, float &ProcChance, uint16 hand = EQ::invslot::slotPrimary, Mob *on = nullptr);
 	virtual float GetSkillProcChances(uint16 ReuseTime, uint16 hand = 0); // hand = MainCharm?
 	uint16 GetWeaponSpeedbyHand(uint16 hand);
 	virtual int GetBaseSkillDamage(EQ::skills::SkillType skill, Mob *target = nullptr);
-	virtual int64 GetFocusEffect(focusType type, uint16 spell_id, Mob *caster = nullptr, bool from_buff_tic = false);
+	virtual int64 GetFocusEffect(focusType type, int32 spell_id, Mob *caster = nullptr, bool from_buff_tic = false);
 	virtual EQ::InventoryProfile& GetInv() { return m_inv; }
 	void CalculateNewFearpoint();
 	float FindGroundZ(float new_x, float new_y, float z_offset=0.0);
 	float FindDestGroundZ(glm::vec3 dest, float z_offset=0.0);
 
-	virtual float GetSympatheticProcChances(uint16 spell_id, int16 ProcRateMod, int32 ItemProcRate = 0);
-	int16 GetSympatheticSpellProcRate(uint16 spell_id);
-	uint16 GetSympatheticSpellProcID(uint16 spell_id);
+	virtual float GetSympatheticProcChances(int32 spell_id, int16 ProcRateMod, int32 ItemProcRate = 0);
+	int16 GetSympatheticSpellProcRate(int32 spell_id);
+	int32 GetSympatheticSpellProcID(int32 spell_id);
 
 	enum {MAX_PROCS = 10};
 	tProc PermaProcs[MAX_PROCS];
@@ -1724,7 +1724,7 @@ protected:
 
 	//spell casting vars
 	Timer spellend_timer;
-	uint16 casting_spell_id;
+	int32 casting_spell_id;
 	glm::vec3 m_SpellLocation;
 	int attacked_count;
 	bool delaytimer;
@@ -1945,6 +1945,6 @@ private:
 	void SetHeroicIntBonuses(StatBonuses* n);
 	void SetHeroicWisBonuses(StatBonuses* n);
 
-	void DoSpellInterrupt(uint16 spell_id, int32 mana_cost, int my_curmana);
+	void DoSpellInterrupt(int32 spell_id, int32 mana_cost, int my_curmana);
 	void HandleDoorOpen();
 };

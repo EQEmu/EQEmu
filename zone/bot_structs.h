@@ -33,7 +33,7 @@ struct BotsAvailableList {
 };
 
 struct BotSpell {
-	uint16 SpellId;
+	int32 SpellId;
 	int SpellIndex;
 	int16 ManaCost;
 };
@@ -64,7 +64,7 @@ struct BotSpellSetting {
 
 struct BotSpells {
 	uint32		type;			// 0 = never, must be one (and only one) of the defined values
-	uint16		spellid;		// <= 0 = no spell
+	int32 spellid;		// <= 0 = no spell
 	int16		manacost;		// -1 = use spdat, -2 = no cast time
 	uint32		time_cancast;	// when we can cast this spell next
 	int32		recast_delay;
@@ -82,7 +82,7 @@ struct BotSpells {
 struct BotSpells_wIndex {
 	uint32		index;			//index of AIBot_spells
 	uint32		type;			// 0 = never, must be one (and only one) of the defined values
-	uint16		spellid;		// <= 0 = no spell
+	int32 spellid;		// <= 0 = no spell
 	int16		manacost;		// -1 = use spdat, -2 = no cast time
 	uint32		time_cancast;	// when we can cast this spell next
 	int32		recast_delay;
@@ -103,7 +103,7 @@ struct BotTimer {
 	uint32		recast_time;
 	bool		is_spell;
 	bool		is_disc;
-	uint16		spell_id;
+	int32 spell_id;
 	bool		is_item;
 	uint32		item_id;
 };
@@ -138,7 +138,7 @@ struct BotSpellTypeOrder {
 
 struct BotBlockedBuffs {
 	uint32_t	bot_id;
-	uint32_t	spell_id;
+	int32_t spell_id;
 	uint8_t		blocked;
 	uint8_t		blocked_pet;
 };

@@ -1221,7 +1221,7 @@ bool ZoneDatabase::SaveCharacterCurrency(uint32 character_id, PlayerProfile_Stru
 	);
 }
 
-bool ZoneDatabase::SaveCharacterMemorizedSpell(uint32 character_id, uint32 spell_id, uint32 slot_id){
+bool ZoneDatabase::SaveCharacterMemorizedSpell(uint32 character_id, int32 spell_id, uint32 slot_id){
 	if (!IsValidSpell(spell_id)) {
 		return false;
 	}
@@ -1231,12 +1231,12 @@ bool ZoneDatabase::SaveCharacterMemorizedSpell(uint32 character_id, uint32 spell
 		CharacterMemmedSpellsRepository::CharacterMemmedSpells{
 			.id = character_id,
 			.slot_id = static_cast<uint16_t>(slot_id),
-			.spell_id = static_cast<uint16_t>(spell_id)
+			.spell_id = spell_id
 		}
 	);
 }
 
-bool ZoneDatabase::SaveCharacterSpell(uint32 character_id, uint32 spell_id, uint32 slot_id)
+bool ZoneDatabase::SaveCharacterSpell(uint32 character_id, int32 spell_id, uint32 slot_id)
 {
 	if (!IsValidSpell(spell_id)) {
 		return false;
@@ -1247,7 +1247,7 @@ bool ZoneDatabase::SaveCharacterSpell(uint32 character_id, uint32 spell_id, uint
 		CharacterSpellsRepository::CharacterSpells{
 			.id = character_id,
 			.slot_id = static_cast<uint16_t>(slot_id),
-			.spell_id = static_cast<uint16_t>(spell_id)
+			.spell_id = spell_id
 		}
 	);
 }

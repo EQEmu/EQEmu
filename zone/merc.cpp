@@ -1568,7 +1568,7 @@ bool EntityList::Merc_AICheckCloseBeneficialSpells(Merc* caster, uint8 iChance, 
 	return false;
 }
 
-bool Merc::AIDoSpellCast(uint16 spellid, Mob* tar, int32 mana_cost, uint32* oDontDoAgainBefore) {
+bool Merc::AIDoSpellCast(int32 spellid, Mob* tar, int32 mana_cost, uint32* oDontDoAgainBefore) {
 	bool result = false;
 	MercSpell mercSpell = GetMercSpellBySpellID(this, spellid);
 
@@ -2136,7 +2136,7 @@ bool Merc::HasOrMayGetAggro() {
 	return mayGetAggro;
 }
 
-bool Merc::CheckAENuke(Merc* caster, Mob* tar, uint16 spell_id, uint8 &numTargets) {
+bool Merc::CheckAENuke(Merc* caster, Mob* tar, int32 spell_id, uint8 &numTargets) {
 	std::list<NPC*> npc_list;
 	entity_list.GetNPCList(npc_list);
 
@@ -2160,7 +2160,7 @@ bool Merc::CheckAENuke(Merc* caster, Mob* tar, uint16 spell_id, uint8 &numTarget
 	return false;
 }
 
-int64 Merc::GetFocusEffect(focusType type, uint16 spell_id, bool from_buff_tic) {
+int64 Merc::GetFocusEffect(focusType type, int32 spell_id, bool from_buff_tic) {
 
 	int32 realTotal = 0;
 	int32 realTotal2 = 0;
@@ -2526,7 +2526,7 @@ MercSpell Merc::GetFirstMercSpellBySpellType(Merc* caster, uint32 spellType) {
 	return result;
 }
 
-MercSpell Merc::GetMercSpellBySpellID(Merc* caster, uint16 spellid) {
+MercSpell Merc::GetMercSpellBySpellID(Merc* caster, int32 spellid) {
 	MercSpell result;
 
 	result.spellid = 0;
@@ -3596,7 +3596,7 @@ bool Merc::UseDiscipline(int32 spell_id, int32 target) {
 	return(true);
 }
 
-void Merc::SetSpellRecastTimer(uint16 timer_id, uint16 spellid, uint32 recast_delay) {
+void Merc::SetSpellRecastTimer(uint16 timer_id, int32 spellid, uint32 recast_delay) {
 	if(timer_id > 0) {
 		MercTimer timer;
 		timer.timerid = timer_id;
@@ -3617,7 +3617,7 @@ int32 Merc::GetSpellRecastTimer(Merc *caster, uint16 timer_id) {
 	return result;
 }
 
-bool Merc::CheckSpellRecastTimers(Merc *caster, uint16 spell_id) {
+bool Merc::CheckSpellRecastTimers(Merc *caster, int32 spell_id) {
 	if(caster) {
 		MercSpell mercSpell = GetMercSpellBySpellID(caster, spell_id);
 		if(mercSpell.spellid > 0 && mercSpell.time_cancast < Timer::GetCurrentTime()) { //checks spell recast
@@ -3629,7 +3629,7 @@ bool Merc::CheckSpellRecastTimers(Merc *caster, uint16 spell_id) {
 	return false;
 }
 
-void Merc::SetDisciplineRecastTimer(uint16 timer_id, uint16 spellid, uint32 recast_delay) {
+void Merc::SetDisciplineRecastTimer(uint16 timer_id, int32 spellid, uint32 recast_delay) {
 	if(timer_id > 0) {
 		MercTimer timer;
 		timer.timerid = timer_id;
@@ -3660,7 +3660,7 @@ int32 Merc::GetDisciplineRemainingTime(Merc *caster, uint16 timer_id) {
 	return result;
 }
 
-bool Merc::CheckDisciplineRecastTimers(Merc *caster, uint16 spell_id, uint16 timer_id) {
+bool Merc::CheckDisciplineRecastTimers(Merc *caster, int32 spell_id, uint16 timer_id) {
 	if(caster) {
 		MercSpell mercSpell = GetMercSpellBySpellID(caster, spell_id);
 		if(mercSpell.spellid > 0 && mercSpell.time_cancast < Timer::GetCurrentTime()) { //checks spell recast
@@ -3673,7 +3673,7 @@ bool Merc::CheckDisciplineRecastTimers(Merc *caster, uint16 spell_id, uint16 tim
 	return false;
 }
 
-void Merc::SetSpellTimeCanCast(uint16 spellid, uint32 recast_delay) {
+void Merc::SetSpellTimeCanCast(int32 spellid, uint32 recast_delay) {
 	for (int i = 0; i < merc_spells.size(); i++) {
 		if(merc_spells[i].spellid == spellid) {
 			merc_spells[i].time_cancast = Timer::GetCurrentTime() + recast_delay;
@@ -4046,7 +4046,7 @@ bool Merc::Attack(Mob* other, int Hand, bool bRiposte, bool IsStrikethrough, boo
 	return NPC::Attack(other, Hand, bRiposte, IsStrikethrough, IsFromSpell, opts);
 }
 
-void Merc::Damage(Mob* other, int64 damage, uint16 spell_id, EQ::skills::SkillType attack_skill, bool avoidable, int8 buffslot, bool iBuffTic, eSpecialAttacks special)
+void Merc::Damage(Mob* other, int64 damage, int32 spell_id, EQ::skills::SkillType attack_skill, bool avoidable, int8 buffslot, bool iBuffTic, eSpecialAttacks special)
 {
 	if(IsDead() || IsCorpse())
 		return;
@@ -4087,7 +4087,7 @@ Mob* Merc::GetOwnerOrSelf() {
 	return Result;
 }
 
-bool Merc::Death(Mob* killer_mob, int64 damage, uint16 spell, EQ::skills::SkillType attack_skill, uint8 killed_by, bool is_buff_tic)
+bool Merc::Death(Mob* killer_mob, int64 damage, int32 spell, EQ::skills::SkillType attack_skill, uint8 killed_by, bool is_buff_tic)
 {
 	if (!NPC::Death(killer_mob, damage, spell, attack_skill)) {
 		return false;

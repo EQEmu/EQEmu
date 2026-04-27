@@ -63,7 +63,7 @@ public:
 
 	bool HasQuestSub(uint32 npc_id, QuestEventID event_id);
 	bool PlayerHasQuestSub(QuestEventID event_id);
-	bool SpellHasQuestSub(uint32 spell_id, QuestEventID event_id);
+	bool SpellHasQuestSub(int32 spell_id, QuestEventID event_id);
 	bool ItemHasQuestSub(EQ::ItemInstance* inst, QuestEventID event_id);
 	bool BotHasQuestSub(QuestEventID event_id);
 	bool MercHasQuestSub(QuestEventID event_id);
@@ -100,7 +100,7 @@ public:
 		QuestEventID event_id,
 		Mob* mob,
 		Client* client,
-		uint32 spell_id,
+		int32 spell_id,
 		std::string data,
 		uint32 extra_data,
 		std::vector<std::any>* extra_pointers = nullptr
@@ -206,7 +206,7 @@ private:
 	bool PlayerHasQuestSubLocal(QuestEventID event_id);
 	bool PlayerHasQuestSubGlobal(QuestEventID event_id);
 	bool PlayerHasEncounterSub(QuestEventID event_id);
-	bool SpellHasEncounterSub(uint32 spell_id, QuestEventID event_id);
+	bool SpellHasEncounterSub(int32 spell_id, QuestEventID event_id);
 	bool ItemHasEncounterSub(EQ::ItemInstance* inst, QuestEventID event_id);
 	bool HasEncounterSub(QuestEventID event_id, const std::string& package_name);
 	bool BotHasQuestSubLocal(QuestEventID event_id);
@@ -306,7 +306,7 @@ private:
 	QuestInterface* GetQIByGlobalNPCQuest(std::string& filename);
 	QuestInterface* GetQIByPlayerQuest(std::string& filename);
 	QuestInterface* GetQIByGlobalPlayerQuest(std::string& filename);
-	QuestInterface* GetQIBySpellQuest(uint32 spell_id, std::string& filename);
+	QuestInterface* GetQIBySpellQuest(int32 spell_id, std::string& filename);
 	QuestInterface* GetQIByItemQuest(std::string item_script, std::string& filename);
 	QuestInterface* GetQIByEncounterQuest(std::string encounter_name, std::string& filename);
 	QuestInterface* GetQIByBotQuest(std::string& filename);
@@ -347,7 +347,7 @@ private:
 		QuestEventID event_id,
 		Mob* mob,
 		Client* client,
-		uint32 spell_id,
+		int32 spell_id,
 		std::string data,
 		uint32 extra_data,
 		std::vector<std::any>* extra_pointers

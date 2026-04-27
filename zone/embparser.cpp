@@ -527,7 +527,7 @@ int PerlembParser::EventSpell(
 	QuestEventID event_id,
 	Mob* mob,
 	Client* client,
-	uint32 spell_id,
+	int32 spell_id,
 	std::string data,
 	uint32 extra_data,
 	std::vector<std::any>* extra_pointers
@@ -606,7 +606,7 @@ bool PerlembParser::GlobalPlayerHasQuestSub(QuestEventID event_id)
 	return perl->SubExists("qst_global_player", QuestEventSubroutines[event_id]);
 }
 
-bool PerlembParser::SpellHasQuestSub(uint32 spell_id, QuestEventID event_id)
+bool PerlembParser::SpellHasQuestSub(int32 spell_id, QuestEventID event_id)
 {
 	if (!perl || event_id >= _LargestEventID) {
 		return false;
@@ -786,7 +786,7 @@ void PerlembParser::LoadItemScript(std::string filename, EQ::ItemInstance* inst)
 	item_quest_status_[inst->GetID()] = questLoaded;
 }
 
-void PerlembParser::LoadSpellScript(std::string filename, uint32 spell_id)
+void PerlembParser::LoadSpellScript(std::string filename, int32 spell_id)
 {
 	if (!perl) {
 		return;
@@ -986,7 +986,7 @@ void PerlembParser::ExportVar(const char* prefix, const char* variable_name, con
 int PerlembParser::SendCommands(
 	const char* prefix,
 	const char* event_id,
-	uint32 object_id,
+	int32 object_id, // TODO: unused parameter? spell_id in header, object_id here
 	Mob* other,
 	Mob* mob,
 	EQ::ItemInstance* inst,
@@ -1917,8 +1917,8 @@ void PerlembParser::ExportEventVariables(
 
 		case EVENT_SPELL_BLOCKED: {
 			Seperator sep(data);
-			const uint32 blocking_spell_id = Strings::ToUnsignedInt(sep.arg[0]);
-			const uint32 cast_spell_id = Strings::ToUnsignedInt(sep.arg[1]);
+			const int32 blocking_spell_id = Strings::ToInt(sep.arg[0]);
+			const int32 cast_spell_id = Strings::ToInt(sep.arg[1]);
 
 			ExportVar(package_name.c_str(), "blocking_spell_id", blocking_spell_id);
 			ExportVar(package_name.c_str(), "cast_spell_id", cast_spell_id);

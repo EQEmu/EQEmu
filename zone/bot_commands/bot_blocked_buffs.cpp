@@ -87,7 +87,7 @@ void bot_command_blocked_buffs(Client* c, const Seperator* sep)
 	bool remove = false;
 	bool list = false;
 	bool wipe = false;
-	uint16 spell_id;
+	int32 spell_id;
 
 	if (!arg1.compare("add")) {
 		if (!sep->IsNumber(2) || !IsValidSpell(atoi(sep->arg[2])) || !IsBeneficialSpell(atoi(sep->arg[2]))) {
@@ -325,7 +325,7 @@ void bot_command_blocked_pet_buffs(Client* c, const Seperator* sep)
 	bool remove = false;
 	bool list = false;
 	bool wipe = false;
-	uint16 spell_id;
+	int32 spell_id;
 
 	if (!arg1.compare("add")) {
 		if (!sep->IsNumber(2) || !IsValidSpell(atoi(sep->arg[2])) || !IsBeneficialSpell(atoi(sep->arg[2]))) {

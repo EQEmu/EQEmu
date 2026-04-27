@@ -473,7 +473,7 @@ namespace UF
 		for (int i = 0; i < emu->count; ++i)
 		{
 			__packet->WriteUInt32(emu->type == 0 ? ServerToUFBuffSlot(emu->entries[i].buff_slot) : emu->entries[i].buff_slot);
-			__packet->WriteUInt32(emu->entries[i].spell_id);
+			__packet->WriteSInt32 (emu->entries[i].spell_id);
 			__packet->WriteUInt32(emu->entries[i].tics_remaining);
 			__packet->WriteUInt32(emu->entries[i].num_hits);
 			__packet->WriteString(emu->entries[i].caster);

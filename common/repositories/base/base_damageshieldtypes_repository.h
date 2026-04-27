@@ -36,7 +36,7 @@
 class BaseDamageshieldtypesRepository {
 public:
 	struct Damageshieldtypes {
-		uint32_t spellid;
+		int32_t  spellid;
 		uint8_t  type;
 	};
 

@@ -1425,7 +1425,7 @@ struct CZSpell_Struct {
 	uint8  update_type; // 0 - Character, 1 - Group, 2 - Raid, 3 - Guild, 4 - Expedition, 5 - Character Name
 	uint8  update_subtype; // 0 - Cast Spell, 1 - Remove Spell
 	int    update_identifier; // Character ID, Group ID, Raid ID, Guild ID, or Expedition ID based on update type, 0 for Character Name
-	uint32 spell_id;
+	int32  spell_id;
 	char   client_name[64]; // Only used by Character Name Type, else empty
 };
 
@@ -1498,7 +1498,7 @@ struct WWSignal_Struct {
 
 struct WWSpell_Struct {
 	uint8  update_type; // 0 - Cast Spell, 1 - Remove Spell
-	uint32 spell_id;
+	int32  spell_id;
 	uint8  min_status;
 	uint8  max_status;
 };

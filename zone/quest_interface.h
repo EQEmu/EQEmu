@@ -94,7 +94,7 @@ public:
 		QuestEventID event_id,
 		Mob* mob,
 		Client* client,
-		uint32 spell_id,
+		int32 spell_id,
 		std::string data,
 		uint32 extra_data,
 		std::vector<std::any>* extra_pointers
@@ -204,7 +204,7 @@ public:
 		return false;
 	}
 
-	virtual bool SpellHasQuestSub(uint32 spell_id, QuestEventID event_id)
+	virtual bool SpellHasQuestSub(int32 spell_id, QuestEventID event_id)
 	{
 		return false;
 	}
@@ -259,7 +259,7 @@ public:
 	virtual void LoadPlayerScript(std::string filename) { }
 	virtual void LoadGlobalPlayerScript(std::string filename) { }
 	virtual void LoadItemScript(std::string filename, EQ::ItemInstance* inst) { }
-	virtual void LoadSpellScript(std::string filename, uint32 spell_id) { }
+	virtual void LoadSpellScript(std::string filename, int32 spell_id) { }
 	virtual void LoadEncounterScript(std::string filename, std::string encounter_name) { }
 	virtual void LoadBotScript(std::string filename) { }
 	virtual void LoadGlobalBotScript(std::string filename) { }
@@ -308,7 +308,7 @@ public:
 		QuestEventID event_id,
 		Mob* mob,
 		Client* client,
-		uint32 spell_id,
+		int32 spell_id,
 		std::string data,
 		uint32 extra_data,
 		std::vector<std::any>* extra_pointers

@@ -29,15 +29,15 @@ struct NewSpawn_Struct;
 
 class Horse : public NPC {
 public:
-	Horse(Client* c, uint16 spell_id, const glm::vec4& position);
+	Horse(Client* c, int32 spell_id, const glm::vec4& position);
 
 	virtual void FillSpawnStruct(NewSpawn_Struct* ns, Mob* m);
 
-	static bool IsHorseSpell(uint16 spell_id);
+	static bool IsHorseSpell(int32 spell_id);
 protected:
 	Client* owner;
 
 	static std::map<uint16, const NPCType*> horse_types;
-	static const NPCType* GetHorseType(uint16 spell_id);
-	static const NPCType* BuildHorseType(uint16 spell_id);
+	static const NPCType* GetHorseType(int32 spell_id);
+	static const NPCType* BuildHorseType(int32 spell_id);
 };

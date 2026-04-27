@@ -11,7 +11,7 @@ void Links::FormatItemLink(char* Buffer, size_t BufferSize, const EQ::ItemInstan
     // TODO: Reverse 0x14064B220 to get definition of this function
 }
 
-void Links::FormatSpellLink(char* Buffer, size_t BufferSize, uint32_t SpellID,
+void Links::FormatSpellLink(char* Buffer, size_t BufferSize, int32_t SpellID,
     const char* spellNameOverride)
 {
     snprintf(Buffer, BufferSize, "%c%d3^%d^0^'%s%c", ITEM_TAG_CHAR, ETAG_SPELL, SpellID,
