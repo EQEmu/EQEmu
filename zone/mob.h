@@ -472,8 +472,6 @@ public:
 	virtual uint32 GetLastBuffSlot(bool disc, bool song);
 	virtual void InitializeBuffSlots() { buffs = nullptr; }
 	virtual void UninitializeBuffSlots() { }
-	EQApplicationPacket *MakeBuffsPacket(bool for_target = true, bool clear_buffs = false);
-	void SendBuffsToClient(Client *c);
 	inline Buffs_Struct* GetBuffs() { return buffs; }
 	void DoGravityEffect();
 	void DamageShield(Mob* other, bool spell_ds = false);
@@ -1303,7 +1301,6 @@ public:
 	virtual int32 CheckAggroAmount(uint16 spell_id, Mob *target, bool isproc = false);
 	virtual int32 CheckHealAggroAmount(uint16 spell_id, Mob *target, uint32 heal_possible = 0);
 
-	//uint32 GetInstrumentMod(uint16 spell_id) const;
 	uint32 GetInstrumentMod(uint16 spell_id);
 	int64 CalcSpellEffectValue(uint16 spell_id, int effect_id, int caster_level = 1, uint32 instrument_mod = 10, Mob *caster = nullptr, int ticsremaining = 0,uint16 casterid=0);
 	int64 CalcSpellEffectValue_formula(uint32 formula, int64 base_value, int64 max_value, int caster_level, uint16 spell_id, int ticsremaining = 0);
@@ -1368,6 +1365,7 @@ public:
 	Timer* GetAIMovementTimer() { return AI_movement_timer.get(); }
 	Timer GetAttackTimer() { return attack_timer; }
 	Timer GetAttackDWTimer() { return attack_dw_timer; }
+	uint32 GetRemainingTicTime() const { return tic_timer.GetRemainingTime(); }
 	inline bool IsFindable() { return findable; }
 	inline uint8 GetManaPercent() { return (uint8)((float)current_mana / (float)max_mana * 100.0f); }
 	virtual uint8 GetEndurancePercent() { return 0; }

@@ -38,6 +38,8 @@
 #include <iostream>
 #include <sstream>
 
+#include "zone/mob.h"
+
 
 namespace UF
 {
@@ -5234,3 +5236,64 @@ namespace UF
 		return index; // as long as we guard against bad slots server side, we should be fine
 	}
 } /*UF*/
+
+namespace Buff {
+
+std::unique_ptr<EQApplicationPacket> UF::MakeLegacyBuffsPacket(Mob* mob, bool for_target, bool clear_buffs) const
+{
+	// UF introduced the self update buff packet
+
+	uint32 count = 0;
+	uint32 buff_count;
+
+	// for self we want all buffs, for target, we want to skip song window buffs
+	// since NPCs and pets don't have a song window, we still see it for them :P
+	if (for_target) {
+		buff_count = (clear_buffs) ? 0 : mob->GetMaxBuffSlots();
+	}
+	else {
+		buff_count = mob->GetMaxTotalSlots();
+	}
+
+	Buffs_Struct* buffs = mob->GetBuffs();
+
+	for(int i = 0; i < buff_count; ++i) {
+		if (buffs[i].spellid > 1) {
+			++count;
+		}
+	}
+
+	//Create it for a targeting window, else create it for a create buff packet.
+	auto outapp = std::make_unique<EQApplicationPacket>(for_target ? OP_RefreshTargetBuffs : OP_RefreshBuffs,
+		sizeof(BuffIcon_Struct) + sizeof(BuffIconEntry_Struct) * count);
+
+	BuffIcon_Struct *buff = (BuffIcon_Struct*)outapp->pBuffer;
+	buff->entity_id = mob->GetID();
+	buff->count = count;
+	buff->all_buffs = 1;
+	buff->tic_timer = mob->GetRemainingTicTime();
+	// there are more types, the client doesn't seem to really care though. The others are also currently hard to fill in here ...
+	// (see comment in common/eq_packet_structs.h)
+	if (for_target)
+		buff->type = mob->IsClient() ? 5 : 7;
+	else
+		buff->type = 0;
+
+	buff->name_lengths = 0; // hacky shit
+	uint32 index = 0;
+	for(int i = 0; i < buff_count; ++i) {
+		if (buffs[i].spellid > 1) {
+			buff->entries[index].buff_slot = i;
+			buff->entries[index].spell_id = buffs[i].spellid;
+			buff->entries[index].tics_remaining = buffs[i].ticsremaining;
+			buff->entries[index].num_hits = buffs[i].hit_number;
+			strn0cpy(buff->entries[index].caster, buffs[i].caster_name, 64);
+			buff->name_lengths += strlen(buff->entries[index].caster);
+			++index;
+		}
+	}
+
+	return outapp;
+}
+
+} // namespace Buff

@@ -65,14 +65,14 @@ public:
 	TOB() = default;
 	~TOB() override = default;
 
-	std::unique_ptr<EQApplicationPacket> MakeLegacyBuffsPacket(Mob* mob, int32_t timer, bool for_target,
-		bool clear_buffs) const override;
+	// std::unique_ptr<EQApplicationPacket> MakeLegacyBuffsPacket(Mob* mob, bool for_target,
+	// 	bool clear_buffs) const override;
 
 	std::unique_ptr<EQApplicationPacket>
 	BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot, bool fade) const override;
 	std::unique_ptr<EQApplicationPacket> RefreshBuffs(EmuOpcode opcode, Mob* mob, int32_t timer, bool remove,
 		bool buff_timers_suspended, const std::vector<uint32_t>& slots) const override;
-	void SetRefreshType(const std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const override;
+	void SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const override;
 };
 
 } // namespace Buff

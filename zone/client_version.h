@@ -18,6 +18,7 @@ namespace ClientPatch {
 
 using ClientList = std::unordered_map<uint16, Client*>;
 template<typename Obj> using ComponentGetter = std::function<Obj*(const Client*)>;
+using SendPredicate = std::function<bool(Client*)>;
 
 template <typename Fun, typename Obj, typename... Args>
 	requires std::is_member_function_pointer_v<Fun>
@@ -37,9 +38,8 @@ static auto QueueClients(Mob* sender, bool ignore_sender = false, bool ackreq = 
 			requires std::is_member_function_pointer_v<Fun>
 	{
 		std::array<std::unique_ptr<EQApplicationPacket>, EQ::versions::ClientVersionCount> build_packets;
-		std::unordered_map<uint16, Client*> client_list = entity_list.GetClientList();
 
-		for (auto [_, ent] : client_list) {
+		for (auto [_, ent] : entity_list.GetClientList()) {
 			if (!ignore_sender || ent != sender) {
 				auto& packet = build_packets.at(static_cast<uint32_t>(ent->ClientVersion()));
 				if (!packet)
@@ -106,66 +106,25 @@ static void FastQueuePacket(Client* c, Fun fun, Obj* obj, Args&&... args)
 	}
 }
 
-static auto QueueClientsByTarget(Mob* sender, bool iSendToSender, Mob* SkipThisMob, bool ackreq, bool HoTT,
-	uint32 ClientVersionBits, bool inspect_buffs, bool clear_target_window)
+static auto QueueClientsByTarget(Mob* sender, bool ackreq, bool HoTT, const SendPredicate& ShouldSend)
 {
 	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun, const ComponentGetter<Obj> component, Args&&... args)
 			requires std::is_member_function_pointer_v<Fun>
 	{
-		std::unordered_map<EQ::versions::ClientVersion, EQApplicationPacket*> build_packets;
-		std::unordered_map<uint16, Client*> client_list = entity_list.GetClientList();
+		if (sender != nullptr) {
+			std::array<std::unique_ptr<EQApplicationPacket>, EQ::versions::ClientVersionCount> build_packets;
 
-		for (auto [_, c] : client_list) {
-			if (c != SkipThisMob && (iSendToSender || c != sender)) {
-				Mob* Target = c->GetTarget();
-				if (Target != nullptr) {
-					// if (Target == sender || (iSendToSender && c == sender) || (HoTT && Target->GetTarget() == sender)) {
-					// 	// the client has the sender targeted, so check if we send the packet
-					// 	EQApplicationPacket* app = std::invoke(fun, component_getter(c), std::forward<Args>(args)...);
-					// }
-					Mob* TargetsTarget = Target->GetTarget();
-					bool Send = iSendToSender && c == sender;
-					if (c != sender) {
-						if (Target == sender) {
-							if (inspect_buffs) { // if inspect_buffs is true we're sending a mob's buffs to those with the LAA
-								Send = clear_target_window;
-								if (c->GetGM() || RuleB(Spells, AlwaysSendTargetsBuffs)) {
-									if (c->GetGM()) {
-										if (!c->EntityVariableExists(SEE_BUFFS_FLAG)) {
-											c->Message(Chat::White,
-												"Your GM flag allows you to always see your targets' buffs.");
-											c->SetEntityVariable(SEE_BUFFS_FLAG, "1");
-										}
-									}
+			for (auto [_, c] : entity_list.GetClientList()) {
+				if (c != sender) {
+					Mob* Target = c->GetTarget();
+					if ((Target == sender || (HoTT && Target != nullptr && Target->GetTarget() == sender)) && ShouldSend(c)) {
+						auto& packet = build_packets.at(static_cast<uint32_t>(c->ClientVersion()));
+						if (!packet)
+							if (auto comp = component(c); comp != nullptr)
+								packet = std::invoke(fun, comp, std::forward<Args>(args)...);
 
-									Send = !clear_target_window;
-								} else if (c->IsRaidGrouped()) {
-									Raid* raid = c->GetRaid();
-									if (raid) {
-										uint32 gid = raid->GetGroup(c);
-										if (gid < MAX_RAID_GROUPS && raid->GroupCount(gid) >= 3) {
-											if (raid->GetLeadershipAA(groupAAInspectBuffs, gid))
-												Send = !clear_target_window;
-										}
-									}
-								} else {
-									Group* group = c->GetGroup();
-									if (group && group->GroupCount() >= 3) {
-										if (group->GetLeadershipAA(groupAAInspectBuffs)) {
-											Send = !clear_target_window;
-										}
-									}
-								}
-							} else {
-								Send = true;
-							}
-						} else if (HoTT && TargetsTarget == sender) {
-							Send = true;
-						}
-					}
-
-					if (Send && (c->ClientVersionBit() & ClientVersionBits)) {
-						EQApplicationPacket* app = std::invoke(fun, component(c), std::forward<Args>(args)...);
+						if (packet)
+							c->QueuePacket(packet.get(), ackreq, Client::CLIENT_CONNECTED);
 					}
 				}
 			}
@@ -238,14 +197,58 @@ static std::function GetComponent = [](const Client* c) -> IBuff* {
 	return GetBuffComponent(c->GetClientVersion()).get();
 };
 
-inline void SendLegacyBuffsPacket(Client* c, Mob* sender, int32 timer, bool for_target = true, bool clear_buffs = false)
+static bool ShouldSendTargetBuffs(Client* c)
 {
-	ClientPatch::FastQueuePacket(c, &IBuff::MakeLegacyBuffsPacket, GetComponent(c), sender, timer, for_target, clear_buffs);
+	// this function checks for server rules against LAA and GM status to determine if a buffs packet should be sent
+	// to a client (c) for targeted mobs
+	if (c->GetGM() || RuleB(Spells, AlwaysSendTargetsBuffs)) { // this rule bypasses LAA abilities, always return true
+		if (c->GetGM()) {
+			if (!c->EntityVariableExists(SEE_BUFFS_FLAG)) {
+				c->Message(Chat::White,
+					"Your GM flag allows you to always see your targets' buffs.");
+				c->SetEntityVariable(SEE_BUFFS_FLAG, "1");
+			}
+		}
+		return true;
+	}
+
+	if (c->IsRaidGrouped()) {
+		Raid* raid = c->GetRaid();
+		if (raid) {
+			uint32 gid = raid->GetGroup(c);
+			if (gid < MAX_RAID_GROUPS && raid->GroupCount(gid) >= 3) {
+				if (raid->GetLeadershipAA(groupAAInspectBuffs, gid))
+					return true;
+			}
+		}
+	} else {
+		Group* group = c->GetGroup();
+		if (group && group->GroupCount() >= 3) {
+			if (group->GetLeadershipAA(groupAAInspectBuffs)) {
+				return true;
+			}
+		}
+	}
+
+	return false;
 }
 
-inline void SendLegacyBuffsPacketToClients(Client* c, bool for_target = true, bool clear_buffs = false)
+inline void SendLegacyBuffsPacket(Client* c, Mob* sender, bool for_target = true, bool clear_buffs = false)
 {
+	ClientPatch::FastQueuePacket(c, &IBuff::MakeLegacyBuffsPacket, GetComponent(c), sender, for_target, clear_buffs);
+}
 
+inline void SendLegacyBuffsPacketToClients(Mob* sender, bool ackreq = true, bool HoTT = false, bool clear_buffs = false)
+{
+	ClientPatch::QueueClientsByTarget(sender, ackreq, HoTT, ShouldSendTargetBuffs)(
+		&IBuff::MakeLegacyBuffsPacket, GetComponent, sender, true, clear_buffs);
+}
+
+inline void SendCharmDroppedBuffsPacket(Mob* sender, bool ackreq = true)
+{
+	// dropping charm means that we want to remove the buff list from clients that shouldn't see non-pet buffs
+	ClientPatch::QueueClientsByTarget(sender, ackreq, false, [](Client* c) { return !ShouldSendTargetBuffs(c); })(
+		&IBuff::MakeLegacyBuffsPacket, GetComponent, sender, true, true);
 }
 
 } // namespace Buff

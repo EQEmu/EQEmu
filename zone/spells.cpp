@@ -3744,26 +3744,10 @@ int Mob::AddBuff(Mob *caster, uint16 spell_id, int duration, int32 level_overrid
 	if (IsPet() && GetOwner() && GetOwner()->IsClient())
 		SendPetBuffsToClient();
 
-	if((IsClient() && !CastToClient()->GetPVP()) ||
-		(IsPet() && GetOwner() && GetOwner()->IsClient() && !GetOwner()->CastToClient()->GetPVP()) ||
-		(IsBot() && GetOwner() && GetOwner()->IsClient() && !GetOwner()->CastToClient()->GetPVP()) ||
-		(IsMerc() && GetOwner() && GetOwner()->IsClient() && !GetOwner()->CastToClient()->GetPVP()))
-	{
-		EQApplicationPacket *outapp = MakeBuffsPacket();
+	Buff::SendLegacyBuffsPacketToClients(this);
 
-		entity_list.QueueClientsByTarget(this, outapp, false, nullptr, true, false, EQ::versions::maskSoDAndLater);
-
-		if(IsClient() && GetTarget() == this)
-			CastToClient()->QueuePacket(outapp);
-
-		safe_delete(outapp);
-	}
-
-	if (IsNPC()) {
-		EQApplicationPacket *outapp = MakeBuffsPacket();
-		entity_list.QueueClientsByTarget(this, outapp, false, nullptr, true, false, EQ::versions::maskSoDAndLater, true);
-		safe_delete(outapp);
-	}
+	if (IsClient() && GetTarget() == this)
+		Buff::SendLegacyBuffsPacket(CastToClient(), this);
 
 	// recalculate bonuses since we stripped/added buffs
 	CalcBonuses();
@@ -6613,76 +6597,6 @@ void Mob::SendPetBuffsToClient()
 	pbs->buffcount=PetBuffCount;
 	GetOwner()->CastToClient()->QueuePacket(outapp);
 	safe_delete(outapp);
-}
-
-void Mob::SendBuffsToClient(Client *c)
-{
-	if(!c)
-		return;
-
-	if (c->ClientVersionBit() & EQ::versions::maskSoDAndLater)
-	{
-		EQApplicationPacket *outapp = MakeBuffsPacket();
-		c->FastQueuePacket(&outapp);
-	}
-}
-
-EQApplicationPacket *Mob::MakeBuffsPacket(bool for_target, bool clear_buffs)
-{
-	uint32 count = 0;
-	uint32 buff_count;
-
-	// for self we want all buffs, for target, we want to skip song window buffs
-	// since NPCs and pets don't have a song window, we still see it for them :P
-	if (for_target) {
-		buff_count = (clear_buffs) ? 0 : GetMaxBuffSlots();
-	}
-	else {
-		buff_count = GetMaxTotalSlots();
-	}
-
-	for(int i = 0; i < buff_count; ++i) {
-		if (IsValidSpell(buffs[i].spellid)) {
-			++count;
-		}
-	}
-
-	EQApplicationPacket* outapp = nullptr;
-
-	//Create it for a targeting window, else create it for a create buff packet.
-	if(for_target) {
-		outapp = new EQApplicationPacket(OP_RefreshTargetBuffs, sizeof(BuffIcon_Struct) + sizeof(BuffIconEntry_Struct) * count);
-	}
-	else {
-		outapp = new EQApplicationPacket(OP_RefreshBuffs, sizeof(BuffIcon_Struct) + sizeof(BuffIconEntry_Struct) * count);
-	}
-	BuffIcon_Struct *buff = (BuffIcon_Struct*)outapp->pBuffer;
-	buff->entity_id = GetID();
-	buff->count = count;
-	buff->all_buffs = 1;
-	buff->tic_timer = tic_timer.GetRemainingTime();
-	// there are more types, the client doesn't seem to really care though. The others are also currently hard to fill in here ...
-	// (see comment in common/eq_packet_structs.h)
-	if (for_target)
-		buff->type = IsClient() ? 5 : 7;
-	else
-		buff->type = 0;
-
-	buff->name_lengths = 0; // hacky shit
-	uint32 index = 0;
-	for(int i = 0; i < buff_count; ++i) {
-		if (IsValidSpell(buffs[i].spellid)) {
-			buff->entries[index].buff_slot = i;
-			buff->entries[index].spell_id = buffs[i].spellid;
-			buff->entries[index].tics_remaining = buffs[i].ticsremaining;
-			buff->entries[index].num_hits = buffs[i].hit_number;
-			strn0cpy(buff->entries[index].caster, buffs[i].caster_name, 64);
-			buff->name_lengths += strlen(buff->entries[index].caster);
-			++index;
-		}
-	}
-
-	return outapp;
 }
 
 void Mob::BuffModifyDurationBySpellID(uint16 spell_id, int32 newDuration)

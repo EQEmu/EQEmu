@@ -45,6 +45,8 @@
 
 #include <iostream>
 
+#include "client_version.h"
+
 extern QueryServ* QServ;
 extern Zone* zone;
 extern volatile bool is_zone_loaded;
@@ -2307,11 +2309,8 @@ void Client::ClearHover()
 	entity_list.QueueClients(this, outapp, false);
 	safe_delete(outapp);
 
-	if (IsClient() && CastToClient()->ClientVersionBit() & EQ::versions::maskUFAndLater)
-	{
-		EQApplicationPacket *outapp = MakeBuffsPacket(false);
-		CastToClient()->FastQueuePacket(&outapp);
-	}
+	if (IsClient())
+		Buff::SendLegacyBuffsPacket(CastToClient(), this, false);
 
 	dead = false;
 }

@@ -33,6 +33,8 @@
 
 #include <cmath>
 
+#include "client_version.h"
+
 
 extern Zone* zone;
 extern volatile bool is_zone_loaded;
@@ -150,11 +152,8 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 		if (spells[spell_id].endurance_upkeep > 0)
 			SetEndurUpkeep(true);
 
-		if (IsClient() && CastToClient()->ClientVersionBit() & EQ::versions::maskUFAndLater)
-		{
-			EQApplicationPacket *outapp = MakeBuffsPacket(false);
-			CastToClient()->FastQueuePacket(&outapp);
-		}
+		if (IsClient())
+			Buff::SendLegacyBuffsPacket(CastToClient(), this, false);
 	}
 
 	if (IsClient()) {
@@ -813,9 +812,7 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 
 				// This was done in AddBuff, but we were not a pet yet, so
 				// the target windows didn't get updated.
-				EQApplicationPacket *outapp = MakeBuffsPacket();
-				entity_list.QueueClientsByTarget(this, outapp, false, nullptr, true, false, EQ::versions::maskSoDAndLater);
-				safe_delete(outapp);
+				Buff::SendLegacyBuffsPacketToClients(this);
 
 				if(caster->IsClient()){
 					auto app = new EQApplicationPacket(OP_Charm, sizeof(Charm_Struct));
@@ -4435,9 +4432,7 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 				// no longer see the buffs on the old pet.
 				// QueueClientsByTarget preserves GM and leadership cases.
 
-				EQApplicationPacket *outapp = MakeBuffsPacket(true, true);
-
-				entity_list.QueueClientsByTarget(this, outapp, false, nullptr, true, false, EQ::versions::maskSoDAndLater, true, true);
+				Buff::SendCharmDroppedBuffsPacket(this);
 
 				if (IsAIControlled())
 				{
@@ -4664,32 +4659,14 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 	if(IsPet() && GetOwner() && GetOwner()->IsClient()) {
 		SendPetBuffsToClient();
 	}
-	if((IsClient() && !CastToClient()->GetPVP()) ||
-		(IsPet() && GetOwner() && GetOwner()->IsClient() && !GetOwner()->CastToClient()->GetPVP()) ||
-		(IsBot() && GetOwner() && GetOwner()->IsClient() && !GetOwner()->CastToClient()->GetPVP()) ||
-		(IsMerc() && GetOwner() && GetOwner()->IsClient() && !GetOwner()->CastToClient()->GetPVP()))
-	{
-		EQApplicationPacket *outapp = MakeBuffsPacket();
 
-		entity_list.QueueClientsByTarget(this, outapp, false, nullptr, true, false, EQ::versions::maskSoDAndLater);
-		if(IsClient() && GetTarget() == this) {
-			CastToClient()->QueuePacket(outapp);
-		}
+	Buff::SendLegacyBuffsPacketToClients(this);
 
-		safe_delete(outapp);
-	}
+	if (IsClient() && GetTarget() == this)
+		Buff::SendLegacyBuffsPacket(CastToClient(), this);
 
-	if (IsNPC()) {
-		EQApplicationPacket *outapp = MakeBuffsPacket();
-		entity_list.QueueClientsByTarget(this, outapp, false, nullptr, true, false, EQ::versions::maskSoDAndLater, true);
-		safe_delete(outapp);
-	}
-
-	if (IsClient() && CastToClient()->ClientVersionBit() & EQ::versions::maskUFAndLater)
-	{
-		EQApplicationPacket *outapp = MakeBuffsPacket(false);
-		CastToClient()->FastQueuePacket(&outapp);
-	}
+	if (IsClient())
+		Buff::SendLegacyBuffsPacket(CastToClient(), this, false);
 
 	// we will eventually call CalcBonuses() even if we skip it right here, so should correct itself if we still have them
 	degenerating_effects = false;

@@ -68,6 +68,9 @@ class UF : public SoD
 public:
 	UF() = default;
 	~UF() override = default;
+
+	std::unique_ptr<EQApplicationPacket> MakeLegacyBuffsPacket(Mob* mob, bool for_target,
+		bool clear_buffs) const override;
 };
 
 } // namespace Buff

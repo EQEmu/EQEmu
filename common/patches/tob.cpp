@@ -5613,8 +5613,7 @@ std::unique_ptr<EQApplicationPacket> TOB::InterruptSpellOther(Mob* sender, uint3
 } // namespace Message
 
 namespace Buff {
-std::unique_ptr<EQApplicationPacket> TOB::MakeLegacyBuffsPacket(Mob* mob, int32_t timer, bool for_target,
-	bool clear_buffs) const { return nullptr; }
+// std::unique_ptr<EQApplicationPacket> TOB::MakeLegacyBuffsPacket(Mob* mob, bool for_target, bool clear_buffs) const { return nullptr; }
 
 std::unique_ptr<EQApplicationPacket> TOB::BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot, bool fade) const
 {
@@ -5712,7 +5711,7 @@ std::unique_ptr<EQApplicationPacket> TOB::RefreshBuffs(EmuOpcode opcode, Mob* mo
 }
 
 // 0 = self buff window, 1 = self target window, 2 = pet buff or target window, 4 = group, 5 = PC, 7 = NPC
-void TOB::SetRefreshType(const std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const
+void TOB::SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const
 {
 	unsigned char* type = &packet->pBuffer[packet->size - 2];
 

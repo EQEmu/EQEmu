@@ -4019,58 +4019,40 @@ void Titanium::ResolveArguments(uint32_t id, std::array<const char*, 9>& args) c
 } // namespace Message
 
 namespace Buff {
-std::unique_ptr<EQApplicationPacket> Titanium::MakeLegacyBuffsPacket(Mob* mob, int32_t timer, bool for_target,
-	bool clear_buffs) const
+std::unique_ptr<EQApplicationPacket> Titanium::MakeLegacyBuffsPacket(Mob* mob, bool for_target, bool clear_buffs) const
 {
-	uint32 count = 0;
-	uint32 buff_count;
+	return nullptr;
+}
 
-	// for self we want all buffs, for target, we want to skip song window buffs
-	// since NPCs and pets don't have a song window, we still see it for them :P
-	if (for_target) {
-		buff_count = (clear_buffs) ? 0 : mob->GetMaxBuffSlots();
-	}
-	else {
-		buff_count = mob->GetMaxTotalSlots();
-	}
+std::unique_ptr<EQApplicationPacket> Titanium::LegacyBuffDefinition(Mob* mob, Buffs_Struct& buff, int slot) const
+{
+	auto outapp = std::make_unique<EQApplicationPacket>(OP_BuffDefinition, sizeof(SpellBuffPacket_Struct));
+	SpellBuffPacket_Struct* sbf = (SpellBuffPacket_Struct*) outapp->pBuffer;
 
-	Buffs_Struct* buffs = mob->GetBuffs();
+	sbf->entityid = mob->GetID();
 
-	for(int i = 0; i < buff_count; ++i) {
-		if (buffs[i].spellid > 1) {
-			++count;
-		}
-	}
+	sbf->buff.effect_type = 2;
 
-	//Create it for a targeting window, else create it for a create buff packet.
-	auto outapp = std::make_unique<EQApplicationPacket>(for_target ? OP_RefreshTargetBuffs : OP_RefreshBuffs,
-		sizeof(BuffIcon_Struct) + sizeof(BuffIconEntry_Struct) * count);
+	sbf->buff.level = buff.casterlevel > 0 ? buff.casterlevel : mob->GetLevel();
+	sbf->buff.bard_modifier = buff.instrument_mod;
+	sbf->buff.spellid = buff.spellid;
+	sbf->buff.duration = buff.ticsremaining;
+	if (buff.dot_rune)
+		sbf->buff.counters = buff.dot_rune;
+	else if (buff.magic_rune)
+		sbf->buff.counters = buff.magic_rune;
+	else if (buff.melee_rune)
+		sbf->buff.counters = buff.melee_rune;
+	else if (buff.counters)
+		sbf->buff.counters = buff.counters;
+	sbf->buff.player_id = buff.casterid;
+	sbf->buff.num_hits = buff.hit_number;
+	sbf->buff.y = buff.caston_y;
+	sbf->buff.x = buff.caston_x;
+	sbf->buff.z = buff.caston_z;
 
-	BuffIcon_Struct *buff = (BuffIcon_Struct*)outapp->pBuffer;
-	buff->entity_id = mob->GetID();
-	buff->count = count;
-	buff->all_buffs = 1;
-	buff->tic_timer = timer;
-	// there are more types, the client doesn't seem to really care though. The others are also currently hard to fill in here ...
-	// (see comment in common/eq_packet_structs.h)
-	if (for_target)
-		buff->type = mob->IsClient() ? 5 : 7;
-	else
-		buff->type = 0;
-
-	buff->name_lengths = 0; // hacky shit
-	uint32 index = 0;
-	for(int i = 0; i < buff_count; ++i) {
-		if (buffs[i].spellid > 1) {
-			buff->entries[index].buff_slot = i;
-			buff->entries[index].spell_id = buffs[i].spellid;
-			buff->entries[index].tics_remaining = buffs[i].ticsremaining;
-			buff->entries[index].num_hits = buffs[i].hit_number;
-			strn0cpy(buff->entries[index].caster, buffs[i].caster_name, 64);
-			buff->name_lengths += strlen(buff->entries[index].caster);
-			++index;
-		}
-	}
+	sbf->slotid = slot;
+	sbf->bufffade = 0;
 
 	return outapp;
 }
@@ -4087,6 +4069,6 @@ std::unique_ptr<EQApplicationPacket> Titanium::RefreshBuffs(EmuOpcode opcode, Mo
 	return nullptr;
 }
 
-void Titanium::SetRefreshType(const std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const {}
+void Titanium::SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const {}
 
 } // namespace Buff

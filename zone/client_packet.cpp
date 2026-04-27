@@ -61,6 +61,8 @@
 #include <numbers>
 #include <set>
 
+#include "client_version.h"
+
 extern QueryServ* QServ;
 extern Zone* zone;
 extern volatile bool is_zone_loaded;
@@ -933,10 +935,8 @@ void Client::CompleteConnect()
 		delete pack;
 	}
 
-	if (IsClient() && CastToClient()->ClientVersionBit() & EQ::versions::maskUFAndLater) {
-		EQApplicationPacket *outapp = MakeBuffsPacket(false);
-		CastToClient()->FastQueuePacket(&outapp);
-	}
+	if (IsClient())
+		Buff::SendLegacyBuffsPacket(CastToClient(), this, false);
 
 	// TODO: load these states
 	// We at least will set them to the correct state for now
@@ -15108,30 +15108,7 @@ void Client::Handle_OP_TargetMouse(const EQApplicationPacket *app)
 		if (nt)
 		{
 			SetTarget(nt);
-			bool inspect_buffs = false;
-			// rank 1 gives you ability to see NPC buffs in target window (SoD+)
-			if (nt->IsNPC()) {
-				if (IsRaidGrouped()) {
-					Raid *raid = GetRaid();
-					if (raid) {
-						uint32 gid = raid->GetGroup(this);
-						if (gid < 12 && raid->GroupCount(gid) > 2)
-							inspect_buffs = raid->GetLeadershipAA(groupAAInspectBuffs, gid);
-					}
-				}
-				else {
-					Group *group = GetGroup();
-					if (group && group->GroupCount() > 2)
-						inspect_buffs = group->GetLeadershipAA(groupAAInspectBuffs);
-				}
-			}
-			if (GetGM() || RuleB(Spells, AlwaysSendTargetsBuffs) || nt == this || inspect_buffs || (nt->IsClient() && !nt->CastToClient()->GetPVP()) ||
-				(nt->IsPet() && nt->GetOwner() && nt->GetOwner()->IsClient() && !nt->GetOwner()->CastToClient()->GetPVP()) ||
-				(nt->IsBot() && nt->GetOwner() && nt->GetOwner()->IsClient() && !nt->GetOwner()->CastToClient()->GetPVP()) || // TODO: bot pets
-				(nt->IsMerc() && nt->GetOwner() && nt->GetOwner()->IsClient() && !nt->GetOwner()->CastToClient()->GetPVP()))
-			{
-				nt->SendBuffsToClient(this);
-			}
+			Buff::SendLegacyBuffsPacket(this, nt);
 		}
 		else
 		{
