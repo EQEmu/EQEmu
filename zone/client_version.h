@@ -19,6 +19,7 @@ namespace ClientPatch {
 using ClientList = std::unordered_map<uint16, Client*>;
 template<typename Obj> using ComponentGetter = std::function<Obj*(const Client*)>;
 using SendPredicate = std::function<bool(Client*)>;
+using MutatePacket = std::function<void(std::unique_ptr<EQApplicationPacket>&, Client*)>;
 
 template <typename Fun, typename Obj, typename... Args>
 	requires std::is_member_function_pointer_v<Fun>
@@ -106,7 +107,7 @@ static void FastQueuePacket(Client* c, Fun fun, Obj* obj, Args&&... args)
 	}
 }
 
-static auto QueueClientsByTarget(Mob* sender, bool ackreq, bool HoTT, const SendPredicate& ShouldSend)
+static auto QueueClientsByTarget(Mob* sender, bool ackreq, bool HoTT, const SendPredicate& should_send, const MutatePacket& mutate)
 {
 	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun, const ComponentGetter<Obj> component, Args&&... args)
 			requires std::is_member_function_pointer_v<Fun>
@@ -115,17 +116,18 @@ static auto QueueClientsByTarget(Mob* sender, bool ackreq, bool HoTT, const Send
 			std::array<std::unique_ptr<EQApplicationPacket>, EQ::versions::ClientVersionCount> build_packets;
 
 			for (auto [_, c] : entity_list.GetClientList()) {
-				if (c != sender) {
-					Mob* Target = c->GetTarget();
-					if ((Target == sender || (HoTT && Target != nullptr && Target->GetTarget() == sender)) && ShouldSend(c)) {
-						auto& packet = build_packets.at(static_cast<uint32_t>(c->ClientVersion()));
-						if (!packet)
-							if (auto comp = component(c); comp != nullptr)
-								packet = std::invoke(fun, comp, std::forward<Args>(args)...);
+				Mob* Target = c->GetTarget();
+				if ((Target == sender || (HoTT && Target != nullptr && Target->GetTarget() == sender)) &&
+					(Target == c || should_send(c))) {
+					auto& packet = build_packets.at(static_cast<uint32_t>(c->ClientVersion()));
+					if (!packet)
+						if (auto comp = component(c); comp != nullptr)
+							packet = std::invoke(fun, comp, std::forward<Args>(args)...);
 
-						if (packet)
-							c->QueuePacket(packet.get(), ackreq, Client::CLIENT_CONNECTED);
-					}
+					mutate(packet, c);
+
+					if (packet)
+						c->QueuePacket(packet.get(), ackreq, Client::CLIENT_CONNECTED);
 				}
 			}
 		}
@@ -203,7 +205,7 @@ static bool ShouldSendTargetBuffs(Client* c)
 	// to a client (c) for targeted mobs
 	if (c->GetGM() || RuleB(Spells, AlwaysSendTargetsBuffs)) { // this rule bypasses LAA abilities, always return true
 		if (c->GetGM()) {
-			if (!c->EntityVariableExists(SEE_BUFFS_FLAG)) {
+			if (!c->EntityVariableExists(SEE_BUFFS_FLAG)) { // This flag just ensures that the following message is only sent once
 				c->Message(Chat::White,
 					"Your GM flag allows you to always see your targets' buffs.");
 				c->SetEntityVariable(SEE_BUFFS_FLAG, "1");
@@ -233,22 +235,66 @@ static bool ShouldSendTargetBuffs(Client* c)
 	return false;
 }
 
-inline void SendLegacyBuffsPacket(Client* c, Mob* sender, bool for_target = true, bool clear_buffs = false)
+inline void SendFullBuffRefresh(Mob* sender, bool remove = false, bool ackreq = true)
 {
-	ClientPatch::FastQueuePacket(c, &IBuff::MakeLegacyBuffsPacket, GetComponent(c), sender, for_target, clear_buffs);
+	bool suspended = zone->BuffTimersSuspended();
+	std::vector<uint32_t> slots;
+
+	// first, send to self if self is client
+	if (sender->IsClient()) {
+		Client* c = sender->CastToClient();
+		ClientPatch::FastQueuePacket(c, &IBuff::RefreshBuffs, GetComponent(c), OP_RefreshBuffs, sender, false, suspended, slots);
+	}
+
+	// next, send to owner if self is a pet to a client
+	if (sender->IsPet() && sender->GetOwner()->IsClient()) {
+		if (Mob* owner = sender->GetOwner(); owner != nullptr && owner->IsClient()) {
+			Client* c = owner->CastToClient();
+			ClientPatch::FastQueuePacket(c, &IBuff::RefreshBuffs, GetComponent(c), OP_RefreshPetBuffs, sender, false, suspended, slots);
+		}
+	}
+
+	// finally send to all clients targeting the mob, will need to mutate the packet to set the type
+	auto mutate = [sender](std::unique_ptr<EQApplicationPacket>& packet, Client* c) {
+		GetComponent(c)->SetRefreshType(packet, sender, c);
+	};
+
+	ClientPatch::QueueClientsByTarget(sender, ackreq, false, ShouldSendTargetBuffs, mutate)(
+		&IBuff::RefreshBuffs, GetComponent, OP_RefreshTargetBuffs, sender, false, suspended, slots);
+
+	// if we have remove set, this will clear  any target windows that shouldn't see the buffs
+	if (remove)
+		ClientPatch::QueueClientsByTarget(sender, ackreq, true,
+			[](Client* c) { return !ShouldSendTargetBuffs(c); }, mutate)(
+			&IBuff::RefreshBuffs, GetComponent, OP_RefreshTargetBuffs, sender, true, suspended, slots);
 }
 
-inline void SendLegacyBuffsPacketToClients(Mob* sender, bool ackreq = true, bool HoTT = false, bool clear_buffs = false)
+inline void SendSingleBuffChange(Mob* sender, const Buffs_Struct& buff, int slot, bool remove = false, bool ackreq = true)
 {
-	ClientPatch::QueueClientsByTarget(sender, ackreq, HoTT, ShouldSendTargetBuffs)(
-		&IBuff::MakeLegacyBuffsPacket, GetComponent, sender, true, clear_buffs);
-}
+	bool suspended = zone->BuffTimersSuspended();
+	std::vector slots = { static_cast<uint32_t>(slot) };
 
-inline void SendCharmDroppedBuffsPacket(Mob* sender, bool ackreq = true)
-{
-	// dropping charm means that we want to remove the buff list from clients that shouldn't see non-pet buffs
-	ClientPatch::QueueClientsByTarget(sender, ackreq, false, [](Client* c) { return !ShouldSendTargetBuffs(c); })(
-		&IBuff::MakeLegacyBuffsPacket, GetComponent, sender, true, true);
+	// first, send to self if self is client, which takes the definition and the refresh
+	if (sender->IsClient()) {
+		Client* c = sender->CastToClient();
+		ClientPatch::FastQueuePacket(c, &IBuff::BuffDefinition, GetComponent(c), sender, buff,  slot, remove);
+		ClientPatch::FastQueuePacket(c, &IBuff::RefreshBuffs, GetComponent(c), OP_RefreshBuffs, sender, remove, suspended, slots);
+	}
+
+	// the rest of the buff packets do not take the definition, only the refresh
+	if (sender->IsPet() && sender->GetOwner()->IsClient()) {
+		if (Mob* owner = sender->GetOwner(); owner != nullptr && owner->IsClient()) {
+			Client* c = owner->CastToClient();
+			ClientPatch::FastQueuePacket(c, &IBuff::RefreshBuffs, GetComponent(c), OP_RefreshPetBuffs, sender, remove, suspended, slots);
+		}
+	}
+
+	auto mutate = [sender](std::unique_ptr<EQApplicationPacket>& packet, Client* c) {
+		GetComponent(c)->SetRefreshType(packet, sender, c);
+	};
+
+	ClientPatch::QueueClientsByTarget(sender, ackreq, false, ShouldSendTargetBuffs, mutate)(
+		&IBuff::RefreshBuffs, GetComponent, OP_RefreshTargetBuffs, sender, remove, suspended, slots);
 }
 
 } // namespace Buff

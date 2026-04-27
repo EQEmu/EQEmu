@@ -5613,7 +5613,6 @@ std::unique_ptr<EQApplicationPacket> TOB::InterruptSpellOther(Mob* sender, uint3
 } // namespace Message
 
 namespace Buff {
-// std::unique_ptr<EQApplicationPacket> TOB::MakeLegacyBuffsPacket(Mob* mob, bool for_target, bool clear_buffs) const { return nullptr; }
 
 std::unique_ptr<EQApplicationPacket> TOB::BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot, bool fade) const
 {
@@ -5641,7 +5640,7 @@ std::unique_ptr<EQApplicationPacket> TOB::BuffDefinition(Mob* mob, const Buffs_S
 	affect->affect.flags = 0;
 	affect->affect.spell_id = buff.spellid;
 	affect->affect.duration = buff.ticsremaining;
-	affect->affect.initial_duration = buff.ticsremaining; // this  isn't correct, it's the total duration
+	affect->affect.initial_duration = buff.ticsremaining; // TODO: this  isn't correct, it's the total duration
 	affect->affect.hit_count = buff.hit_number;
 	affect->affect.viral_timer = 0;
 	affect->affect.modifier = static_cast<float>(buff.instrument_mod) / 10.f;
@@ -5667,7 +5666,7 @@ std::unique_ptr<EQApplicationPacket> TOB::BuffDefinition(Mob* mob, const Buffs_S
 	return packet;
 }
 
-std::unique_ptr<EQApplicationPacket> TOB::RefreshBuffs(EmuOpcode opcode, Mob* mob, int32_t timer, bool remove,
+std::unique_ptr<EQApplicationPacket> TOB::RefreshBuffs(EmuOpcode opcode, Mob* mob, bool remove,
 	bool buff_timers_suspended, const std::vector<uint32_t>& slots) const
 {
 	Buffs_Struct* buffs = mob->GetBuffs();
@@ -5692,8 +5691,8 @@ std::unique_ptr<EQApplicationPacket> TOB::RefreshBuffs(EmuOpcode opcode, Mob* mo
 	SerializeBuffer buffer(buffer_size);
 
 	buffer.WriteUInt32(mob->GetID());
-	buffer.WriteInt32(timer);
-	buffer.WriteUInt8(slots.empty() ? 1 : 0);			// 1 indicates all buffs on the player (0 to add or remove a single buff)
+	buffer.WriteInt32(mob->GetRemainingTicTime());
+	buffer.WriteUInt8(slots.empty() ? 1 : 0);			// 1 indicates all buffs on the mob (0 to add or remove a single buff)
 	buffer.WriteUInt16(send_slots.size());
 
 	for (uint32_t slot : send_slots) {
@@ -5713,18 +5712,20 @@ std::unique_ptr<EQApplicationPacket> TOB::RefreshBuffs(EmuOpcode opcode, Mob* mo
 // 0 = self buff window, 1 = self target window, 2 = pet buff or target window, 4 = group, 5 = PC, 7 = NPC
 void TOB::SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const
 {
-	unsigned char* type = &packet->pBuffer[packet->size - 2];
+	if (packet) {
+		unsigned char* type = &packet->pBuffer[packet->size - 2];
 
-	if (target->GetID() == source->GetID())
-		*type = 1;
-	else if (target->IsPet())
-		*type = 2;
-	else if (target->HasGroup() && source->GetGroup() == target->GetGroup())
-		*type = 4;
-	else if (target->IsClient())
-		*type = 5;
-	else
-		*type = 7;
+		if (target->GetID() == source->GetID())
+			*type = 1;
+		else if (target->IsPet())
+			*type = 2;
+		else if (target->HasGroup() && source->GetGroup() == target->GetGroup())
+			*type = 4;
+		else if (target->IsClient())
+			*type = 5;
+		else
+			*type = 7;
+	}
 }
 
 } // namespace Buff

@@ -152,8 +152,7 @@ bool Mob::SpellEffect(Mob* caster, int32 spell_id, float partial, int level_over
 		if (spells[spell_id].endurance_upkeep > 0)
 			SetEndurUpkeep(true);
 
-		if (IsClient())
-			Buff::SendLegacyBuffsPacket(CastToClient(), this, false);
+		Buff::SendFullBuffRefresh(this);
 	}
 
 	if (IsClient()) {
@@ -812,7 +811,7 @@ bool Mob::SpellEffect(Mob* caster, int32 spell_id, float partial, int level_over
 
 				// This was done in AddBuff, but we were not a pet yet, so
 				// the target windows didn't get updated.
-				Buff::SendLegacyBuffsPacketToClients(this);
+				Buff::SendFullBuffRefresh(this);
 
 				if(caster->IsClient()){
 					auto app = new EQApplicationPacket(OP_Charm, sizeof(Charm_Struct));
@@ -4432,7 +4431,7 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 				// no longer see the buffs on the old pet.
 				// QueueClientsByTarget preserves GM and leadership cases.
 
-				Buff::SendCharmDroppedBuffsPacket(this);
+				Buff::SendFullBuffRefresh(this, true);
 
 				if (IsAIControlled())
 				{
@@ -4656,17 +4655,8 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 		RemoveNimbusEffect(spells[buffs[slot].spellid].nimbus_effect);
 
 	buffs[slot].spellid = SPELL_UNKNOWN;
-	if(IsPet() && GetOwner() && GetOwner()->IsClient()) {
-		SendPetBuffsToClient();
-	}
-
-	Buff::SendLegacyBuffsPacketToClients(this);
-
-	if (IsClient() && GetTarget() == this)
-		Buff::SendLegacyBuffsPacket(CastToClient(), this);
-
-	if (IsClient())
-		Buff::SendLegacyBuffsPacket(CastToClient(), this, false);
+	Buff::SendSingleBuffChange(this, buffs[slot], slot, true);
+	Buff::SendFullBuffRefresh(this);
 
 	// we will eventually call CalcBonuses() even if we skip it right here, so should correct itself if we still have them
 	degenerating_effects = false;

@@ -935,8 +935,7 @@ void Client::CompleteConnect()
 		delete pack;
 	}
 
-	if (IsClient())
-		Buff::SendLegacyBuffsPacket(CastToClient(), this, false);
+	Buff::SendFullBuffRefresh(this);
 
 	// TODO: load these states
 	// We at least will set them to the correct state for now
@@ -15108,7 +15107,7 @@ void Client::Handle_OP_TargetMouse(const EQApplicationPacket *app)
 		if (nt)
 		{
 			SetTarget(nt);
-			Buff::SendLegacyBuffsPacket(this, nt);
+			Buff::SendFullBuffRefresh(nt);
 		}
 		else
 		{

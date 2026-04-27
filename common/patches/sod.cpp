@@ -35,6 +35,7 @@
 #include <iostream>
 #include <sstream>
 
+#include "zone/client.h"
 #include "zone/mob.h"
 
 
@@ -4290,21 +4291,15 @@ namespace SoD
 
 namespace Buff {
 
-std::unique_ptr<EQApplicationPacket> SoD::MakeLegacyBuffsPacket(Mob* mob, bool for_target, bool clear_buffs) const
+std::unique_ptr<EQApplicationPacket> SoD::RefreshBuffs(EmuOpcode opcode, Mob* mob, bool remove,
+	bool buff_timers_suspended, const std::vector<uint32_t>& slots) const
 {
 	// SoD only supports target refresh, not self refresh packets
-	if (for_target) {
+	if (opcode == OP_RefreshTargetBuffs) {
 		uint32 count = 0;
 		uint32 buff_count;
 
-		// for self we want all buffs, for target, we want to skip song window buffs
-		// since NPCs and pets don't have a song window, we still see it for them :P
-		if (for_target) {
-			buff_count = (clear_buffs) ? 0 : mob->GetMaxBuffSlots();
-		}
-		else {
-			buff_count = mob->GetMaxTotalSlots();
-		}
+		buff_count = mob->GetMaxTotalSlots();
 
 		Buffs_Struct* buffs = mob->GetBuffs();
 
@@ -4314,7 +4309,7 @@ std::unique_ptr<EQApplicationPacket> SoD::MakeLegacyBuffsPacket(Mob* mob, bool f
 			}
 		}
 
-		auto outapp = std::make_unique<EQApplicationPacket>(OP_RefreshTargetBuffs,
+		auto outapp = std::make_unique<EQApplicationPacket>(opcode,
 			sizeof(BuffIcon_Struct) + sizeof(BuffIconEntry_Struct) * count);
 
 		BuffIcon_Struct *buff = (BuffIcon_Struct*)outapp->pBuffer;
@@ -4322,12 +4317,8 @@ std::unique_ptr<EQApplicationPacket> SoD::MakeLegacyBuffsPacket(Mob* mob, bool f
 		buff->count = count;
 		buff->all_buffs = 1;
 		buff->tic_timer = mob->GetRemainingTicTime();
-		// there are more types, the client doesn't seem to really care though. The others are also currently hard to fill in here ...
-		// (see comment in common/eq_packet_structs.h)
-		if (for_target)
-			buff->type = mob->IsClient() ? 5 : 7;
-		else
-			buff->type = 0;
+		// (see comment in common/eq_packet_structs.h), mutated in SetRefreshType
+		buff->type = mob->IsClient() ? 5 : 7;
 
 		buff->name_lengths = 0; // hacky shit
 		uint32 index = 0;
@@ -4347,6 +4338,24 @@ std::unique_ptr<EQApplicationPacket> SoD::MakeLegacyBuffsPacket(Mob* mob, bool f
 	}
 
 	return nullptr;
+}
+
+// 0 = self buff window, 1 = self target window, 2 = pet buff or target window, 4 = group, 5 = PC, 7 = NPC
+void SoD::SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const
+{
+	if (packet) {
+		BuffIcon_Struct *buff = (BuffIcon_Struct*)packet->pBuffer;
+		if (target->GetID() == source->GetID())
+			buff->type = 1;
+		else if (target->IsPet())
+			buff->type = 2;
+		else if (target->HasGroup() && source->GetGroup() == target->GetGroup())
+			buff->type = 4;
+		else if (target->IsClient())
+			buff->type = 5;
+		else
+			buff->type = 7;
+	}
 }
 
 } // namespace Buff

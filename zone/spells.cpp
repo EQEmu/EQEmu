@@ -3741,13 +3741,8 @@ int Mob::AddBuff(Mob *caster, int32 spell_id, int duration, int32 level_override
 	}
 
 	LogSpells("Buff [{}] added to slot [{}] with caster level [{}]", spell_id, emptyslot, caster_level);
-	if (IsPet() && GetOwner() && GetOwner()->IsClient())
-		SendPetBuffsToClient();
-
-	Buff::SendLegacyBuffsPacketToClients(this);
-
-	if (IsClient() && GetTarget() == this)
-		Buff::SendLegacyBuffsPacket(CastToClient(), this);
+	Buff::SendSingleBuffChange(this, buffs[emptyslot], emptyslot);
+	Buff::SendFullBuffRefresh(this);
 
 	// recalculate bonuses since we stripped/added buffs
 	CalcBonuses();

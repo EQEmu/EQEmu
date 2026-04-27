@@ -4019,12 +4019,9 @@ void Titanium::ResolveArguments(uint32_t id, std::array<const char*, 9>& args) c
 } // namespace Message
 
 namespace Buff {
-std::unique_ptr<EQApplicationPacket> Titanium::MakeLegacyBuffsPacket(Mob* mob, bool for_target, bool clear_buffs) const
-{
-	return nullptr;
-}
 
-std::unique_ptr<EQApplicationPacket> Titanium::LegacyBuffDefinition(Mob* mob, Buffs_Struct& buff, int slot) const
+std::unique_ptr<EQApplicationPacket> Titanium::BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot,
+	bool fade) const
 {
 	auto outapp = std::make_unique<EQApplicationPacket>(OP_BuffDefinition, sizeof(SpellBuffPacket_Struct));
 	SpellBuffPacket_Struct* sbf = (SpellBuffPacket_Struct*) outapp->pBuffer;
@@ -4052,18 +4049,12 @@ std::unique_ptr<EQApplicationPacket> Titanium::LegacyBuffDefinition(Mob* mob, Bu
 	sbf->buff.z = buff.caston_z;
 
 	sbf->slotid = slot;
-	sbf->bufffade = 0;
+	sbf->bufffade = fade;
 
 	return outapp;
 }
 
-std::unique_ptr<EQApplicationPacket> Titanium::BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot,
-	bool fade) const
-{
-	return nullptr;
-}
-
-std::unique_ptr<EQApplicationPacket> Titanium::RefreshBuffs(EmuOpcode opcode, Mob* mob, int32_t timer, bool remove,
+std::unique_ptr<EQApplicationPacket> Titanium::RefreshBuffs(EmuOpcode opcode, Mob* mob, bool remove,
 	bool buff_timers_suspended, const std::vector<uint32_t>& slots) const
 {
 	return nullptr;
