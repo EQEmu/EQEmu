@@ -7207,6 +7207,25 @@ ALTER TABLE `character_parcels_containers`
 )",
 		.content_schema_update = false
 	},
+	ManifestEntry{
+		.version = 9329,
+		.description = "2026_04_27_spell_id_type_correction.sql",
+		.check = "SHOW COLUMNS FROM `character_spells` WHERE `Field` LIKE 'spell_id' AND `Type` LIKE 'int(%)'",
+		.condition = "empty",
+		.match = "",
+		.sql = R"(
+ALTER TABLE `blocked_spells` MODIFY COLUMN `spellid` INTEGER NULL;
+ALTER TABLE `character_buffs` MODIFY COLUMN `spell_id` INTEGER NOT NULL;
+ALTER TABLE `character_memmed_spells` MODIFY COLUMN `spell_id` INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE `character_spells` MODIFY COLUMN `spell_id` INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE `damageshieldtypes` MODIFY COLUMN `spellid` INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE `ldon_trap_templates` MODIFY COLUMN `spell_id` INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS `merc_buffs` MODIFY COLUMN `SpellId` INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS `merc_spell_list_entries` MODIFY COLUMN `spell_id` INTEGER NOT NULL;
+ALTER TABLE `npc_spells_entries` MODIFY COLUMN `spellid` INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE `spell_buckets` MODIFY COLUMN `spell_id` INTEGER NOT NULL;
+)"
+	},
 // -- template; copy/paste this when you need to create a new entry
 //	ManifestEntry{
 //		.version = 9228,

@@ -73,7 +73,7 @@ CREATE TABLE `merc_buffs`
 (
     `MercBuffId`         int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
     `MercId`             int(10) UNSIGNED NOT NULL DEFAULT 0,
-    `SpellId`            int(10) UNSIGNED NOT NULL DEFAULT 0,
+    `SpellId`            int(10) NOT NULL DEFAULT 0,
     `CasterLevel`        int(10) UNSIGNED NOT NULL DEFAULT 0,
     `DurationFormula`    int(10) UNSIGNED NOT NULL DEFAULT 0,
     `TicsRemaining`      int(11) NOT NULL DEFAULT 0,
@@ -941,7 +941,7 @@ CREATE TABLE `merc_spell_list_entries`
 (
     `merc_spell_list_entry_id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
     `merc_spell_list_id`       int(10) UNSIGNED NOT NULL,
-    `spell_id`                 int(10) UNSIGNED NOT NULL,
+    `spell_id`                 int(10) NOT NULL,
     `spell_type`               int(10) UNSIGNED NOT NULL DEFAULT 0,
     `stance_id`                tinyint(3) UNSIGNED NOT NULL DEFAULT 0,
     `minlevel`                 tinyint(3) UNSIGNED NOT NULL DEFAULT 1,

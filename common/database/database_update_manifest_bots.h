@@ -2174,7 +2174,23 @@ FROM bot_settings
 WHERE `setting_id` = 0
 AND `setting_type` = 0;
 )"
-		}
+		},
+		ManifestEntry{
+			.version = 9056,
+			.description = "some_new_migration.sql",
+			.check = "SHOW COLUMNS FROM `table_name` LIKE 'column_name'",
+			.condition = "empty",
+			.match = "",
+			.sql = R"(
+ALTER TABLE `bot_blocked_buffs` MODIFY COLUMN `spell_id` INTEGER NOT NULL;
+ALTER TABLE `bot_buffs` MODIFY COLUMN `spell_id` INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE `bot_pet_buffs` MODIFY COLUMN `spell_id` INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE `bot_pets` MODIFY COLUMN `spell_id` INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE `bot_spell_settings` MODIFY COLUMN `spell_id` INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE `bot_spells_entries` MODIFY COLUMN `spell_id` INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE `bot_timers` MODIFY COLUMN `spell_id` INTEGER NOT NULL DEFAULT 0;
+)"
+		},
 // -- template; copy/paste this when you need to create a new entry
 //	ManifestEntry{
 //		.version = 9228,
