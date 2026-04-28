@@ -49,25 +49,3 @@ namespace RoF2
 	};
 
 }; /*RoF2*/
-
-namespace Message {
-
-class RoF2 : public RoF
-{
-public:
-	RoF2() = default;
-	~RoF2() override = default;
-};
-
-} // namespace Message
-
-namespace Buff {
-
-class RoF2 : public RoF
-{
-public:
-	RoF2() = default;
-	~RoF2() override = default;
-};
-
-} // namespace Buff

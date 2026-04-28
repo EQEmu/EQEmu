@@ -40,24 +40,24 @@ struct ClientComponents
 			messageComponent = std::make_unique<Message::TOB>();
 			break;
 		case Version::RoF2:
-			buffComponent = std::make_unique<Buff::RoF2>();
-			messageComponent = std::make_unique<Message::RoF2>();
+			buffComponent = std::make_unique<Buff::UF>();
+			messageComponent = std::make_unique<Message::Titanium>();
 			break;
 		case Version::RoF:
-			buffComponent = std::make_unique<Buff::RoF>();
-			messageComponent = std::make_unique<Message::RoF>();
+			buffComponent = std::make_unique<Buff::UF>();
+			messageComponent = std::make_unique<Message::Titanium>();
 			break;
 		case Version::UF:
 			buffComponent = std::make_unique<Buff::UF>();
-			messageComponent = std::make_unique<Message::UF>();
+			messageComponent = std::make_unique<Message::Titanium>();
 			break;
 		case Version::SoD:
 			buffComponent = std::make_unique<Buff::SoD>();
-			messageComponent = std::make_unique<Message::SoD>();
+			messageComponent = std::make_unique<Message::Titanium>();
 			break;
 		case Version::SoF:
-			buffComponent = std::make_unique<Buff::SoF>();
-			messageComponent = std::make_unique<Message::SoF>();
+			buffComponent = std::make_unique<Buff::Titanium>();
+			messageComponent = std::make_unique<Message::Titanium>();
 			break;
 		case Version::Titanium:
 			buffComponent = std::make_unique<Buff::Titanium>();

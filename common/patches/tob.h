@@ -36,7 +36,7 @@ namespace TOB
 
 namespace Message {
 
-class TOB : public RoF2
+class TOB : public Titanium
 {
 public:
 	TOB() = default;
@@ -59,7 +59,7 @@ protected:
 
 namespace Buff {
 
-class TOB : public RoF2
+class TOB : public UF
 {
 public:
 	TOB() = default;

@@ -50,17 +50,6 @@ namespace UF
 
 }; /*UF*/
 
-namespace Message {
-
-class UF : public SoD
-{
-public:
-	UF() = default;
-	~UF() override = default;
-};
-
-} // namespace Message
-
 namespace Buff {
 
 class UF : public SoD

@@ -49,25 +49,3 @@ namespace RoF
 	};
 
 } /*RoF*/
-
-namespace Message {
-
-class RoF : public UF
-{
-public:
-	RoF() = default;
-	~RoF() override = default;
-};
-
-} // namespace Message
-
-namespace Buff {
-
-class RoF : public UF
-{
-public:
-	RoF() = default;
-	~RoF() override = default;
-};
-
-} // namespace Buff

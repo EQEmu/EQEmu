@@ -50,20 +50,9 @@ namespace SoD
 
 } /*SoD*/
 
-namespace Message {
-
-class SoD : public SoF
-{
-public:
-	SoD() = default;
-	~SoD() override = default;
-};
-
-} // namespace Message
-
 namespace Buff {
 
-class SoD : public SoF
+class SoD : public Titanium
 {
 public:
 	SoD() = default;

@@ -49,25 +49,3 @@ namespace SoF
 	};
 
 } /*SoF*/
-
-namespace Message {
-
-class SoF : public Titanium
-{
-public:
-	SoF() = default;
-	~SoF() override = default;
-};
-
-} // namespace Message
-
-namespace Buff {
-
-class SoF : public Titanium
-{
-public:
-	SoF() = default;
-	~SoF() override = default;
-};
-
-} // namespace Buff

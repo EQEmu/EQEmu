@@ -5531,7 +5531,7 @@ uint32_t TOB::ResolveID(uint32_t id) const
 	case DISARMED_TRAP:
 		return TOBStringIDs::DisarmedTrap;
 	default:
-		return RoF2::ResolveID(id);
+		return Titanium::ResolveID(id);
 	}
 }
 
@@ -5545,7 +5545,7 @@ void TOB::ResolveArguments(uint32_t id, std::array<const char*, 9>& args) const
 		// take all arguments (spell link)
 		break;
 	default:
-		RoF2::ResolveArguments(id, args);
+		Titanium::ResolveArguments(id, args);
 		break;
 	}
 }
