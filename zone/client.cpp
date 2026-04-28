@@ -6326,8 +6326,7 @@ void Client::SuspendMinion(int value)
 			if(value >= 1)
 			{
 				CurrentPet->SetPetState(m_suspendedminion.Buffs, m_suspendedminion.Items);
-
-				CurrentPet->SendPetBuffsToClient();
+				Buff::SendFullBuffRefresh(CurrentPet);
 			}
 			CurrentPet->CalcBonuses();
 

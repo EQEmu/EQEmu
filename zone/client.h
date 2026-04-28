@@ -1268,11 +1268,6 @@ public:
 	const std::string GetAutoLoginCharacterName();
 	bool SetAutoLoginCharacterName(const std::string& character_name);
 
-	//This is used to later set the buff duration of the spell, in slot to duration.
-	//Doesn't appear to work directly after the client recieves an action packet.
-	void SendBuffDurationPacket(Buffs_Struct &buff, int slot);
-	void SendBuffNumHitPacket(Buffs_Struct &buff, int slot);
-
 	void ProcessInspectRequest(Client* requestee, Client* requester);
 	bool ClientFinishedLoading() { return (conn_state == ClientConnectFinished); }
 	int FindSpellBookSlotBySpellID(int32 spellid);
@@ -1956,7 +1951,6 @@ public:
 protected:
 	friend class Mob;
 	void CalcEdibleBonuses(StatBonuses* newbon);
-	void MakeBuffFadePacket(int32 spell_id, int slot_id, bool send_message = true);
 	bool client_data_loaded;
 
 

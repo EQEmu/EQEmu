@@ -459,7 +459,6 @@ public:
 	int AddBuff(Mob *caster, const int32 spell_id, int duration = 0, int32 level_override = -1, bool disable_buff_overwrite = false);
 	int CanBuffStack(int32 spellid, uint8 caster_level, bool iFailIfOverwrite = false);
 	int CalcBuffDuration(Mob *caster, Mob *target, int32 spell_id, int32 caster_level_override = -1);
-	void SendPetBuffsToClient();
 	virtual int GetCurrentBuffSlots() const { return 0; }
 	virtual int GetCurrentSongSlots() const { return 0; }
 	virtual int GetCurrentDiscSlots() const { return 0; }

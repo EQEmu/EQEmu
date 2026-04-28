@@ -760,7 +760,7 @@ void Client::CompleteConnect()
 	Mob* pet = GetPet();
 	if (pet) {
 		pet->SendWearChangeAndLighting(EQ::textures::LastTexture);
-		pet->SendPetBuffsToClient();
+		Buff::SendFullBuffRefresh(pet);
 	}
 
 	if (GetGroup())

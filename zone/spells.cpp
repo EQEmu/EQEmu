@@ -2856,7 +2856,7 @@ bool Mob::SpellFinished(int32 spell_id, Mob *spell_target, CastingSlot slot, int
 	if (IsClient() && IsEffectInSpell(spell_id, SpellEffect::BindSight)) {
 		for (int i = 0; i < GetMaxTotalSlots(); i++) {
 			if (buffs[i].spellid == spell_id) {
-				CastToClient()->SendBuffNumHitPacket(buffs[i], i);//its hack, it works.
+				Buff::SendSingleBuffChange(this, buffs[i], i);//its hack, it works.
 			}
 		}
 	}
@@ -2864,7 +2864,7 @@ bool Mob::SpellFinished(int32 spell_id, Mob *spell_target, CastingSlot slot, int
 	if (IsClient() && spells[spell_id].hit_number) {
 		for (int i = 0; i < GetMaxTotalSlots(); i++) {
 			if (buffs[i].spellid == spell_id && buffs[i].hit_number > 0) {
-				CastToClient()->SendBuffNumHitPacket(buffs[i], i);
+				Buff::SendSingleBuffChange(this, buffs[i], i);
 				break;
 			}
 		}
@@ -5809,53 +5809,6 @@ void Mob::Mesmerize()
 	StopNavigation();
 }
 
-void Client::MakeBuffFadePacket(int32 spell_id, int slot_id, bool send_message)
-{
-	EQApplicationPacket* outapp = nullptr;
-
-	outapp = new EQApplicationPacket(OP_BuffDefinition, sizeof(SpellBuffPacket_Struct));
-	SpellBuffPacket_Struct* sbf = (SpellBuffPacket_Struct*) outapp->pBuffer;
-
-	sbf->entityid = GetID();
-	// i dont know why but this works.. for now
-	sbf->buff.effect_type = 2;
-//	sbf->slot=m_pp.buffs[slot_id].slotid;
-//	sbf->level=m_pp.buffs[slot_id].level;
-//	sbf->effect=m_pp.buffs[slot_id].effect;
-	sbf->buff.spellid = spell_id;
-	sbf->slotid = slot_id;
-	sbf->bufffade = 1;
-#if EQDEBUG >= 11
-	printf("Sending SBF 1 from server:\n");
-	DumpPacket(outapp);
-#endif
-	QueuePacket(outapp);
-
-/*
-	sbf->effect=0;
-	sbf->level=0;
-	sbf->slot=0;
-*/
-	sbf->buff.spellid = 0xffffffff;
-#if EQDEBUG >= 11
-	printf("Sending SBF 2 from server:\n");
-	DumpPacket(outapp);
-#endif
-	QueuePacket(outapp);
-	safe_delete(outapp);
-
-	if(send_message)
-	{
-		const char *fadetext = spells[spell_id].spell_fades;
-		outapp = new EQApplicationPacket(OP_ColoredText, sizeof(ColoredText_Struct) + strlen(fadetext));
-		ColoredText_Struct *bfm = (ColoredText_Struct *) outapp->pBuffer;
-		bfm->color = Chat::Spells;
-		memcpy(bfm->msg, fadetext, strlen(fadetext));
-		QueuePacket(outapp);
-		safe_delete(outapp);
-	}
-}
-
 void Client::MemSpell(int32 spell_id, int slot, bool update_client)
 {
 	if (slot >= EQ::spells::SPELL_GEM_COUNT || slot < 0) {
@@ -6501,99 +6454,6 @@ int Mob::GetCasterLevel(int32 spell_id) {
 	return std::max(1, level);
 }
 
-//This member function sets the buff duration on the client
-//however it does not work if sent quickly after an action packets, which is what one might perfer to do
-//Thus I use this in the buff process to update the correct duration once after casting
-//this allows AAs and focus effects that increase buff duration to work correctly, but could probably
-//be used for other things as well
-void Client::SendBuffDurationPacket(Buffs_Struct &buff, int slot)
-{
-	EQApplicationPacket* outapp = nullptr;
-	outapp = new EQApplicationPacket(OP_BuffDefinition, sizeof(SpellBuffPacket_Struct));
-	SpellBuffPacket_Struct* sbf = (SpellBuffPacket_Struct*) outapp->pBuffer;
-
-	sbf->entityid = GetID();
-
-	sbf->buff.effect_type = 2;
-
-	sbf->buff.level = buff.casterlevel > 0 ? buff.casterlevel : GetLevel();
-	sbf->buff.bard_modifier = buff.instrument_mod;
-	sbf->buff.spellid = buff.spellid;
-	sbf->buff.duration = buff.ticsremaining;
-	if (buff.dot_rune)
-		sbf->buff.counters = buff.dot_rune;
-	else if (buff.magic_rune)
-		sbf->buff.counters = buff.magic_rune;
-	else if (buff.melee_rune)
-		sbf->buff.counters = buff.melee_rune;
-	else if (buff.counters)
-		sbf->buff.counters = buff.counters;
-	sbf->buff.player_id = buff.casterid;
-	sbf->buff.num_hits = buff.hit_number;
-	sbf->buff.y = buff.caston_y;
-	sbf->buff.x = buff.caston_x;
-	sbf->buff.z = buff.caston_z;
-
-	sbf->slotid = slot;
-	sbf->bufffade = 0;
-	FastQueuePacket(&outapp);
-}
-
-void Client::SendBuffNumHitPacket(Buffs_Struct &buff, int slot)
-{
-	// UF+ use this packet
-	if (ClientVersion() < EQ::versions::ClientVersion::UF)
-		return;
-	EQApplicationPacket *outapp = nullptr;
-	outapp = new EQApplicationPacket(OP_RefreshBuffs, sizeof(BuffIcon_Struct) + sizeof(BuffIconEntry_Struct));
-	BuffIcon_Struct *bi = (BuffIcon_Struct *)outapp->pBuffer;
-	bi->entity_id = GetID();
-	bi->count = 1;
-	bi->all_buffs = 0;
-	bi->tic_timer = tic_timer.GetRemainingTime();
-
-	bi->entries[0].buff_slot = slot;
-	bi->entries[0].spell_id = buff.spellid;
-	bi->entries[0].tics_remaining = buff.ticsremaining;
-	bi->entries[0].num_hits = buff.hit_number;
-	strn0cpy(bi->entries[0].caster, buff.caster_name, 64);
-	bi->name_lengths = strlen(bi->entries[0].caster);
-	FastQueuePacket(&outapp);
-}
-
-void Mob::SendPetBuffsToClient()
-{
-	// Don't really need this check, as it should be checked before this method is called, but it doesn't hurt
-	// too much to check again.
-	if(!(GetOwner() && GetOwner()->IsClient()))
-		return;
-
-	int PetBuffCount = 0;
-
-	auto outapp = new EQApplicationPacket(OP_RefreshPetBuffs, sizeof(PetBuff_Struct));
-	PetBuff_Struct* pbs=(PetBuff_Struct*)outapp->pBuffer;
-	memset(outapp->pBuffer,0,outapp->size);
-	pbs->petid=GetID();
-
-	int MaxSlots = GetMaxTotalSlots();
-
-	if(MaxSlots > PET_BUFF_COUNT)
-		MaxSlots = PET_BUFF_COUNT;
-
-	for(int buffslot = 0; buffslot < MaxSlots; buffslot++)
-	{
-		if (IsValidSpell(buffs[buffslot].spellid)) {
-			pbs->spellid[buffslot] = buffs[buffslot].spellid;
-			pbs->ticsremaining[buffslot] = buffs[buffslot].ticsremaining;
-			PetBuffCount++;
-		}
-	}
-
-	pbs->buffcount=PetBuffCount;
-	GetOwner()->CastToClient()->QueuePacket(outapp);
-	safe_delete(outapp);
-}
-
 void Mob::BuffModifyDurationBySpellID(int32 spell_id, int32 newDuration)
 {
 	int buff_count = GetMaxTotalSlots();
@@ -6602,10 +6462,7 @@ void Mob::BuffModifyDurationBySpellID(int32 spell_id, int32 newDuration)
 		if (buffs[i].spellid == spell_id)
 		{
 			buffs[i].ticsremaining = newDuration;
-			if(IsClient())
-			{
-				CastToClient()->SendBuffDurationPacket(buffs[i], i);
-			}
+			Buff::SendSingleBuffChange(this, buffs[i], i);
 		}
 	}
 }

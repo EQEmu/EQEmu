@@ -295,6 +295,18 @@ inline void SendSingleBuffChange(Mob* sender, const Buffs_Struct& buff, int slot
 
 	ClientPatch::QueueClientsByTarget(sender, ackreq, false, ShouldSendTargetBuffs, mutate)(
 		&IBuff::RefreshBuffs, GetComponent, OP_RefreshTargetBuffs, sender, remove, suspended, slots);
+
+	// the client doesn't automatically do this for some reason (RoF2? I think this is in TOB)
+	// TODO: hook this up to QueueClients, or figure out if there's another missing packet to display the fade text
+	if (remove && sender->IsClient())
+	{
+		const char *fadetext = spells[buff.spellid].spell_fades;
+		auto outapp = std::make_unique<EQApplicationPacket>(OP_ColoredText, sizeof(ColoredText_Struct) +  strlen(fadetext));
+		ColoredText_Struct *bfm = (ColoredText_Struct *) outapp->pBuffer;
+		bfm->color = Chat::Spells;
+		memcpy(bfm->msg, fadetext, strlen(fadetext));
+		sender->CastToClient()->QueuePacket(outapp.get());
+	}
 }
 
 } // namespace Buff

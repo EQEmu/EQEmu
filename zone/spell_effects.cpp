@@ -821,7 +821,7 @@ bool Mob::SpellEffect(Mob* caster, int32 spell_id, float partial, int level_over
 					ps->command = 1;
 					entity_list.QueueClients(this, app);
 					safe_delete(app);
-					SendPetBuffsToClient();
+					Buff::SendFullBuffRefresh(this);
 					SendAppearancePacket(AppearanceType::Pet, caster->GetID(), true, true);
 				}
 
@@ -3864,19 +3864,15 @@ void Mob::BuffProcess()
 				}
 			}
 
-			if(IsClient())
-			{
-				if(buffs[buffs_i].UpdateClient == true)
-				{
-					CastToClient()->SendBuffDurationPacket(buffs[buffs_i], buffs_i);
-					// Hack to get UF to play nicer, RoF seems fine without it
-					if (CastToClient()->ClientVersion() == EQ::versions::ClientVersion::UF && buffs[buffs_i].hit_number > 0)
-						CastToClient()->SendBuffNumHitPacket(buffs[buffs_i], buffs_i);
-					buffs[buffs_i].UpdateClient = false;
-				}
+			// this is for older clients. Newer clients will simply discard this packet
+			if (IsClient() && buffs[buffs_i].UpdateClient == true) {
+				Buff::SendSingleBuffChange(this, buffs[buffs_i], buffs_i);
+				buffs[buffs_i].UpdateClient = false;
 			}
 		}
 	}
+
+	Buff::SendFullBuffRefresh(this);
 }
 
 void Mob::DoBuffTic(const Buffs_Struct &buff, int slot, Mob *caster)
@@ -4248,7 +4244,7 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 		return;
 
 	if (IsClient() && !CastToClient()->IsDead())
-		CastToClient()->MakeBuffFadePacket(buffs[slot].spellid, slot);
+		Buff::SendSingleBuffChange(this, buffs[slot], slot);
 
 	LogSpells("Fading buff [{}] from slot [{}]", buffs[slot].spellid, slot);
 
@@ -7014,7 +7010,7 @@ void Mob::CheckNumHitsRemaining(NumHit type, int32 buff_slot, int32 spell_id)
 					if (!TryFadeEffect(d))
 						BuffFadeBySlot(d, true);
 				} else if (IsClient()) { // still have numhits and client, update
-					CastToClient()->SendBuffNumHitPacket(buffs[d], d);
+					Buff::SendSingleBuffChange(this, buffs[d], d);
 				}
 			}
 		}
@@ -7029,7 +7025,7 @@ void Mob::CheckNumHitsRemaining(NumHit type, int32 buff_slot, int32 spell_id)
 				if (!TryFadeEffect(buff_slot))
 					BuffFadeBySlot(buff_slot , true);
 			} else if (IsClient()) { // still have numhits and client, update
-				CastToClient()->SendBuffNumHitPacket(buffs[buff_slot], buff_slot);
+				Buff::SendSingleBuffChange(this, buffs[buff_slot], buff_slot);
 			}
 		}
 	}
@@ -7047,7 +7043,7 @@ void Mob::CheckNumHitsRemaining(NumHit type, int32 buff_slot, int32 spell_id)
 					if (!TryFadeEffect(d))
 						BuffFadeBySlot(d, true);
 				} else if (IsClient()) { // still have numhits and client, update
-					CastToClient()->SendBuffNumHitPacket(buffs[d], d);
+					Buff::SendSingleBuffChange(this, buffs[d], d);
 				}
 			}
 		}

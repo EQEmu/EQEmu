@@ -242,7 +242,7 @@ struct Buffs_Struct {
 	int32	virus_spread_time; //time till next attempted viral spread
 	bool	persistant_buff;
 	bool	client; //True if the caster is a client
-	bool	UpdateClient;
+	bool	UpdateClient; // This is for legacy client support only. Newer clients take refresh packets for the entire buff list
 
 	// cereal
 	template<class Archive>
