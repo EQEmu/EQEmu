@@ -103,7 +103,7 @@ namespace luabind { namespace detail
 			if (luabind::move_back_reference(L, ptr))
 				return;
 
-            make_instance(L, std::auto_ptr<T>(ptr));
+            make_instance(L, std::unique_ptr<T>(ptr));
 		}
 	};
 

@@ -17,11 +17,13 @@
 */
 #ifdef EMBPERL
 
+#include "zone/embparser.h"
+
+#include "common/compiler_macros.h"
 #include "common/features.h"
 #include "common/misc_functions.h"
 #include "common/seperator.h"
 #include "common/strings.h"
-#include "zone/embparser.h"
 #include "zone/masterentity.h"
 #include "zone/qglobals.h"
 #include "zone/questmgr.h"
@@ -398,6 +400,8 @@ int PerlembParser::EventCommon(
 			zone
 		);
 	}
+
+	return 0;
 }
 
 int PerlembParser::EventNPC(
@@ -1211,31 +1215,33 @@ QuestType PerlembParser::GetQuestTypes(
 		event_id == EVENT_SPELL_EFFECT_TRANSLOCATE_COMPLETE
 	) {
 		return is_global ? QuestType::SpellGlobal : QuestType::Spell;
-	} else {
-		if (npc_mob) {
-			if (!inst) {
-				if (npc_mob->IsBot()) {
-					return is_global ? QuestType::BotGlobal : QuestType::Bot;
-				} else if (npc_mob->IsMerc()) {
-					return is_global ? QuestType::MercGlobal : QuestType::Merc;
-				} else if (npc_mob->IsNPC()) {
-					return is_global ? QuestType::NPCGlobal : QuestType::NPC;
-				}
-			} else {
-				return is_global ? QuestType::ItemGlobal : QuestType::Item;
-			}
-		} else if (!npc_mob && mob) {
-			if (!inst) {
-				if (mob->IsClient()) {
-					return is_global ? QuestType::PlayerGlobal : QuestType::Player;
-				}
-			} else {
-				return is_global ? QuestType::ItemGlobal : QuestType::Item;
-			}
-		} else if (zone) {
-			return is_global ? QuestType::ZoneGlobal : QuestType::Zone;
-		}
 	}
+
+	if (npc_mob) {
+		if (!inst) {
+			if (npc_mob->IsBot()) {
+				return is_global ? QuestType::BotGlobal : QuestType::Bot;
+			} else if (npc_mob->IsMerc()) {
+				return is_global ? QuestType::MercGlobal : QuestType::Merc;
+			} else if (npc_mob->IsNPC()) {
+				return is_global ? QuestType::NPCGlobal : QuestType::NPC;
+			}
+		} else {
+			return is_global ? QuestType::ItemGlobal : QuestType::Item;
+		}
+	} else if (mob) {
+		if (!inst) {
+			if (mob->IsClient()) {
+				return is_global ? QuestType::PlayerGlobal : QuestType::Player;
+			}
+		} else {
+			return is_global ? QuestType::ItemGlobal : QuestType::Item;
+		}
+	} else if (zone) {
+		return is_global ? QuestType::ZoneGlobal : QuestType::Zone;
+	}
+
+	UNREACHABLE();
 }
 
 std::string PerlembParser::GetQuestPackageName(

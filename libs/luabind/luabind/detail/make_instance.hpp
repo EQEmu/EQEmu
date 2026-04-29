@@ -88,7 +88,7 @@ void make_instance(lua_State* L, P p)
 
     try
     {
-        new (storage) holder_type(p, dynamic.first, dynamic.second, cls);
+        new (storage) holder_type(std::move(p), dynamic.first, dynamic.second, cls);
     }
     catch (...)
     {
