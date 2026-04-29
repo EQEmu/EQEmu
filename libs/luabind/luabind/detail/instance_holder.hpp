@@ -57,7 +57,7 @@ inline mpl::true_ check_const_pointer(void const*)
 }
 
 template <class T>
-void release_ownership(std::auto_ptr<T>& p)
+void release_ownership(std::unique_ptr<T>& p)
 {
     p.release();
 }
@@ -83,7 +83,7 @@ public:
         P p, class_id dynamic_id, void* dynamic_ptr, class_rep* cls
     )
       : instance_holder(cls, check_const_pointer(false ? get_pointer(p) : 0))
-      , p(p)
+      , p(std::move(p))
       , weak(0)
       , dynamic_id(dynamic_id)
       , dynamic_ptr(dynamic_ptr)

@@ -46,7 +46,7 @@ struct construct_aux<0, T, Pointer, Signature>
         object_rep* self = touserdata<object_rep>(self_);
         class_rep* cls = self->crep();
 
-        std::auto_ptr<T> instance(new T);
+        std::unique_ptr<T> instance(new T);
         inject_backref(self_.interpreter(), instance.get(), instance.get());
 
         void* naked_ptr = instance.get();
@@ -55,7 +55,7 @@ struct construct_aux<0, T, Pointer, Signature>
         void* storage = self->allocate(sizeof(holder_type));
 
         self->set_instance(new (storage) holder_type(
-            ptr, registered_class<T>::id, naked_ptr, cls));
+            std::move(ptr), registered_class<T>::id, naked_ptr, cls));
     }
 };
 
@@ -92,7 +92,7 @@ struct construct_aux<N, T, Pointer, Signature>
         object_rep* self = touserdata<object_rep>(self_);
         class_rep* cls = self->crep();
 
-        std::auto_ptr<T> instance(new T(BOOST_PP_ENUM_PARAMS(N,_)));
+        std::unique_ptr<T> instance(new T(BOOST_PP_ENUM_PARAMS(N,_)));
         inject_backref(self_.interpreter(), instance.get(), instance.get());
 
         void* naked_ptr = instance.get();
@@ -101,7 +101,7 @@ struct construct_aux<N, T, Pointer, Signature>
         void* storage = self->allocate(sizeof(holder_type));
 
         self->set_instance(new (storage) holder_type(
-            ptr, registered_class<T>::id, naked_ptr, cls));
+            std::move(ptr), registered_class<T>::id, naked_ptr, cls));
     }
 };
 

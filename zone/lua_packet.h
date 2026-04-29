@@ -41,7 +41,7 @@ public:
 	Lua_Packet(int opcode, int size, bool raw);
 	Lua_Packet& operator=(const Lua_Packet& o);
 	Lua_Packet(const Lua_Packet& o);
-	virtual ~Lua_Packet() { if(owned_) { EQApplicationPacket *ptr = GetLuaPtrData(); if(ptr) { delete ptr; } } }
+	virtual ~Lua_Packet();
 
 	int GetSize();
 	int GetOpcode();

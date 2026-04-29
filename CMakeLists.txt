@@ -42,7 +42,7 @@ option(EQEMU_BUILD_PCH "Build with precompiled headers (Windows)" ON)
 
 if(MSVC)
 	add_compile_options(/bigobj)
-	add_compile_definitions(_CRT_SECURE_NO_WARNINGS NOMINMAX WIN32_LEAN_AND_MEAN CRASH_LOGGING _HAS_AUTO_PTR_ETC)
+	add_compile_definitions(_CRT_SECURE_NO_WARNINGS NOMINMAX WIN32_LEAN_AND_MEAN CRASH_LOGGING)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
 
 	option(EQEMU_DISABLE_MSVC_WARNINGS "Disable MSVC compile warnings." OFF)

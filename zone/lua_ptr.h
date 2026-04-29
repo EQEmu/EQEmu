@@ -48,7 +48,8 @@ public:
 	Lua_Ptr(T *d) : d_(d) {
 	}
 	
-	~Lua_Ptr() {
+
+	virtual ~Lua_Ptr() {
 	}
 	
 	T *GetLuaPtrData() {

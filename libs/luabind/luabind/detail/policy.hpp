@@ -169,7 +169,7 @@ namespace luabind { namespace detail
     {
         if (get_pointer(x))
         {
-            make_instance(L, x);
+            make_instance(L, std::move(x));
         }
         else
         {
@@ -180,8 +180,8 @@ namespace luabind { namespace detail
     template <class T>
     void make_pointee_instance(lua_State* L, T& x, mpl::false_, mpl::true_)
     {
-        std::auto_ptr<T> ptr(new T(x));
-        make_instance(L, ptr);
+        std::unique_ptr<T> ptr(new T(x));
+        make_instance(L, std::move(ptr));
     }
 
     template <class T>
