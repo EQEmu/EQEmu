@@ -355,7 +355,7 @@ public:
 					const char *message7 = nullptr, const char *message8 = nullptr,
 					const char *message9 = nullptr);
 	void Tell_StringID(uint32 string_id, const char *who, const char *message);
-	void SendColoredText(uint32 color, std::string message);
+	void SendColoredText(uint32 color, const std::string& message);
 	void SendTraderItem(uint32 item_id,uint16 quantity, TraderRepository::Trader &trader);
 	void DoBazaarSearch(BazaarSearchCriteria_Struct search_criteria);
 	uint16 FindTraderItem(int32 SerialNumber,uint16 Quantity);

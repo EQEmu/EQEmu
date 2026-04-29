@@ -339,12 +339,12 @@ bool Mob::DoCastSpell(int32 spell_id, uint16 target_id, CastingSlot slot,
 		Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spell_id);
 
 		if (IsClient())
-			Message::MessageString(CastToClient(), Chat::SpellFailure, fizzle_msg, spell_link);
+			ClientPatch::MessageString(CastToClient(), Chat::SpellFailure, fizzle_msg, spell_link);
 
 		/**
 		 * Song Failure message
 		 */
-		Message::CloseMessageString(this, true, RuleI(Range, SpellMessages),
+		ClientPatch::CloseMessageString(this, true, RuleI(Range, SpellMessages),
 			nullptr, true, IsClient() ? FilterPCSpells : FilterNPCSpells)(
 				Chat::SpellFailure, fizzle_msg == MISS_NOTE ? MISSED_NOTE_OTHER : SPELL_FIZZLE_OTHER, GetName(), spell_link);
 
@@ -1303,7 +1303,7 @@ void Mob::InterruptSpell(uint16 message, uint16 color, int32 spellid)
 		// the interrupt message
 		char spell_link[Links::MAX_LINK_SIZE];
 		Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spellid);
-		Message::InterruptSpell(CastToClient(), message, GetID(), spell_link);
+		ClientPatch::InterruptSpell(CastToClient(), message, GetID(), spell_link);
 		SendSpellBarEnable(spellid);
 	}
 
@@ -1331,7 +1331,7 @@ void Mob::InterruptSpell(uint16 message, uint16 color, int32 spellid)
 	// this is the actual message, it works the same as a formatted message
 	char spell_link[Links::MAX_LINK_SIZE];
 	Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spellid);
-	Message::InterruptSpellOther(this, message_other, GetID(), GetCleanName(), spell_link);
+	ClientPatch::InterruptSpellOther(this, message_other, GetID(), GetCleanName(), spell_link);
 }
 
 // this is like interrupt, just it doesn't spam interrupt packets to everyone
@@ -2856,7 +2856,7 @@ bool Mob::SpellFinished(int32 spell_id, Mob *spell_target, CastingSlot slot, int
 	if (IsClient() && IsEffectInSpell(spell_id, SpellEffect::BindSight)) {
 		for (int i = 0; i < GetMaxTotalSlots(); i++) {
 			if (buffs[i].spellid == spell_id) {
-				Buff::SendSingleBuffChange(this, buffs[i], i);//its hack, it works.
+				ClientPatch::SendSingleBuffChange(this, buffs[i], i);//its hack, it works.
 			}
 		}
 	}
@@ -2864,7 +2864,7 @@ bool Mob::SpellFinished(int32 spell_id, Mob *spell_target, CastingSlot slot, int
 	if (IsClient() && spells[spell_id].hit_number) {
 		for (int i = 0; i < GetMaxTotalSlots(); i++) {
 			if (buffs[i].spellid == spell_id && buffs[i].hit_number > 0) {
-				Buff::SendSingleBuffChange(this, buffs[i], i);
+				ClientPatch::SendSingleBuffChange(this, buffs[i], i);
 				break;
 			}
 		}
@@ -3741,8 +3741,8 @@ int Mob::AddBuff(Mob *caster, int32 spell_id, int duration, int32 level_override
 	}
 
 	LogSpells("Buff [{}] added to slot [{}] with caster level [{}]", spell_id, emptyslot, caster_level);
-	Buff::SendSingleBuffChange(this, buffs[emptyslot], emptyslot);
-	Buff::SendFullBuffRefresh(this);
+	ClientPatch::SendSingleBuffChange(this, buffs[emptyslot], emptyslot);
+	ClientPatch::SendFullBuffRefresh(this);
 
 	// recalculate bonuses since we stripped/added buffs
 	CalcBonuses();
@@ -6462,7 +6462,7 @@ void Mob::BuffModifyDurationBySpellID(int32 spell_id, int32 newDuration)
 		if (buffs[i].spellid == spell_id)
 		{
 			buffs[i].ticsremaining = newDuration;
-			Buff::SendSingleBuffChange(this, buffs[i], i);
+			ClientPatch::SendSingleBuffChange(this, buffs[i], i);
 		}
 	}
 }
@@ -7037,7 +7037,7 @@ void Mob::DoBardCastingFromItemClick(bool is_casting_bard_song, uint32 cast_time
 		if (cast_time != 0) {
 			char spell_link[Links::MAX_LINK_SIZE];
 			Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spell_id);
-			Message::InterruptSpell(CastToClient(), SONG_ENDS, GetID(), spell_link);
+			ClientPatch::InterruptSpell(CastToClient(), SONG_ENDS, GetID(), spell_link);
 
 			ZeroCastingVars();
 			ZeroBardPulseVars();

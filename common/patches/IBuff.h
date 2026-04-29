@@ -16,7 +16,7 @@ class Mob;
 class EQApplicationPacket;
 class Buffs_Struct;
 
-namespace Buff {
+namespace ClientPatch {
 
 class IBuff
 {

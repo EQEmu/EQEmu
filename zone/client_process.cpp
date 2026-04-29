@@ -2309,7 +2309,7 @@ void Client::ClearHover()
 	entity_list.QueueClients(this, outapp, false);
 	safe_delete(outapp);
 
-	Buff::SendFullBuffRefresh(this);
+	ClientPatch::SendFullBuffRefresh(this);
 
 	dead = false;
 }

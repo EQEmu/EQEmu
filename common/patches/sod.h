@@ -22,45 +22,34 @@
 
 class EQStreamIdentifier;
 
-namespace SoD
-{
+namespace SoD {
 
-	//these are the only public member of this namespace.
-	extern void Register(EQStreamIdentifier &into);
-	extern void Reload();
+extern void Register(EQStreamIdentifier& into);
+extern void Reload();
 
-
-
-	//you should not directly access anything below..
-	//I just dont feel like making a seperate header for it.
-
-	class Strategy : public StructStrategy {
-	public:
-		Strategy();
-
-	protected:
-
-		virtual std::string Describe() const;
-		virtual const EQ::versions::ClientVersion ClientVersion() const;
-
-		//magic macro to declare our opcode processors
-		#include "ss_declare.h"
-		#include "sod_ops.h"
-	};
-
-} /*SoD*/
-
-namespace Buff {
-
-class SoD : public Titanium
+class Strategy : public StructStrategy
 {
 public:
-	SoD() = default;
-	~SoD() override = default;
+	Strategy();
+
+protected:
+	virtual std::string Describe() const;
+	virtual const EQ::versions::ClientVersion ClientVersion() const;
+
+	//magic macro to declare our opcode processors
+#include "ss_declare.h"
+#include "sod_ops.h"
+};
+
+class BuffComponent : public Titanium::BuffComponent
+{
+public:
+	BuffComponent() = default;
+	~BuffComponent() override = default;
 
 	std::unique_ptr<EQApplicationPacket> RefreshBuffs(EmuOpcode opcode, Mob* mob, bool remove,
 		bool buff_timers_suspended, const std::vector<uint32_t>& slots) const override;
 	void SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const override;
 };
 
-} // namespace Buff
+} /*SoD*/

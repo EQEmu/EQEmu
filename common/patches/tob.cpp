@@ -5478,16 +5478,13 @@ namespace TOB
 		// we're a normal buff
 		return index; // as long as we guard against bad slots server side, we should be fine
 	}
-} /*TOB*/
-
-namespace Message {
 
 struct TOBStringIDs
 {
 	static constexpr uint32_t DisarmedTrap = 1458; // You successfully disarmed the trap
 };
 
-uint32_t TOB::ResolveID(uint32_t id) const
+uint32_t MessageComponent::ResolveID(uint32_t id) const
 {
 	switch (id) {
 	case YOU_FLURRY:
@@ -5531,11 +5528,11 @@ uint32_t TOB::ResolveID(uint32_t id) const
 	case DISARMED_TRAP:
 		return TOBStringIDs::DisarmedTrap;
 	default:
-		return Titanium::ResolveID(id);
+		return Titanium::MessageComponent::ResolveID(id);
 	}
 }
 
-void TOB::ResolveArguments(uint32_t id, std::array<const char*, 9>& args) const
+void MessageComponent::ResolveArguments(uint32_t id, std::array<const char*, 9>& args) const
 {
 	switch (id) {
 	case SPELL_FIZZLE:
@@ -5545,12 +5542,12 @@ void TOB::ResolveArguments(uint32_t id, std::array<const char*, 9>& args) const
 		// take all arguments (spell link)
 		break;
 	default:
-		Titanium::ResolveArguments(id, args);
+		Titanium::MessageComponent::ResolveArguments(id, args);
 		break;
 	}
 }
 
-std::unique_ptr<EQApplicationPacket> TOB::Formatted(uint32_t color, uint32_t id,
+std::unique_ptr<EQApplicationPacket> MessageComponent::Formatted(uint32_t color, uint32_t id,
 	const std::array<const char*, 9>& args) const
 {
 	uint32_t string_id = ResolveID(id);
@@ -5583,7 +5580,7 @@ std::unique_ptr<EQApplicationPacket> TOB::Formatted(uint32_t color, uint32_t id,
 	return nullptr;
 }
 
-std::unique_ptr<EQApplicationPacket> TOB::InterruptSpell(uint32_t message, uint32_t spawn_id,
+std::unique_ptr<EQApplicationPacket> MessageComponent::InterruptSpell(uint32_t message, uint32_t spawn_id,
 	const char* spell_link) const
 {
 	auto outapp = std::make_unique<EQApplicationPacket>(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(spell_link) + 1);
@@ -5596,7 +5593,7 @@ std::unique_ptr<EQApplicationPacket> TOB::InterruptSpell(uint32_t message, uint3
 	return outapp;
 }
 
-std::unique_ptr<EQApplicationPacket> TOB::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id,
+std::unique_ptr<EQApplicationPacket> MessageComponent::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id,
 	const char* name,
 	const char* spell_link) const
 {
@@ -5610,20 +5607,18 @@ std::unique_ptr<EQApplicationPacket> TOB::InterruptSpellOther(Mob* sender, uint3
 	return outapp;
 }
 
-} // namespace Message
-
-namespace Buff {
-
-std::unique_ptr<EQApplicationPacket> TOB::BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot, bool fade) const
+std::unique_ptr<EQApplicationPacket> BuffComponent::BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot, bool fade) const
 {
-	auto packet = std::make_unique<EQApplicationPacket>(OP_BuffDefinition, sizeof(::TOB::structs::EQAffectPacket_Struct));
-	auto affect = reinterpret_cast<::TOB::structs::EQAffectPacket_Struct*>(packet->pBuffer);
+	auto packet = std::make_unique<EQApplicationPacket>(OP_BuffDefinition, sizeof(structs::EQAffectPacket_Struct));
+	auto affect = reinterpret_cast<structs::EQAffectPacket_Struct*>(packet->pBuffer);
 
 	// base packet
 	affect->entity_id = mob->GetID();
 	affect->unknown004 = 0;
-	affect->slot_id = ::TOB::ServerToTOBBuffSlot(slot);
+	affect->slot_id = ServerToTOBBuffSlot(slot);
 	affect->buff_fade = fade ? 1 : 2; // 1 is remove, 2 is modify, 3 is add (only seen 1 and 2 sent)
+
+	memset(&affect->affect, 0, sizeof(affect->affect));
 
 	// affect slots
 	for (int affect_slot = 0; affect_slot < 6; ++affect_slot) {
@@ -5633,22 +5628,24 @@ std::unique_ptr<EQApplicationPacket> TOB::BuffDefinition(Mob* mob, const Buffs_S
 		affect->affect.slots[affect_slot].value = 0; // this is always 0
 	}
 
-	// affect info
-	affect->affect.caster_id.Id = buff.casterid;
-	affect->affect.caster_id.WorldId = RuleI(World, Id);
-	affect->affect.caster_id.Reserved = 0;
-	affect->affect.flags = 0;
-	affect->affect.spell_id = buff.spellid;
-	affect->affect.duration = buff.ticsremaining;
-	affect->affect.initial_duration = buff.ticsremaining; // TODO: this  isn't correct, it's the total duration
-	affect->affect.hit_count = buff.hit_number;
-	affect->affect.viral_timer = 0;
-	affect->affect.modifier = static_cast<float>(buff.instrument_mod) / 10.f;
-	affect->affect.y = static_cast<float>(buff.caston_y);
-	affect->affect.x = static_cast<float>(buff.caston_x);
-	affect->affect.z = static_cast<float>(buff.caston_z);
-	affect->affect.type = 2;
-	affect->affect.level = buff.casterlevel > 0 ? buff.casterlevel : mob->GetLevel();
+	if (!fade) {
+		// affect info
+		affect->affect.caster_id.Id = buff.casterid;
+		affect->affect.caster_id.WorldId = RuleI(World, Id);
+		affect->affect.caster_id.Reserved = 0;
+		affect->affect.flags = 0;
+		affect->affect.spell_id = buff.spellid;
+		affect->affect.duration = buff.ticsremaining;
+		affect->affect.initial_duration = buff.ticsremaining; // TODO: this  isn't correct, it's the total duration
+		affect->affect.hit_count = buff.hit_number;
+		affect->affect.viral_timer = 0;
+		affect->affect.modifier = static_cast<float>(buff.instrument_mod) / 10.f;
+		affect->affect.y = static_cast<float>(buff.caston_y);
+		affect->affect.x = static_cast<float>(buff.caston_x);
+		affect->affect.z = static_cast<float>(buff.caston_z);
+		affect->affect.type = 2;
+		affect->affect.level = buff.casterlevel > 0 ? buff.casterlevel : mob->GetLevel();
+	}
 
 	//no idea if these are right; eqlib doesn't seem to know either
 	if (buff.dot_rune > 0)
@@ -5666,7 +5663,7 @@ std::unique_ptr<EQApplicationPacket> TOB::BuffDefinition(Mob* mob, const Buffs_S
 	return packet;
 }
 
-std::unique_ptr<EQApplicationPacket> TOB::RefreshBuffs(EmuOpcode opcode, Mob* mob, bool remove,
+std::unique_ptr<EQApplicationPacket> BuffComponent::RefreshBuffs(EmuOpcode opcode, Mob* mob, bool remove,
 	bool buff_timers_suspended, const std::vector<uint32_t>& slots) const
 {
 	Buffs_Struct* buffs = mob->GetBuffs();
@@ -5710,7 +5707,7 @@ std::unique_ptr<EQApplicationPacket> TOB::RefreshBuffs(EmuOpcode opcode, Mob* mo
 }
 
 // 0 = self buff window, 1 = self target window, 2 = pet buff or target window, 4 = group, 5 = PC, 7 = NPC
-void TOB::SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const
+void BuffComponent::SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const
 {
 	if (packet) {
 		unsigned char* type = &packet->pBuffer[packet->size - 2];
@@ -5728,4 +5725,4 @@ void TOB::SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* sour
 	}
 }
 
-} // namespace Buff
+} /*TOB*/

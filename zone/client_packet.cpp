@@ -760,7 +760,7 @@ void Client::CompleteConnect()
 	Mob* pet = GetPet();
 	if (pet) {
 		pet->SendWearChangeAndLighting(EQ::textures::LastTexture);
-		Buff::SendFullBuffRefresh(pet);
+		ClientPatch::SendFullBuffRefresh(pet);
 	}
 
 	if (GetGroup())
@@ -935,7 +935,7 @@ void Client::CompleteConnect()
 		delete pack;
 	}
 
-	Buff::SendFullBuffRefresh(this);
+	ClientPatch::SendFullBuffRefresh(this);
 
 	// TODO: load these states
 	// We at least will set them to the correct state for now
@@ -15107,7 +15107,7 @@ void Client::Handle_OP_TargetMouse(const EQApplicationPacket *app)
 		if (nt)
 		{
 			SetTarget(nt);
-			Buff::SendFullBuffRefresh(nt);
+			ClientPatch::SendFullBuffRefresh(nt);
 		}
 		else
 		{

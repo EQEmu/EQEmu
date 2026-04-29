@@ -3921,10 +3921,8 @@ namespace Titanium
 		// we're a normal buff
 		return index; // as long as we guard against bad slots server side, we should be fine
 	}
-} /*Titanium*/
 
-namespace Message {
-std::unique_ptr<EQApplicationPacket> Titanium::Simple(uint32_t color, uint32_t id) const
+std::unique_ptr<EQApplicationPacket> MessageComponent::Simple(uint32_t color, uint32_t id) const
 {
 	uint32_t string_id = ResolveID(id);
 	if (string_id > 0) {
@@ -3940,7 +3938,7 @@ std::unique_ptr<EQApplicationPacket> Titanium::Simple(uint32_t color, uint32_t i
 	return nullptr;
 }
 
-std::unique_ptr<EQApplicationPacket> Titanium::Formatted(
+std::unique_ptr<EQApplicationPacket> MessageComponent::Formatted(
 	uint32_t color, uint32_t id, const std::array<const char*, 9>& args) const
 {
 	uint32_t string_id = ResolveID(id);
@@ -3968,7 +3966,7 @@ std::unique_ptr<EQApplicationPacket> Titanium::Formatted(
 	return nullptr;
 }
 
-std::unique_ptr<EQApplicationPacket> Titanium::InterruptSpell(uint32_t message, uint32_t spawn_id,
+std::unique_ptr<EQApplicationPacket> MessageComponent::InterruptSpell(uint32_t message, uint32_t spawn_id,
 	const char* spell_link) const
 {
 	auto outapp = std::make_unique<EQApplicationPacket>(OP_InterruptCast, sizeof(InterruptCast_Struct));
@@ -3980,7 +3978,7 @@ std::unique_ptr<EQApplicationPacket> Titanium::InterruptSpell(uint32_t message, 
 	return outapp;
 }
 
-std::unique_ptr<EQApplicationPacket> Titanium::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id,
+std::unique_ptr<EQApplicationPacket> MessageComponent::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id,
 	const char* name,
 	const char* spell_link) const
 {
@@ -3993,14 +3991,14 @@ std::unique_ptr<EQApplicationPacket> Titanium::InterruptSpellOther(Mob* sender, 
 }
 
 // A value of 0 means that the string isn't mapped in this client, valid string ids start at 1
-uint32_t Titanium::ResolveID(uint32_t id) const
+uint32_t MessageComponent::ResolveID(uint32_t id) const
 {
 	// passthrough — string IDs are defined at the base client level;
 	// override in patches where IDs need remapping
 	return id;
 }
 
-void Titanium::ResolveArguments(uint32_t id, std::array<const char*, 9>& args) const
+void MessageComponent::ResolveArguments(uint32_t id, std::array<const char*, 9>& args) const
 {
 	switch (id) {
 	case SPELL_FIZZLE:
@@ -4016,11 +4014,7 @@ void Titanium::ResolveArguments(uint32_t id, std::array<const char*, 9>& args) c
 	}
 }
 
-} // namespace Message
-
-namespace Buff {
-
-std::unique_ptr<EQApplicationPacket> Titanium::BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot,
+std::unique_ptr<EQApplicationPacket> BuffComponent::BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot,
 	bool fade) const
 {
 	auto outapp = std::make_unique<EQApplicationPacket>(OP_BuffDefinition, sizeof(SpellBuffPacket_Struct));
@@ -4054,12 +4048,12 @@ std::unique_ptr<EQApplicationPacket> Titanium::BuffDefinition(Mob* mob, const Bu
 	return outapp;
 }
 
-std::unique_ptr<EQApplicationPacket> Titanium::RefreshBuffs(EmuOpcode opcode, Mob* mob, bool remove,
+std::unique_ptr<EQApplicationPacket> BuffComponent::RefreshBuffs(EmuOpcode opcode, Mob* mob, bool remove,
 	bool buff_timers_suspended, const std::vector<uint32_t>& slots) const
 {
 	return nullptr;
 }
 
-void Titanium::SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const {}
+void BuffComponent::SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const {}
 
-} // namespace Buff
+} /*Titanium*/

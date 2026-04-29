@@ -4287,12 +4287,10 @@ namespace SoD
 		// we're a normal buff
 		return index; // as long as we guard against bad slots server side, we should be fine
 	}
-} /*SoD*/
 
-namespace Buff {
-
-std::unique_ptr<EQApplicationPacket> SoD::RefreshBuffs(EmuOpcode opcode, Mob* mob, bool remove,
-	bool buff_timers_suspended, const std::vector<uint32_t>& slots) const
+	std::unique_ptr<EQApplicationPacket> BuffComponent::RefreshBuffs(EmuOpcode opcode, Mob* mob,
+		bool remove,
+		bool buff_timers_suspended, const std::vector<uint32_t>& slots) const
 {
 	// SoD only supports target refresh, not self refresh packets
 	if (opcode == OP_RefreshTargetBuffs) {
@@ -4341,7 +4339,7 @@ std::unique_ptr<EQApplicationPacket> SoD::RefreshBuffs(EmuOpcode opcode, Mob* mo
 }
 
 // 0 = self buff window, 1 = self target window, 2 = pet buff or target window, 4 = group, 5 = PC, 7 = NPC
-void SoD::SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const
+void BuffComponent::SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const
 {
 	if (packet) {
 		BuffIcon_Struct *buff = (BuffIcon_Struct*)packet->pBuffer;
@@ -4358,4 +4356,4 @@ void SoD::SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* sour
 	}
 }
 
-} // namespace Buff
+} /*SoD*/

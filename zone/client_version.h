@@ -17,7 +17,7 @@
 namespace ClientPatch {
 
 using ClientList = std::unordered_map<uint16, Client*>;
-template<typename Obj> using ComponentGetter = std::function<Obj*(const Client*)>;
+template<typename Obj> using ComponentGetter = Obj*(*)(const Client*); //std::function<Obj*(const Client*)>;
 using SendPredicate = std::function<bool(Client*)>;
 using MutatePacket = std::function<void(std::unique_ptr<EQApplicationPacket>&, Client*)>;
 
@@ -35,7 +35,7 @@ static void QueuePacket(Client* c, Fun fun, Obj* obj, Args&&... args)
 // packet generator queue functions
 static auto QueueClients(Mob* sender, bool ignore_sender = false, bool ackreq = true)
 {
-	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun, const ComponentGetter<Obj>& component, Args&&... args)
+	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun, ComponentGetter<Obj> component, Args&&... args)
 			requires std::is_member_function_pointer_v<Fun>
 	{
 		std::array<std::unique_ptr<EQApplicationPacket>, EQ::versions::ClientVersionCount> build_packets;
@@ -61,7 +61,7 @@ static auto QueueCloseClients(
 {
 	if (distance <= 0) distance = static_cast<float>(zone->GetClientUpdateRange());
 
-	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun, const ComponentGetter<Obj>& component, Args&&... args)
+	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun, ComponentGetter<Obj> component, Args&&... args)
 			requires std::is_member_function_pointer_v<Fun>
 	{
 		if (sender == nullptr) {
@@ -109,7 +109,7 @@ static void FastQueuePacket(Client* c, Fun fun, Obj* obj, Args&&... args)
 
 static auto QueueClientsByTarget(Mob* sender, bool ackreq, bool HoTT, const SendPredicate& should_send, const MutatePacket& mutate)
 {
-	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun, const ComponentGetter<Obj> component, Args&&... args)
+	return [=]<typename Fun, typename Obj, typename... Args>(Fun fun, ComponentGetter<Obj> component, Args&&... args)
 			requires std::is_member_function_pointer_v<Fun>
 	{
 		if (sender != nullptr) {
@@ -128,21 +128,11 @@ static auto QueueClientsByTarget(Mob* sender, bool ackreq, bool HoTT, const Send
 
 					if (packet)
 						c->QueuePacket(packet.get(), ackreq, Client::CLIENT_CONNECTED);
-				}
+					}
 			}
 		}
 	};
 }
-
-} // namespace ClientPatch
-
-// Helpers for the Message interface to send message packets
-namespace Message {
-
-// this can return nullptr when the component doesn't exist for the version
-static std::function GetComponent = [](const Client* c) -> IMessage* {
-	return GetMessageComponent(c->GetClientVersion()).get();
-};
 
 // Helper functions to wrap the packet construction in sends
 template <AllConstChar... Args>
@@ -150,10 +140,10 @@ template <AllConstChar... Args>
 void MessageString(Client* c, uint32_t type, uint32_t id, Args&&... args)
 {
 	if constexpr (sizeof...(Args) == 0) {
-		ClientPatch::QueuePacket(c, &IMessage::Simple, GetComponent(c), type, id);
+		QueuePacket(c, &IMessage::Simple, GetClientComponent<IMessage>(c), type, id);
 	} else {
 		std::array<const char*, 9> a = {args...};
-		ClientPatch::QueuePacket(c, &IMessage::Formatted, GetComponent(c), type, id, a);
+		QueuePacket(c, &IMessage::Formatted, GetClientComponent<IMessage>(c), type, id, a);
 	}
 }
 
@@ -165,39 +155,30 @@ static auto CloseMessageString(
 	return [=]<AllConstChar... Args>(uint32_t type, uint32_t id, Args&&... args)
 			requires (sizeof...(Args) <= 9)
 	{
-		auto queue_close_clients = ClientPatch::QueueCloseClients(sender, ignore_sender, distance, skipped_mob,
+		auto queue_close_clients = QueueCloseClients(sender, ignore_sender, distance, skipped_mob,
 			is_ack_required, filter);
 
 		if constexpr (sizeof...(Args) == 0) {
-			return queue_close_clients(&IMessage::Simple, GetComponent, type, id);
+			return queue_close_clients(&IMessage::Simple, GetClientComponent<IMessage>, type, id);
 		} else {
 			std::array<const char*, 9> a = {args...};
-			return queue_close_clients(&IMessage::Formatted, GetComponent, type, id, a);
+			return queue_close_clients(&IMessage::Formatted, GetClientComponent<IMessage>, type, id, a);
 		}
 	};
 }
 
 inline void InterruptSpell(Client* c, uint32_t message, uint32_t spawn_id, const char* spell_link)
 {
-	ClientPatch::QueuePacket(c, &IMessage::InterruptSpell, GetComponent(c), message, spawn_id, spell_link);
+	QueuePacket(c, &IMessage::InterruptSpell, GetClientComponent<IMessage>(c), message, spawn_id, spell_link);
 }
 
 inline void InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, const char* name,
 	const char* spell_link)
 {
-	ClientPatch::QueueCloseClients(sender, true, RuleI(Range, SongMessages), nullptr, true,
+	QueueCloseClients(sender, true, RuleI(Range, SongMessages), nullptr, true,
 		sender->IsClient() ? FilterPCSpells : FilterNPCSpells)(
-		&IMessage::InterruptSpellOther, GetComponent, sender, message, spawn_id, name, spell_link);
+		&IMessage::InterruptSpellOther, GetClientComponent<IMessage>, sender, message, spawn_id, name, spell_link);
 }
-
-} // namespace Message
-
-// helper functions to handle sending buffs
-namespace Buff {
-
-static std::function GetComponent = [](const Client* c) -> IBuff* {
-	return GetBuffComponent(c->GetClientVersion()).get();
-};
 
 static bool ShouldSendTargetBuffs(Client* c)
 {
@@ -243,30 +224,30 @@ inline void SendFullBuffRefresh(Mob* sender, bool remove = false, bool ackreq = 
 	// first, send to self if self is client
 	if (sender->IsClient()) {
 		Client* c = sender->CastToClient();
-		ClientPatch::FastQueuePacket(c, &IBuff::RefreshBuffs, GetComponent(c), OP_RefreshBuffs, sender, false, suspended, slots);
+		FastQueuePacket(c, &IBuff::RefreshBuffs, GetClientComponent<IBuff>(c), OP_RefreshBuffs, sender, false, suspended, slots);
 	}
 
 	// next, send to owner if self is a pet to a client
 	if (sender->IsPet() && sender->GetOwner()->IsClient()) {
 		if (Mob* owner = sender->GetOwner(); owner != nullptr && owner->IsClient()) {
 			Client* c = owner->CastToClient();
-			ClientPatch::FastQueuePacket(c, &IBuff::RefreshBuffs, GetComponent(c), OP_RefreshPetBuffs, sender, false, suspended, slots);
+			FastQueuePacket(c, &IBuff::RefreshBuffs, GetClientComponent<IBuff>(c), OP_RefreshPetBuffs, sender, false, suspended, slots);
 		}
 	}
 
 	// finally send to all clients targeting the mob, will need to mutate the packet to set the type
 	auto mutate = [sender](std::unique_ptr<EQApplicationPacket>& packet, Client* c) {
-		GetComponent(c)->SetRefreshType(packet, sender, c);
+		GetClientComponent<IBuff>(c)->SetRefreshType(packet, sender, c);
 	};
 
-	ClientPatch::QueueClientsByTarget(sender, ackreq, false, ShouldSendTargetBuffs, mutate)(
-		&IBuff::RefreshBuffs, GetComponent, OP_RefreshTargetBuffs, sender, false, suspended, slots);
+	QueueClientsByTarget(sender, ackreq, false, ShouldSendTargetBuffs, mutate)(
+		&IBuff::RefreshBuffs, GetClientComponent<IBuff>, OP_RefreshTargetBuffs, sender, false, suspended, slots);
 
 	// if we have remove set, this will clear  any target windows that shouldn't see the buffs
 	if (remove)
-		ClientPatch::QueueClientsByTarget(sender, ackreq, true,
+		QueueClientsByTarget(sender, ackreq, true,
 			[](Client* c) { return !ShouldSendTargetBuffs(c); }, mutate)(
-			&IBuff::RefreshBuffs, GetComponent, OP_RefreshTargetBuffs, sender, true, suspended, slots);
+			&IBuff::RefreshBuffs, GetClientComponent<IBuff>, OP_RefreshTargetBuffs, sender, true, suspended, slots);
 }
 
 inline void SendSingleBuffChange(Mob* sender, const Buffs_Struct& buff, int slot, bool remove = false, bool ackreq = true)
@@ -277,36 +258,31 @@ inline void SendSingleBuffChange(Mob* sender, const Buffs_Struct& buff, int slot
 	// first, send to self if self is client, which takes the definition and the refresh
 	if (sender->IsClient()) {
 		Client* c = sender->CastToClient();
-		ClientPatch::FastQueuePacket(c, &IBuff::BuffDefinition, GetComponent(c), sender, buff,  slot, remove);
-		ClientPatch::FastQueuePacket(c, &IBuff::RefreshBuffs, GetComponent(c), OP_RefreshBuffs, sender, remove, suspended, slots);
+		// FastQueuePacket(c, &IBuff::BuffDefinition, GetClientComponent<IBuff>(c), sender, buff,  slot, false);
+		// FastQueuePacket(c, &IBuff::RefreshBuffs, GetClientComponent<IBuff>(c), OP_RefreshBuffs, sender, remove, suspended, slots);
+		// FastQueuePacket(c, &IBuff::BuffDefinition, GetClientComponent<IBuff>(c), sender, buff,  slot, remove);
+		// FastQueuePacket(c, &IBuff::RefreshBuffs, GetClientComponent<IBuff>(c), OP_RefreshBuffs, sender, remove, suspended, slots);
+		FastQueuePacket(c, &IBuff::RefreshBuffs, GetClientComponent<IBuff>(c), OP_RefreshBuffs, sender, remove, suspended, slots);
 	}
 
 	// the rest of the buff packets do not take the definition, only the refresh
 	if (sender->IsPet() && sender->GetOwner()->IsClient()) {
 		if (Mob* owner = sender->GetOwner(); owner != nullptr && owner->IsClient()) {
 			Client* c = owner->CastToClient();
-			ClientPatch::FastQueuePacket(c, &IBuff::RefreshBuffs, GetComponent(c), OP_RefreshPetBuffs, sender, remove, suspended, slots);
+			FastQueuePacket(c, &IBuff::RefreshBuffs, GetClientComponent<IBuff>(c), OP_RefreshPetBuffs, sender, remove, suspended, slots);
 		}
 	}
 
 	auto mutate = [sender](std::unique_ptr<EQApplicationPacket>& packet, Client* c) {
-		GetComponent(c)->SetRefreshType(packet, sender, c);
+		GetClientComponent<IBuff>(c)->SetRefreshType(packet, sender, c);
 	};
 
-	ClientPatch::QueueClientsByTarget(sender, ackreq, false, ShouldSendTargetBuffs, mutate)(
-		&IBuff::RefreshBuffs, GetComponent, OP_RefreshTargetBuffs, sender, remove, suspended, slots);
+	QueueClientsByTarget(sender, ackreq, false, ShouldSendTargetBuffs, mutate)(
+		&IBuff::RefreshBuffs, GetClientComponent<IBuff>, OP_RefreshTargetBuffs, sender, remove, suspended, slots);
 
-	// the client doesn't automatically do this for some reason (RoF2? I think this is in TOB)
-	// TODO: hook this up to QueueClients, or figure out if there's another missing packet to display the fade text
-	if (remove && sender->IsClient())
-	{
-		const char *fadetext = spells[buff.spellid].spell_fades;
-		auto outapp = std::make_unique<EQApplicationPacket>(OP_ColoredText, sizeof(ColoredText_Struct) +  strlen(fadetext));
-		ColoredText_Struct *bfm = (ColoredText_Struct *) outapp->pBuffer;
-		bfm->color = Chat::Spells;
-		memcpy(bfm->msg, fadetext, strlen(fadetext));
-		sender->CastToClient()->QueuePacket(outapp.get());
-	}
+	// the client doesn't automatically do this for some reason, only send it to the sender
+	// if (remove && sender->IsClient())
+	// 	sender->CastToClient()->SendColoredText(Chat::Spells, spells[buff.spellid].spell_fades);
 }
 
-} // namespace Buff
+} // namespace ClientPatch

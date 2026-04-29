@@ -3811,10 +3811,10 @@ void Client::MessageString(uint32 type, uint32 string_id, uint32 distance)
 		return;
 
 	if (distance > 0)
-		Message::CloseMessageString(this, false, static_cast<float>(distance))(
+		ClientPatch::CloseMessageString(this, false, static_cast<float>(distance))(
 			type, string_id);
 	else
-		Message::MessageString(this, type, string_id);
+		ClientPatch::MessageString(this, type, string_id);
 }
 
 //
@@ -3843,10 +3843,10 @@ void Client::MessageString(uint32 type, uint32 string_id, const char* message1,
 		type = 4;
 
 	if (distance > 0)
-		Message::CloseMessageString(this, false, static_cast<float>(distance))(type, string_id, message1,
+		ClientPatch::CloseMessageString(this, false, static_cast<float>(distance))(type, string_id, message1,
 			message2, message3, message4, message5, message6, message7, message8, message9);
 	else
-		Message::MessageString(this, type, string_id, message1, message2, message3, message4, message5,
+		ClientPatch::MessageString(this, type, string_id, message1, message2, message3, message4, message5,
 			message6, message7, message8, message9);
 }
 
@@ -6326,7 +6326,7 @@ void Client::SuspendMinion(int value)
 			if(value >= 1)
 			{
 				CurrentPet->SetPetState(m_suspendedminion.Buffs, m_suspendedminion.Items);
-				Buff::SendFullBuffRefresh(CurrentPet);
+				ClientPatch::SendFullBuffRefresh(CurrentPet);
 			}
 			CurrentPet->CalcBonuses();
 
@@ -8930,7 +8930,7 @@ int Client::GetQuiverHaste(int delay)
 	return (pi->GetItem()->BagWR * 0.0025f * delay) + 1;
 }
 
-void Client::SendColoredText(uint32 color, std::string message)
+void Client::SendColoredText(uint32 color, const std::string& message)
 {
 	// arbitrary size limit
 	if (message.size() > 512) // live does send this with empty strings sometimes ...

@@ -152,7 +152,7 @@ bool Mob::SpellEffect(Mob* caster, int32 spell_id, float partial, int level_over
 		if (spells[spell_id].endurance_upkeep > 0)
 			SetEndurUpkeep(true);
 
-		Buff::SendFullBuffRefresh(this);
+		ClientPatch::SendFullBuffRefresh(this);
 	}
 
 	if (IsClient()) {
@@ -811,7 +811,7 @@ bool Mob::SpellEffect(Mob* caster, int32 spell_id, float partial, int level_over
 
 				// This was done in AddBuff, but we were not a pet yet, so
 				// the target windows didn't get updated.
-				Buff::SendFullBuffRefresh(this);
+				ClientPatch::SendFullBuffRefresh(this);
 
 				if(caster->IsClient()){
 					auto app = new EQApplicationPacket(OP_Charm, sizeof(Charm_Struct));
@@ -821,7 +821,7 @@ bool Mob::SpellEffect(Mob* caster, int32 spell_id, float partial, int level_over
 					ps->command = 1;
 					entity_list.QueueClients(this, app);
 					safe_delete(app);
-					Buff::SendFullBuffRefresh(this);
+					ClientPatch::SendFullBuffRefresh(this);
 					SendAppearancePacket(AppearanceType::Pet, caster->GetID(), true, true);
 				}
 
@@ -3866,13 +3866,13 @@ void Mob::BuffProcess()
 
 			// this is for older clients. Newer clients will simply discard this packet
 			if (IsClient() && buffs[buffs_i].UpdateClient == true) {
-				Buff::SendSingleBuffChange(this, buffs[buffs_i], buffs_i);
+				ClientPatch::SendSingleBuffChange(this, buffs[buffs_i], buffs_i);
 				buffs[buffs_i].UpdateClient = false;
 			}
 		}
 	}
 
-	Buff::SendFullBuffRefresh(this);
+	ClientPatch::SendFullBuffRefresh(this);
 }
 
 void Mob::DoBuffTic(const Buffs_Struct &buff, int slot, Mob *caster)
@@ -4244,7 +4244,7 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 		return;
 
 	if (IsClient() && !CastToClient()->IsDead())
-		Buff::SendSingleBuffChange(this, buffs[slot], slot);
+		ClientPatch::SendSingleBuffChange(this, buffs[slot], slot);
 
 	LogSpells("Fading buff [{}] from slot [{}]", buffs[slot].spellid, slot);
 
@@ -4427,7 +4427,7 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 				// no longer see the buffs on the old pet.
 				// QueueClientsByTarget preserves GM and leadership cases.
 
-				Buff::SendFullBuffRefresh(this, true);
+				ClientPatch::SendFullBuffRefresh(this, true);
 
 				if (IsAIControlled())
 				{
@@ -4651,8 +4651,8 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 		RemoveNimbusEffect(spells[buffs[slot].spellid].nimbus_effect);
 
 	buffs[slot].spellid = SPELL_UNKNOWN;
-	Buff::SendSingleBuffChange(this, buffs[slot], slot, true);
-	Buff::SendFullBuffRefresh(this);
+	ClientPatch::SendSingleBuffChange(this, buffs[slot], slot, true);
+	ClientPatch::SendFullBuffRefresh(this);
 
 	// we will eventually call CalcBonuses() even if we skip it right here, so should correct itself if we still have them
 	degenerating_effects = false;
@@ -7010,7 +7010,7 @@ void Mob::CheckNumHitsRemaining(NumHit type, int32 buff_slot, int32 spell_id)
 					if (!TryFadeEffect(d))
 						BuffFadeBySlot(d, true);
 				} else if (IsClient()) { // still have numhits and client, update
-					Buff::SendSingleBuffChange(this, buffs[d], d);
+					ClientPatch::SendSingleBuffChange(this, buffs[d], d);
 				}
 			}
 		}
@@ -7025,7 +7025,7 @@ void Mob::CheckNumHitsRemaining(NumHit type, int32 buff_slot, int32 spell_id)
 				if (!TryFadeEffect(buff_slot))
 					BuffFadeBySlot(buff_slot , true);
 			} else if (IsClient()) { // still have numhits and client, update
-				Buff::SendSingleBuffChange(this, buffs[buff_slot], buff_slot);
+				ClientPatch::SendSingleBuffChange(this, buffs[buff_slot], buff_slot);
 			}
 		}
 	}
@@ -7043,7 +7043,7 @@ void Mob::CheckNumHitsRemaining(NumHit type, int32 buff_slot, int32 spell_id)
 					if (!TryFadeEffect(d))
 						BuffFadeBySlot(d, true);
 				} else if (IsClient()) { // still have numhits and client, update
-					Buff::SendSingleBuffChange(this, buffs[d], d);
+					ClientPatch::SendSingleBuffChange(this, buffs[d], d);
 				}
 			}
 		}

@@ -5235,12 +5235,10 @@ namespace UF
 		// we're a normal buff
 		return index; // as long as we guard against bad slots server side, we should be fine
 	}
-} /*UF*/
 
-namespace Buff {
-
-std::unique_ptr<EQApplicationPacket> UF::RefreshBuffs(EmuOpcode opcode, Mob* mob, bool remove,
-	bool buff_timers_suspended, const std::vector<uint32_t>& slots) const
+	std::unique_ptr<EQApplicationPacket> BuffComponent::RefreshBuffs(EmuOpcode opcode, Mob* mob,
+		bool remove,
+		bool buff_timers_suspended, const std::vector<uint32_t>& slots) const
 {
 	// UF introduced the self update buff packet
 
@@ -5286,4 +5284,4 @@ std::unique_ptr<EQApplicationPacket> UF::RefreshBuffs(EmuOpcode opcode, Mob* mob
 	return outapp;
 }
 
-} // namespace Buff
+} /*UF*/

@@ -36,32 +36,32 @@ struct ClientComponents
 	{
 		switch (version) {
 		case Version::TOB:
-			buffComponent = std::make_unique<Buff::TOB>();
-			messageComponent = std::make_unique<Message::TOB>();
+			buffComponent = std::make_unique<TOB::BuffComponent>();
+			messageComponent = std::make_unique<TOB::MessageComponent>();
 			break;
 		case Version::RoF2:
-			buffComponent = std::make_unique<Buff::UF>();
-			messageComponent = std::make_unique<Message::Titanium>();
+			buffComponent = std::make_unique<UF::BuffComponent>();
+			messageComponent = std::make_unique<Titanium::MessageComponent>();
 			break;
 		case Version::RoF:
-			buffComponent = std::make_unique<Buff::UF>();
-			messageComponent = std::make_unique<Message::Titanium>();
+			buffComponent = std::make_unique<UF::BuffComponent>();
+			messageComponent = std::make_unique<Titanium::MessageComponent>();
 			break;
 		case Version::UF:
-			buffComponent = std::make_unique<Buff::UF>();
-			messageComponent = std::make_unique<Message::Titanium>();
+			buffComponent = std::make_unique<UF::BuffComponent>();
+			messageComponent = std::make_unique<Titanium::MessageComponent>();
 			break;
 		case Version::SoD:
-			buffComponent = std::make_unique<Buff::SoD>();
-			messageComponent = std::make_unique<Message::Titanium>();
+			buffComponent = std::make_unique<SoD::BuffComponent>();
+			messageComponent = std::make_unique<Titanium::MessageComponent>();
 			break;
 		case Version::SoF:
-			buffComponent = std::make_unique<Buff::Titanium>();
-			messageComponent = std::make_unique<Message::Titanium>();
+			buffComponent = std::make_unique<Titanium::BuffComponent>();
+			messageComponent = std::make_unique<Titanium::MessageComponent>();
 			break;
 		case Version::Titanium:
-			buffComponent = std::make_unique<Buff::Titanium>();
-			messageComponent = std::make_unique<Message::Titanium>();
+			buffComponent = std::make_unique<Titanium::BuffComponent>();
+			messageComponent = std::make_unique<Titanium::MessageComponent>();
 			break;
 		default:
 			break;
@@ -69,8 +69,8 @@ struct ClientComponents
 	}
 
 	const Version version;
-    std::unique_ptr<Buff::IBuff> buffComponent;
-	std::unique_ptr<Message::IMessage> messageComponent;
+    std::unique_ptr<ClientPatch::IBuff> buffComponent;
+	std::unique_ptr<ClientPatch::IMessage> messageComponent;
 };
 
 // this array must be in the same order as the Version enum because it converts Version to index directly
@@ -88,12 +88,14 @@ static const std::array<ClientComponents, EQ::versions::ClientVersionCount> s_pa
 	}
 };
 
-const std::unique_ptr<Buff::IBuff>& GetBuffComponent(Version version)
+template<>
+const std::unique_ptr<ClientPatch::IBuff>& GetComponent(Version version)
 {
 	return s_patches.at(static_cast<uint32_t>(version)).buffComponent;
 }
 
-const std::unique_ptr<Message::IMessage>& GetMessageComponent(Version version)
+template<>
+const std::unique_ptr<ClientPatch::IMessage>& GetComponent(Version version)
 {
 	return s_patches.at(static_cast<uint32_t>(version)).messageComponent;
 }

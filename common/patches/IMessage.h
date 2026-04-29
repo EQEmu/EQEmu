@@ -25,7 +25,7 @@ class Client;
 class Mob;
 class EQApplicationPacket;
 
-namespace Message {
+namespace ClientPatch {
 
 template<typename... Args>
 concept AllConstChar = (std::is_convertible_v<Args, const char*> && ...);

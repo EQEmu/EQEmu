@@ -23,42 +23,30 @@
 
 class EQStreamIdentifier;
 
-namespace Titanium
-{
+namespace Titanium {
 
-	//these are the only public member of this namespace.
-	extern void Register(EQStreamIdentifier &into);
-	extern void Reload();
+extern void Register(EQStreamIdentifier& into);
+extern void Reload();
 
-
-
-	//you should not directly access anything below..
-	//I just dont feel like making a seperate header for it.
-
-	class Strategy : public StructStrategy {
-	public:
-		Strategy();
-
-	protected:
-
-		virtual std::string Describe() const;
-		virtual const EQ::versions::ClientVersion ClientVersion() const;
-
-		//magic macro to declare our opcode processors
-		#include "ss_declare.h"
-		#include "titanium_ops.h"
-	};
-
-} /*Titanium*/
-
-// out-going message packets
-namespace Message {
-
-class Titanium : public IMessage
+class Strategy : public StructStrategy
 {
 public:
-	Titanium() = default;
-	~Titanium() override = default;
+	Strategy();
+
+protected:
+	virtual std::string Describe() const;
+	virtual const EQ::versions::ClientVersion ClientVersion() const;
+
+	//magic macro to declare our opcode processors
+#include "ss_declare.h"
+#include "titanium_ops.h"
+};
+
+class MessageComponent : public ClientPatch::IMessage
+{
+public:
+	MessageComponent() = default;
+	~MessageComponent() override = default;
 
 	std::unique_ptr<EQApplicationPacket> Simple(uint32_t color, uint32_t id) const override;
 	std::unique_ptr<EQApplicationPacket> Formatted(uint32_t color, uint32_t id,
@@ -75,15 +63,11 @@ protected:
 	virtual void ResolveArguments(uint32_t id, std::array<const char*, 9>& args) const;
 };
 
-} // namespace Message
-
-namespace Buff {
-
-class Titanium : public IBuff
+class BuffComponent : public ClientPatch::IBuff
 {
 public:
-	Titanium() = default;
-	~Titanium() override = default;
+	BuffComponent() = default;
+	~BuffComponent() override = default;
 
 	std::unique_ptr<EQApplicationPacket> BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot,
 		bool fade) const override;
@@ -92,5 +76,5 @@ public:
 	void SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const override;
 };
 
-} // namespace Buff
+} /*Titanium*/
 
