@@ -33,12 +33,11 @@
 #include "common/raid.h"
 #include "common/rulesys.h"
 #include "common/strings.h"
+#include "zone/mob.h"
 
 #include "cereal/types/vector.hpp"
 #include <iostream>
 #include <sstream>
-
-#include "zone/mob.h"
 
 
 namespace UF

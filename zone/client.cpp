@@ -3811,10 +3811,10 @@ void Client::MessageString(uint32 type, uint32 string_id, uint32 distance)
 		return;
 
 	if (distance > 0)
-		ClientPatch::CloseMessageString(this, false, static_cast<float>(distance))(
+		ClientPatch::BroadcastMessageStringInRadius(this, false, static_cast<float>(distance))(
 			type, string_id);
 	else
-		ClientPatch::MessageString(this, type, string_id);
+		ClientPatch::SendMessageString(this, type, string_id);
 }
 
 //
@@ -3843,10 +3843,10 @@ void Client::MessageString(uint32 type, uint32 string_id, const char* message1,
 		type = 4;
 
 	if (distance > 0)
-		ClientPatch::CloseMessageString(this, false, static_cast<float>(distance))(type, string_id, message1,
+		ClientPatch::BroadcastMessageStringInRadius(this, false, static_cast<float>(distance))(type, string_id, message1,
 			message2, message3, message4, message5, message6, message7, message8, message9);
 	else
-		ClientPatch::MessageString(this, type, string_id, message1, message2, message3, message4, message5,
+		ClientPatch::SendMessageString(this, type, string_id, message1, message2, message3, message4, message5,
 			message6, message7, message8, message9);
 }
 

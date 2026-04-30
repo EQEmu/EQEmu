@@ -31,12 +31,11 @@
 #include "common/raid.h"
 #include "common/rulesys.h"
 #include "common/strings.h"
+#include "zone/client.h"
+#include "zone/mob.h"
 
 #include <iostream>
 #include <sstream>
-
-#include "zone/client.h"
-#include "zone/mob.h"
 
 
 namespace SoD

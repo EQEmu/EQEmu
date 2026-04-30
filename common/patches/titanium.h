@@ -50,7 +50,7 @@ public:
 
 	std::unique_ptr<EQApplicationPacket> Simple(uint32_t color, uint32_t id) const override;
 	std::unique_ptr<EQApplicationPacket> Formatted(uint32_t color, uint32_t id,
-		const std::array<const char*, 9>& args) const override;
+		const FormattedArgs& args) const override;
 
 	std::unique_ptr<EQApplicationPacket> InterruptSpell(uint32_t message, uint32_t spawn_id,
 		const char* spell_link) const override;

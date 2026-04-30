@@ -339,12 +339,12 @@ bool Mob::DoCastSpell(int32 spell_id, uint16 target_id, CastingSlot slot,
 		Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spell_id);
 
 		if (IsClient())
-			ClientPatch::MessageString(CastToClient(), Chat::SpellFailure, fizzle_msg, spell_link);
+			ClientPatch::SendMessageString(CastToClient(), Chat::SpellFailure, fizzle_msg, spell_link);
 
 		/**
 		 * Song Failure message
 		 */
-		ClientPatch::CloseMessageString(this, true, RuleI(Range, SpellMessages),
+		ClientPatch::BroadcastMessageStringInRadius(this, true, RuleI(Range, SpellMessages),
 			nullptr, true, IsClient() ? FilterPCSpells : FilterNPCSpells)(
 				Chat::SpellFailure, fizzle_msg == MISS_NOTE ? MISSED_NOTE_OTHER : SPELL_FIZZLE_OTHER, GetName(), spell_link);
 

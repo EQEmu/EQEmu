@@ -37,6 +37,7 @@
 #include "common/rulesys.h"
 #include "common/shared_tasks.h"
 #include "zone/bot.h"
+#include "zone/client_version.h"
 #include "zone/dialogue_window.h"
 #include "zone/dynamic_zone.h"
 #include "zone/event_codes.h"
@@ -60,8 +61,6 @@
 #include <iostream>
 #include <numbers>
 #include <set>
-
-#include "client_version.h"
 
 extern QueryServ* QServ;
 extern Zone* zone;

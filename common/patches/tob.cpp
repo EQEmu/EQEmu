@@ -34,8 +34,13 @@ Copyright (C) 2001-2026 EQEmu Development Team
 #include "common/rulesys.h"
 #include "common/path_manager.h"
 #include "common/classes.h"
+#include "common/packet_dump.h"
 #include "common/races.h"
 #include "common/raid.h"
+#include "world/sof_char_create_data.h"
+#include "zone/client.h"
+#include "zone/mob.h"
+#include "zone/string_ids.h"
 
 #include <iostream>
 #include <sstream>
@@ -43,12 +48,6 @@ Copyright (C) 2001-2026 EQEmu Development Team
 #include <cassert>
 #include <cinttypes>
 #include <set>
-
-#include "common/packet_dump.h"
-#include "world/sof_char_create_data.h"
-#include "zone/client.h"
-#include "zone/mob.h"
-#include "zone/string_ids.h"
 
 namespace TOB
 {
@@ -5566,7 +5565,7 @@ void MessageComponent::ResolveArguments(uint32_t id, std::array<const char*, 9>&
 }
 
 std::unique_ptr<EQApplicationPacket> MessageComponent::Formatted(uint32_t color, uint32_t id,
-	const std::array<const char*, 9>& args) const
+	const FormattedArgs& args) const
 {
 	uint32_t string_id = ResolveID(id);
 	if (string_id > 0) {
@@ -5605,7 +5604,7 @@ std::unique_ptr<EQApplicationPacket> MessageComponent::InterruptSpell(uint32_t m
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);
 	ic->spawnid = spawn_id;
-	fmt::format_to_n(ic->message, strlen(spell_link) + 1, "{}\0", spell_link);
+	strcpy(ic->message, spell_link);
 	outapp->priority = 5;
 
 	return outapp;
@@ -5620,7 +5619,8 @@ std::unique_ptr<EQApplicationPacket> MessageComponent::InterruptSpellOther(Mob* 
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);
 	ic->spawnid = spawn_id;
-	fmt::format_to_n(ic->message, strlen(name) + strlen(spell_link) + 2, "{}\0{}\0", name, spell_link);
+	strcpy(ic->message, name);
+	strcpy(&ic->message[strlen(name) + 1], spell_link);
 
 	return outapp;
 }

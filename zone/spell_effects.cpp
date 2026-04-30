@@ -4420,7 +4420,7 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 					owner->SetPet(0);
 				}
 
-				// Any client that has a previous charmed pet targetted shouldo
+				// Any client that has a previous charmed pet targeted should
 				// no longer see the buffs on the old pet.
 				// QueueClientsByTarget preserves GM and leadership cases.
 

@@ -32,11 +32,10 @@
 #include "common/raid.h"
 #include "common/rulesys.h"
 #include "common/strings.h"
+#include "zone/mob.h"
 #include "zone/string_ids.h"
 
 #include <sstream>
-
-#include "zone/mob.h"
 
 
 namespace Titanium
@@ -3902,8 +3901,8 @@ std::unique_ptr<EQApplicationPacket> MessageComponent::Simple(uint32_t color, ui
 	return nullptr;
 }
 
-std::unique_ptr<EQApplicationPacket> MessageComponent::Formatted(
-	uint32_t color, uint32_t id, const std::array<const char*, 9>& args) const
+std::unique_ptr<EQApplicationPacket> MessageComponent::Formatted(uint32_t color, uint32_t id,
+	const FormattedArgs& args) const
 {
 	uint32_t string_id = ResolveID(id);
 	if (string_id > 0) {
@@ -3943,14 +3942,13 @@ std::unique_ptr<EQApplicationPacket> MessageComponent::InterruptSpell(uint32_t m
 }
 
 std::unique_ptr<EQApplicationPacket> MessageComponent::InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id,
-	const char* name,
-	const char* spell_link) const
+	const char* name, const char* spell_link) const
 {
 	auto outapp = std::make_unique<EQApplicationPacket>(OP_InterruptCast, sizeof(InterruptCast_Struct) + strlen(name) + 1);
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);
 	ic->spawnid = spawn_id;
-	fmt::format_to_n(ic->message, strlen(name) + 1, "{}\0", name);
+	strcpy(ic->message, spell_link);
 	return outapp;
 }
 
@@ -3967,11 +3965,11 @@ void MessageComponent::ResolveArguments(uint32_t id, std::array<const char*, 9>&
 	switch (id) {
 	case SPELL_FIZZLE:
 	case MISS_NOTE:
-		args[0] = nullptr; // drop spell link
+		args[0] = nullptr; // the 0th (and only) argument here is the spell link, not supported before TOB
 		break;
 	case SPELL_FIZZLE_OTHER:
 	case MISSED_NOTE_OTHER:
-		args[1] = nullptr; // drop spell link
+		args[1] = nullptr; // the 1st argument here is the spell link, not supported before TOB
 		break;
 	default:
 		break;

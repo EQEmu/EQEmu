@@ -123,7 +123,6 @@ void FastQueuePacket(Client* c, Fun fun, Obj* obj, Args&&... args)
 		if (app) {
 			// FastQueuePacket specifically takes lifetime management of packet, so release here
 			EQApplicationPacket* packet = app.release();
-			LogNetcode("S->C FastQueuePacket {}", DumpPacketToString(packet));
 			c->FastQueuePacket(&packet);
 		}
 	}
@@ -158,17 +157,17 @@ inline auto QueueClientsByTarget(Mob* sender, bool ackreq, const SendPredicate& 
 // Helper functions to wrap the packet construction in sends
 template <AllConstChar... Args>
 	requires (sizeof...(Args) <= 9)
-void MessageString(Client* c, uint32_t type, uint32_t id, Args&&... args)
+void SendMessageString(Client* c, uint32_t type, uint32_t id, Args&&... args)
 {
 	if constexpr (sizeof...(Args) == 0) {
 		QueuePacket(c, &IMessage::Simple, GetClientComponent<IMessage>(c), type, id);
 	} else {
-		std::array<const char*, 9> a = {args...};
+		IMessage::FormattedArgs a = {args...};
 		QueuePacket(c, &IMessage::Formatted, GetClientComponent<IMessage>(c), type, id, a);
 	}
 }
 
-inline auto CloseMessageString(
+inline auto BroadcastMessageStringInRadius(
 	Mob* sender, bool ignore_sender = false, float distance = 200.f,
 	Mob* skipped_mob = nullptr, bool is_ack_required = true,
 	eqFilterType filter = FilterNone)
@@ -182,7 +181,7 @@ inline auto CloseMessageString(
 		if constexpr (sizeof...(Args) == 0) {
 			return queue_close_clients(&IMessage::Simple, GetClientComponent<IMessage>, type, id);
 		} else {
-			std::array<const char*, 9> a = {args...};
+			IMessage::FormattedArgs a = {args...};
 			return queue_close_clients(&IMessage::Formatted, GetClientComponent<IMessage>, type, id, a);
 		}
 	};
