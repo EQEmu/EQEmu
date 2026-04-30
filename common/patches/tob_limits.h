@@ -1,9 +1,9 @@
 #ifndef COMMON_LAURION_LIMITS_H
 #define COMMON_LAURION_LIMITS_H
 
-#include "../types.h"
-#include "../emu_versions.h"
-#include "../skills.h"
+#include "common/types.h"
+#include "common/emu_versions.h"
+#include "common/skills.h"
 
 namespace TOB
 {

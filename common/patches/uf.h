@@ -17,8 +17,8 @@
 */
 #pragma once
 
-#include "sod.h"
 #include "common/struct_strategy.h"
+#include "common/patches/sod.h"
 
 class EQStreamIdentifier;
 
@@ -44,7 +44,8 @@ protected:
 class BuffComponent : public SoD::BuffComponent
 {
 public:
-	BuffComponent() = default;
+	BuffComponent(uint32_t maxLongBuffs, uint32_t maxShortBuffs) : SoD::BuffComponent(maxLongBuffs, maxShortBuffs) {}
+	BuffComponent() = delete;
 	~BuffComponent() override = default;
 
 	std::unique_ptr<EQApplicationPacket> RefreshBuffs(EmuOpcode opcode, Mob* mob, bool remove,

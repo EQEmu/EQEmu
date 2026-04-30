@@ -64,7 +64,6 @@ namespace Titanium
 	static inline spells::CastingSlot ServerToTitaniumCastingSlot(EQ::spells::CastingSlot slot);
 	static inline EQ::spells::CastingSlot TitaniumToServerCastingSlot(spells::CastingSlot slot, uint32 item_location);
 
-	static inline int ServerToTitaniumBuffSlot(int index);
 	static inline int TitaniumToServerBuffSlot(int index);
 
 	void Register(EQStreamIdentifier &into)
@@ -341,7 +340,7 @@ namespace Titanium
 		OUT(buff.duration);
 		OUT(buff.counters);
 		OUT(buff.player_id);
-		eq->slotid = ServerToTitaniumBuffSlot(emu->slotid);
+		OUT(slotid);
 		OUT(bufffade);
 
 		FINISH_ENCODE();
@@ -1305,28 +1304,6 @@ namespace Titanium
 
 		eq->unknown4236 = 0x00000000;
 		eq->unknown4240 = 0xffffffff;
-
-		FINISH_ENCODE();
-	}
-
-	ENCODE(OP_RefreshPetBuffs)
-	{
-		ENCODE_LENGTH_EXACT(PetBuff_Struct);
-		SETUP_DIRECT_ENCODE(PetBuff_Struct, PetBuff_Struct);
-
-		OUT(petid);
-		OUT(buffcount);
-
-		int EQBuffSlot = 0; // do we really want to shuffle them around like this?
-
-		for (uint32 EmuBuffSlot = 0; EmuBuffSlot < PET_BUFF_COUNT; ++EmuBuffSlot)
-		{
-			if (emu->spellid[EmuBuffSlot])
-			{
-				eq->spellid[EQBuffSlot] = emu->spellid[EmuBuffSlot];
-				eq->ticsremaining[EQBuffSlot++] = emu->ticsremaining[EmuBuffSlot];
-			}
-		}
 
 		FINISH_ENCODE();
 	}
@@ -3896,19 +3873,6 @@ namespace Titanium
 		}
 	}
 
-	static inline int ServerToTitaniumBuffSlot(int index)
-	{
-		// we're a disc
-		if (index >= EQ::spells::LONG_BUFFS + EQ::spells::SHORT_BUFFS)
-			return index - EQ::spells::LONG_BUFFS - EQ::spells::SHORT_BUFFS +
-			       spells::LONG_BUFFS + spells::SHORT_BUFFS;
-		// we're a song
-		if (index >= EQ::spells::LONG_BUFFS)
-			return index - EQ::spells::LONG_BUFFS + spells::LONG_BUFFS;
-		// we're a normal buff
-		return index; // as long as we guard against bad slots server side, we should be fine
-	}
-
 	static inline int TitaniumToServerBuffSlot(int index)
 	{
 		// we're a disc
@@ -4014,11 +3978,11 @@ void MessageComponent::ResolveArguments(uint32_t id, std::array<const char*, 9>&
 	}
 }
 
-std::unique_ptr<EQApplicationPacket> BuffComponent::BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot,
+std::unique_ptr<EQApplicationPacket> BuffComponent::BuffDefinition(Mob* mob, const Buffs_Struct& buff, uint32_t slot,
 	bool fade) const
 {
 	auto outapp = std::make_unique<EQApplicationPacket>(OP_BuffDefinition, sizeof(SpellBuffPacket_Struct));
-	SpellBuffPacket_Struct* sbf = (SpellBuffPacket_Struct*) outapp->pBuffer;
+	auto sbf = reinterpret_cast<SpellBuffPacket_Struct*>(outapp->pBuffer);
 
 	sbf->entityid = mob->GetID();
 
@@ -4042,7 +4006,7 @@ std::unique_ptr<EQApplicationPacket> BuffComponent::BuffDefinition(Mob* mob, con
 	sbf->buff.x = buff.caston_x;
 	sbf->buff.z = buff.caston_z;
 
-	sbf->slotid = slot;
+	sbf->slotid = ServerToPatchBuffSlot(slot);
 	sbf->bufffade = fade;
 
 	return outapp;
@@ -4051,6 +4015,44 @@ std::unique_ptr<EQApplicationPacket> BuffComponent::BuffDefinition(Mob* mob, con
 std::unique_ptr<EQApplicationPacket> BuffComponent::RefreshBuffs(EmuOpcode opcode, Mob* mob, bool remove,
 	bool buff_timers_suspended, const std::vector<uint32_t>& slots) const
 {
+	// titanium only sends refresh for pet buffs
+	if (opcode == OP_RefreshPetBuffs) {
+		Buffs_Struct* buffs = mob->GetBuffs();
+
+		std::vector<uint32_t> send_slots;
+		if (slots.empty()) {
+			for (uint32_t slot = 0; slot < mob->GetMaxTotalSlots(); ++slot)
+				if (buffs[slot].spellid > 1)
+					send_slots.push_back(slot);
+		} else {
+			for (uint32_t slot : slots)
+				if (slot < mob->GetMaxTotalSlots() && buffs[slot].spellid > 1)
+					send_slots.push_back(slot);
+		}
+
+		auto outapp = std::make_unique<EQApplicationPacket>(OP_RefreshPetBuffs, sizeof(PetBuff_Struct));
+		auto pbs = reinterpret_cast<PetBuff_Struct*>(outapp->pBuffer);
+		memset(outapp->pBuffer, 0, outapp->size);
+
+		pbs->petid = mob->GetID();
+		int MaxSlots = mob->GetMaxTotalSlots();
+		if (MaxSlots > PET_BUFF_COUNT)
+			MaxSlots = PET_BUFF_COUNT;
+
+		int count = 0;
+		for (uint32_t slot : send_slots) {
+			if (slot < MaxSlots) {
+				pbs->spellid[slot] = buffs[slot].spellid;
+				pbs->ticsremaining[slot] = buffs[slot].ticsremaining;
+				++count;
+			}
+		}
+
+		pbs->buffcount = count;
+
+		return outapp;
+	}
+
 	return nullptr;
 }
 

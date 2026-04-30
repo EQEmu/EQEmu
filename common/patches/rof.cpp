@@ -67,7 +67,6 @@ namespace RoF
 	static inline spells::CastingSlot ServerToRoFCastingSlot(EQ::spells::CastingSlot slot);
 	static inline EQ::spells::CastingSlot RoFToServerCastingSlot(spells::CastingSlot slot);
 
-	static inline int ServerToRoFBuffSlot(int index);
 	static inline int RoFToServerBuffSlot(int index);
 
 	void Register(EQStreamIdentifier &into)
@@ -410,8 +409,7 @@ namespace RoF
 		OUT(entityid);
 		OUT(buff.effect_type);
 		OUT(buff.level);
-		// just so we're 100% sure we get a 1.0f ...
-		eq->buff.bard_modifier = emu->buff.bard_modifier == 10 ? 1.0f : emu->buff.bard_modifier / 10.0f;
+		OUT(buff.bard_modifier);
 		OUT(buff.spellid);
 		OUT(buff.duration);
 		OUT(buff.player_id);
@@ -420,58 +418,12 @@ namespace RoF
 		OUT(buff.x);
 		OUT(buff.z);
 		// TODO: implement slot_data stuff
-		eq->slotid = ServerToRoFBuffSlot(emu->slotid);
+		OUT(slotid);
 
 		if (emu->bufffade == 1)
 			eq->bufffade = 1;
 		else
 			eq->bufffade = 2;
-
-		// Bit of a hack. OP_BuffDefinition appears to add/remove the buff while OP_RefreshBuffs adds/removes the actual buff icon
-		EQApplicationPacket *outapp = nullptr;
-		if (eq->bufffade == 1)
-		{
-			outapp = new EQApplicationPacket(OP_RefreshBuffs, 29);
-			outapp->WriteUInt32(emu->entityid);
-			outapp->WriteUInt32(0);	// tic timer
-			outapp->WriteUInt8(0);		// Type of OP_RefreshBuffs packet ?
-			outapp->WriteUInt16(1);		// 1 buff in this packet
-			outapp->WriteUInt32(eq->slotid);
-			outapp->WriteUInt32(0xffffffff);		// SpellID (0xffff to remove)
-			outapp->WriteUInt32(0);			// Duration
-			outapp->WriteUInt32(0);			// numhits
-			outapp->WriteUInt8(0);		// Caster name
-			outapp->WriteUInt8(0);		// Type
-		}
-		FINISH_ENCODE();
-
-		if (outapp)
-			dest->FastQueuePacket(&outapp);	// Send the OP_RefreshBuffs to remove the buff
-	}
-
-	ENCODE(OP_RefreshBuffs)
-	{
-		SETUP_VAR_ENCODE(BuffIcon_Struct);
-
-		uint32 sz = 12 + (17 * emu->count) + emu->name_lengths; // 17 includes nullterm
-		__packet->size = sz;
-		__packet->pBuffer = new unsigned char[sz];
-		memset(__packet->pBuffer, 0, sz);
-
-		__packet->WriteUInt32(emu->entity_id);
-		__packet->WriteUInt32(emu->tic_timer);
-		__packet->WriteUInt8(emu->all_buffs);			// 1 indicates all buffs on the player (0 to add or remove a single buff)
-		__packet->WriteUInt16(emu->count);
-
-		for (int i = 0; i < emu->count; ++i)
-		{
-			__packet->WriteUInt32(emu->type == 0 ? ServerToRoFBuffSlot(emu->entries[i].buff_slot) : emu->entries[i].buff_slot);
-			__packet->WriteSInt32 (emu->entries[i].spell_id);
-			__packet->WriteUInt32(emu->entries[i].tics_remaining);
-			__packet->WriteUInt32(emu->entries[i].num_hits); // Unknown
-			__packet->WriteString(emu->entries[i].caster);
-		}
-		__packet->WriteUInt8(emu->type); // Unknown
 
 		FINISH_ENCODE();
 	}
@@ -1858,38 +1810,6 @@ namespace RoF
 		FINISH_ENCODE();
 	}
 
-	ENCODE(OP_RefreshPetBuffs)
-	{
-		// The format of the RoF packet is identical to the OP_RefreshBuffs packet.
-
-		SETUP_VAR_ENCODE(PetBuff_Struct);
-
-		uint32 sz = 12 + (17 * emu->buffcount);
-		__packet->size = sz;
-		__packet->pBuffer = new unsigned char[sz];
-		memset(__packet->pBuffer, 0, sz);
-
-		__packet->WriteUInt32(emu->petid);
-		__packet->WriteUInt32(0);		// PlayerID ?
-		__packet->WriteUInt8(1);		// 1 indicates all buffs on the pet (0 to add or remove a single buff)
-		__packet->WriteUInt16(emu->buffcount);
-
-		for (uint16 i = 0; i < PET_BUFF_COUNT; ++i)
-		{
-			if (emu->spellid[i])
-			{
-				__packet->WriteUInt32(i);
-				__packet->WriteSInt32 (emu->spellid[i]);
-				__packet->WriteUInt32(emu->ticsremaining[i]);
-				__packet->WriteUInt32(0); // numhits
-				__packet->WriteString("");
-			}
-		}
-		__packet->WriteUInt8(0); // some sort of type
-
-		FINISH_ENCODE();
-	}
-
 	ENCODE(OP_PlayerProfile)
 	{
 		EQApplicationPacket *in = *p;
@@ -3238,8 +3158,6 @@ namespace RoF
 
 		FINISH_ENCODE();
 	}
-
-	ENCODE(OP_RefreshTargetBuffs) { ENCODE_FORWARD(OP_RefreshBuffs); }
 
 	ENCODE(OP_TaskDescription)
 	{
@@ -6261,21 +6179,6 @@ namespace RoF
 		default: // we shouldn't have any issues with other slots ... just return something
 			return EQ::spells::CastingSlot::Discipline;
 		}
-	}
-
-	// these should be optimized out for RoF since they should all boil down to return index :P
-	// but lets leave it here for future proofing
-	static inline int ServerToRoFBuffSlot(int index)
-	{
-		// we're a disc
-		if (index >= EQ::spells::LONG_BUFFS + EQ::spells::SHORT_BUFFS)
-			return index - EQ::spells::LONG_BUFFS - EQ::spells::SHORT_BUFFS +
-			       spells::LONG_BUFFS + spells::SHORT_BUFFS;
-		// we're a song
-		if (index >= EQ::spells::LONG_BUFFS)
-			return index - EQ::spells::LONG_BUFFS + spells::LONG_BUFFS;
-		// we're a normal buff
-		return index; // as long as we guard against bad slots server side, we should be fine
 	}
 
 	static inline int RoFToServerBuffSlot(int index)

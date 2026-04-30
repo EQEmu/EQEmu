@@ -1,7 +1,25 @@
+/*	EQEmu: EQEmulator
+
+Copyright (C) 2001-2026 EQEmu Development Team
+
+	This program is free software; you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation; either version 3 of the License, or
+	(at your option) any later version.
+
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+	GNU General Public License for more details.
+
+	You should have received a copy of the GNU General Public License
+	along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #pragma once
 
-#include "rof2.h"
-#include "../struct_strategy.h"
+#include "common/struct_strategy.h"
+#include "common/patches/rof2.h"
 
 class EQStreamIdentifier;
 
@@ -46,11 +64,12 @@ protected:
 class BuffComponent : public UF::BuffComponent
 {
 public:
-	BuffComponent() = default;
+	BuffComponent(uint32_t maxLongBuffs, uint32_t maxShortBuffs) : UF::BuffComponent(maxLongBuffs, maxShortBuffs) {}
+	BuffComponent() = delete;
 	~BuffComponent() override = default;
 
 	std::unique_ptr<EQApplicationPacket>
-	BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot, bool fade) const override;
+	BuffDefinition(Mob* mob, const Buffs_Struct& buff, uint32_t slot, bool fade) const override;
 	std::unique_ptr<EQApplicationPacket> RefreshBuffs(EmuOpcode opcode, Mob* mob, bool remove,
 		bool buff_timers_suspended, const std::vector<uint32_t>& slots) const override;
 	void SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const override;

@@ -64,7 +64,6 @@ namespace SoD
 	static inline spells::CastingSlot ServerToSoDCastingSlot(EQ::spells::CastingSlot slot);
 	static inline EQ::spells::CastingSlot SoDToServerCastingSlot(spells::CastingSlot slot);
 
-	static inline int ServerToSoDBuffSlot(int index);
 	static inline int SoDToServerBuffSlot(int index);
 
 	void Register(EQStreamIdentifier &into)
@@ -309,7 +308,7 @@ namespace SoD
 		OUT(buff.duration);
 		OUT(buff.counters);
 		OUT(buff.player_id);
-		eq->slotid = ServerToSoDBuffSlot(emu->slotid);
+		OUT(slotid);
 		OUT(bufffade);
 
 		FINISH_ENCODE();
@@ -1378,38 +1377,6 @@ namespace SoD
 		FINISH_ENCODE();
 	}
 
-	ENCODE(OP_RefreshPetBuffs)
-	{
-		EQApplicationPacket *in = *p;
-		*p = nullptr;
-
-		unsigned char *__emu_buffer = in->pBuffer;
-		PetBuff_Struct *emu = (PetBuff_Struct *)__emu_buffer;
-		int PacketSize = 7 + (emu->buffcount * 13);
-		in->size = PacketSize;
-		in->pBuffer = new unsigned char[in->size];
-		char *Buffer = (char *)in->pBuffer;
-
-		VARSTRUCT_ENCODE_TYPE(uint32, Buffer, emu->petid);
-		VARSTRUCT_ENCODE_TYPE(uint16, Buffer, emu->buffcount);
-
-		for (unsigned int i = 0; i < PET_BUFF_COUNT; ++i)
-		{
-			if (emu->spellid[i])
-			{
-				VARSTRUCT_ENCODE_TYPE(uint32, Buffer, i);
-				VARSTRUCT_ENCODE_TYPE(uint32, Buffer, emu->spellid[i]);
-				VARSTRUCT_ENCODE_TYPE(uint32, Buffer, emu->ticsremaining[i]);
-				VARSTRUCT_ENCODE_TYPE(uint8, Buffer, 0);	// This is a string. Name of the caster of the buff.
-			}
-		}
-
-		VARSTRUCT_ENCODE_TYPE(uint8, Buffer, emu->buffcount); // I think this is actually some sort of type
-
-		delete[] __emu_buffer;
-		dest->FastQueuePacket(&in, ack_req);
-	}
-
 	ENCODE(OP_PlayerProfile)
 	{
 		SETUP_DIRECT_ENCODE(PlayerProfile_Struct, structs::PlayerProfile_Struct);
@@ -2145,35 +2112,6 @@ namespace SoD
 		eq->unknown005 = 163;
 		eq->unknown006 = 67;
 
-		FINISH_ENCODE();
-	}
-
-	ENCODE(OP_RefreshTargetBuffs)
-	{
-		SETUP_VAR_ENCODE(BuffIcon_Struct);
-
-		uint32 sz = 7 + (13 * emu->count);
-		__packet->size = sz;
-		__packet->pBuffer = new unsigned char[sz];
-		memset(__packet->pBuffer, 0, sz);
-
-		uchar *ptr = __packet->pBuffer;
-		*((uint32*)ptr) = emu->entity_id;
-		ptr += sizeof(uint32);
-
-		*((uint16*)ptr) = emu->count;
-		ptr += sizeof(uint16);
-
-		for (uint16 i = 0; i < emu->count; ++i)
-		{
-			*((uint32*)ptr) = emu->entries[i].buff_slot;
-			ptr += sizeof(uint32);
-			*((uint32*)ptr) = emu->entries[i].spell_id;
-			ptr += sizeof(uint32);
-			*((uint32*)ptr) = emu->entries[i].tics_remaining;
-			ptr += sizeof(uint32);
-			ptr += 1;
-		}
 		FINISH_ENCODE();
 	}
 
@@ -4262,19 +4200,6 @@ namespace SoD
 		}
 	}
 
-	static inline int ServerToSoDBuffSlot(int index)
-	{
-		// we're a disc
-		if (index >= EQ::spells::LONG_BUFFS + EQ::spells::SHORT_BUFFS)
-			return index - EQ::spells::LONG_BUFFS - EQ::spells::SHORT_BUFFS +
-			       spells::LONG_BUFFS + spells::SHORT_BUFFS;
-		// we're a song
-		if (index >= EQ::spells::LONG_BUFFS)
-			return index - EQ::spells::LONG_BUFFS + spells::LONG_BUFFS;
-		// we're a normal buff
-		return index; // as long as we guard against bad slots server side, we should be fine
-	}
-
 	static inline int SoDToServerBuffSlot(int index)
 	{
 		// we're a disc
@@ -4288,71 +4213,65 @@ namespace SoD
 		return index; // as long as we guard against bad slots server side, we should be fine
 	}
 
-	std::unique_ptr<EQApplicationPacket> BuffComponent::RefreshBuffs(EmuOpcode opcode, Mob* mob,
-		bool remove,
+	std::unique_ptr<EQApplicationPacket> BuffComponent::RefreshBuffs(EmuOpcode opcode, Mob* mob, bool remove,
 		bool buff_timers_suspended, const std::vector<uint32_t>& slots) const
-{
-	// SoD only supports target refresh, not self refresh packets
-	if (opcode == OP_RefreshTargetBuffs) {
-		uint32 count = 0;
-		uint32 buff_count;
+	{
+		if (opcode == OP_RefreshPetBuffs || opcode == OP_RefreshTargetBuffs) {
+			Buffs_Struct* buffs = mob->GetBuffs();
 
-		buff_count = mob->GetMaxTotalSlots();
-
-		Buffs_Struct* buffs = mob->GetBuffs();
-
-		for(int i = 0; i < buff_count; ++i) {
-			if (buffs[i].spellid > 1) {
-				++count;
+			size_t buffer_size = 7; // 7 bytes outside the list
+			std::vector<uint32_t> send_slots;
+			if (slots.empty()) {
+				for (uint32_t slot = 0; slot < mob->GetMaxTotalSlots(); ++slot)
+					if (buffs[slot].spellid > 1) {
+						buffer_size += 13 + strlen(buffs[slot].caster_name); // 13 includes the null terminator
+						send_slots.push_back(slot);
+					}
+			} else {
+				for (uint32_t slot : slots)
+					if (slot < mob->GetMaxTotalSlots() && buffs[slot].spellid > 1) {
+						buffer_size += 13 + strlen(buffs[slot].caster_name);
+						send_slots.push_back(slot);
+					}
 			}
+
+			// SoD only supports target and pet refresh, not self refresh packets
+			SerializeBuffer buffer(buffer_size);
+
+			buffer.WriteUInt32(mob->GetID());
+			buffer.WriteUInt16(send_slots.size());
+
+			for (uint32_t slot : send_slots) {
+				buffer.WriteUInt32(ServerToPatchBuffSlot(slot));
+				buffer.WriteInt32(remove ? -1 : buffs[slot].spellid);
+				buffer.WriteInt32(buffs[slot].ticsremaining);
+				buffer.WriteString(buffs[slot].caster_name);
+			}
+
+			buffer.WriteUInt8(opcode == OP_RefreshPetBuffs ? 2 : 0);
+
+			return std::make_unique<EQApplicationPacket>(opcode, std::move(buffer));
 		}
 
-		auto outapp = std::make_unique<EQApplicationPacket>(opcode,
-			sizeof(BuffIcon_Struct) + sizeof(BuffIconEntry_Struct) * count);
-
-		BuffIcon_Struct *buff = (BuffIcon_Struct*)outapp->pBuffer;
-		buff->entity_id = mob->GetID();
-		buff->count = count;
-		buff->all_buffs = 1;
-		buff->tic_timer = mob->GetRemainingTicTime();
-		// (see comment in common/eq_packet_structs.h), mutated in SetRefreshType
-		buff->type = mob->IsClient() ? 5 : 7;
-
-		buff->name_lengths = 0; // hacky shit
-		uint32 index = 0;
-		for(int i = 0; i < buff_count; ++i) {
-			if (buffs[i].spellid > 1) {
-				buff->entries[index].buff_slot = i;
-				buff->entries[index].spell_id = buffs[i].spellid;
-				buff->entries[index].tics_remaining = buffs[i].ticsremaining;
-				buff->entries[index].num_hits = buffs[i].hit_number;
-				strn0cpy(buff->entries[index].caster, buffs[i].caster_name, 64);
-				buff->name_lengths += strlen(buff->entries[index].caster);
-				++index;
-			}
-		}
-
-		return outapp;
+		return nullptr;
 	}
-
-	return nullptr;
-}
 
 // 0 = self buff window, 1 = self target window, 2 = pet buff or target window, 4 = group, 5 = PC, 7 = NPC
 void BuffComponent::SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const
 {
 	if (packet) {
-		BuffIcon_Struct *buff = (BuffIcon_Struct*)packet->pBuffer;
+		unsigned char* type = &packet->pBuffer[packet->size - 1];
+
 		if (target->GetID() == source->GetID())
-			buff->type = 1;
+			*type = 1;
 		else if (target->IsPet())
-			buff->type = 2;
+			*type = 2;
 		else if (target->HasGroup() && source->GetGroup() == target->GetGroup())
-			buff->type = 4;
+			*type = 4;
 		else if (target->IsClient())
-			buff->type = 5;
+			*type = 5;
 		else
-			buff->type = 7;
+			*type = 7;
 	}
 }
 

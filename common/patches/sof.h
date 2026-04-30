@@ -17,8 +17,8 @@
 */
 #pragma once
 
-#include "titanium.h"
 #include "common/struct_strategy.h"
+#include "common/patches/titanium.h"
 
 class EQStreamIdentifier;
 

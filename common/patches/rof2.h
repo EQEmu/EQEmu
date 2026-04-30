@@ -17,8 +17,8 @@
 */
 #pragma once
 
-#include "rof.h"
 #include "common/struct_strategy.h"
+#include "common/patches/rof.h"
 
 class EQStreamIdentifier;
 

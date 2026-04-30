@@ -15,9 +15,8 @@
 	You should have received a copy of the GNU General Public License
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#pragma once
 
-#include "client_version.h"
+#pragma once
 
 // Migration path: replace string_ids.h usage with ID enum values one call site at a time.
 

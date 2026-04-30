@@ -17,9 +17,9 @@
 */
 #pragma once
 
-#include "IBuff.h"
-#include "IMessage.h"
 #include "common/struct_strategy.h"
+#include "common/patches/IBuff.h"
+#include "common/patches/IMessage.h"
 
 class EQStreamIdentifier;
 
@@ -66,10 +66,11 @@ protected:
 class BuffComponent : public ClientPatch::IBuff
 {
 public:
-	BuffComponent() = default;
+	BuffComponent(uint32_t maxLongBuffs, uint32_t maxShortBuffs) : IBuff(maxLongBuffs, maxShortBuffs) {}
+	BuffComponent() = delete;
 	~BuffComponent() override = default;
 
-	std::unique_ptr<EQApplicationPacket> BuffDefinition(Mob* mob, const Buffs_Struct& buff, int slot,
+	std::unique_ptr<EQApplicationPacket> BuffDefinition(Mob* mob, const Buffs_Struct& buff, uint32_t slot,
 		bool fade) const override;
 	std::unique_ptr<EQApplicationPacket> RefreshBuffs(EmuOpcode opcode, Mob* mob, bool remove,
 		bool buff_timers_suspended, const std::vector<uint32_t>& slots) const override;

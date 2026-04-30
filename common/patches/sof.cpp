@@ -60,7 +60,6 @@ namespace SoF
 	static inline spells::CastingSlot ServerToSoFCastingSlot(EQ::spells::CastingSlot slot);
 	static inline EQ::spells::CastingSlot SoFToServerCastingSlot(spells::CastingSlot slot, uint32 item_location);
 
-	static inline int ServerToSoFBuffSlot(int index);
 	static inline int SoFToServerBuffSlot(int index);
 
 	void Register(EQStreamIdentifier &into)
@@ -285,7 +284,7 @@ namespace SoF
 		OUT(buff.duration);
 		OUT(buff.counters);
 		OUT(buff.player_id);
-		eq->slotid = ServerToSoFBuffSlot(emu->slotid);
+		eq->slotid = SoFToServerBuffSlot(emu->slotid);
 		OUT(bufffade);
 
 		FINISH_ENCODE();
@@ -1045,28 +1044,6 @@ namespace SoF
 
 		eq->unknown4236 = 0x00000000;
 		eq->unknown4240 = 0xffffffff;
-
-		FINISH_ENCODE();
-	}
-
-	ENCODE(OP_RefreshPetBuffs)
-	{
-		ENCODE_LENGTH_EXACT(PetBuff_Struct);
-		SETUP_DIRECT_ENCODE(PetBuff_Struct, PetBuff_Struct);
-
-		OUT(petid);
-		OUT(buffcount);
-
-		int EQBuffSlot = 0; // do we really want to shuffle them around like this?
-
-		for (uint32 EmuBuffSlot = 0; EmuBuffSlot < PET_BUFF_COUNT; ++EmuBuffSlot)
-		{
-			if (emu->spellid[EmuBuffSlot])
-			{
-				eq->spellid[EQBuffSlot] = emu->spellid[EmuBuffSlot];
-				eq->ticsremaining[EQBuffSlot++] = emu->ticsremaining[EmuBuffSlot];
-			}
-		}
 
 		FINISH_ENCODE();
 	}
@@ -2334,7 +2311,7 @@ namespace SoF
 		IN(buff.duration);
 		IN(buff.counters);
 		IN(buff.player_id);
-		emu->slotid = SoFToServerBuffSlot(eq->slotid);
+		IN(slotid);
 		IN(bufffade);
 
 		FINISH_DIRECT_DECODE();
@@ -3655,18 +3632,6 @@ namespace SoF
 			default: // we shouldn't have any issues with other slots ... just return something
 				return EQ::spells::CastingSlot::Discipline;
 		}
-	}
-
-	static inline int ServerToSoFBuffSlot(int index) {
-		// we're a disc
-		if (index >= EQ::spells::LONG_BUFFS + EQ::spells::SHORT_BUFFS)
-			return index - EQ::spells::LONG_BUFFS - EQ::spells::SHORT_BUFFS +
-				   spells::LONG_BUFFS + spells::SHORT_BUFFS;
-		// we're a song
-		if (index >= EQ::spells::LONG_BUFFS)
-			return index - EQ::spells::LONG_BUFFS + spells::LONG_BUFFS;
-		// we're a normal buff
-		return index; // as long as we guard against bad slots server side, we should be fine
 	}
 
 	static inline int SoFToServerBuffSlot(int index)

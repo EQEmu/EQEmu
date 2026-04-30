@@ -17,8 +17,8 @@
 */
 #pragma once
 
-#include "uf.h"
 #include "common/struct_strategy.h"
+#include "common/patches/uf.h"
 
 class EQStreamIdentifier;
 
