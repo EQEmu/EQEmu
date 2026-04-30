@@ -18,8 +18,6 @@
 
 #pragma once
 
-#include <ranges>
-
 #include "common/emu_versions.h"
 #include "common/patches/client_version.h"
 #include "common/patches/IBuff.h"
@@ -27,6 +25,8 @@
 
 #include "zone/client.h"
 #include "zone/mob.h"
+
+#include <ranges>
 
 // store all _generic_ static functions for the different patches here
 namespace ClientPatch {
@@ -37,7 +37,7 @@ using SendPredicate = std::function<bool(Client*)>;
 using MutatePacket = std::function<void(std::unique_ptr<EQApplicationPacket>&, Client*)>;
 
 template <typename Component>
-static Component* GetClientComponent(const Client* client)
+Component* GetClientComponent(const Client* client)
 {
 	return GetComponent<Component>(client->GetClientVersion()).get();
 }
