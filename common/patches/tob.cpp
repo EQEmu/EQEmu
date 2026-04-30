@@ -5725,22 +5725,10 @@ std::unique_ptr<EQApplicationPacket> BuffComponent::RefreshBuffs(EmuOpcode opcod
 bool BuffComponent::NeedsWearMessage() const { return false; }
 
 // 0 = self buff window, 1 = self target window, 2 = pet buff or target window, 4 = group, 5 = PC, 7 = NPC
-void BuffComponent::SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const
+void BuffComponent::SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, uint8_t refresh_type) const
 {
-	if (packet) {
-		unsigned char* type = &packet->pBuffer[packet->size - 2];
-
-		if (target->GetID() == source->GetID())
-			*type = 1;
-		else if (target->IsPet())
-			*type = 2;
-		else if (target->HasGroup() && source->GetGroup() == target->GetGroup())
-			*type = 4;
-		else if (target->IsClient())
-			*type = 5;
-		else
-			*type = 7;
-	}
+	if (packet)
+		packet->pBuffer[packet->size - 2] = refresh_type;
 }
 
 } /*TOB*/

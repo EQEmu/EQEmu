@@ -74,6 +74,23 @@ static bool ShouldSendTargetBuffs(Client* c) {
 	return false;
 }
 
+static void SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target)
+{
+	uint8_t type = 0;
+	if (target->GetID() == source->GetID())
+		type = 1;
+	else if (source->IsPet())
+		type = 2;
+	else if (target->HasGroup() && source->GetGroup() == target->GetGroup())
+		type = 4;
+	else if (source->IsClient())
+		type = 5;
+	else
+		type = 7;
+
+	ClientPatch::GetClientComponent<ClientPatch::IBuff>(target)->SetRefreshType(packet, type);
+}
+
 void ClientPatch::SendFullBuffRefresh(Mob* sender, bool remove, bool ackreq) {
 	bool suspended = zone->BuffTimersSuspended();
 	std::vector<uint32_t> slots;
@@ -94,7 +111,7 @@ void ClientPatch::SendFullBuffRefresh(Mob* sender, bool remove, bool ackreq) {
 
 	// finally send to all clients targeting the mob, will need to mutate the packet to set the type
 	auto mutate = [sender](std::unique_ptr<EQApplicationPacket>& packet, Client* c) {
-		GetClientComponent<IBuff>(c)->SetRefreshType(packet, sender, c);
+		SetRefreshType(packet, sender, c);
 	};
 
 	QueueClientsByTarget(sender, ackreq, ShouldSendTargetBuffs, mutate)(
@@ -131,7 +148,7 @@ void ClientPatch::SendSingleBuffChange(Mob* sender, const Buffs_Struct& buff, in
 	}
 
 	auto mutate = [sender](std::unique_ptr<EQApplicationPacket>& packet, Client* c) {
-		GetClientComponent<IBuff>(c)->SetRefreshType(packet, sender, c);
+		SetRefreshType(packet, sender, c);
 	};
 
 	QueueClientsByTarget(sender, ackreq, ShouldSendTargetBuffs, mutate)(
