@@ -3537,6 +3537,20 @@ namespace TOB
 		emu->Initialise = init;
 	}
 
+	DECODE(OP_BuffRemoveRequest)
+	{
+		// This is to cater for the fact that short buff box buffs start at 30 as opposed to 25 in prior clients.
+		//
+		DECODE_LENGTH_EXACT(BuffRemoveRequest_Struct);
+		SETUP_DIRECT_DECODE(BuffRemoveRequest_Struct, BuffRemoveRequest_Struct);
+
+		emu->SlotID = TOBToServerBuffSlot(eq->SlotID);
+
+		IN(EntityID);
+
+		FINISH_DIRECT_DECODE();
+	}
+
 	DECODE(OP_CastSpell)
 	{
 		DECODE_LENGTH_EXACT(structs::CastSpell_Struct);
@@ -5632,24 +5646,22 @@ std::unique_ptr<EQApplicationPacket> BuffComponent::BuffDefinition(Mob* mob, con
 		affect->affect.slots[affect_slot].value = 0; // this is always 0
 	}
 
-	if (!fade) {
-		// affect info
-		affect->affect.caster_id.Id = buff.casterid;
-		affect->affect.caster_id.WorldId = RuleI(World, Id);
-		affect->affect.caster_id.Reserved = 0;
-		affect->affect.flags = 0;
-		affect->affect.spell_id = buff.spellid;
-		affect->affect.duration = buff.ticsremaining;
-		affect->affect.initial_duration = buff.ticsremaining; // TODO: this  isn't correct, it's the total duration
-		affect->affect.hit_count = buff.hit_number;
-		affect->affect.viral_timer = 0;
-		affect->affect.modifier = static_cast<float>(buff.instrument_mod) / 10.f;
-		affect->affect.y = static_cast<float>(buff.caston_y);
-		affect->affect.x = static_cast<float>(buff.caston_x);
-		affect->affect.z = static_cast<float>(buff.caston_z);
-		affect->affect.type = 2;
-		affect->affect.level = buff.casterlevel > 0 ? buff.casterlevel : mob->GetLevel();
-	}
+	// affect info
+	affect->affect.caster_id.Id = buff.casterid;
+	affect->affect.caster_id.WorldId = RuleI(World, Id);
+	affect->affect.caster_id.Reserved = 0;
+	affect->affect.flags = 0;
+	affect->affect.spell_id = buff.spellid;
+	affect->affect.duration = buff.ticsremaining;
+	affect->affect.initial_duration = buff.initialduration;
+	affect->affect.hit_count = buff.hit_number;
+	affect->affect.viral_timer = 0;
+	affect->affect.modifier = static_cast<float>(buff.instrument_mod) / 10.f;
+	affect->affect.y = static_cast<float>(buff.caston_y);
+	affect->affect.x = static_cast<float>(buff.caston_x);
+	affect->affect.z = static_cast<float>(buff.caston_z);
+	affect->affect.type = 2;
+	affect->affect.level = buff.casterlevel > 0 ? buff.casterlevel : mob->GetLevel();
 
 	//no idea if these are right; eqlib doesn't seem to know either
 	if (buff.dot_rune > 0)
@@ -5709,6 +5721,8 @@ std::unique_ptr<EQApplicationPacket> BuffComponent::RefreshBuffs(EmuOpcode opcod
 
 	return std::make_unique<EQApplicationPacket>(opcode, std::move(buffer));
 }
+
+bool BuffComponent::NeedsWearMessage() const { return false; }
 
 // 0 = self buff window, 1 = self target window, 2 = pet buff or target window, 4 = group, 5 = PC, 7 = NPC
 void BuffComponent::SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const

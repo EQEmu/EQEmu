@@ -4056,6 +4056,8 @@ std::unique_ptr<EQApplicationPacket> BuffComponent::RefreshBuffs(EmuOpcode opcod
 	return nullptr;
 }
 
+bool BuffComponent::NeedsWearMessage() const { return true; }
+
 void BuffComponent::SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const {}
 
 } /*Titanium*/

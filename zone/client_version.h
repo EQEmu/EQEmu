@@ -123,6 +123,7 @@ void FastQueuePacket(Client* c, Fun fun, Obj* obj, Args&&... args)
 		if (app) {
 			// FastQueuePacket specifically takes lifetime management of packet, so release here
 			EQApplicationPacket* packet = app.release();
+			LogNetcode("S->C FastQueuePacket {}", DumpPacketToString(packet));
 			c->FastQueuePacket(&packet);
 		}
 	}

@@ -228,6 +228,7 @@ struct Buffs_Struct {
 	uint32	casterid;		// Maybe change this to a pointer sometime, but gotta make sure it's 0'd when it no longer points to anything
 	char	caster_name[64];
 	int32	ticsremaining;
+	int32	initialduration;
 	uint32	counters;
 	uint32	hit_number; //the number of physical hits this buff can take before it fades away, lots of druid armor spells take advantage of this mixed with powerful effects
 	uint32	melee_rune;

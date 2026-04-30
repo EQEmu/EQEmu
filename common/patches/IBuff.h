@@ -48,6 +48,7 @@ public:
     virtual std::unique_ptr<EQApplicationPacket> RefreshBuffs(EmuOpcode opcode, Mob* mob, bool remove,
         bool buff_timers_suspended, const std::vector<uint32_t>& slots) const = 0;
     virtual void SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* source, Client* target) const = 0;
+	virtual bool NeedsWearMessage() const = 0;
 
     uint32_t ServerToPatchBuffSlot(uint32_t slot) const;
 

@@ -4243,9 +4243,6 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 	if(!IsValidSpell(buffs[slot].spellid))
 		return;
 
-	if (IsClient() && !CastToClient()->IsDead())
-		ClientPatch::SendSingleBuffChange(this, buffs[slot], slot);
-
 	LogSpells("Fading buff [{}] from slot [{}]", buffs[slot].spellid, slot);
 
 	const auto has_fade_event = parse->SpellHasQuestSub(buffs[slot].spellid, EVENT_SPELL_FADE);
@@ -4650,8 +4647,12 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 	if (spells[buffs[slot].spellid].nimbus_effect > 0)
 		RemoveNimbusEffect(spells[buffs[slot].spellid].nimbus_effect);
 
-	buffs[slot].spellid = SPELL_UNKNOWN;
+	// the client expects remaining duration to be 0 in the single packet change
+	buffs[slot].ticsremaining = 0;
 	ClientPatch::SendSingleBuffChange(this, buffs[slot], slot, true);
+
+	// don't set the spell to unknown until after the server has sent the single remove packets
+	buffs[slot].spellid = SPELL_UNKNOWN;
 	ClientPatch::SendFullBuffRefresh(this);
 
 	// we will eventually call CalcBonuses() even if we skip it right here, so should correct itself if we still have them

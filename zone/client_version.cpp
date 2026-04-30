@@ -113,8 +113,13 @@ void ClientPatch::SendSingleBuffChange(Mob* sender, const Buffs_Struct& buff, in
 	// first, send to self if self is client, which takes the definition and the refresh
 	if (sender->IsClient()) {
 		Client* c = sender->CastToClient();
-		FastQueuePacket(c, &IBuff::BuffDefinition, GetClientComponent<IBuff>(c), sender, buff,  slot, remove);
-		FastQueuePacket(c, &IBuff::RefreshBuffs, GetClientComponent<IBuff>(c), OP_RefreshBuffs, sender, remove, suspended, slots);
+		IBuff* component = GetClientComponent<IBuff>(c);
+		FastQueuePacket(c, &IBuff::BuffDefinition, component, sender, buff,  slot, remove);
+		FastQueuePacket(c, &IBuff::RefreshBuffs, component, OP_RefreshBuffs, sender, remove, suspended, slots);
+
+		// the client doesn't automatically do this for some reason pre-TOB
+		if (remove && component->NeedsWearMessage())
+			c->SendColoredText(Chat::Spells, spells[buff.spellid].spell_fades);
 	}
 
 	// the rest of the buff packets do not take the definition, only the refresh
@@ -131,8 +136,4 @@ void ClientPatch::SendSingleBuffChange(Mob* sender, const Buffs_Struct& buff, in
 
 	QueueClientsByTarget(sender, ackreq, ShouldSendTargetBuffs, mutate)(
 		&IBuff::RefreshBuffs, GetClientComponent<IBuff>, OP_RefreshTargetBuffs, sender, remove, suspended, slots);
-
-	// the client doesn't automatically do this for some reason, only send it to the sender (TOB doesn't actually need this, but it doesn't double show the message)
-	if (remove && sender->IsClient())
-		sender->CastToClient()->SendColoredText(Chat::Spells, spells[buff.spellid].spell_fades);
 }
