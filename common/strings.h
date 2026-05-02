@@ -62,7 +62,8 @@ public:
 	static std::string Join(const std::vector<std::string> &ar, const std::string &delim);
 	static std::string Join(const std::vector<uint32_t> &ar, const std::string &delim);
 	static std::string MillisecondsToTime(int duration);
-	static std::string Money(uint64 platinum, uint64 gold = 0, uint64 silver = 0, uint64 copper = 0);
+	static std::string Money(uint64 platinum, uint64 gold = 0, uint64 silver = 0, uint64 copper = 0, bool commify = true);
+	static std::string MoneyShort(uint64 copper = 0, bool commify = true); // Matches merchant format when commify is false
 	static std::string NumberToWords(unsigned long long int n);
 	static std::string Repeat(std::string s, int n);
 	static std::string Replace(std::string subject, const std::string &search, const std::string &replace);
