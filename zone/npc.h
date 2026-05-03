@@ -184,8 +184,8 @@ public:
 	void	GoToBind(uint8 bind_number = 0)	{ GMMove(m_SpawnPoint.x, m_SpawnPoint.y, m_SpawnPoint.z, m_SpawnPoint.w); }
 	void	Gate(uint8 bind_number = 0);
 
-	void	GetPetState(SpellBuff_Struct *buffs, uint32 *items, char *name);
-	void	SetPetState(SpellBuff_Struct *buffs, uint32 *items);
+	void	SavePetState(Buffs_Struct* buffs, uint32 *items, char *name) const;
+	void	RestorePetState(const Buffs_Struct* pet_buffs, const uint32* items);
 	virtual void SpellProcess();
 	virtual void FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho);
 
@@ -611,6 +611,7 @@ public:
 			buffs[i].casterid    = b.casterid;
 			strncpy(buffs[i].caster_name, b.caster_name, 64);
 			buffs[i].ticsremaining     = b.ticsremaining;
+			buffs[i].initialduration   = b.initialduration;
 			buffs[i].counters          = b.counters;
 			buffs[i].hit_number        = b.hit_number;
 			buffs[i].melee_rune        = b.melee_rune;
@@ -623,7 +624,7 @@ public:
 			buffs[i].RootBreakChance   = b.RootBreakChance;
 			buffs[i].instrument_mod    = b.instrument_mod;
 			buffs[i].virus_spread_time = b.virus_spread_time;
-			buffs[i].persistant_buff   = b.persistant_buff;
+			buffs[i].persistent_buff   = b.persistent_buff;
 			buffs[i].client            = b.client;
 			buffs[i].UpdateClient      = b.UpdateClient;
 			i++;

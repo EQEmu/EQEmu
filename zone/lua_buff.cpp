@@ -134,7 +134,7 @@ bool Lua_Buff::IsCasterClient()
 bool Lua_Buff::IsPersistentBuff()
 {
 	Lua_Safe_Call_Bool();
-	return self->persistant_buff;
+	return self->persistent_buff;
 }
 
 bool Lua_Buff::SendsClientUpdate()

@@ -36,26 +36,28 @@
 class BaseBotBuffsRepository {
 public:
 	struct BotBuffs {
-		uint32_t buffs_index;
-		uint32_t bot_id;
-		int32_t  spell_id;
-		uint8_t  caster_level;
-		uint32_t duration_formula;
-		uint32_t tics_remaining;
-		uint32_t poison_counters;
-		uint32_t disease_counters;
-		uint32_t curse_counters;
-		uint32_t corruption_counters;
-		uint32_t numhits;
-		uint32_t melee_rune;
-		uint32_t magic_rune;
-		uint32_t dot_rune;
-		int8_t   persistent;
-		int32_t  caston_x;
-		int32_t  caston_y;
-		int32_t  caston_z;
-		uint32_t extra_di_chance;
-		int32_t  instrument_mod;
+		uint32_t    buffs_index;
+		uint32_t    bot_id;
+		int32_t     spell_id;
+		uint8_t     caster_level;
+		std::string caster_name;
+		uint32_t    duration_formula;
+		uint32_t    tics_remaining;
+		int32_t     initial_duration;
+		uint32_t    poison_counters;
+		uint32_t    disease_counters;
+		uint32_t    curse_counters;
+		uint32_t    corruption_counters;
+		uint32_t    numhits;
+		uint32_t    melee_rune;
+		uint32_t    magic_rune;
+		uint32_t    dot_rune;
+		int8_t      persistent;
+		int32_t     caston_x;
+		int32_t     caston_y;
+		int32_t     caston_z;
+		uint32_t    extra_di_chance;
+		int32_t     instrument_mod;
 	};
 
 	static std::string PrimaryKey()
@@ -70,8 +72,10 @@ public:
 			"bot_id",
 			"spell_id",
 			"caster_level",
+			"caster_name",
 			"duration_formula",
 			"tics_remaining",
+			"initial_duration",
 			"poison_counters",
 			"disease_counters",
 			"curse_counters",
@@ -96,8 +100,10 @@ public:
 			"bot_id",
 			"spell_id",
 			"caster_level",
+			"caster_name",
 			"duration_formula",
 			"tics_remaining",
+			"initial_duration",
 			"poison_counters",
 			"disease_counters",
 			"curse_counters",
@@ -156,8 +162,10 @@ public:
 		e.bot_id              = 0;
 		e.spell_id            = 0;
 		e.caster_level        = 0;
+		e.caster_name         = "";
 		e.duration_formula    = 0;
 		e.tics_remaining      = 0;
+		e.initial_duration    = 0;
 		e.poison_counters     = 0;
 		e.disease_counters    = 0;
 		e.curse_counters      = 0;
@@ -210,24 +218,26 @@ public:
 
 			e.buffs_index         = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.bot_id              = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
-			e.spell_id            = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.spell_id            = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.caster_level        = row[3] ? static_cast<uint8_t>(strtoul(row[3], nullptr, 10)) : 0;
-			e.duration_formula    = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
-			e.tics_remaining      = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
-			e.poison_counters     = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
-			e.disease_counters    = row[7] ? static_cast<uint32_t>(strtoul(row[7], nullptr, 10)) : 0;
-			e.curse_counters      = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
-			e.corruption_counters = row[9] ? static_cast<uint32_t>(strtoul(row[9], nullptr, 10)) : 0;
-			e.numhits             = row[10] ? static_cast<uint32_t>(strtoul(row[10], nullptr, 10)) : 0;
-			e.melee_rune          = row[11] ? static_cast<uint32_t>(strtoul(row[11], nullptr, 10)) : 0;
-			e.magic_rune          = row[12] ? static_cast<uint32_t>(strtoul(row[12], nullptr, 10)) : 0;
-			e.dot_rune            = row[13] ? static_cast<uint32_t>(strtoul(row[13], nullptr, 10)) : 0;
-			e.persistent          = row[14] ? static_cast<int8_t>(atoi(row[14])) : 0;
-			e.caston_x            = row[15] ? static_cast<int32_t>(atoi(row[15])) : 0;
-			e.caston_y            = row[16] ? static_cast<int32_t>(atoi(row[16])) : 0;
-			e.caston_z            = row[17] ? static_cast<int32_t>(atoi(row[17])) : 0;
-			e.extra_di_chance     = row[18] ? static_cast<uint32_t>(strtoul(row[18], nullptr, 10)) : 0;
-			e.instrument_mod      = row[19] ? static_cast<int32_t>(atoi(row[19])) : 10;
+			e.caster_name         = row[4] ? row[4] : "";
+			e.duration_formula    = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
+			e.tics_remaining      = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
+			e.initial_duration    = row[7] ? static_cast<int32_t>(atoi(row[7])) : 0;
+			e.poison_counters     = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
+			e.disease_counters    = row[9] ? static_cast<uint32_t>(strtoul(row[9], nullptr, 10)) : 0;
+			e.curse_counters      = row[10] ? static_cast<uint32_t>(strtoul(row[10], nullptr, 10)) : 0;
+			e.corruption_counters = row[11] ? static_cast<uint32_t>(strtoul(row[11], nullptr, 10)) : 0;
+			e.numhits             = row[12] ? static_cast<uint32_t>(strtoul(row[12], nullptr, 10)) : 0;
+			e.melee_rune          = row[13] ? static_cast<uint32_t>(strtoul(row[13], nullptr, 10)) : 0;
+			e.magic_rune          = row[14] ? static_cast<uint32_t>(strtoul(row[14], nullptr, 10)) : 0;
+			e.dot_rune            = row[15] ? static_cast<uint32_t>(strtoul(row[15], nullptr, 10)) : 0;
+			e.persistent          = row[16] ? static_cast<int8_t>(atoi(row[16])) : 0;
+			e.caston_x            = row[17] ? static_cast<int32_t>(atoi(row[17])) : 0;
+			e.caston_y            = row[18] ? static_cast<int32_t>(atoi(row[18])) : 0;
+			e.caston_z            = row[19] ? static_cast<int32_t>(atoi(row[19])) : 0;
+			e.extra_di_chance     = row[20] ? static_cast<uint32_t>(strtoul(row[20], nullptr, 10)) : 0;
+			e.instrument_mod      = row[21] ? static_cast<int32_t>(atoi(row[21])) : 10;
 
 			return e;
 		}
@@ -264,22 +274,24 @@ public:
 		v.push_back(columns[1] + " = " + std::to_string(e.bot_id));
 		v.push_back(columns[2] + " = " + std::to_string(e.spell_id));
 		v.push_back(columns[3] + " = " + std::to_string(e.caster_level));
-		v.push_back(columns[4] + " = " + std::to_string(e.duration_formula));
-		v.push_back(columns[5] + " = " + std::to_string(e.tics_remaining));
-		v.push_back(columns[6] + " = " + std::to_string(e.poison_counters));
-		v.push_back(columns[7] + " = " + std::to_string(e.disease_counters));
-		v.push_back(columns[8] + " = " + std::to_string(e.curse_counters));
-		v.push_back(columns[9] + " = " + std::to_string(e.corruption_counters));
-		v.push_back(columns[10] + " = " + std::to_string(e.numhits));
-		v.push_back(columns[11] + " = " + std::to_string(e.melee_rune));
-		v.push_back(columns[12] + " = " + std::to_string(e.magic_rune));
-		v.push_back(columns[13] + " = " + std::to_string(e.dot_rune));
-		v.push_back(columns[14] + " = " + std::to_string(e.persistent));
-		v.push_back(columns[15] + " = " + std::to_string(e.caston_x));
-		v.push_back(columns[16] + " = " + std::to_string(e.caston_y));
-		v.push_back(columns[17] + " = " + std::to_string(e.caston_z));
-		v.push_back(columns[18] + " = " + std::to_string(e.extra_di_chance));
-		v.push_back(columns[19] + " = " + std::to_string(e.instrument_mod));
+		v.push_back(columns[4] + " = '" + Strings::Escape(e.caster_name) + "'");
+		v.push_back(columns[5] + " = " + std::to_string(e.duration_formula));
+		v.push_back(columns[6] + " = " + std::to_string(e.tics_remaining));
+		v.push_back(columns[7] + " = " + std::to_string(e.initial_duration));
+		v.push_back(columns[8] + " = " + std::to_string(e.poison_counters));
+		v.push_back(columns[9] + " = " + std::to_string(e.disease_counters));
+		v.push_back(columns[10] + " = " + std::to_string(e.curse_counters));
+		v.push_back(columns[11] + " = " + std::to_string(e.corruption_counters));
+		v.push_back(columns[12] + " = " + std::to_string(e.numhits));
+		v.push_back(columns[13] + " = " + std::to_string(e.melee_rune));
+		v.push_back(columns[14] + " = " + std::to_string(e.magic_rune));
+		v.push_back(columns[15] + " = " + std::to_string(e.dot_rune));
+		v.push_back(columns[16] + " = " + std::to_string(e.persistent));
+		v.push_back(columns[17] + " = " + std::to_string(e.caston_x));
+		v.push_back(columns[18] + " = " + std::to_string(e.caston_y));
+		v.push_back(columns[19] + " = " + std::to_string(e.caston_z));
+		v.push_back(columns[20] + " = " + std::to_string(e.extra_di_chance));
+		v.push_back(columns[21] + " = " + std::to_string(e.instrument_mod));
 
 		auto results = db.QueryDatabase(
 			fmt::format(
@@ -305,8 +317,10 @@ public:
 		v.push_back(std::to_string(e.bot_id));
 		v.push_back(std::to_string(e.spell_id));
 		v.push_back(std::to_string(e.caster_level));
+		v.push_back("'" + Strings::Escape(e.caster_name) + "'");
 		v.push_back(std::to_string(e.duration_formula));
 		v.push_back(std::to_string(e.tics_remaining));
+		v.push_back(std::to_string(e.initial_duration));
 		v.push_back(std::to_string(e.poison_counters));
 		v.push_back(std::to_string(e.disease_counters));
 		v.push_back(std::to_string(e.curse_counters));
@@ -354,8 +368,10 @@ public:
 			v.push_back(std::to_string(e.bot_id));
 			v.push_back(std::to_string(e.spell_id));
 			v.push_back(std::to_string(e.caster_level));
+			v.push_back("'" + Strings::Escape(e.caster_name) + "'");
 			v.push_back(std::to_string(e.duration_formula));
 			v.push_back(std::to_string(e.tics_remaining));
+			v.push_back(std::to_string(e.initial_duration));
 			v.push_back(std::to_string(e.poison_counters));
 			v.push_back(std::to_string(e.disease_counters));
 			v.push_back(std::to_string(e.curse_counters));
@@ -405,24 +421,26 @@ public:
 
 			e.buffs_index         = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.bot_id              = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
-			e.spell_id            = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.spell_id            = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.caster_level        = row[3] ? static_cast<uint8_t>(strtoul(row[3], nullptr, 10)) : 0;
-			e.duration_formula    = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
-			e.tics_remaining      = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
-			e.poison_counters     = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
-			e.disease_counters    = row[7] ? static_cast<uint32_t>(strtoul(row[7], nullptr, 10)) : 0;
-			e.curse_counters      = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
-			e.corruption_counters = row[9] ? static_cast<uint32_t>(strtoul(row[9], nullptr, 10)) : 0;
-			e.numhits             = row[10] ? static_cast<uint32_t>(strtoul(row[10], nullptr, 10)) : 0;
-			e.melee_rune          = row[11] ? static_cast<uint32_t>(strtoul(row[11], nullptr, 10)) : 0;
-			e.magic_rune          = row[12] ? static_cast<uint32_t>(strtoul(row[12], nullptr, 10)) : 0;
-			e.dot_rune            = row[13] ? static_cast<uint32_t>(strtoul(row[13], nullptr, 10)) : 0;
-			e.persistent          = row[14] ? static_cast<int8_t>(atoi(row[14])) : 0;
-			e.caston_x            = row[15] ? static_cast<int32_t>(atoi(row[15])) : 0;
-			e.caston_y            = row[16] ? static_cast<int32_t>(atoi(row[16])) : 0;
-			e.caston_z            = row[17] ? static_cast<int32_t>(atoi(row[17])) : 0;
-			e.extra_di_chance     = row[18] ? static_cast<uint32_t>(strtoul(row[18], nullptr, 10)) : 0;
-			e.instrument_mod      = row[19] ? static_cast<int32_t>(atoi(row[19])) : 10;
+			e.caster_name         = row[4] ? row[4] : "";
+			e.duration_formula    = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
+			e.tics_remaining      = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
+			e.initial_duration    = row[7] ? static_cast<int32_t>(atoi(row[7])) : 0;
+			e.poison_counters     = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
+			e.disease_counters    = row[9] ? static_cast<uint32_t>(strtoul(row[9], nullptr, 10)) : 0;
+			e.curse_counters      = row[10] ? static_cast<uint32_t>(strtoul(row[10], nullptr, 10)) : 0;
+			e.corruption_counters = row[11] ? static_cast<uint32_t>(strtoul(row[11], nullptr, 10)) : 0;
+			e.numhits             = row[12] ? static_cast<uint32_t>(strtoul(row[12], nullptr, 10)) : 0;
+			e.melee_rune          = row[13] ? static_cast<uint32_t>(strtoul(row[13], nullptr, 10)) : 0;
+			e.magic_rune          = row[14] ? static_cast<uint32_t>(strtoul(row[14], nullptr, 10)) : 0;
+			e.dot_rune            = row[15] ? static_cast<uint32_t>(strtoul(row[15], nullptr, 10)) : 0;
+			e.persistent          = row[16] ? static_cast<int8_t>(atoi(row[16])) : 0;
+			e.caston_x            = row[17] ? static_cast<int32_t>(atoi(row[17])) : 0;
+			e.caston_y            = row[18] ? static_cast<int32_t>(atoi(row[18])) : 0;
+			e.caston_z            = row[19] ? static_cast<int32_t>(atoi(row[19])) : 0;
+			e.extra_di_chance     = row[20] ? static_cast<uint32_t>(strtoul(row[20], nullptr, 10)) : 0;
+			e.instrument_mod      = row[21] ? static_cast<int32_t>(atoi(row[21])) : 10;
 
 			all_entries.push_back(e);
 		}
@@ -449,24 +467,26 @@ public:
 
 			e.buffs_index         = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.bot_id              = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
-			e.spell_id            = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.spell_id            = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.caster_level        = row[3] ? static_cast<uint8_t>(strtoul(row[3], nullptr, 10)) : 0;
-			e.duration_formula    = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
-			e.tics_remaining      = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
-			e.poison_counters     = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
-			e.disease_counters    = row[7] ? static_cast<uint32_t>(strtoul(row[7], nullptr, 10)) : 0;
-			e.curse_counters      = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
-			e.corruption_counters = row[9] ? static_cast<uint32_t>(strtoul(row[9], nullptr, 10)) : 0;
-			e.numhits             = row[10] ? static_cast<uint32_t>(strtoul(row[10], nullptr, 10)) : 0;
-			e.melee_rune          = row[11] ? static_cast<uint32_t>(strtoul(row[11], nullptr, 10)) : 0;
-			e.magic_rune          = row[12] ? static_cast<uint32_t>(strtoul(row[12], nullptr, 10)) : 0;
-			e.dot_rune            = row[13] ? static_cast<uint32_t>(strtoul(row[13], nullptr, 10)) : 0;
-			e.persistent          = row[14] ? static_cast<int8_t>(atoi(row[14])) : 0;
-			e.caston_x            = row[15] ? static_cast<int32_t>(atoi(row[15])) : 0;
-			e.caston_y            = row[16] ? static_cast<int32_t>(atoi(row[16])) : 0;
-			e.caston_z            = row[17] ? static_cast<int32_t>(atoi(row[17])) : 0;
-			e.extra_di_chance     = row[18] ? static_cast<uint32_t>(strtoul(row[18], nullptr, 10)) : 0;
-			e.instrument_mod      = row[19] ? static_cast<int32_t>(atoi(row[19])) : 10;
+			e.caster_name         = row[4] ? row[4] : "";
+			e.duration_formula    = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
+			e.tics_remaining      = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
+			e.initial_duration    = row[7] ? static_cast<int32_t>(atoi(row[7])) : 0;
+			e.poison_counters     = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
+			e.disease_counters    = row[9] ? static_cast<uint32_t>(strtoul(row[9], nullptr, 10)) : 0;
+			e.curse_counters      = row[10] ? static_cast<uint32_t>(strtoul(row[10], nullptr, 10)) : 0;
+			e.corruption_counters = row[11] ? static_cast<uint32_t>(strtoul(row[11], nullptr, 10)) : 0;
+			e.numhits             = row[12] ? static_cast<uint32_t>(strtoul(row[12], nullptr, 10)) : 0;
+			e.melee_rune          = row[13] ? static_cast<uint32_t>(strtoul(row[13], nullptr, 10)) : 0;
+			e.magic_rune          = row[14] ? static_cast<uint32_t>(strtoul(row[14], nullptr, 10)) : 0;
+			e.dot_rune            = row[15] ? static_cast<uint32_t>(strtoul(row[15], nullptr, 10)) : 0;
+			e.persistent          = row[16] ? static_cast<int8_t>(atoi(row[16])) : 0;
+			e.caston_x            = row[17] ? static_cast<int32_t>(atoi(row[17])) : 0;
+			e.caston_y            = row[18] ? static_cast<int32_t>(atoi(row[18])) : 0;
+			e.caston_z            = row[19] ? static_cast<int32_t>(atoi(row[19])) : 0;
+			e.extra_di_chance     = row[20] ? static_cast<uint32_t>(strtoul(row[20], nullptr, 10)) : 0;
+			e.instrument_mod      = row[21] ? static_cast<int32_t>(atoi(row[21])) : 10;
 
 			all_entries.push_back(e);
 		}
@@ -545,8 +565,10 @@ public:
 		v.push_back(std::to_string(e.bot_id));
 		v.push_back(std::to_string(e.spell_id));
 		v.push_back(std::to_string(e.caster_level));
+		v.push_back("'" + Strings::Escape(e.caster_name) + "'");
 		v.push_back(std::to_string(e.duration_formula));
 		v.push_back(std::to_string(e.tics_remaining));
+		v.push_back(std::to_string(e.initial_duration));
 		v.push_back(std::to_string(e.poison_counters));
 		v.push_back(std::to_string(e.disease_counters));
 		v.push_back(std::to_string(e.curse_counters));
@@ -587,8 +609,10 @@ public:
 			v.push_back(std::to_string(e.bot_id));
 			v.push_back(std::to_string(e.spell_id));
 			v.push_back(std::to_string(e.caster_level));
+			v.push_back("'" + Strings::Escape(e.caster_name) + "'");
 			v.push_back(std::to_string(e.duration_formula));
 			v.push_back(std::to_string(e.tics_remaining));
+			v.push_back(std::to_string(e.initial_duration));
 			v.push_back(std::to_string(e.poison_counters));
 			v.push_back(std::to_string(e.disease_counters));
 			v.push_back(std::to_string(e.curse_counters));

@@ -96,8 +96,8 @@ public:
 	bool SavePetStats(const uint32 bot_id, const std::string& pet_name, const uint32 pet_mana, const uint32 pet_hp, const int32 pet_spell_id);
 	bool DeletePetStats(const uint32 bot_id);
 
-	bool LoadPetBuffs(const uint32 bot_id, SpellBuff_Struct* pet_buffs);
-	bool SavePetBuffs(const uint32 bot_id, const SpellBuff_Struct* pet_buffs, bool delete_flag = false);
+	bool LoadPetBuffs(const uint32 bot_id, Buffs_Struct* pet_buffs);
+	bool SavePetBuffs(const uint32 bot_id, const Buffs_Struct* pet_buffs, bool delete_flag = false);
 	bool DeletePetBuffs(const uint32 bot_id);
 
 	bool LoadPetItems(const uint32 bot_id, uint32* pet_items);

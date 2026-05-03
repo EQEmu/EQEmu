@@ -193,7 +193,7 @@ public:
 			BlockedSpells e{};
 
 			e.id                     = row[0] ? static_cast<int32_t>(atoi(row[0])) : 0;
-			e.spellid                = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
+			e.spellid                = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
 			e.type                   = row[2] ? static_cast<int8_t>(atoi(row[2])) : 0;
 			e.zoneid                 = row[3] ? static_cast<int32_t>(atoi(row[3])) : 0;
 			e.x                      = row[4] ? strtof(row[4], nullptr) : 0;
@@ -372,7 +372,7 @@ public:
 			BlockedSpells e{};
 
 			e.id                     = row[0] ? static_cast<int32_t>(atoi(row[0])) : 0;
-			e.spellid                = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
+			e.spellid                = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
 			e.type                   = row[2] ? static_cast<int8_t>(atoi(row[2])) : 0;
 			e.zoneid                 = row[3] ? static_cast<int32_t>(atoi(row[3])) : 0;
 			e.x                      = row[4] ? strtof(row[4], nullptr) : 0;
@@ -412,7 +412,7 @@ public:
 			BlockedSpells e{};
 
 			e.id                     = row[0] ? static_cast<int32_t>(atoi(row[0])) : 0;
-			e.spellid                = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
+			e.spellid                = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
 			e.type                   = row[2] ? static_cast<int8_t>(atoi(row[2])) : 0;
 			e.zoneid                 = row[3] ? static_cast<int32_t>(atoi(row[3])) : 0;
 			e.x                      = row[4] ? strtof(row[4], nullptr) : 0;

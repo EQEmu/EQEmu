@@ -198,6 +198,16 @@ public:
 			e.fast_heals          = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.adaptive_targeting  = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
 			e.casting_override    = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
+			e.safe_hp_base        = row[6] ? (strtof(row[6], nullptr) > 0.0f ? strtof(row[6], nullptr) : 0) : 0;
+			e.safe_hp_cloth       = row[7] ? (strtof(row[7], nullptr) > 0.0f ? strtof(row[7], nullptr) : 0) : 0;
+			e.safe_hp_leather     = row[8] ? (strtof(row[8], nullptr) > 0.0f ? strtof(row[8], nullptr) : 0) : 0;
+			e.safe_hp_chain       = row[9] ? (strtof(row[9], nullptr) > 0.0f ? strtof(row[9], nullptr) : 0) : 0;
+			e.safe_hp_plate       = row[10] ? (strtof(row[10], nullptr) > 0.0f ? strtof(row[10], nullptr) : 0) : 0;
+			e.critical_hp_base    = row[11] ? (strtof(row[11], nullptr) > 0.0f ? strtof(row[11], nullptr) : 0) : 0;
+			e.critical_hp_cloth   = row[12] ? (strtof(row[12], nullptr) > 0.0f ? strtof(row[12], nullptr) : 0) : 0;
+			e.critical_hp_leather = row[13] ? (strtof(row[13], nullptr) > 0.0f ? strtof(row[13], nullptr) : 0) : 0;
+			e.critical_hp_chain   = row[14] ? (strtof(row[14], nullptr) > 0.0f ? strtof(row[14], nullptr) : 0) : 0;
+			e.critical_hp_plate   = row[15] ? (strtof(row[15], nullptr) > 0.0f ? strtof(row[15], nullptr) : 0) : 0;
 
 			return e;
 		}
@@ -367,6 +377,16 @@ public:
 			e.fast_heals          = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.adaptive_targeting  = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
 			e.casting_override    = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
+			e.safe_hp_base        = row[6] ? (strtof(row[6], nullptr) > 0.0f ? strtof(row[6], nullptr) : 0) : 0;
+			e.safe_hp_cloth       = row[7] ? (strtof(row[7], nullptr) > 0.0f ? strtof(row[7], nullptr) : 0) : 0;
+			e.safe_hp_leather     = row[8] ? (strtof(row[8], nullptr) > 0.0f ? strtof(row[8], nullptr) : 0) : 0;
+			e.safe_hp_chain       = row[9] ? (strtof(row[9], nullptr) > 0.0f ? strtof(row[9], nullptr) : 0) : 0;
+			e.safe_hp_plate       = row[10] ? (strtof(row[10], nullptr) > 0.0f ? strtof(row[10], nullptr) : 0) : 0;
+			e.critical_hp_base    = row[11] ? (strtof(row[11], nullptr) > 0.0f ? strtof(row[11], nullptr) : 0) : 0;
+			e.critical_hp_cloth   = row[12] ? (strtof(row[12], nullptr) > 0.0f ? strtof(row[12], nullptr) : 0) : 0;
+			e.critical_hp_leather = row[13] ? (strtof(row[13], nullptr) > 0.0f ? strtof(row[13], nullptr) : 0) : 0;
+			e.critical_hp_chain   = row[14] ? (strtof(row[14], nullptr) > 0.0f ? strtof(row[14], nullptr) : 0) : 0;
+			e.critical_hp_plate   = row[15] ? (strtof(row[15], nullptr) > 0.0f ? strtof(row[15], nullptr) : 0) : 0;
 
 			all_entries.push_back(e);
 		}
@@ -397,6 +417,16 @@ public:
 			e.fast_heals          = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.adaptive_targeting  = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
 			e.casting_override    = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
+			e.safe_hp_base        = row[6] ? (strtof(row[6], nullptr) > 0.0f ? strtof(row[6], nullptr) : 0) : 0;
+			e.safe_hp_cloth       = row[7] ? (strtof(row[7], nullptr) > 0.0f ? strtof(row[7], nullptr) : 0) : 0;
+			e.safe_hp_leather     = row[8] ? (strtof(row[8], nullptr) > 0.0f ? strtof(row[8], nullptr) : 0) : 0;
+			e.safe_hp_chain       = row[9] ? (strtof(row[9], nullptr) > 0.0f ? strtof(row[9], nullptr) : 0) : 0;
+			e.safe_hp_plate       = row[10] ? (strtof(row[10], nullptr) > 0.0f ? strtof(row[10], nullptr) : 0) : 0;
+			e.critical_hp_base    = row[11] ? (strtof(row[11], nullptr) > 0.0f ? strtof(row[11], nullptr) : 0) : 0;
+			e.critical_hp_cloth   = row[12] ? (strtof(row[12], nullptr) > 0.0f ? strtof(row[12], nullptr) : 0) : 0;
+			e.critical_hp_leather = row[13] ? (strtof(row[13], nullptr) > 0.0f ? strtof(row[13], nullptr) : 0) : 0;
+			e.critical_hp_chain   = row[14] ? (strtof(row[14], nullptr) > 0.0f ? strtof(row[14], nullptr) : 0) : 0;
+			e.critical_hp_plate   = row[15] ? (strtof(row[15], nullptr) > 0.0f ? strtof(row[15], nullptr) : 0) : 0;
 
 			all_entries.push_back(e);
 		}

@@ -190,7 +190,7 @@ public:
 
 			e.id                = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.npc_spells_id     = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
-			e.spell_id          = row[2] ? static_cast<uint16_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.spell_id          = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.type              = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.minlevel          = row[4] ? static_cast<uint8_t>(strtoul(row[4], nullptr, 10)) : 0;
 			e.maxlevel          = row[5] ? static_cast<uint8_t>(strtoul(row[5], nullptr, 10)) : 255;
@@ -365,7 +365,7 @@ public:
 
 			e.id                = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.npc_spells_id     = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
-			e.spell_id          = row[2] ? static_cast<uint16_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.spell_id          = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.type              = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.minlevel          = row[4] ? static_cast<uint8_t>(strtoul(row[4], nullptr, 10)) : 0;
 			e.maxlevel          = row[5] ? static_cast<uint8_t>(strtoul(row[5], nullptr, 10)) : 255;
@@ -404,7 +404,7 @@ public:
 
 			e.id                = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.npc_spells_id     = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
-			e.spell_id          = row[2] ? static_cast<uint16_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.spell_id          = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.type              = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.minlevel          = row[4] ? static_cast<uint8_t>(strtoul(row[4], nullptr, 10)) : 0;
 			e.maxlevel          = row[5] ? static_cast<uint8_t>(strtoul(row[5], nullptr, 10)) : 255;

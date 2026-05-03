@@ -663,7 +663,7 @@ void Client::CompleteConnect()
 					break;
 				}
 
-				if (buffs[j1].persistant_buff) {
+				if (buffs[j1].persistent_buff) {
 					Mob *caster = entity_list.GetMobID(buffs[j1].casterid);
 					ApplySpellEffectIllusion(spell.id, caster, j1, spell.base_value[x1], spell.limit_value[x1], spell.max_value[x1]);
 				}
@@ -1715,13 +1715,13 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 
 	if (RuleB(NPC, PetZoneWithOwner)) {
 		/* Load Pet */
-		database.LoadPetInfo(this);
+		database.LoadPetInfo(this); // TODO: Is the pet loading correctly? I don't get any buffs
 		if (m_petinfo.SpellID > 1 && !GetPet() && m_petinfo.SpellID <= SPDAT_RECORDS) {
 			MakePoweredPet(m_petinfo.SpellID, spells[m_petinfo.SpellID].teleport_zone, m_petinfo.petpower,
 						   m_petinfo.Name, m_petinfo.size);
 			if (GetPet() && GetPet()->IsNPC()) {
 				NPC *pet = GetPet()->CastToNPC();
-				pet->SetPetState(m_petinfo.Buffs, m_petinfo.Items);
+				pet->RestorePetState(m_petinfo.Buffs, m_petinfo.Items);
 				pet->CalcBonuses();
 				pet->SetHP(m_petinfo.HP);
 				pet->SetMana(m_petinfo.Mana);

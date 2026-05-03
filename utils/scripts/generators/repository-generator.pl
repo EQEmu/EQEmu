@@ -152,18 +152,18 @@ foreach my $table_to_generate (@tables) {
     );
 
     foreach my $category (@categories) {
-        if ($table_to_generate ~~ $database_schema->{$category}) {
+        if ( grep {  $_ eq $table_to_generate } @{$database_schema->{$category}}) {
             $table_found_in_schema = 1;
         }
     }
 
-    if ($table_to_generate ~~ @table_ignore_list) {
+    if ( grep { $_ eq $table_to_generate } @table_ignore_list) {
         print "Table [$table_to_generate] is on ignore list... skipping...\n";
         $table_found_in_schema = 0;
     }
 
     my $cereal_enabled = 0;
-    if ($table_to_generate ~~ @cereal_enabled_tables) {
+    if ( grep { $_ eq $table_to_generate } @cereal_enabled_tables ) {
         $cereal_enabled = 1;
     }
 
@@ -425,7 +425,7 @@ foreach my $table_to_generate (@tables) {
     my $primary_key         = ($table_primary_key{$table_to_generate} ? $table_primary_key{$table_to_generate} : "");
     my $database_connection = "database";
 
-    if ($table_to_generate ~~ $database_schema->{"content_tables"}) {
+    if ( grep { $_ eq $table_to_generate } $database_schema->{"content_tables"} ) {
         $database_connection = "content_db";
     }
 
@@ -442,7 +442,7 @@ foreach my $table_to_generate (@tables) {
 		{
 			ar(\n" . $cereal_columns . "\n\t\t\t);\n\t\t}";
 
-        $additional_includes .= "#include \"cereal/cereal.hpp\"";
+        $additional_includes .= "#include \"cereal/cereal.hpp\"\n";
     }
 
     chomp($column_names_quoted);

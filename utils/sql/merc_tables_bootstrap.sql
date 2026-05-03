@@ -77,6 +77,7 @@ CREATE TABLE `merc_buffs`
     `CasterLevel`        int(10) UNSIGNED NOT NULL DEFAULT 0,
     `DurationFormula`    int(10) UNSIGNED NOT NULL DEFAULT 0,
     `TicsRemaining`      int(11) NOT NULL DEFAULT 0,
+    `InitialDuration`    int(11) NOT NULL DEFAULT 0,
     `PoisonCounters`     int(11) UNSIGNED NOT NULL DEFAULT 0,
     `DiseaseCounters`    int(11) UNSIGNED NOT NULL DEFAULT 0,
     `CurseCounters`      int(11) UNSIGNED NOT NULL DEFAULT 0,

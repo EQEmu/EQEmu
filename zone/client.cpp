@@ -1048,7 +1048,7 @@ bool Client::Save(uint8 iCommitNow) {
 		m_petinfo.SpellID = pet->CastToNPC()->GetPetSpellID();
 		m_petinfo.HP = pet->GetHP();
 		m_petinfo.Mana = pet->GetMana();
-		pet->GetPetState(m_petinfo.Buffs, m_petinfo.Items, m_petinfo.Name);
+		pet->SavePetState(m_petinfo.Buffs, m_petinfo.Items, m_petinfo.Name);
 		m_petinfo.petpower = pet->GetPetPower();
 		m_petinfo.size = pet->GetSize();
 		m_petinfo.taunting = pet->CastToNPC()->IsTaunting();
@@ -6325,7 +6325,7 @@ void Client::SuspendMinion(int value)
 
 			if(value >= 1)
 			{
-				CurrentPet->SetPetState(m_suspendedminion.Buffs, m_suspendedminion.Items);
+				CurrentPet->RestorePetState(m_suspendedminion.Buffs, m_suspendedminion.Items);
 				ClientPatch::SendFullBuffRefresh(CurrentPet);
 			}
 			CurrentPet->CalcBonuses();
@@ -6392,7 +6392,7 @@ void Client::SuspendMinion(int value)
 				m_suspendedminion.size = CurrentPet->GetSize();
 
 				if(value >= 1)
-					CurrentPet->GetPetState(m_suspendedminion.Buffs, m_suspendedminion.Items, m_suspendedminion.Name);
+					CurrentPet->SavePetState(m_suspendedminion.Buffs, m_suspendedminion.Items, m_suspendedminion.Name);
 				else
 					strn0cpy(m_suspendedminion.Name, CurrentPet->GetName(), 64); // Name stays even at rank 1
 

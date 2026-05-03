@@ -2191,6 +2191,36 @@ ALTER TABLE `bot_spells_entries` MODIFY COLUMN `spell_id` INTEGER NOT NULL DEFAU
 ALTER TABLE `bot_timers` MODIFY COLUMN `spell_id` INTEGER NOT NULL DEFAULT 0;
 )"
 		},
+		ManifestEntry{
+			.version     = 9057,
+			.description = "2026_04_30_buffdurations.sql",
+			.check       = "SHOW COLUMNS FROM `bot_buffs` LIKE 'initial_duration'",
+			.condition   = "empty",
+			.match       = "",
+			.sql         = R"(
+ALTER TABLE `bot_buffs`
+	ADD COLUMN `caster_name` VARCHAR(64) NOT NULL DEFAULT '' AFTER `caster_level`,
+	ADD COLUMN `initial_duration` INT(11) SIGNED NOT NULL DEFAULT 0 AFTER `tics_remaining`;
+UPDATE `bot_buffs` SET `initial_duration` = `tics_remaining` WHERE TRUE;
+
+ALTER TABLE `bot_pet_buffs`
+	ADD COLUMN `caster_name` VARCHAR(64) NOT NULL DEFAULT '' AFTER `caster_level`,
+	CHANGE COLUMN `duration` `tics_remaining` INT(11) SIGNED NOT NULL DEFAULT 0 AFTER `caster_name`,
+	ADD COLUMN `initial_duration` INT(11) SIGNED NOT NULL DEFAULT 0 AFTER `tics_remaining`,
+	ADD COLUMN `counters` INT(10) UNSIGNED NOT NULL DEFAULT 0 AFTER `initial_duration`,
+	ADD COLUMN `numhits` INT(10) UNSIGNED NOT NULL DEFAULT 0 AFTER `counters`,
+   	ADD COLUMN `melee_rune` INT(10) UNSIGNED NOT NULL DEFAULT 0 AFTER `numhits`,
+	ADD COLUMN `magic_rune` INT(10) UNSIGNED NOT NULL DEFAULT 0 AFTER `melee_rune`,
+	ADD COLUMN `dot_rune` INT(10) UNSIGNED NOT NULL DEFAULT 0 AFTER `magic_rune`,
+	ADD COLUMN `persistent` TINYINT(3) UNSIGNED NOT NULL DEFAULT 0 AFTER `dot_rune`,
+	ADD COLUMN `caston_x` INT(10) NOT NULL DEFAULT 0 AFTER `persistent`,
+	ADD COLUMN `caston_y` INT(10) NOT NULL DEFAULT 0 AFTER `caston_x`,
+	ADD COLUMN `caston_z` INT(10) NOT NULL DEFAULT 0 AFTER `caston_y`,
+	ADD COLUMN `extra_di_chance` INT(10) NOT NULL DEFAULT 0 AFTER `caston_z`,
+	ADD COLUMN `instrument_mod` INT(10) UNSIGNED NOT NULL DEFAULT 10 AFTER `extra_di_chance`;
+UPDATE `bot_pet_buffs` SET `initial_duration` = `tics_remaining` WHERE TRUE;
+)",
+		},
 // -- template; copy/paste this when you need to create a new entry
 //	ManifestEntry{
 //		.version = 9228,

@@ -150,7 +150,7 @@ public:
 
 			e.id       = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.type     = row[1] ? static_cast<uint8_t>(strtoul(row[1], nullptr, 10)) : 1;
-			e.spell_id = row[2] ? static_cast<uint16_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.spell_id = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.skill    = row[3] ? static_cast<uint16_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.locked   = row[4] ? static_cast<uint8_t>(strtoul(row[4], nullptr, 10)) : 0;
 
@@ -286,7 +286,7 @@ public:
 
 			e.id       = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.type     = row[1] ? static_cast<uint8_t>(strtoul(row[1], nullptr, 10)) : 1;
-			e.spell_id = row[2] ? static_cast<uint16_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.spell_id = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.skill    = row[3] ? static_cast<uint16_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.locked   = row[4] ? static_cast<uint8_t>(strtoul(row[4], nullptr, 10)) : 0;
 
@@ -315,7 +315,7 @@ public:
 
 			e.id       = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.type     = row[1] ? static_cast<uint8_t>(strtoul(row[1], nullptr, 10)) : 1;
-			e.spell_id = row[2] ? static_cast<uint16_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.spell_id = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.skill    = row[3] ? static_cast<uint16_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.locked   = row[4] ? static_cast<uint8_t>(strtoul(row[4], nullptr, 10)) : 0;
 

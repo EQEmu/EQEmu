@@ -114,7 +114,7 @@ bool Perl_Buff_IsCasterClient(Buffs_Struct* self)
 
 bool Perl_Buff_IsPersistentBuff(Buffs_Struct* self)
 {
-	return self->persistant_buff;
+	return self->persistent_buff;
 }
 
 bool Perl_Buff_SendsClientUpdate(Buffs_Struct* self)

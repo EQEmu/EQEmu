@@ -67,7 +67,7 @@ public:
 		float       buffer;
 		uint32_t    client_version_mask;
 		int16_t     is_ldon_door;
-		int16_t     close_timer_ms;
+		uint16_t    close_timer_ms;
 		int32_t     dz_switch_id;
 		int8_t      min_expansion;
 		int8_t      max_expansion;
@@ -307,7 +307,7 @@ public:
 			e.buffer                 = row[28] ? strtof(row[28], nullptr) : 0;
 			e.client_version_mask    = row[29] ? static_cast<uint32_t>(strtoul(row[29], nullptr, 10)) : 4294967295;
 			e.is_ldon_door           = row[30] ? static_cast<int16_t>(atoi(row[30])) : 0;
-			e.close_timer_ms         = row[31] ? static_cast<int16_t>(atoi(row[31])) : 5000;
+			e.close_timer_ms         = row[31] ? static_cast<uint16_t>(strtoul(row[31], nullptr, 10)) : 5000;
 			e.dz_switch_id           = row[32] ? static_cast<int32_t>(atoi(row[32])) : 0;
 			e.min_expansion          = row[33] ? static_cast<int8_t>(atoi(row[33])) : -1;
 			e.max_expansion          = row[34] ? static_cast<int8_t>(atoi(row[34])) : -1;
@@ -570,7 +570,7 @@ public:
 			e.buffer                 = row[28] ? strtof(row[28], nullptr) : 0;
 			e.client_version_mask    = row[29] ? static_cast<uint32_t>(strtoul(row[29], nullptr, 10)) : 4294967295;
 			e.is_ldon_door           = row[30] ? static_cast<int16_t>(atoi(row[30])) : 0;
-			e.close_timer_ms         = row[31] ? static_cast<int16_t>(atoi(row[31])) : 5000;
+			e.close_timer_ms         = row[31] ? static_cast<uint16_t>(strtoul(row[31], nullptr, 10)) : 5000;
 			e.dz_switch_id           = row[32] ? static_cast<int32_t>(atoi(row[32])) : 0;
 			e.min_expansion          = row[33] ? static_cast<int8_t>(atoi(row[33])) : -1;
 			e.max_expansion          = row[34] ? static_cast<int8_t>(atoi(row[34])) : -1;
@@ -631,7 +631,7 @@ public:
 			e.buffer                 = row[28] ? strtof(row[28], nullptr) : 0;
 			e.client_version_mask    = row[29] ? static_cast<uint32_t>(strtoul(row[29], nullptr, 10)) : 4294967295;
 			e.is_ldon_door           = row[30] ? static_cast<int16_t>(atoi(row[30])) : 0;
-			e.close_timer_ms         = row[31] ? static_cast<int16_t>(atoi(row[31])) : 5000;
+			e.close_timer_ms         = row[31] ? static_cast<uint16_t>(strtoul(row[31], nullptr, 10)) : 5000;
 			e.dz_switch_id           = row[32] ? static_cast<int32_t>(atoi(row[32])) : 0;
 			e.min_expansion          = row[33] ? static_cast<int8_t>(atoi(row[33])) : -1;
 			e.max_expansion          = row[34] ? static_cast<int8_t>(atoi(row[34])) : -1;

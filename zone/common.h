@@ -241,7 +241,7 @@ struct Buffs_Struct {
 	int16	RootBreakChance; //Not saved to dbase
 	uint32	instrument_mod;
 	int32	virus_spread_time; //time till next attempted viral spread
-	bool	persistant_buff;
+	bool	persistent_buff;
 	bool	client; //True if the caster is a client
 	bool	UpdateClient; // This is for legacy client support only. Newer clients take refresh packets for the entire buff list
 
@@ -261,6 +261,7 @@ struct Buffs_Struct {
 			CEREAL_NVP(casterid),
 			CEREAL_NVP(caster_name_str),
 			CEREAL_NVP(ticsremaining),
+			CEREAL_NVP(initialduration),
 			CEREAL_NVP(counters),
 			CEREAL_NVP(hit_number),
 			CEREAL_NVP(melee_rune),
@@ -273,7 +274,7 @@ struct Buffs_Struct {
 			CEREAL_NVP(RootBreakChance),
 			CEREAL_NVP(instrument_mod),
 			CEREAL_NVP(virus_spread_time),
-			CEREAL_NVP(persistant_buff),
+			CEREAL_NVP(persistent_buff),
 			CEREAL_NVP(client),
 			CEREAL_NVP(UpdateClient)
 		);

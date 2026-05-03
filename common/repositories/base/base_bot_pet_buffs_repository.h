@@ -36,11 +36,24 @@
 class BaseBotPetBuffsRepository {
 public:
 	struct BotPetBuffs {
-		uint32_t pet_buffs_index;
-		uint32_t pets_index;
-		int32_t  spell_id;
-		uint32_t caster_level;
-		uint32_t duration;
+		uint32_t    pet_buffs_index;
+		uint32_t    pets_index;
+		int32_t     spell_id;
+		uint32_t    caster_level;
+		std::string caster_name;
+		int32_t     tics_remaining;
+		int32_t     initial_duration;
+		uint32_t    counters;
+		uint32_t    numhits;
+		uint32_t    melee_rune;
+		uint32_t    magic_rune;
+		uint32_t    dot_rune;
+		uint8_t     persistent;
+		int32_t     caston_x;
+		int32_t     caston_y;
+		int32_t     caston_z;
+		int32_t     extra_di_chance;
+		uint32_t    instrument_mod;
 	};
 
 	static std::string PrimaryKey()
@@ -55,7 +68,20 @@ public:
 			"pets_index",
 			"spell_id",
 			"caster_level",
-			"duration",
+			"caster_name",
+			"tics_remaining",
+			"initial_duration",
+			"counters",
+			"numhits",
+			"melee_rune",
+			"magic_rune",
+			"dot_rune",
+			"persistent",
+			"caston_x",
+			"caston_y",
+			"caston_z",
+			"extra_di_chance",
+			"instrument_mod",
 		};
 	}
 
@@ -66,7 +92,20 @@ public:
 			"pets_index",
 			"spell_id",
 			"caster_level",
-			"duration",
+			"caster_name",
+			"tics_remaining",
+			"initial_duration",
+			"counters",
+			"numhits",
+			"melee_rune",
+			"magic_rune",
+			"dot_rune",
+			"persistent",
+			"caston_x",
+			"caston_y",
+			"caston_z",
+			"extra_di_chance",
+			"instrument_mod",
 		};
 	}
 
@@ -107,11 +146,24 @@ public:
 	{
 		BotPetBuffs e{};
 
-		e.pet_buffs_index = 0;
-		e.pets_index      = 0;
-		e.spell_id        = 0;
-		e.caster_level    = 0;
-		e.duration        = 0;
+		e.pet_buffs_index  = 0;
+		e.pets_index       = 0;
+		e.spell_id         = 0;
+		e.caster_level     = 0;
+		e.caster_name      = "";
+		e.tics_remaining   = 0;
+		e.initial_duration = 0;
+		e.counters         = 0;
+		e.numhits          = 0;
+		e.melee_rune       = 0;
+		e.magic_rune       = 0;
+		e.dot_rune         = 0;
+		e.persistent       = 0;
+		e.caston_x         = 0;
+		e.caston_y         = 0;
+		e.caston_z         = 0;
+		e.extra_di_chance  = 0;
+		e.instrument_mod   = 10;
 
 		return e;
 	}
@@ -148,11 +200,24 @@ public:
 		if (results.RowCount() == 1) {
 			BotPetBuffs e{};
 
-			e.pet_buffs_index = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
-			e.pets_index      = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
-			e.spell_id        = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
-			e.caster_level    = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
-			e.duration        = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
+			e.pet_buffs_index  = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
+			e.pets_index       = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
+			e.spell_id         = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
+			e.caster_level     = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
+			e.caster_name      = row[4] ? row[4] : "";
+			e.tics_remaining   = row[5] ? static_cast<int32_t>(atoi(row[5])) : 0;
+			e.initial_duration = row[6] ? static_cast<int32_t>(atoi(row[6])) : 0;
+			e.counters         = row[7] ? static_cast<uint32_t>(strtoul(row[7], nullptr, 10)) : 0;
+			e.numhits          = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
+			e.melee_rune       = row[9] ? static_cast<uint32_t>(strtoul(row[9], nullptr, 10)) : 0;
+			e.magic_rune       = row[10] ? static_cast<uint32_t>(strtoul(row[10], nullptr, 10)) : 0;
+			e.dot_rune         = row[11] ? static_cast<uint32_t>(strtoul(row[11], nullptr, 10)) : 0;
+			e.persistent       = row[12] ? static_cast<uint8_t>(strtoul(row[12], nullptr, 10)) : 0;
+			e.caston_x         = row[13] ? static_cast<int32_t>(atoi(row[13])) : 0;
+			e.caston_y         = row[14] ? static_cast<int32_t>(atoi(row[14])) : 0;
+			e.caston_z         = row[15] ? static_cast<int32_t>(atoi(row[15])) : 0;
+			e.extra_di_chance  = row[16] ? static_cast<int32_t>(atoi(row[16])) : 0;
+			e.instrument_mod   = row[17] ? static_cast<uint32_t>(strtoul(row[17], nullptr, 10)) : 10;
 
 			return e;
 		}
@@ -189,7 +254,20 @@ public:
 		v.push_back(columns[1] + " = " + std::to_string(e.pets_index));
 		v.push_back(columns[2] + " = " + std::to_string(e.spell_id));
 		v.push_back(columns[3] + " = " + std::to_string(e.caster_level));
-		v.push_back(columns[4] + " = " + std::to_string(e.duration));
+		v.push_back(columns[4] + " = '" + Strings::Escape(e.caster_name) + "'");
+		v.push_back(columns[5] + " = " + std::to_string(e.tics_remaining));
+		v.push_back(columns[6] + " = " + std::to_string(e.initial_duration));
+		v.push_back(columns[7] + " = " + std::to_string(e.counters));
+		v.push_back(columns[8] + " = " + std::to_string(e.numhits));
+		v.push_back(columns[9] + " = " + std::to_string(e.melee_rune));
+		v.push_back(columns[10] + " = " + std::to_string(e.magic_rune));
+		v.push_back(columns[11] + " = " + std::to_string(e.dot_rune));
+		v.push_back(columns[12] + " = " + std::to_string(e.persistent));
+		v.push_back(columns[13] + " = " + std::to_string(e.caston_x));
+		v.push_back(columns[14] + " = " + std::to_string(e.caston_y));
+		v.push_back(columns[15] + " = " + std::to_string(e.caston_z));
+		v.push_back(columns[16] + " = " + std::to_string(e.extra_di_chance));
+		v.push_back(columns[17] + " = " + std::to_string(e.instrument_mod));
 
 		auto results = db.QueryDatabase(
 			fmt::format(
@@ -215,7 +293,20 @@ public:
 		v.push_back(std::to_string(e.pets_index));
 		v.push_back(std::to_string(e.spell_id));
 		v.push_back(std::to_string(e.caster_level));
-		v.push_back(std::to_string(e.duration));
+		v.push_back("'" + Strings::Escape(e.caster_name) + "'");
+		v.push_back(std::to_string(e.tics_remaining));
+		v.push_back(std::to_string(e.initial_duration));
+		v.push_back(std::to_string(e.counters));
+		v.push_back(std::to_string(e.numhits));
+		v.push_back(std::to_string(e.melee_rune));
+		v.push_back(std::to_string(e.magic_rune));
+		v.push_back(std::to_string(e.dot_rune));
+		v.push_back(std::to_string(e.persistent));
+		v.push_back(std::to_string(e.caston_x));
+		v.push_back(std::to_string(e.caston_y));
+		v.push_back(std::to_string(e.caston_z));
+		v.push_back(std::to_string(e.extra_di_chance));
+		v.push_back(std::to_string(e.instrument_mod));
 
 		auto results = db.QueryDatabase(
 			fmt::format(
@@ -249,7 +340,20 @@ public:
 			v.push_back(std::to_string(e.pets_index));
 			v.push_back(std::to_string(e.spell_id));
 			v.push_back(std::to_string(e.caster_level));
-			v.push_back(std::to_string(e.duration));
+			v.push_back("'" + Strings::Escape(e.caster_name) + "'");
+			v.push_back(std::to_string(e.tics_remaining));
+			v.push_back(std::to_string(e.initial_duration));
+			v.push_back(std::to_string(e.counters));
+			v.push_back(std::to_string(e.numhits));
+			v.push_back(std::to_string(e.melee_rune));
+			v.push_back(std::to_string(e.magic_rune));
+			v.push_back(std::to_string(e.dot_rune));
+			v.push_back(std::to_string(e.persistent));
+			v.push_back(std::to_string(e.caston_x));
+			v.push_back(std::to_string(e.caston_y));
+			v.push_back(std::to_string(e.caston_z));
+			v.push_back(std::to_string(e.extra_di_chance));
+			v.push_back(std::to_string(e.instrument_mod));
 
 			insert_chunks.push_back("(" + Strings::Implode(",", v) + ")");
 		}
@@ -283,11 +387,24 @@ public:
 		for (auto row = results.begin(); row != results.end(); ++row) {
 			BotPetBuffs e{};
 
-			e.pet_buffs_index = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
-			e.pets_index      = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
-			e.spell_id        = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
-			e.caster_level    = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
-			e.duration        = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
+			e.pet_buffs_index  = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
+			e.pets_index       = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
+			e.spell_id         = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
+			e.caster_level     = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
+			e.caster_name      = row[4] ? row[4] : "";
+			e.tics_remaining   = row[5] ? static_cast<int32_t>(atoi(row[5])) : 0;
+			e.initial_duration = row[6] ? static_cast<int32_t>(atoi(row[6])) : 0;
+			e.counters         = row[7] ? static_cast<uint32_t>(strtoul(row[7], nullptr, 10)) : 0;
+			e.numhits          = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
+			e.melee_rune       = row[9] ? static_cast<uint32_t>(strtoul(row[9], nullptr, 10)) : 0;
+			e.magic_rune       = row[10] ? static_cast<uint32_t>(strtoul(row[10], nullptr, 10)) : 0;
+			e.dot_rune         = row[11] ? static_cast<uint32_t>(strtoul(row[11], nullptr, 10)) : 0;
+			e.persistent       = row[12] ? static_cast<uint8_t>(strtoul(row[12], nullptr, 10)) : 0;
+			e.caston_x         = row[13] ? static_cast<int32_t>(atoi(row[13])) : 0;
+			e.caston_y         = row[14] ? static_cast<int32_t>(atoi(row[14])) : 0;
+			e.caston_z         = row[15] ? static_cast<int32_t>(atoi(row[15])) : 0;
+			e.extra_di_chance  = row[16] ? static_cast<int32_t>(atoi(row[16])) : 0;
+			e.instrument_mod   = row[17] ? static_cast<uint32_t>(strtoul(row[17], nullptr, 10)) : 10;
 
 			all_entries.push_back(e);
 		}
@@ -312,11 +429,24 @@ public:
 		for (auto row = results.begin(); row != results.end(); ++row) {
 			BotPetBuffs e{};
 
-			e.pet_buffs_index = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
-			e.pets_index      = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
-			e.spell_id        = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
-			e.caster_level    = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
-			e.duration        = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
+			e.pet_buffs_index  = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
+			e.pets_index       = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
+			e.spell_id         = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
+			e.caster_level     = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
+			e.caster_name      = row[4] ? row[4] : "";
+			e.tics_remaining   = row[5] ? static_cast<int32_t>(atoi(row[5])) : 0;
+			e.initial_duration = row[6] ? static_cast<int32_t>(atoi(row[6])) : 0;
+			e.counters         = row[7] ? static_cast<uint32_t>(strtoul(row[7], nullptr, 10)) : 0;
+			e.numhits          = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
+			e.melee_rune       = row[9] ? static_cast<uint32_t>(strtoul(row[9], nullptr, 10)) : 0;
+			e.magic_rune       = row[10] ? static_cast<uint32_t>(strtoul(row[10], nullptr, 10)) : 0;
+			e.dot_rune         = row[11] ? static_cast<uint32_t>(strtoul(row[11], nullptr, 10)) : 0;
+			e.persistent       = row[12] ? static_cast<uint8_t>(strtoul(row[12], nullptr, 10)) : 0;
+			e.caston_x         = row[13] ? static_cast<int32_t>(atoi(row[13])) : 0;
+			e.caston_y         = row[14] ? static_cast<int32_t>(atoi(row[14])) : 0;
+			e.caston_z         = row[15] ? static_cast<int32_t>(atoi(row[15])) : 0;
+			e.extra_di_chance  = row[16] ? static_cast<int32_t>(atoi(row[16])) : 0;
+			e.instrument_mod   = row[17] ? static_cast<uint32_t>(strtoul(row[17], nullptr, 10)) : 10;
 
 			all_entries.push_back(e);
 		}
@@ -395,7 +525,20 @@ public:
 		v.push_back(std::to_string(e.pets_index));
 		v.push_back(std::to_string(e.spell_id));
 		v.push_back(std::to_string(e.caster_level));
-		v.push_back(std::to_string(e.duration));
+		v.push_back("'" + Strings::Escape(e.caster_name) + "'");
+		v.push_back(std::to_string(e.tics_remaining));
+		v.push_back(std::to_string(e.initial_duration));
+		v.push_back(std::to_string(e.counters));
+		v.push_back(std::to_string(e.numhits));
+		v.push_back(std::to_string(e.melee_rune));
+		v.push_back(std::to_string(e.magic_rune));
+		v.push_back(std::to_string(e.dot_rune));
+		v.push_back(std::to_string(e.persistent));
+		v.push_back(std::to_string(e.caston_x));
+		v.push_back(std::to_string(e.caston_y));
+		v.push_back(std::to_string(e.caston_z));
+		v.push_back(std::to_string(e.extra_di_chance));
+		v.push_back(std::to_string(e.instrument_mod));
 
 		auto results = db.QueryDatabase(
 			fmt::format(
@@ -422,7 +565,20 @@ public:
 			v.push_back(std::to_string(e.pets_index));
 			v.push_back(std::to_string(e.spell_id));
 			v.push_back(std::to_string(e.caster_level));
-			v.push_back(std::to_string(e.duration));
+			v.push_back("'" + Strings::Escape(e.caster_name) + "'");
+			v.push_back(std::to_string(e.tics_remaining));
+			v.push_back(std::to_string(e.initial_duration));
+			v.push_back(std::to_string(e.counters));
+			v.push_back(std::to_string(e.numhits));
+			v.push_back(std::to_string(e.melee_rune));
+			v.push_back(std::to_string(e.magic_rune));
+			v.push_back(std::to_string(e.dot_rune));
+			v.push_back(std::to_string(e.persistent));
+			v.push_back(std::to_string(e.caston_x));
+			v.push_back(std::to_string(e.caston_y));
+			v.push_back(std::to_string(e.caston_z));
+			v.push_back(std::to_string(e.extra_di_chance));
+			v.push_back(std::to_string(e.instrument_mod));
 
 			insert_chunks.push_back("(" + Strings::Implode(",", v) + ")");
 		}

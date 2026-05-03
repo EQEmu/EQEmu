@@ -144,10 +144,10 @@ public:
 		if (results.RowCount() == 1) {
 			BotBlockedBuffs e{};
 
-			e.bot_id      = row[0] ? static_cast<uint32_t>(atoi(row[0])) : 0;
-			e.spell_id    = row[1] ? static_cast<uint32_t>(atoi(row[1])) : 0;
-			e.blocked     = row[2] ? static_cast<uint8_t>(atoi(row[2])) : 0;
-			e.blocked_pet = row[3] ? static_cast<uint8_t>(atoi(row[3])) : 0;
+			e.bot_id      = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
+			e.spell_id    = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
+			e.blocked     = row[2] ? static_cast<uint8_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.blocked_pet = row[3] ? static_cast<uint8_t>(strtoul(row[3], nullptr, 10)) : 0;
 
 			return e;
 		}
@@ -276,10 +276,10 @@ public:
 		for (auto row = results.begin(); row != results.end(); ++row) {
 			BotBlockedBuffs e{};
 
-			e.bot_id      = row[0] ? static_cast<uint32_t>(atoi(row[0])) : 0;
-			e.spell_id    = row[1] ? static_cast<uint32_t>(atoi(row[1])) : 0;
-			e.blocked     = row[2] ? static_cast<uint8_t>(atoi(row[2])) : 0;
-			e.blocked_pet = row[3] ? static_cast<uint8_t>(atoi(row[3])) : 0;
+			e.bot_id      = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
+			e.spell_id    = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
+			e.blocked     = row[2] ? static_cast<uint8_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.blocked_pet = row[3] ? static_cast<uint8_t>(strtoul(row[3], nullptr, 10)) : 0;
 
 			all_entries.push_back(e);
 		}
@@ -304,10 +304,10 @@ public:
 		for (auto row = results.begin(); row != results.end(); ++row) {
 			BotBlockedBuffs e{};
 
-			e.bot_id      = row[0] ? static_cast<uint32_t>(atoi(row[0])) : 0;
-			e.spell_id    = row[1] ? static_cast<uint32_t>(atoi(row[1])) : 0;
-			e.blocked     = row[2] ? static_cast<uint8_t>(atoi(row[2])) : 0;
-			e.blocked_pet = row[3] ? static_cast<uint8_t>(atoi(row[3])) : 0;
+			e.bot_id      = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
+			e.spell_id    = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
+			e.blocked     = row[2] ? static_cast<uint8_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.blocked_pet = row[3] ? static_cast<uint8_t>(strtoul(row[3], nullptr, 10)) : 0;
 
 			all_entries.push_back(e);
 		}

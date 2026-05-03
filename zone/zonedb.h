@@ -209,7 +209,7 @@ struct PetInfo {
 	uint32	HP;
 	uint32	Mana;
 	float	size;
-	SpellBuff_Struct	Buffs[PET_BUFF_COUNT];
+	Buffs_Struct	Buffs[PET_BUFF_COUNT];
 	uint32	Items[EQ::invslot::EQUIPMENT_COUNT];
 	char	Name[64];
 	bool	taunting;

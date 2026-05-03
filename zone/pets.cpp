@@ -471,7 +471,8 @@ void Mob::SetPetID(uint16 NewPetID) {
 	}
 }
 
-void NPC::GetPetState(SpellBuff_Struct *pet_buffs, uint32 *items, char *name) {
+void NPC::SavePetState(Buffs_Struct* pet_buffs, uint32 *items, char *name) const
+{
 	//save the pet name
 	strn0cpy(name, GetName(), 64);
 
@@ -479,102 +480,71 @@ void NPC::GetPetState(SpellBuff_Struct *pet_buffs, uint32 *items, char *name) {
 	memcpy(items, equipment, sizeof(uint32) * EQ::invslot::EQUIPMENT_COUNT);
 
 	//save their buffs.
-	for (int i=EQ::invslot::EQUIPMENT_BEGIN; i < GetPetMaxTotalSlots(); i++) {
-		if (IsValidSpell(buffs[i].spellid)) {
-			pet_buffs[i].spellid = buffs[i].spellid;
-			pet_buffs[i].effect_type = i+1;
-			pet_buffs[i].duration = buffs[i].ticsremaining;
-			pet_buffs[i].level = buffs[i].casterlevel;
-			pet_buffs[i].bard_modifier = 10;
-			pet_buffs[i].counters = buffs[i].counters;
-			pet_buffs[i].bard_modifier = buffs[i].instrument_mod;
-		}
-		else {
-			pet_buffs[i].spellid = SPELL_UNKNOWN;
-			pet_buffs[i].duration = 0;
-			pet_buffs[i].level = 0;
-			pet_buffs[i].bard_modifier = 10;
-			pet_buffs[i].counters = 0;
-		}
-	}
+	memcpy(pet_buffs, buffs, sizeof(Buffs_Struct) * GetPetMaxTotalSlots());
 }
 
-void NPC::SetPetState(SpellBuff_Struct *pet_buffs, uint32 *items) {
+void NPC::RestorePetState(const Buffs_Struct* pet_buffs, const uint32* items) {
 	//restore their buffs...
+	memcpy(buffs, pet_buffs, sizeof(Buffs_Struct) * GetPetMaxTotalSlots());
 
-	int i;
-	for (i = 0; i < GetPetMaxTotalSlots(); i++) {
-		for(int z = 0; z < GetPetMaxTotalSlots(); z++) {
-		// check for duplicates
-			if(IsValidSpell(buffs[z].spellid) && buffs[z].spellid == pet_buffs[i].spellid) {
-				buffs[z].spellid = SPELL_UNKNOWN;
-				pet_buffs[i].spellid = 0xFFFFFFFF;
-			}
-		}
-
-		if (pet_buffs[i].spellid <= (uint32)SPDAT_RECORDS && pet_buffs[i].spellid != 0 && (pet_buffs[i].duration > 0 || pet_buffs[i].duration == -1)) {
-			if(pet_buffs[i].level == 0 || pet_buffs[i].level > 100)
-				pet_buffs[i].level = 1;
-			buffs[i].spellid			= pet_buffs[i].spellid;
-			buffs[i].ticsremaining		= pet_buffs[i].duration;
-			buffs[i].casterlevel		= pet_buffs[i].level;
-			buffs[i].casterid			= 0;
-			buffs[i].counters			= pet_buffs[i].counters;
-			buffs[i].hit_number			= spells[pet_buffs[i].spellid].hit_number;
-			buffs[i].instrument_mod		= pet_buffs[i].bard_modifier;
-		}
-		else {
-			buffs[i].spellid = SPELL_UNKNOWN;
-			pet_buffs[i].spellid = 0xFFFFFFFF;
-			pet_buffs[i].effect_type = 0;
-			pet_buffs[i].level = 0;
-			pet_buffs[i].duration = 0;
-			pet_buffs[i].bard_modifier = 0;
-		}
-	}
-	for (int j1=0; j1 < GetPetMaxTotalSlots(); j1++) {
-		if (buffs[j1].spellid <= (uint32)SPDAT_RECORDS) {
-			for (int x1=0; x1 < EFFECT_COUNT; x1++) {
-				switch (spells[buffs[j1].spellid].effect_id[x1]) {
-					case SpellEffect::AddMeleeProc:
-					case SpellEffect::WeaponProc:
-						// We need to reapply buff based procs
-						// We need to do this here so suspended pets also regain their procs.
-						AddProcToWeapon(GetProcID(buffs[j1].spellid,x1), false, 100+spells[buffs[j1].spellid].limit_value[x1], buffs[j1].spellid, buffs[j1].casterlevel, GetSpellProcLimitTimer(buffs[j1].spellid, ProcType::MELEE_PROC));
-						break;
-					case SpellEffect::DefensiveProc:
-						AddDefensiveProc(GetProcID(buffs[j1].spellid, x1), 100 + spells[buffs[j1].spellid].limit_value[x1], buffs[j1].spellid, GetSpellProcLimitTimer(buffs[j1].spellid, ProcType::DEFENSIVE_PROC));
-						break;
-					case SpellEffect::RangedProc:
-						AddRangedProc(GetProcID(buffs[j1].spellid, x1), 100 + spells[buffs[j1].spellid].limit_value[x1], buffs[j1].spellid, GetSpellProcLimitTimer(buffs[j1].spellid, ProcType::RANGED_PROC));
-						break;
-					case SpellEffect::Charm:
-					case SpellEffect::Rune:
-					case SpellEffect::NegateAttacks:
-					case SpellEffect::Illusion:
-						buffs[j1].spellid = SPELL_UNKNOWN;
-						pet_buffs[j1].spellid = SPELL_UNKNOWN;
-						pet_buffs[j1].effect_type = 0;
-						pet_buffs[j1].level = 0;
-						pet_buffs[j1].duration = 0;
-						pet_buffs[j1].bard_modifier = 0;
-						x1 = EFFECT_COUNT;
-						break;
-					// We can't send appearance packets yet, put down at CompleteConnect
+	for (int slot = 0; slot < GetPetMaxTotalSlots(); ++slot) {
+		if (IsValidSpell(buffs[slot].spellid)) {
+			// check for duplicates of valid spells, keep the lowest one
+			for (int slot2 = slot + 1; slot2 < GetPetMaxTotalSlots(); ++slot2) {
+				if (IsValidSpell(buffs[slot2].spellid) && buffs[slot].spellid == buffs[slot2].spellid) {
+					buffs[slot2].spellid = SPELL_UNKNOWN;
+					buffs[slot2].ticsremaining = 0;
 				}
 			}
+
+			// re-add any specific passive effects that need to be added
+			for (int effect = 0; effect < EFFECT_COUNT; ++effect) {
+				switch (spells[buffs[slot].spellid].effect_id[effect]) {
+				case SpellEffect::AddMeleeProc:
+				case SpellEffect::WeaponProc:
+					// We need to reapply buff based procs
+					// We need to do this here so suspended pets also regain their procs.
+					AddProcToWeapon(GetProcID(buffs[slot].spellid, effect), false,
+						100 + spells[buffs[slot].spellid].limit_value[effect], buffs[slot].spellid,
+						buffs[slot].casterlevel, GetSpellProcLimitTimer(buffs[slot].spellid, ProcType::MELEE_PROC));
+					break;
+				case SpellEffect::DefensiveProc:
+					AddDefensiveProc(GetProcID(buffs[slot].spellid, effect),
+						100 + spells[buffs[slot].spellid].limit_value[effect], buffs[slot].spellid,
+						GetSpellProcLimitTimer(buffs[slot].spellid, ProcType::DEFENSIVE_PROC));
+					break;
+				case SpellEffect::RangedProc:
+					AddRangedProc(GetProcID(buffs[slot].spellid, effect),
+						100 + spells[buffs[slot].spellid].limit_value[effect], buffs[slot].spellid,
+						GetSpellProcLimitTimer(buffs[slot].spellid, ProcType::RANGED_PROC));
+					break;
+				case SpellEffect::Charm:
+				case SpellEffect::Rune:
+				case SpellEffect::NegateAttacks:
+				case SpellEffect::Illusion:
+					buffs[slot].spellid = SPELL_UNKNOWN;
+					buffs[slot].ticsremaining = 0;
+					effect = EFFECT_COUNT; // don't process any more effects, this buff is gone
+					break;
+					// We can't send appearance packets yet, put down at CompleteConnect
+				default:
+					break;
+				}
+			}
+		} else {
+			// ensure this buff isn't going to stick around
+			buffs[slot].spellid = SPELL_UNKNOWN;
+			buffs[slot].ticsremaining = 0;
 		}
 	}
 
 	//restore their equipment...
-	for (i = EQ::invslot::EQUIPMENT_BEGIN; i <= EQ::invslot::EQUIPMENT_END; i++) {
-		if (items[i] == 0) {
+	for (int equip = EQ::invslot::EQUIPMENT_BEGIN; equip <= EQ::invslot::EQUIPMENT_END; equip++) {
+		if (items[equip] == 0) {
 			continue;
 		}
 
-		const EQ::ItemData *item2 = database.GetItem(items[i]);
-
-		if (item2) {
+		if (const EQ::ItemData *item2 = database.GetItem(items[equip])) {
 			bool noDrop           = (item2->NoDrop == 0); // Field is reverse logic
 			bool petCanHaveNoDrop = (RuleB(Pets, CanTakeNoDrop) && _CLIENTPET(this) && GetPetType() <= PetType::Normal);
 

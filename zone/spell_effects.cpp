@@ -10532,10 +10532,10 @@ void Mob::ApplySpellEffectIllusion(int32 spell_id, Mob *caster, int buffslot, in
 				RuleB(Spells, IllusionsAlwaysPersist)
 			)
 		) {
-			buffs[buffslot].persistant_buff = 1;
+			buffs[buffslot].persistent_buff = 1;
 		}
 		else {
-			buffs[buffslot].persistant_buff = 0;
+			buffs[buffslot].persistent_buff = 0;
 		}
 	}
 }
@@ -10654,6 +10654,7 @@ int Mob::GetBuffStatValueBySlot(uint8 slot, const char* stat_identifier)
 	else if (id == "spell_id") { return buffs[slot].spellid; }
 	else if (id == "caster_id") { return buffs[slot].spellid; }
 	else if (id == "ticsremaining") { return buffs[slot].ticsremaining; }
+	else if (id == "initialduration") { return buffs[slot].initialduration; }
 	else if (id == "counters") { return buffs[slot].counters; }
 	else if (id == "hit_number") { return  buffs[slot].hit_number; }
 	else if (id == "melee_rune") { return  buffs[slot].melee_rune; }
@@ -10663,7 +10664,7 @@ int Mob::GetBuffStatValueBySlot(uint8 slot, const char* stat_identifier)
 	else if (id == "caston_y") { return buffs[slot].caston_y; }
 	else if (id == "caston_z") { return  buffs[slot].caston_z; }
 	else if (id == "instrument_mod") { return  buffs[slot].instrument_mod; }
-	else if (id == "persistant_buff") { return  buffs[slot].persistant_buff; }
+	else if (id == "persistant_buff") { return  buffs[slot].persistent_buff; }
 	else if (id == "client") { return  buffs[slot].client; }
 	else if (id == "extra_di_chance") { return  buffs[slot].ExtraDIChance; }
 	else if (id == "root_break_chance") { return  buffs[slot].RootBreakChance; }

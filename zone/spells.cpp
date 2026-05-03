@@ -3724,7 +3724,7 @@ int Mob::AddBuff(Mob *caster, int32 spell_id, int duration, int32 level_override
 	buffs[emptyslot].counters = CalculateCounters(spell_id);
 	buffs[emptyslot].hit_number = spells[spell_id].hit_number;
 	buffs[emptyslot].client = caster ? caster->IsClient() : 0;
-	buffs[emptyslot].persistant_buff = 0;
+	buffs[emptyslot].persistent_buff = 0;
 	buffs[emptyslot].caston_x = 0;
 	buffs[emptyslot].caston_y = 0;
 	buffs[emptyslot].caston_z = 0;
@@ -4574,11 +4574,9 @@ bool Mob::SpellOnTarget(
 		// if SpellEffect returned false there's a problem applying the
 		// spell. It's most likely a buff that can't stack.
 		LogSpells("Spell [{}] could not apply its effects [{}] -> [{}]\n", spell_id, GetName(), spelltar->GetName());
-		if (casting_spell_aa_id) {
-			MessageString(Chat::SpellFailure, SPELL_NO_HOLD);
-			if (RuleB(Spells, LegacyManaburn) && IsClient() && casting_spell_aa_id == aaManaBurn) {
-				StopCasting();
-			}
+		MessageString(Chat::SpellFailure, SPELL_NO_HOLD);
+		if (casting_spell_aa_id && RuleB(Spells, LegacyManaburn) && IsClient() && casting_spell_aa_id == aaManaBurn) {
+			StopCasting();
 		}
 		safe_delete(action_packet);
 		return false;
