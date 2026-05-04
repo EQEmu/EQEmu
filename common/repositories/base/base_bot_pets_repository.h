@@ -153,7 +153,7 @@ public:
 			BotPets e{};
 
 			e.pets_index = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
-			e.spell_id   = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
+			e.spell_id   = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
 			e.bot_id     = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
 			e.name       = row[3] ? row[3] : "";
 			e.mana       = row[4] ? static_cast<int32_t>(atoi(row[4])) : 0;
@@ -292,7 +292,7 @@ public:
 			BotPets e{};
 
 			e.pets_index = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
-			e.spell_id   = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
+			e.spell_id   = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
 			e.bot_id     = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
 			e.name       = row[3] ? row[3] : "";
 			e.mana       = row[4] ? static_cast<int32_t>(atoi(row[4])) : 0;
@@ -322,7 +322,7 @@ public:
 			BotPets e{};
 
 			e.pets_index = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
-			e.spell_id   = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
+			e.spell_id   = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
 			e.bot_id     = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
 			e.name       = row[3] ? row[3] : "";
 			e.mana       = row[4] ? static_cast<int32_t>(atoi(row[4])) : 0;

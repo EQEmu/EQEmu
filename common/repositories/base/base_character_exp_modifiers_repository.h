@@ -110,8 +110,8 @@ public:
 		e.character_id     = 0;
 		e.zone_id          = 0;
 		e.instance_version = -1;
-		e.aa_modifier      = 0;
-		e.exp_modifier     = 0;
+		e.aa_modifier      = 1;
+		e.exp_modifier     = 1;
 
 		return e;
 	}
@@ -151,8 +151,8 @@ public:
 			e.character_id     = row[0] ? static_cast<int32_t>(atoi(row[0])) : 0;
 			e.zone_id          = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
 			e.instance_version = row[2] ? static_cast<int32_t>(atoi(row[2])) : -1;
-			e.aa_modifier      = row[3] ? strtof(row[3], nullptr) : 0;
-			e.exp_modifier     = row[4] ? strtof(row[4], nullptr) : 0;
+			e.aa_modifier      = row[3] ? strtof(row[3], nullptr) : 1;
+			e.exp_modifier     = row[4] ? strtof(row[4], nullptr) : 1;
 
 			return e;
 		}
@@ -287,8 +287,8 @@ public:
 			e.character_id     = row[0] ? static_cast<int32_t>(atoi(row[0])) : 0;
 			e.zone_id          = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
 			e.instance_version = row[2] ? static_cast<int32_t>(atoi(row[2])) : -1;
-			e.aa_modifier      = row[3] ? strtof(row[3], nullptr) : 0;
-			e.exp_modifier     = row[4] ? strtof(row[4], nullptr) : 0;
+			e.aa_modifier      = row[3] ? strtof(row[3], nullptr) : 1;
+			e.exp_modifier     = row[4] ? strtof(row[4], nullptr) : 1;
 
 			all_entries.push_back(e);
 		}
@@ -316,8 +316,8 @@ public:
 			e.character_id     = row[0] ? static_cast<int32_t>(atoi(row[0])) : 0;
 			e.zone_id          = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
 			e.instance_version = row[2] ? static_cast<int32_t>(atoi(row[2])) : -1;
-			e.aa_modifier      = row[3] ? strtof(row[3], nullptr) : 0;
-			e.exp_modifier     = row[4] ? strtof(row[4], nullptr) : 0;
+			e.aa_modifier      = row[3] ? strtof(row[3], nullptr) : 1;
+			e.exp_modifier     = row[4] ? strtof(row[4], nullptr) : 1;
 
 			all_entries.push_back(e);
 		}

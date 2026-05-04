@@ -41,7 +41,7 @@ public:
 		uint8_t     stance;
 		uint16_t    setting_id;
 		uint8_t     setting_type;
-		int32_t     value;
+		int64_t     value;
 		std::string category_name;
 		std::string setting_name;
 	};
@@ -116,7 +116,7 @@ public:
 	{
 		BotSettings e{};
 
-		e.character_id	= 0;
+		e.character_id  = 0;
 		e.bot_id        = 0;
 		e.stance        = 0;
 		e.setting_id    = 0;
@@ -160,12 +160,12 @@ public:
 		if (results.RowCount() == 1) {
 			BotSettings e{};
 
-			e.character_id	= row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
+			e.character_id  = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.bot_id        = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
 			e.stance        = row[2] ? static_cast<uint8_t>(strtoul(row[2], nullptr, 10)) : 0;
 			e.setting_id    = row[3] ? static_cast<uint16_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.setting_type  = row[4] ? static_cast<uint8_t>(strtoul(row[4], nullptr, 10)) : 0;
-			e.value         = row[5] ? static_cast<int32_t>(atoi(row[5])) : 0;
+			e.value         = row[5] ? strtoll(row[5], nullptr, 10) : 0;
 			e.category_name = row[6] ? row[6] : "";
 			e.setting_name  = row[7] ? row[7] : "";
 
@@ -308,12 +308,12 @@ public:
 		for (auto row = results.begin(); row != results.end(); ++row) {
 			BotSettings e{};
 
-			e.character_id	= row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
+			e.character_id  = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.bot_id        = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
 			e.stance        = row[2] ? static_cast<uint8_t>(strtoul(row[2], nullptr, 10)) : 0;
 			e.setting_id    = row[3] ? static_cast<uint16_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.setting_type  = row[4] ? static_cast<uint8_t>(strtoul(row[4], nullptr, 10)) : 0;
-			e.value         = row[5] ? static_cast<int32_t>(atoi(row[5])) : 0;
+			e.value         = row[5] ? strtoll(row[5], nullptr, 10) : 0;
 			e.category_name = row[6] ? row[6] : "";
 			e.setting_name  = row[7] ? row[7] : "";
 
@@ -340,12 +340,12 @@ public:
 		for (auto row = results.begin(); row != results.end(); ++row) {
 			BotSettings e{};
 
-			e.character_id	= row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
+			e.character_id  = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.bot_id        = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
 			e.stance        = row[2] ? static_cast<uint8_t>(strtoul(row[2], nullptr, 10)) : 0;
 			e.setting_id    = row[3] ? static_cast<uint16_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.setting_type  = row[4] ? static_cast<uint8_t>(strtoul(row[4], nullptr, 10)) : 0;
-			e.value         = row[5] ? static_cast<int32_t>(atoi(row[5])) : 0;
+			e.value         = row[5] ? strtoll(row[5], nullptr, 10) : 0;
 			e.category_name = row[6] ? row[6] : "";
 			e.setting_name  = row[7] ? row[7] : "";
 

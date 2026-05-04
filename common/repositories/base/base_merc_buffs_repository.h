@@ -206,7 +206,7 @@ public:
 
 			e.MercBuffId         = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.MercId             = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
-			e.SpellId            = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.SpellId            = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.CasterLevel        = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.DurationFormula    = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
 			e.TicsRemaining      = row[5] ? static_cast<int32_t>(atoi(row[5])) : 0;
@@ -397,7 +397,7 @@ public:
 
 			e.MercBuffId         = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.MercId             = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
-			e.SpellId            = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.SpellId            = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.CasterLevel        = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.DurationFormula    = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
 			e.TicsRemaining      = row[5] ? static_cast<int32_t>(atoi(row[5])) : 0;
@@ -440,7 +440,7 @@ public:
 
 			e.MercBuffId         = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.MercId             = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
-			e.SpellId            = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.SpellId            = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.CasterLevel        = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.DurationFormula    = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
 			e.TicsRemaining      = row[5] ? static_cast<int32_t>(atoi(row[5])) : 0;

@@ -33,7 +33,6 @@
 
 #include <ctime>
 
-
 class BaseGuildsRepository {
 public:
 	struct Guilds {

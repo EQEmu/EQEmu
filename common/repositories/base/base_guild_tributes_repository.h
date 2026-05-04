@@ -33,7 +33,6 @@
 
 #include <ctime>
 
-
 class BaseGuildTributesRepository {
 public:
 	struct GuildTributes {
@@ -157,13 +156,13 @@ public:
 		if (results.RowCount() == 1) {
 			GuildTributes e{};
 
-			e.guild_id          = static_cast<uint32_t>(strtoul(row[0], nullptr, 10));
-			e.tribute_id_1      = static_cast<uint32_t>(strtoul(row[1], nullptr, 10));
-			e.tribute_id_1_tier = static_cast<uint32_t>(strtoul(row[2], nullptr, 10));
-			e.tribute_id_2      = static_cast<uint32_t>(strtoul(row[3], nullptr, 10));
-			e.tribute_id_2_tier = static_cast<uint32_t>(strtoul(row[4], nullptr, 10));
-			e.time_remaining    = static_cast<uint32_t>(strtoul(row[5], nullptr, 10));
-			e.enabled           = static_cast<uint32_t>(strtoul(row[6], nullptr, 10));
+			e.guild_id          = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
+			e.tribute_id_1      = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
+			e.tribute_id_1_tier = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.tribute_id_2      = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
+			e.tribute_id_2_tier = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
+			e.time_remaining    = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
+			e.enabled           = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
 
 			return e;
 		}
@@ -301,13 +300,13 @@ public:
 		for (auto row = results.begin(); row != results.end(); ++row) {
 			GuildTributes e{};
 
-			e.guild_id          = static_cast<uint32_t>(strtoul(row[0], nullptr, 10));
-			e.tribute_id_1      = static_cast<uint32_t>(strtoul(row[1], nullptr, 10));
-			e.tribute_id_1_tier = static_cast<uint32_t>(strtoul(row[2], nullptr, 10));
-			e.tribute_id_2      = static_cast<uint32_t>(strtoul(row[3], nullptr, 10));
-			e.tribute_id_2_tier = static_cast<uint32_t>(strtoul(row[4], nullptr, 10));
-			e.time_remaining    = static_cast<uint32_t>(strtoul(row[5], nullptr, 10));
-			e.enabled           = static_cast<uint32_t>(strtoul(row[6], nullptr, 10));
+			e.guild_id          = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
+			e.tribute_id_1      = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
+			e.tribute_id_1_tier = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.tribute_id_2      = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
+			e.tribute_id_2_tier = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
+			e.time_remaining    = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
+			e.enabled           = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
 
 			all_entries.push_back(e);
 		}
@@ -332,13 +331,13 @@ public:
 		for (auto row = results.begin(); row != results.end(); ++row) {
 			GuildTributes e{};
 
-			e.guild_id          = static_cast<uint32_t>(strtoul(row[0], nullptr, 10));
-			e.tribute_id_1      = static_cast<uint32_t>(strtoul(row[1], nullptr, 10));
-			e.tribute_id_1_tier = static_cast<uint32_t>(strtoul(row[2], nullptr, 10));
-			e.tribute_id_2      = static_cast<uint32_t>(strtoul(row[3], nullptr, 10));
-			e.tribute_id_2_tier = static_cast<uint32_t>(strtoul(row[4], nullptr, 10));
-			e.time_remaining    = static_cast<uint32_t>(strtoul(row[5], nullptr, 10));
-			e.enabled           = static_cast<uint32_t>(strtoul(row[6], nullptr, 10));
+			e.guild_id          = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
+			e.tribute_id_1      = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
+			e.tribute_id_1_tier = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.tribute_id_2      = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
+			e.tribute_id_2_tier = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
+			e.time_remaining    = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
+			e.enabled           = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
 
 			all_entries.push_back(e);
 		}

@@ -32,6 +32,7 @@
 #include "common/strings.h"
 
 #include <ctime>
+
 class BaseBotCreateCombinationsRepository {
 public:
 	struct BotCreateCombinations {

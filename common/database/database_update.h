@@ -42,8 +42,8 @@ public:
 	DatabaseVersion GetBinaryDatabaseVersions();
 	void CheckDbUpdates();
 	std::string GetQueryResult(const ManifestEntry& e);
-	static bool ShouldRunMigration(ManifestEntry &e, std::string query_result);
-	bool UpdateManifest(std::vector<ManifestEntry> entries, int version_low, int version_high);
+	static bool ShouldRunMigration(const ManifestEntry& e, std::string& query_result);
+	int UpdateManifest(std::vector<ManifestEntry>& entries, int version_low, int version_high);
 
 	DatabaseUpdate *SetDatabase(Database *db);
 	DatabaseUpdate *SetContentDatabase(Database *db);

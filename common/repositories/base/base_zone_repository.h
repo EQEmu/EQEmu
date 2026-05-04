@@ -128,7 +128,7 @@ public:
 		int32_t     fast_regen_mana;
 		int32_t     fast_regen_endurance;
 		int32_t     npc_max_aggro_dist;
-		uint32_t    client_update_range;
+		int32_t     client_update_range;
 		int32_t     underworld_teleport_index;
 		int32_t     lava_damage;
 		int32_t     min_lava_damage;
@@ -616,7 +616,7 @@ public:
 			e.fast_regen_mana           = row[89] ? static_cast<int32_t>(atoi(row[89])) : 180;
 			e.fast_regen_endurance      = row[90] ? static_cast<int32_t>(atoi(row[90])) : 180;
 			e.npc_max_aggro_dist        = row[91] ? static_cast<int32_t>(atoi(row[91])) : 600;
-			e.client_update_range       = row[92] ? static_cast<uint32_t>(strtoul(row[92], nullptr, 10)) : 600;
+			e.client_update_range       = row[92] ? static_cast<int32_t>(atoi(row[92])) : 600;
 			e.underworld_teleport_index = row[93] ? static_cast<int32_t>(atoi(row[93])) : 0;
 			e.lava_damage               = row[94] ? static_cast<int32_t>(atoi(row[94])) : 50;
 			e.min_lava_damage           = row[95] ? static_cast<int32_t>(atoi(row[95])) : 10;
@@ -1127,7 +1127,7 @@ public:
 			e.fast_regen_mana           = row[89] ? static_cast<int32_t>(atoi(row[89])) : 180;
 			e.fast_regen_endurance      = row[90] ? static_cast<int32_t>(atoi(row[90])) : 180;
 			e.npc_max_aggro_dist        = row[91] ? static_cast<int32_t>(atoi(row[91])) : 600;
-			e.client_update_range       = row[92] ? static_cast<uint32_t>(strtoul(row[92], nullptr, 10)) : 600;
+			e.client_update_range       = row[92] ? static_cast<int32_t>(atoi(row[92])) : 600;
 			e.underworld_teleport_index = row[93] ? static_cast<int32_t>(atoi(row[93])) : 0;
 			e.lava_damage               = row[94] ? static_cast<int32_t>(atoi(row[94])) : 50;
 			e.min_lava_damage           = row[95] ? static_cast<int32_t>(atoi(row[95])) : 10;
@@ -1250,7 +1250,7 @@ public:
 			e.fast_regen_mana           = row[89] ? static_cast<int32_t>(atoi(row[89])) : 180;
 			e.fast_regen_endurance      = row[90] ? static_cast<int32_t>(atoi(row[90])) : 180;
 			e.npc_max_aggro_dist        = row[91] ? static_cast<int32_t>(atoi(row[91])) : 600;
-			e.client_update_range       = row[92] ? static_cast<uint32_t>(strtoul(row[92], nullptr, 10)) : 600;
+			e.client_update_range       = row[92] ? static_cast<int32_t>(atoi(row[92])) : 600;
 			e.underworld_teleport_index = row[93] ? static_cast<int32_t>(atoi(row[93])) : 0;
 			e.lava_damage               = row[94] ? static_cast<int32_t>(atoi(row[94])) : 50;
 			e.min_lava_damage           = row[95] ? static_cast<int32_t>(atoi(row[95])) : 10;

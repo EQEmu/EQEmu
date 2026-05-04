@@ -144,7 +144,7 @@ public:
 		if (results.RowCount() == 1) {
 			SpellBuckets e{};
 
-			e.spell_id          = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
+			e.spell_id          = row[0] ? static_cast<int32_t>(atoi(row[0])) : 0;
 			e.bucket_name       = row[1] ? row[1] : "";
 			e.bucket_value      = row[2] ? row[2] : "";
 			e.bucket_comparison = row[3] ? static_cast<uint8_t>(strtoul(row[3], nullptr, 10)) : 0;
@@ -276,7 +276,7 @@ public:
 		for (auto row = results.begin(); row != results.end(); ++row) {
 			SpellBuckets e{};
 
-			e.spell_id          = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
+			e.spell_id          = row[0] ? static_cast<int32_t>(atoi(row[0])) : 0;
 			e.bucket_name       = row[1] ? row[1] : "";
 			e.bucket_value      = row[2] ? row[2] : "";
 			e.bucket_comparison = row[3] ? static_cast<uint8_t>(strtoul(row[3], nullptr, 10)) : 0;
@@ -304,7 +304,7 @@ public:
 		for (auto row = results.begin(); row != results.end(); ++row) {
 			SpellBuckets e{};
 
-			e.spell_id          = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
+			e.spell_id          = row[0] ? static_cast<int32_t>(atoi(row[0])) : 0;
 			e.bucket_name       = row[1] ? row[1] : "";
 			e.bucket_value      = row[2] ? row[2] : "";
 			e.bucket_comparison = row[3] ? static_cast<uint8_t>(strtoul(row[3], nullptr, 10)) : 0;

@@ -158,7 +158,7 @@ public:
 
 			e.id         = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.bot_id     = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
-			e.spell_id   = row[2] ? static_cast<int16_t>(atoi(row[2])) : 0;
+			e.spell_id   = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.priority   = row[3] ? static_cast<int16_t>(atoi(row[3])) : 0;
 			e.min_hp     = row[4] ? static_cast<int16_t>(atoi(row[4])) : 0;
 			e.max_hp     = row[5] ? static_cast<int16_t>(atoi(row[5])) : 0;
@@ -301,7 +301,7 @@ public:
 
 			e.id         = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.bot_id     = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
-			e.spell_id   = row[2] ? static_cast<int16_t>(atoi(row[2])) : 0;
+			e.spell_id   = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.priority   = row[3] ? static_cast<int16_t>(atoi(row[3])) : 0;
 			e.min_hp     = row[4] ? static_cast<int16_t>(atoi(row[4])) : 0;
 			e.max_hp     = row[5] ? static_cast<int16_t>(atoi(row[5])) : 0;
@@ -332,7 +332,7 @@ public:
 
 			e.id         = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.bot_id     = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
-			e.spell_id   = row[2] ? static_cast<int16_t>(atoi(row[2])) : 0;
+			e.spell_id   = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.priority   = row[3] ? static_cast<int16_t>(atoi(row[3])) : 0;
 			e.min_hp     = row[4] ? static_cast<int16_t>(atoi(row[4])) : 0;
 			e.max_hp     = row[5] ? static_cast<int16_t>(atoi(row[5])) : 0;

@@ -31,8 +31,9 @@
 #include "common/database.h"
 #include "common/strings.h"
 
+#include "cereal/cereal.hpp"
 #include <ctime>
-#include <cereal/cereal.hpp>
+
 class BasePlayerEventLogSettingsRepository {
 public:
 	struct PlayerEventLogSettings {

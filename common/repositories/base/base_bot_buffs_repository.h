@@ -210,7 +210,7 @@ public:
 
 			e.buffs_index         = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.bot_id              = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
-			e.spell_id            = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.spell_id            = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.caster_level        = row[3] ? static_cast<uint8_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.duration_formula    = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
 			e.tics_remaining      = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
@@ -405,7 +405,7 @@ public:
 
 			e.buffs_index         = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.bot_id              = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
-			e.spell_id            = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.spell_id            = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.caster_level        = row[3] ? static_cast<uint8_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.duration_formula    = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
 			e.tics_remaining      = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
@@ -449,7 +449,7 @@ public:
 
 			e.buffs_index         = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.bot_id              = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
-			e.spell_id            = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.spell_id            = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.caster_level        = row[3] ? static_cast<uint8_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.duration_formula    = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
 			e.tics_remaining      = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;

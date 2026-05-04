@@ -170,7 +170,7 @@ public:
 			e.recast_time = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.is_spell    = row[4] ? static_cast<uint8_t>(strtoul(row[4], nullptr, 10)) : 0;
 			e.is_disc     = row[5] ? static_cast<uint8_t>(strtoul(row[5], nullptr, 10)) : 0;
-			e.spell_id    = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
+			e.spell_id    = row[6] ? static_cast<int32_t>(atoi(row[6])) : 0;
 			e.is_item     = row[7] ? static_cast<uint8_t>(strtoul(row[7], nullptr, 10)) : 0;
 			e.item_id     = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
 
@@ -322,7 +322,7 @@ public:
 			e.recast_time = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.is_spell    = row[4] ? static_cast<uint8_t>(strtoul(row[4], nullptr, 10)) : 0;
 			e.is_disc     = row[5] ? static_cast<uint8_t>(strtoul(row[5], nullptr, 10)) : 0;
-			e.spell_id    = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
+			e.spell_id    = row[6] ? static_cast<int32_t>(atoi(row[6])) : 0;
 			e.is_item     = row[7] ? static_cast<uint8_t>(strtoul(row[7], nullptr, 10)) : 0;
 			e.item_id     = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
 
@@ -355,7 +355,7 @@ public:
 			e.recast_time = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.is_spell    = row[4] ? static_cast<uint8_t>(strtoul(row[4], nullptr, 10)) : 0;
 			e.is_disc     = row[5] ? static_cast<uint8_t>(strtoul(row[5], nullptr, 10)) : 0;
-			e.spell_id    = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
+			e.spell_id    = row[6] ? static_cast<int32_t>(atoi(row[6])) : 0;
 			e.is_item     = row[7] ? static_cast<uint8_t>(strtoul(row[7], nullptr, 10)) : 0;
 			e.item_id     = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
 
