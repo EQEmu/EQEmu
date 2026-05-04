@@ -38,7 +38,7 @@ public:
 	struct MercBuffs {
 		uint32_t MercBuffId;
 		uint32_t MercId;
-		uint32_t SpellId;
+		int32_t  SpellId;
 		uint32_t CasterLevel;
 		uint32_t DurationFormula;
 		int32_t  TicsRemaining;
@@ -56,7 +56,7 @@ public:
 		int32_t  caston_y;
 		int32_t  caston_z;
 		int32_t  ExtraDIChance;
-		int32_t  instrument_mod;
+		uint32_t instrument_mod;
 	};
 
 	static std::string PrimaryKey()
@@ -214,7 +214,7 @@ public:
 
 			e.MercBuffId         = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.MercId             = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
-			e.SpellId            = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.SpellId            = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.CasterLevel        = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.DurationFormula    = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
 			e.TicsRemaining      = row[5] ? static_cast<int32_t>(atoi(row[5])) : 0;
@@ -232,7 +232,7 @@ public:
 			e.caston_y           = row[17] ? static_cast<int32_t>(atoi(row[17])) : 0;
 			e.caston_z           = row[18] ? static_cast<int32_t>(atoi(row[18])) : 0;
 			e.ExtraDIChance      = row[19] ? static_cast<int32_t>(atoi(row[19])) : 0;
-			e.instrument_mod     = row[20] ? static_cast<int32_t>(atoi(row[20])) : 10;
+			e.instrument_mod     = row[20] ? static_cast<uint32_t>(strtoul(row[20], nullptr, 10)) : 10;
 
 			return e;
 		}
@@ -413,7 +413,7 @@ public:
 
 			e.MercBuffId         = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.MercId             = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
-			e.SpellId            = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.SpellId            = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.CasterLevel        = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.DurationFormula    = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
 			e.TicsRemaining      = row[5] ? static_cast<int32_t>(atoi(row[5])) : 0;
@@ -431,7 +431,7 @@ public:
 			e.caston_y           = row[17] ? static_cast<int32_t>(atoi(row[17])) : 0;
 			e.caston_z           = row[18] ? static_cast<int32_t>(atoi(row[18])) : 0;
 			e.ExtraDIChance      = row[19] ? static_cast<int32_t>(atoi(row[19])) : 0;
-			e.instrument_mod     = row[20] ? static_cast<int32_t>(atoi(row[20])) : 10;
+			e.instrument_mod     = row[20] ? static_cast<uint32_t>(strtoul(row[20], nullptr, 10)) : 10;
 
 			all_entries.push_back(e);
 		}
@@ -458,7 +458,7 @@ public:
 
 			e.MercBuffId         = row[0] ? static_cast<uint32_t>(strtoul(row[0], nullptr, 10)) : 0;
 			e.MercId             = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
-			e.SpellId            = row[2] ? static_cast<uint32_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.SpellId            = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
 			e.CasterLevel        = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
 			e.DurationFormula    = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
 			e.TicsRemaining      = row[5] ? static_cast<int32_t>(atoi(row[5])) : 0;
@@ -476,7 +476,7 @@ public:
 			e.caston_y           = row[17] ? static_cast<int32_t>(atoi(row[17])) : 0;
 			e.caston_z           = row[18] ? static_cast<int32_t>(atoi(row[18])) : 0;
 			e.ExtraDIChance      = row[19] ? static_cast<int32_t>(atoi(row[19])) : 0;
-			e.instrument_mod     = row[20] ? static_cast<int32_t>(atoi(row[20])) : 10;
+			e.instrument_mod     = row[20] ? static_cast<uint32_t>(strtoul(row[20], nullptr, 10)) : 10;
 
 			all_entries.push_back(e);
 		}
