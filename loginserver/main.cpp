@@ -159,17 +159,12 @@ void start_web_server()
 int main(int argc, char **argv)
 {
 	RegisterExecutablePlatform(ExePlatformLogin);
+	EQEmuLogSys::Instance()->LoadLogSettingsDefaults();
 	set_exception_handler();
 
 	if (!eqcrypt_init()) {
 		LogError("Failed to initialize crypto providers");
 		return 1;
-	}
-
-	LogInfo("Logging System Init");
-
-	if (argc == 1) {
-		EQEmuLogSys::Instance()->LoadLogSettingsDefaults();
 	}
 
 	PathManager::Instance()->Init();

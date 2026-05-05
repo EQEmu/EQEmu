@@ -31,6 +31,7 @@
 #endif
 
 #include <cstring>
+#include <filesystem>
 #include <string>
 
 #include <memory>
@@ -182,6 +183,12 @@ static OSSL_PROVIDER *s_default_provider = nullptr;
 bool eqcrypt_init()
 {
 #ifdef EQEMU_USE_OPENSSL
+#ifdef _WIN32
+	// Set OpenSSL default provider search path to the working directory. Okay to throw.
+	std::string search_path = std::filesystem::current_path().string();
+	OSSL_PROVIDER_set_default_search_path(nullptr, search_path.c_str());
+#endif
+
 	if (!s_default_provider) {
 		s_default_provider = OSSL_PROVIDER_load(nullptr, "default");
 	}
