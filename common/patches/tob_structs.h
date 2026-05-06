@@ -645,7 +645,7 @@ namespace TOB {
 		{
 			/*000*/	uint32	spawn_id;
 			/*004*/	uint32	killer_id;
-			/*008*/	uint32	corpseid; //not read by client
+			/*008*/	uint32	corpseid;
 			/*012*/	uint32	unknown1; //not read by client
 			/*016*/	int32   spell_id;
 			/*020*/ uint32	attack_skill;

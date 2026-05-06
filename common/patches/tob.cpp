@@ -597,8 +597,8 @@ namespace TOB
 			OUT(skills[i]);
 		}
 
-		eq->unknown408[0] = 1;
-		eq->unknown408[1] = 0xC9;
+		eq->unknown408[0] = 1; // this tells the client to update the GM window
+		eq->unknown408[1] = 0xC9; // these appear to be languages, but it's only testing if this is non-zero
 		eq->unknown408[2] = 0xC9;
 		eq->unknown408[3] = 0xC9;
 		eq->unknown408[4] = 0xC9;
