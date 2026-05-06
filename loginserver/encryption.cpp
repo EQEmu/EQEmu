@@ -31,7 +31,6 @@
 #endif
 
 #include <cstring>
-#include <filesystem>
 #include <string>
 
 #include <memory>
@@ -184,9 +183,15 @@ bool eqcrypt_init()
 {
 #ifdef EQEMU_USE_OPENSSL
 #ifdef _WIN32
-	// Set OpenSSL default provider search path to the working directory. Okay to throw.
-	std::string search_path = std::filesystem::current_path().string();
-	OSSL_PROVIDER_set_default_search_path(nullptr, search_path.c_str());
+	// Set OpenSSL default provider search path to the executable directory.
+	char* exe_path = nullptr;
+	if (_get_pgmptr(&exe_path) == 0 && exe_path != nullptr && *exe_path != '\0') {
+		std::string exe_dir{exe_path};
+		if (auto sep = exe_dir.find_last_of("\\/"); sep != std::string::npos) {
+			exe_dir.resize(sep);
+			OSSL_PROVIDER_set_default_search_path(nullptr, exe_dir.c_str());
+		}
+	}
 #endif
 
 	if (!s_default_provider) {
