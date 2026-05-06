@@ -698,8 +698,6 @@ namespace TOB
 		OUT(spawnid);
 		OUT_str(charname);
 		OUT(race);
-		eq->unknown006[0] = 0;
-		eq->unknown006[1] = 0;
 		OUT(gender);
 		OUT(texture);
 		OUT(helmtexture);
@@ -893,6 +891,7 @@ namespace TOB
 		ENCODE_LENGTH_EXACT(moneyOnCorpseStruct);
 		SETUP_DIRECT_ENCODE(moneyOnCorpseStruct, structs::moneyOnCorpseStruct);
 
+		// TODO: The type has changed to accomodate all kinds of loot options and actions, including advloot
 		eq->type = emu->response;
 		OUT(platinum);
 		OUT(gold);
@@ -3757,6 +3756,21 @@ namespace TOB
 	DECODE(OP_GroupInvite2)
 	{
 		DECODE_FORWARD(OP_GroupInvite);
+	}
+
+	DECODE(OP_LootItem)
+	{
+		DECODE_LENGTH_EXACT(structs::LootingItem_Struct);
+		SETUP_DIRECT_DECODE(LootingItem_Struct, structs::LootingItem_Struct);
+
+		Log(Logs::Detail, Logs::Netcode, "TOB::DECODE(OP_LootItem)");
+
+		IN(lootee);
+		IN(looter);
+		emu->slot_id = TOBToServerCorpseMainSlot(eq->slot_id);
+		IN(auto_loot);
+
+		FINISH_DIRECT_DECODE();
 	}
 
 	DECODE(OP_MemorizeSpell) {

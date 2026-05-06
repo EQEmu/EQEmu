@@ -896,43 +896,48 @@ namespace TOB {
 		struct Illusion_Struct {
 			/*000*/ uint32 spawnid;
 			/*004*/ char charname[64];
-			/*068*/ uint16 race; //according to eqlib this is s32
-			/*070*/ char unknown006[2];
-			/*072*/ uint8 gender;
-			/*073*/ uint8 texture;
-			/*074*/ uint8 armorVariation;
-			/*075*/ uint8 armorMaterial;
-			/*076*/ uint8 helmtexture;
-			/*077*/ uint8 unknown077; //padding from this being a pack(4) struct actually
-			/*078*/ uint8 unknown078;
-			/*079*/ uint8 unknown079;
+			/*068*/ int32 race;
+			/*072*/ int32 class_;
+			/*076*/ float size;
 			/*080*/ uint32 face;
-			/*084*/ uint8 hairstyle;
-			/*085*/ uint8 haircolor;
-			/*086*/ uint8 beard;
-			/*087*/ uint8 beardcolor;
-			/*088*/ float size;
-			/*092*/ uint32_t npc_tint;
-			/*096*/ bool keep_armor_properties;
-			/*097*/ uint8 unknown097[3]; //padding from this being a pack(4) struct actually
-			/*100*/ ArmorPropertyStruct armorProperties[9];
-			/*280*/ uint32_t armorTints[9];
-			/*316*/ int32 class_;
-			/*320*/ uint32 drakkin_heritage;
-			/*324*/ uint32 drakkin_tattoo;
-			/*328*/ uint32 drakkin_details;
+			/*084*/ uint32 npc_tint;
+			/*088*/ uint32 keep_armor_properties;
+			/*092*/ uint32 drakkin_heritage;
+			/*096*/ uint32 drakkin_tattoo;
+			/*100*/ uint32 drakkin_details;
+			/*104*/ uint8 gender;
+			/*105*/ uint8 texture;
+			/*106*/ uint8 helmtexture;
+			/*107*/ uint8 armorVariation;
+			/*108*/ uint8 armorMaterial;
+			/*109*/ uint8 hairstyle;
+			/*110*/ uint8 haircolor;
+			/*111*/ uint8 beard;
+			/*112*/ uint8 beardcolor;
+			/*113*/ uint8 padding[3];
+			/*116*/ ArmorPropertyStruct armorProperties[9];
+			/*296*/ uint32 armorTints[9];
 			/*332*/
 		};
 
 		struct moneyOnCorpseStruct {
-			/*000*/ uint8 type;
+			/*000*/ uint8 type; // 0 = someone is already looting, 1 = OK, 2 = cannot access at this time, 3 = OK, 4 = cannot loot while hostile nearby, 5 = too far away to loot, 6 = loot all, 7 = cancel loot, 8 = add access, 9 = using advloot (when right clicking), 10 = show advloot
 			/*001*/ uint8 padding1[3];
-			/*004*/ uint32 flags;
+			/*004*/ uint32 flags; // 1 = extra lucky bonus, 2 = lucky bonus, 4 = bonus
 			/*008*/ uint32 platinum;
 			/*012*/ uint32 gold;
 			/*016*/ uint32 silver;
 			/*020*/ uint32 copper;
 			/*024*/
+		};
+
+		struct LootingItem_Struct {
+			/*000*/	uint32	lootee;
+			/*004*/	uint32	looter;
+			/*008*/	uint32	slot_id;
+			/*012*/	int32	auto_loot;
+			/*016*/	uint32	unknown16;
+			/*020*/
 		};
 
 		struct GroupGeneric_Struct {
