@@ -238,6 +238,22 @@ namespace TOB
 		FINISH_ENCODE();
 	}
 
+	ENCODE(OP_Begging)
+	{
+		ENCODE_LENGTH_EXACT(BeggingResponse_Struct);
+		SETUP_DIRECT_ENCODE(BeggingResponse_Struct, structs::BeggingResponse_Struct);
+
+		OUT(Unknown00);
+		OUT(Unknown04);
+		OUT(Unknown08);
+		eq->Result = static_cast<uint8>(emu->Result);
+		OUT(Amount);
+		eq->StringSize = 0; // set this to 0, but it's a string size
+		eq->Lucky = 0; // set to 1 to message a lucky beg
+
+		FINISH_ENCODE();
+	}
+
 	ENCODE(OP_BeginCast)
 	{
 		ENCODE_LENGTH_EXACT(BeginCast_Struct);
@@ -3691,6 +3707,23 @@ namespace TOB
 	}
 
 	DECODE(OP_ConsiderCorpse) { DECODE_FORWARD(OP_Consider); }
+
+	DECODE(OP_CorpseDrag)
+	{
+		std::string CorpseName;
+		__packet->ReadLengthString(CorpseName);
+
+		std::string DraggerName;
+		__packet->ReadLengthString(DraggerName);
+
+		__packet->SetReadPosition(0);
+		__packet->size = sizeof(CorpseDrag_Struct);
+		__packet->pBuffer = new unsigned char[__packet->size]{};
+		auto* emu = reinterpret_cast<CorpseDrag_Struct*>(__packet->pBuffer);
+
+		strncpy(emu->CorpseName, CorpseName.c_str(), 64);
+		strncpy(emu->DraggerName, DraggerName.c_str(), 64);
+	}
 
 	DECODE(OP_DeleteItem)
 	{

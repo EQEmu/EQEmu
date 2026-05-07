@@ -790,7 +790,7 @@ namespace TOB {
 		//This is what we call OP_Action
 		//To the client though this is basically a missile hit though
 		//OP_Action is basically "instant missile hit" to the client
-		//@0x1401f0970 MissileHitInfo::Deserialize(CUnSerializeBuffer *buffer);
+		//@0x1402024C0 MissileHitInfo::Deserialize(CUnSerializeBuffer *buffer);
 		struct MissileHitInfo
 		{
 			uint16 target;
@@ -1105,6 +1105,17 @@ namespace TOB {
 			uint32 Deity;
 			uint32 AllocationIndex;
 			uint32 Zone;
+		};
+
+		struct BeggingResponse_Struct
+		{
+			/*00*/	uint32	Unknown00;
+			/*04*/	uint32	Unknown04;
+			/*08*/	uint32	Unknown08;
+			/*12*/	uint8 	Result;	// 0 = Fail, 1 = Plat, 2 = Gold, 3 = Silver, 4 = Copper
+			/*13*/	uint32	Amount;
+			/*17*/  uint32  StringSize; // set this to 0, but it's a string size
+			/*21*/  uint8   Lucky; // set to 1 to message a lucky beg
 		};
 
 #pragma pack()

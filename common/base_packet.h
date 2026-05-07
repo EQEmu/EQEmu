@@ -81,6 +81,7 @@ public:
 	void ReadString(char *str) { uint32 len = static_cast<uint32>(strlen((char *)(pBuffer + _rpos))) + 1; memcpy(str, pBuffer + _rpos, len); _rpos += len; }
 	void ReadString(std::string &str) { str = reinterpret_cast<char *>(pBuffer + _rpos); _rpos += str.length() + 1; }
 	void ReadString(char *str, uint32 Offset, uint32 MaxLength) const;
+	void ReadLengthString(std::string& str) { uint32 len = *(uint32*)(pBuffer + _rpos); _rpos += sizeof(uint32); str.resize(len); memcpy(&str[0], pBuffer + _rpos, len); _rpos += len; }
 
 	uint32 GetWritePosition() { return _wpos; }
 	uint32 GetReadPosition() { return _rpos; }
