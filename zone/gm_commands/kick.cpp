@@ -27,7 +27,7 @@ void command_kick(Client *c, const Seperator *sep)
 		c->Message(Chat::White, "Usage: #kick [Character Name]");
 		return;
 	}
-	
+
 	std::string character_name = sep->arg[1];
 	auto client = entity_list.GetClientByName(character_name.c_str());
 	if (client) {

@@ -63,7 +63,7 @@ namespace luabind { namespace detail
 	};
 
 	template<int N>
-	struct aligned 
+	struct aligned
 	{
 		char storage[N];
 	};

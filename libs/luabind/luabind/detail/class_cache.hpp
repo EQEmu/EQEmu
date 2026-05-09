@@ -30,9 +30,9 @@
 namespace luabind { namespace detail {
 
 #ifdef LUABIND_NOT_THREADSAFE
-    
+
     class class_rep;
-    
+
     template<class T>
     struct class_cache_impl
     {
@@ -57,7 +57,7 @@ namespace luabind { namespace detail {
           >
     {
     };
-    
+
     template<class T>
     class_rep* get_class_rep(lua_State* L, void(*)(T*) = 0)
     {

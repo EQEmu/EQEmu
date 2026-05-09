@@ -126,17 +126,17 @@ namespace luabind { namespace detail {
 namespace luabind
 {
 	template<int N>
-	detail::policy_cons<detail::container_policy<N, detail::null_type>, detail::null_type> 
-	container(LUABIND_PLACEHOLDER_ARG(N)) 
-	{ 
-		return detail::policy_cons<detail::container_policy<N, detail::null_type>, detail::null_type>(); 
+	detail::policy_cons<detail::container_policy<N, detail::null_type>, detail::null_type>
+	container(LUABIND_PLACEHOLDER_ARG(N))
+	{
+		return detail::policy_cons<detail::container_policy<N, detail::null_type>, detail::null_type>();
 	}
 
 	template<int N, class Policies>
-	detail::policy_cons<detail::container_policy<N, Policies>, detail::null_type> 
-	container(LUABIND_PLACEHOLDER_ARG(N), const Policies&) 
-	{ 
-		return detail::policy_cons<detail::container_policy<N, Policies>, detail::null_type>(); 
+	detail::policy_cons<detail::container_policy<N, Policies>, detail::null_type>
+	container(LUABIND_PLACEHOLDER_ARG(N), const Policies&)
+	{
+		return detail::policy_cons<detail::container_policy<N, Policies>, detail::null_type>();
 	}
 }
 

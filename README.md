@@ -59,7 +59,7 @@ EQEmulator has for over 20 years and always will be a <strong>fan-based, non-com
 
 
 <p align="center">
- <strong>Reverse Engineering</strong> 
+ <strong>Reverse Engineering</strong>
 Every system, packet, opcode, and game mechanic has been reconstructed through countless hours of live packet sniffing, client disassembly, and in-game experimentation by dedicated contributors over the years.
 </p>
 

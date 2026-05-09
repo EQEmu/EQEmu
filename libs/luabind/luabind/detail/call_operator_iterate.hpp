@@ -27,7 +27,7 @@
         BOOST_PP_CAT(_, n)
 
 template<class Self BOOST_PP_ENUM_TRAILING_PARAMS(N, class A)>
-struct BOOST_PP_CAT(call_operator, N) 
+struct BOOST_PP_CAT(call_operator, N)
     : detail::operator_<
           BOOST_PP_CAT(call_operator, N)<
               Self BOOST_PP_ENUM_TRAILING_PARAMS(N, A)
@@ -55,7 +55,7 @@ struct BOOST_PP_CAT(call_operator, N)
 #endif
               , (Policies*)0
             );
-        } 
+        }
     };
 
     static char const* name() { return "__call"; }

@@ -30,7 +30,7 @@ namespace luabind {
 
 // A reference to a Lua value. Represents an entry in the
 // registry table.
-class handle 
+class handle
 {
 public:
     handle();
@@ -126,7 +126,7 @@ struct value_wrapper_traits<handle>
     {
         return value.interpreter();
     }
-    
+
     static void unwrap(lua_State* interpreter, handle const& value)
     {
         value.push(interpreter);

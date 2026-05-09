@@ -42,7 +42,7 @@ namespace luabind { namespace detail
 	struct return_reference_to_policy : conversion_policy<0>
 	{
 		static void precall(lua_State*, const index_map&) {}
-		static void postcall(lua_State* L, const index_map& indices) 
+		static void postcall(lua_State* L, const index_map& indices)
 		{
 			int result_index = indices[0];
 			int ref_to_index = indices[N];
@@ -62,10 +62,10 @@ namespace luabind { namespace detail
 namespace luabind
 {
 	template<int N>
-	detail::policy_cons<detail::return_reference_to_policy<N>, detail::null_type> 
-	return_reference_to(LUABIND_PLACEHOLDER_ARG(N)) 
-	{ 
-		return detail::policy_cons<detail::return_reference_to_policy<N>, detail::null_type>(); 
+	detail::policy_cons<detail::return_reference_to_policy<N>, detail::null_type>
+	return_reference_to(LUABIND_PLACEHOLDER_ARG(N))
+	{
+		return detail::policy_cons<detail::return_reference_to_policy<N>, detail::null_type>();
 	}
 }
 

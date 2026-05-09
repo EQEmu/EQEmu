@@ -231,7 +231,7 @@ void bot_command_item_use(Client* c, const Seperator* sep)
 			equipped_item = nullptr;
 			equipped_inst = nullptr;
 
-			
+
 			for (int16 equipable_slot = EQ::invslot::EQUIPMENT_BEGIN; equipable_slot <= EQ::invslot::EQUIPMENT_END; ++equipable_slot) {
 				equipped_inst = bot_iter->GetInv()[equipable_slot];
 				if (equipped_inst && equipped_inst->GetItem()) {

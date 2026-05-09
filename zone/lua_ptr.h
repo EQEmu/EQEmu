@@ -44,30 +44,30 @@ class Lua_Ptr
 public:
 	Lua_Ptr() {
 	}
-	
+
 	Lua_Ptr(T *d) : d_(d) {
 	}
-	
+
 
 	virtual ~Lua_Ptr() {
 	}
-	
+
 	T *GetLuaPtrData() {
 		return d_;
 	}
-	
+
 	void SetLuaPtrData(T *d) {
 		d_ = d;
 	}
-	
+
 	bool Null() {
 		return d_ == nullptr;
 	}
-	
+
 	bool Valid() {
 		return d_ != nullptr;
 	}
-	
+
 protected:
 	T *d_;
 };

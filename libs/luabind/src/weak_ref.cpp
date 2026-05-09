@@ -96,7 +96,7 @@ namespace luabind
         : m_impl(0)
     {
     }
-    
+
     weak_ref::weak_ref(lua_State* main, lua_State* L, int index)
         : m_impl(new impl(main, L, index))
     {
@@ -152,6 +152,6 @@ namespace luabind
         assert(m_impl);
         return m_impl->state;
     }
-    
+
 } // namespace luabind
 

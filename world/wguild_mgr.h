@@ -41,7 +41,7 @@ protected:
 	virtual void SendRankUpdate(uint32 CharID) { return; }
 	virtual void SendGuildDelete(uint32 guild_id);
 
-	
+
 	//map<uint32, uint32> m_tribute;	//map from guild ID to current tribute ammount
 };
 

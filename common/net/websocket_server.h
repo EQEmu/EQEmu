@@ -66,7 +66,7 @@ namespace EQ
 
 			WebsocketServer(const std::string &addr, int port);
 			~WebsocketServer();
-			
+
 			void SetMethodHandler(const std::string& method, MethodHandler handler, int required_status);
 			void SetLoginHandler(LoginHandler handler);
 			void DispatchEvent(WebsocketSubscriptionEvent evt, Json::Value data = Json::Value(), int required_status = 0);

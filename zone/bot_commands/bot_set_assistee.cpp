@@ -49,7 +49,7 @@ void bot_command_set_assistee(Client* c, const Seperator* sep)
 	if (assistee && assistee->IsClient() && c->IsInGroupOrRaid(assistee)) {
 		c->SetAssistee(assistee->CastToClient()->CharacterID());
 		c->Message(Chat::Green, "Your bots will now assist %s.", assistee->GetCleanName());
-		
+
 		return;
 	}
 

@@ -36,13 +36,13 @@ namespace luabind {
     is_indirect_const_check(T(*)(), int);
 
     template<class T>
-    typename boost::is_const<T>::type 
+    typename boost::is_const<T>::type
     is_indirect_const_check(T*(*)(), long);
 
     template<class T>
-    typename boost::is_const<T>::type 
+    typename boost::is_const<T>::type
     is_indirect_const_check(T&(*)(), long);
-    
+
     yes_t to_yes_no(boost::mpl::true_);
     no_t to_yes_no(boost::mpl::false_);
 

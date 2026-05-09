@@ -85,7 +85,7 @@ void bot_command_depart(Client* c, const Seperator* sep)
 	bool list = false;
 	std::string destination = sep->arg[1];
 	int ab_arg = 2;
-	
+
 	if (!single_arg.compare("single")) {
 		++ab_arg;
 		single = true;
@@ -272,7 +272,7 @@ void bot_command_depart(Client* c, const Seperator* sep)
 	}
 
 	if (
-		(list && list_zones.empty()) || 
+		(list && list_zones.empty()) ||
 		(!list && !is_success)
 	) {
 		c->Message(

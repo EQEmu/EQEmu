@@ -75,7 +75,7 @@ void bot_command_follow(Client* c, const Seperator* sep)
 	Mob* target_mob = nullptr;
 
 	std::string optional_arg = sep->arg[1];
-	
+
 	if (!optional_arg.compare("reset")) {
 		target_mob = c;
 		reset = true;
