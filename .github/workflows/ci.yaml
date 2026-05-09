@@ -1,0 +1,201 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  lint:
+    name: Lint and Static Checks
+    runs-on:
+      - self-hosted
+      - linux
+    container:
+      image: ubuntu:24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Install lint tools
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates \
+            curl \
+            git \
+            golang-go \
+            libdbd-mysql-perl \
+            libdbi-perl \
+            libjson-perl \
+            lua5.4 \
+            perl \
+            python3 \
+            shellcheck
+
+      - name: Checkout source
+        uses: actions/checkout@v5
+        with:
+          submodules: false
+          set-safe-directory: true
+
+      - name: Check GitHub Actions workflows
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@latest
+
+      - name: Check whitespace
+        run: |
+          if git grep -nI -E '[[:blank:]]$' -- \
+            '*.c' '*.cc' '*.cpp' '*.h' '*.hpp' \
+            '*.cmake' 'CMakeLists.txt' \
+            '*.json' '*.md' '*.pl' '*.py' '*.sh' '*.lua' \
+            '*.yaml' '*.yml'; then
+            echo "Trailing whitespace found"
+            exit 1
+          fi
+
+      - name: Check final newlines
+        run: |
+          git ls-files -z \
+            '*.c' '*.cc' '*.cpp' '*.h' '*.hpp' \
+            '*.cmake' 'CMakeLists.txt' \
+            '*.json' '*.md' '*.pl' '*.py' '*.sh' '*.lua' \
+            '*.yaml' '*.yml' |
+          while IFS= read -r -d '' file; do
+            if [ -s "$file" ] && [ "$(tail -c 1 "$file" | wc -l)" -eq 0 ]; then
+              echo "$file: missing trailing newline"
+              exit 1
+            fi
+          done
+
+      - name: Check shell scripts
+        run: |
+          git ls-files -z '*.sh' |
+          xargs -0 --no-run-if-empty shellcheck --severity=error
+
+      - name: Check Python scripts
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          # vcxproj_dependencies.py is a legacy Python 2 utility.
+          git ls-files -z '*.py' ':!:utils/scripts/vcxproj_dependencies.py' |
+          xargs -0 --no-run-if-empty python3 -m py_compile
+
+      - name: Check Perl scripts
+        run: |
+          git ls-files -z '*.pl' ':!:utils/deprecated/**' |
+          while IFS= read -r -d '' file; do
+            perl -c "$file"
+          done
+
+      - name: Check Lua scripts
+        run: |
+          git ls-files -z '*.lua' |
+          xargs -0 --no-run-if-empty luac -p
+
+  unit-tests:
+    name: C++ Unit Tests
+    runs-on:
+      - self-hosted
+      - linux
+    container:
+      image: ubuntu:24.04
+      options: --cpus 4
+    timeout-minutes: 60
+
+    steps:
+      - name: Install build tools
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            autoconf \
+            automake \
+            build-essential \
+            ca-certificates \
+            ccache \
+            cmake \
+            curl \
+            git \
+            libtool \
+            make \
+            nasm \
+            ninja-build \
+            perl \
+            pkg-config \
+            python3 \
+            tar \
+            unzip \
+            uuid-dev \
+            zip \
+            zstd
+
+      - name: Checkout source
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          set-safe-directory: true
+
+      - name: Prepare caches
+        run: |
+          mkdir -p .cache/ccache .cache/vcpkg/archives submodules/vcpkg/downloads
+          ccache --set-config=cache_dir="${GITHUB_WORKSPACE}/.cache/ccache"
+          ccache --set-config=max_size=1G
+
+      - name: Restore ccache
+        uses: actions/cache@v5
+        with:
+          path: .cache/ccache
+          key: ${{ runner.os }}-unit-tests-ccache-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-unit-tests-ccache-
+
+      - name: Restore vcpkg cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            .cache/vcpkg/archives
+            submodules/vcpkg/downloads
+            build/unit-tests/vcpkg_installed
+          key: ${{ runner.os }}-unit-tests-vcpkg-${{ hashFiles('vcpkg.json', '.gitmodules') }}
+          restore-keys: |
+            ${{ runner.os }}-unit-tests-vcpkg-
+            ${{ runner.os }}-vcpkg-
+
+      - name: Configure tests
+        env:
+          VCPKG_FEATURE_FLAGS: binarycaching
+          VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/.cache/vcpkg/archives,readwrite
+        run: |
+          cmake -S . -B build/unit-tests -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DEQEMU_BUILD_SERVER=OFF \
+            -DEQEMU_BUILD_LOGIN=OFF \
+            -DEQEMU_BUILD_CLIENT_FILES=OFF \
+            -DEQEMU_BUILD_TESTS=ON \
+            -DEQEMU_BUILD_LUA=OFF \
+            -DEQEMU_BUILD_PERL=OFF
+
+      - name: Build tests
+        run: cmake --build build/unit-tests --target tests --parallel 4
+
+      - name: Run tests
+        working-directory: build/unit-tests
+        run: ./bin/tests
+
+      - name: Show ccache stats
+        if: always()
+        run: ccache --show-stats

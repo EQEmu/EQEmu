@@ -1,150 +1,181 @@
 {
-  "schema": "launch_queue@v1",
-  "project": "EQEmu-Monomyth",
-  "generated_at": "2026-05-07",
-  "source": {
-    "kind": "audit_report",
-    "summary": "Server-side EQEmu multiclass audit for Heroes Journey style rebuild.",
-    "primary_goal": "Implement 1/2/3-class characters while preserving one primary/display class for client compatibility."
+  "kind": "launch_queue@v1",
+  "project": {
+    "name": "EQEmu-Monomyth",
+    "repo": "https://github.com/zutfen/EQEmu-Monomyth",
+    "source_todo": "Heroes Journey multiclass server-side implementation audit",
+    "generated_from": "Audit results and follow-up decision to use class_mask bitmask persistence instead of extra class slot columns"
   },
-  "defaults": {
-    "repo": "eqemu",
-    "execution_mode": "code_gen",
-    "branch_policy": {
-      "if_on_main": "create_feature_branch_before_edits",
-      "if_not_on_main": "continue_on_existing_branch",
-      "commit_required": true,
-      "push_required": true,
-      "final_response_required": "Branch: <branch> Commit: <hash>"
-    },
-    "go_tooling": "not_applicable_cpp_project",
-    "review_expectation": "implementation only; do not perform unrelated refactors",
-    "testing_expectation": [
-      "Build affected EQEmu server targets where practical.",
-      "Run focused regression/manual tests listed in each slice.",
-      "Single-class characters must remain stock-compatible."
+  "sentinel": "<<END_OF_QUEUE>>",
+  "status_enum": [
+    "ready",
+    "in_progress",
+    "blocked",
+    "complete",
+    "deferred"
+  ],
+  "machine_contract": {
+    "selection_rules": [
+      "Select the lowest-order ready item whose dependencies are complete.",
+      "Do not start an item if any depends_on item is incomplete.",
+      "Prefer one slice per branch/PR unless explicitly directed otherwise."
+    ],
+    "execution_rules": [
+      "Use code_gen mode for implementation slices.",
+      "Create a feature branch if currently on main/master.",
+      "Commit all changes and report branch plus commit hash.",
+      "Preserve EQEmu client packet/profile compatibility unless the slice explicitly authorizes packet changes.",
+      "Multiclass persistence must use character_data.class_mask.",
+      "For Go code, gofmt/go test may be run where relevant; this project is primarily C++/SQL."
+    ],
+    "resume_rules": [
+      "On resume, inspect status, branch, head_commit, last_run_summary, and dependencies before making changes.",
+      "If local state differs from queue state, stop and report the discrepancy.",
+      "Continue on the same branch for an in-progress item unless explicitly directed otherwise."
+    ],
+    "session_prep_rules": [
+      "Run git status before edits.",
+      "Inspect the target files listed on the selected item.",
+      "Confirm that the selected item does not depend on incomplete prior work.",
+      "Treat character_data.class_ as primary/display class and character_data.class_mask as assigned-class set."
+    ],
+    "post_pr_monitoring_rules": [
+      "After PR creation or commit, record branch, head_commit, PR URL/number if available, and concise run summary.",
+      "If validation fails, leave status blocked or in_progress with failure details.",
+      "Do not mark complete until acceptance and verification are satisfied."
+    ],
+    "status_transitions": [
+      "ready -> in_progress when implementation begins.",
+      "in_progress -> complete when committed and verified.",
+      "in_progress -> blocked when a dependency, schema conflict, or compile blocker prevents completion.",
+      "blocked -> ready only after blocked_reason is resolved.",
+      "ready -> deferred only by explicit human decision."
     ]
   },
-  "queue": [
+  "items": [
     {
       "id": "MC-001",
-      "title": "Add schema and runtime assigned-class set",
+      "parent_id": null,
+      "title": "Add class_mask multiclass persistence foundation",
+      "summary": "Add server-side multiclass persistence using character_data.class_mask while preserving character_data.class_ as the primary/display class. This slice is persistence/runtime scaffolding only and must not change gameplay authorization yet.",
+      "status": "ready",
       "priority": "P0",
-      "status": "open",
-      "depends_on": [],
-      "slice_instance_id": "8f14a1e8f0ef49a6a964e024b33c3b7a",
-      "objective": "Persist up to three assigned classes per character without changing client-facing packet layouts.",
-      "context": [
-        "Keep character_data.class_ as the primary/display class.",
-        "Add class_2 and class_3 as nullable/optional secondary and tertiary assigned-class slots.",
-        "Existing single-class characters must load/save unchanged.",
-        "Do not widen player profile, char select, name approval, or spawn packet structs."
-      ],
-      "files_to_inspect_or_change": [
-        "zone/zonedb.cpp",
-        "zone/client.h",
-        "zone/mob.h",
-        "common/repositories/base/base_character_data_repository.h",
-        "database migrations / schema update files"
-      ],
-      "implementation_notes": [
-        "Add DB migration for character_data.class_2 and character_data.class_3.",
-        "Regenerate or update the character_data repository layer after migration.",
-        "Load assigned classes into a server-side runtime container, normalizing invalid/duplicate/empty slots.",
-        "Primary/display class must always be included in the assigned-class set.",
-        "Use max 3 assigned classes.",
-        "Prefer simple columns for this initial implementation because the code already loads one character_data row and clients only expose one visible class."
-      ],
-      "acceptance_criteria": [
-        "Existing characters without class_2/class_3 load and save unchanged.",
-        "A two-class character round-trips through DB load/save.",
-        "A three-class character round-trips through DB load/save.",
-        "Invalid duplicate class slots are rejected or normalized deterministically.",
-        "Char select still shows only character_data.class_."
-      ],
-      "tests": [
-        "Create/load/save stock single-class character.",
-        "Manually set class_2/class_3 in DB and verify runtime assigned-class set after login.",
-        "Zone/relog and verify values persist.",
-        "Verify no packet struct layout changes were made."
-      ],
-      "risks": [
-        "Repository regeneration may be required.",
-        "Migration ordering can break fresh installs if not added in the expected EQEmu style.",
-        "Hidden assumptions may treat class_ as mutable runtime authority."
-      ],
+      "phase": "multiclass-foundation",
+      "order": 10,
+      "repo": "https://github.com/zutfen/EQEmu-Monomyth",
       "execution_mode": "auto_pr",
-      "repo": "EQEmu-Monomyth",
-      "order": 1
+      "depends_on": [],
+      "files": [
+        "utils/sql/git/required",
+        "zone/client.h",
+        "zone/client.cpp",
+        "zone/zonedb.cpp",
+        "zone/mob.h",
+        "common/repositories/base/base_character_data_repository.h"
+      ],
+      "acceptance": [
+        "SQL migration adds character_data.class_mask as INT UNSIGNED NOT NULL or equivalent unsigned mask storage.",
+        "Migration backfills existing rows so class_mask contains the current primary/display class bit from character_data.class_.",
+        "Existing single-class characters load/save unchanged and retain stock behavior.",
+        "Runtime client state can persist and reload a valid class mask containing 1 to 3 playable class bits.",
+        "character_data.class_ remains the only display/primary class used by packet/profile paths.",
+        "No extra per-class persistence slot columns are introduced."
+      ],
+      "verification": [
+        "Apply migration to a development database or inspect generated SQL for correctness.",
+        "Build/compile relevant server targets if available.",
+        "Verify class_mask round-trip through load/save code.",
+        "Confirm the implementation path only uses class_mask for assigned-class persistence.",
+        "Confirm char select/login/zoning packet structs were not widened."
+      ],
+      "source_anchor": "Audit MC-001 plus follow-up decision: use THJ-style class bitmask.",
+      "notion_slice_id": null,
+      "notion_page_url": null,
+      "slice_instance_id": "5376bfc1-58eb-4da4-8745-f3976f66616c",
+      "branch": null,
+      "head_commit": null,
+      "pr_url": null,
+      "pr_number": null,
+      "attempt_count": 0,
+      "started_at": null,
+      "updated_at": "2026-05-09T13:11:18Z",
+      "last_run_summary": null,
+      "blocked_reason": null,
+      "human_notes": "Use class_mask bit positions compatible with existing EQEmu class bitmask conventions where possible. Enforce display class included, max 3 assigned classes, valid playable classes only.",
+      "resume_instruction": "Resume this slice only after verifying dependencies and preserving class_mask-based multiclass architecture."
     },
     {
       "id": "MC-002",
-      "title": "Introduce central multiclass helper layer",
+      "parent_id": null,
+      "title": "Centralize assigned-class helper API",
+      "summary": "Introduce the helper layer that all later multiclass behavior uses. Helpers decode and validate class_mask while leaving GetClass() as primary/display class behavior.",
+      "status": "ready",
       "priority": "P0",
-      "status": "open",
+      "phase": "multiclass-foundation",
+      "order": 20,
+      "repo": "https://github.com/zutfen/EQEmu-Monomyth",
+      "execution_mode": "auto_pr",
       "depends_on": [
         "MC-001"
       ],
-      "slice_instance_id": "aa0f60c6855440f58e24501ea6e280dd",
-      "objective": "Create one canonical helper surface for assigned-class membership, skill caps, AA gating, and spell level lookup.",
-      "context": [
-        "Avoid scattered GetClass() replacement work without a central API.",
-        "Default Mob behavior should remain single-class.",
-        "Client-specific behavior should consult the assigned-class set."
-      ],
-      "files_to_inspect_or_change": [
-        "zone/mob.h",
+      "files": [
         "zone/client.h",
         "zone/client.cpp",
+        "zone/mob.h",
+        "zone/mob.cpp",
         "zone/aa.cpp",
         "zone/spells.cpp",
         "zone/spell_effects.cpp"
       ],
-      "implementation_notes": [
-        "Add helpers such as GetAssignedClasses(), HasAssignedClass(uint8 class_id), GetEffectiveSkillCap(skill_id), GetLowestAssignedSpellLevel(spell_id), and CanUseAAForAssignedClasses(...).",
-        "Keep helper names and signatures simple and easy to grep.",
-        "Mob base implementation should return the existing single class.",
-        "Client override should use the loaded assigned-class set.",
-        "Helpers should preserve exact stock behavior when only one assigned class exists.",
-        "Do not alter item restrictions, faction, titles, who list, or visible class semantics in this slice."
+      "acceptance": [
+        "Client exposes GetClassMask(), HasAssignedClass(class_id), GetAssignedClasses(), and SetClassMask(mask) or equivalent names.",
+        "Validation helpers reject empty masks, masks missing display class, masks with more than 3 classes, and masks containing invalid/non-playable class bits.",
+        "GetAssignedClasses() returns deterministic normalized class ordering.",
+        "Default Mob/non-client behavior remains single-class compatible.",
+        "No AA, skill, spell, item, faction, title, or visible-class gameplay semantics are changed yet."
       ],
-      "acceptance_criteria": [
-        "Assigned-class helper API compiles and is available to skill, AA, and spell paths.",
-        "Single-class helper outputs match current GetClass()-based behavior.",
-        "Multiclass helper outputs are deterministic and max three classes.",
-        "No packet struct changes."
+      "verification": [
+        "Add or run lightweight unit/helper tests if project structure supports them.",
+        "Compile relevant server targets if available.",
+        "Manually verify helper behavior for single, dual, and triple class masks.",
+        "Manually verify invalid masks fail closed."
       ],
-      "tests": [
-        "Add focused unit-style or debug checks where EQEmu test harness allows.",
-        "Manual GM/debug verification for one-, two-, and three-class assigned sets.",
-        "Build affected zone/common targets."
-      ],
-      "risks": [
-        "Helper signatures may need adjustment once AA/spell call sites are touched.",
-        "Missed direct GetClass() gates can create partial multiclass behavior."
-      ],
-      "execution_mode": "auto_pr",
-      "repo": "EQEmu-Monomyth",
-      "order": 2
+      "source_anchor": "Audit MC-002 and class_mask follow-up.",
+      "notion_slice_id": null,
+      "notion_page_url": null,
+      "slice_instance_id": "d068f704-37ea-4e7a-b629-300d30ed0833",
+      "branch": null,
+      "head_commit": null,
+      "pr_url": null,
+      "pr_number": null,
+      "attempt_count": 0,
+      "started_at": null,
+      "updated_at": "2026-05-09T13:11:18Z",
+      "last_run_summary": null,
+      "blocked_reason": null,
+      "human_notes": "Centralize bitmask operations here. Later slices should consume helpers instead of open-coding bit operations.",
+      "resume_instruction": "Resume this slice only after verifying dependencies and preserving class_mask-based multiclass architecture."
     },
     {
       "id": "MC-003",
-      "title": "Refactor skill caps to use highest assigned-class cap",
+      "parent_id": null,
+      "title": "Refactor skill caps to max across assigned classes",
+      "summary": "Make effective skill caps use the highest cap granted by any class in the assigned class mask while preserving single-class behavior.",
+      "status": "ready",
       "priority": "P0",
-      "status": "open",
+      "phase": "multiclass-skills",
+      "order": 30,
+      "repo": "https://github.com/zutfen/EQEmu-Monomyth",
+      "execution_mode": "auto_pr",
       "depends_on": [
         "MC-001",
         "MC-002"
       ],
-      "slice_instance_id": "ba49e2e7d1dd4629b501fc22883a9cb6",
-      "objective": "Make regular skills use the highest cap available from any assigned class.",
-      "context": [
-        "Examples: Paladin + Monk + Necromancer should receive the best applicable defensive, avoidance, and casting skill caps among the assigned classes.",
-        "Single-class characters must remain stock-compatible."
-      ],
-      "files_to_inspect_or_change": [
+      "files": [
         "common/skill_caps.cpp",
+        "common/skill_caps.h",
         "zone/client.cpp",
+        "zone/client.h",
         "world/client.cpp",
         "zone/gm_commands/set/set_skill.cpp",
         "zone/gm_commands/set/set_skill_all.cpp",
@@ -152,279 +183,250 @@
         "zone/gm_commands/set/set_level.cpp",
         "zone/gm_commands/show/show_skills.cpp"
       ],
-      "implementation_notes": [
-        "Implement effective skill cap as max cap across assigned classes.",
-        "Update CanHaveSkill(), MaxSkill(), GetSkillTrainLevel(), MaxSkills(), CheckIncreaseSkill(), ShowSkillsWindow(), and starting skill initialization as needed.",
-        "Fix the reported GetSkillTrainLevel() loop/key issue if confirmed during implementation.",
-        "Avoid broad unrelated refactors.",
-        "Keep display class untouched."
+      "acceptance": [
+        "Effective skill cap for a skill is the max cap across GetAssignedClasses().",
+        "Single-class characters produce the same caps as stock EQEmu.",
+        "CanHaveSkill(), MaxSkill(), MaxSkills(), GetSkillTrainLevel(), CheckIncreaseSkill(), and ShowSkillsWindow use effective assigned-class caps where appropriate.",
+        "Starting skills remain compatible with primary/display class unless explicitly safe to seed assigned-class skills without client issues.",
+        "Investigate and fix the reported GetSkillTrainLevel() loop/key issue if confirmed in current code."
       ],
-      "acceptance_criteria": [
-        "Single-class skill caps match stock EQEmu.",
-        "Two-/three-class characters receive max cap across assigned classes for each skill.",
-        "Paladin + Monk + Necromancer test case produces expected best-of-class caps.",
-        "GM skill tools reflect effective multiclass caps.",
-        "Skill increases do not exceed effective multiclass cap."
+      "verification": [
+        "Validate a Paladin+Monk+Necromancer mask gets expected highest defensive, avoidance, and casting-related caps.",
+        "Validate a single-class Paladin remains stock-equivalent.",
+        "Use GM skill commands to inspect and set skills.",
+        "Compile relevant server targets if available."
       ],
-      "tests": [
-        "Compare single-class caps before/after for representative classes.",
-        "Test Paladin+Monk+Necromancer defense/dodge/block/casting caps.",
-        "Use #set skill_all_max and #showskills to verify max values.",
-        "Level character and verify MaxSkills behavior."
-      ],
-      "risks": [
-        "Training level and skill cap behavior may differ by client/era.",
-        "Starting skills may need separate treatment from max caps.",
-        "Confirmed bug fix in common/skill_caps.cpp could affect stock behavior if not scoped carefully."
-      ],
-      "execution_mode": "auto_pr",
-      "repo": "EQEmu-Monomyth",
-      "order": 3
+      "source_anchor": "Audit Skill Cap Implementation Plan.",
+      "notion_slice_id": null,
+      "notion_page_url": null,
+      "slice_instance_id": "2d36f9d7-127b-47d8-a011-38a0721a9e7c",
+      "branch": null,
+      "head_commit": null,
+      "pr_url": null,
+      "pr_number": null,
+      "attempt_count": 0,
+      "started_at": null,
+      "updated_at": "2026-05-09T13:11:18Z",
+      "last_run_summary": null,
+      "blocked_reason": null,
+      "human_notes": "Do not broaden item restrictions, faction, titles, or visible class behavior in this slice.",
+      "resume_instruction": "Resume this slice only after verifying dependencies and preserving class_mask-based multiclass architecture."
     },
     {
       "id": "MC-004",
+      "parent_id": null,
       "title": "Union AA eligibility across assigned classes",
+      "summary": "Allow AA visibility, purchase, and use for any class present in the assigned class mask while keeping one AA ownership/state record per character.",
+      "status": "ready",
       "priority": "P0",
-      "status": "open",
+      "phase": "multiclass-aa",
+      "order": 40,
+      "repo": "https://github.com/zutfen/EQEmu-Monomyth",
+      "execution_mode": "auto_pr",
       "depends_on": [
         "MC-001",
         "MC-002"
       ],
-      "slice_instance_id": "3cc1e5892f5c4bf9bb19b8e1d5eaaf6b",
-      "objective": "Allow a character to view, purchase, load, save, and use AA abilities available to any assigned class without duplicating AA state.",
-      "context": [
-        "AA ownership/state remains one per character.",
-        "Do not split character_alternate_abilities rows by class.",
-        "Replace single-class bitmask checks with any-assigned-class helper checks."
-      ],
-      "files_to_inspect_or_change": [
+      "files": [
         "zone/aa.cpp",
         "zone/client.cpp",
+        "zone/client.h",
         "zone/gm_commands/grantaa.cpp",
         "zone/gm_commands/set/set_aa_points.cpp",
-        "zone/gm_commands/set/set_aa_exp.cpp",
-        "zone/gm_commands/show/show_aas.cpp",
-        "zone/gm_commands/show/show_aapoints.cpp"
+        "zone/gm_commands/set/set_aa_exp.cpp"
       ],
-      "implementation_notes": [
-        "Update CanUseAlternateAdvancementRank(), CanPurchaseAlternateAdvancementRank(), SendAlternateAdvancementRank(), LoadAlternateAdvancement(), SaveAA(), GrantAlternateAdvancementAbility(), PurchaseAlternateAdvancementRank(), and TogglePassiveAlternativeAdvancement() where class gating applies.",
-        "Preserve one aa_ranks map per character.",
-        "Ensure grant-only and passive AA handling still works.",
-        "Keep primary/display class for client-visible identity."
+      "acceptance": [
+        "AA class eligibility checks use assigned class mask membership instead of only GetClass().",
+        "AA rows/state remain per character; no per-class AA duplication is introduced.",
+        "AA list/send, purchase, activation/use, passive toggles, grant, load, and save paths remain coherent.",
+        "Single-class AA behavior remains stock-equivalent.",
+        "Grant-only and era/client-specific AA edge cases are called out if not fully resolved."
       ],
-      "acceptance_criteria": [
-        "Single-class AA list/purchase/use behavior remains stock-compatible.",
-        "Multiclass character can see eligible AAs from any assigned class.",
-        "Multiclass character can purchase and activate eligible AAs from any assigned class.",
-        "AA load/save remains one state record per character.",
-        "No duplicate AA state by class is introduced."
+      "verification": [
+        "Validate a dual/triple-class character can see/purchase/use AA from each assigned class.",
+        "Validate an unassigned class AA remains unavailable.",
+        "Validate single-class character AA behavior is unchanged.",
+        "Use #grantaa, #set aa_points, #set aa_exp, #showaas/#showaapoints if available.",
+        "Compile relevant server targets if available."
       ],
-      "tests": [
-        "Create single-class regression test for AA purchase/use.",
-        "Use #set aa_points and #grantaa on multiclass character.",
-        "Verify AA list includes abilities from each assigned class.",
-        "Relog and verify purchased AAs persist once."
-      ],
-      "risks": [
-        "Grant-only AA edge cases.",
-        "Titanium/older-client AA display differences.",
-        "AA ranks with class assumptions outside simple class bitmasks."
-      ],
-      "execution_mode": "auto_pr",
-      "repo": "EQEmu-Monomyth",
-      "order": 4
+      "source_anchor": "Audit AA Implementation Plan.",
+      "notion_slice_id": null,
+      "notion_page_url": null,
+      "slice_instance_id": "21bda319-e170-42b4-ade9-b1e657849fb0",
+      "branch": null,
+      "head_commit": null,
+      "pr_url": null,
+      "pr_number": null,
+      "attempt_count": 0,
+      "started_at": null,
+      "updated_at": "2026-05-09T13:11:18Z",
+      "last_run_summary": null,
+      "blocked_reason": null,
+      "human_notes": "Existing EQEmu AA class masks should make this cleaner: use helper API or mask intersection, not slot loops.",
+      "resume_instruction": "Resume this slice only after verifying dependencies and preserving class_mask-based multiclass architecture."
     },
     {
       "id": "MC-005",
-      "title": "Share spell and discipline access across assigned classes",
+      "parent_id": null,
+      "title": "Share spell access using lowest assigned-class level",
+      "summary": "Make spell/disc access available through any assigned class and use the lowest level requirement among assigned classes for shared spells.",
+      "status": "ready",
       "priority": "P0",
-      "status": "open",
+      "phase": "multiclass-spells",
+      "order": 50,
+      "repo": "https://github.com/zutfen/EQEmu-Monomyth",
+      "execution_mode": "auto_pr",
       "depends_on": [
         "MC-001",
         "MC-002"
       ],
-      "slice_instance_id": "69f8f6c745a04df58513f4a758aa10d9",
-      "objective": "Allow spells/disciplines from any assigned class and use the lowest spell level requirement among assigned classes.",
-      "context": [
-        "Spellbook and memmed-spell persistence remain per character.",
-        "If Paladin and Cleric both receive a heal, Paladin+Cleric should use the Cleric level requirement when Cleric receives it earlier.",
-        "Global minimum spell level across all classes is not sufficient; helper must be character-scoped to assigned classes."
-      ],
-      "files_to_inspect_or_change": [
+      "files": [
         "zone/client.cpp",
+        "zone/client.h",
         "zone/spells.cpp",
         "zone/spell_effects.cpp",
         "common/spdat.cpp",
-        "zone/client.h"
+        "common/spdat.h"
       ],
-      "implementation_notes": [
-        "Update scribing, discipline learning, spellbook access, memorization/casting gates, fizzle checks, spell group cache behavior, and spell-effect level limits where class/level gates apply.",
-        "Implement character-scoped lowest assigned spell level helper.",
-        "Do not rely only on common/spdat.cpp::GetSpellMinimumLevel(), because that is global across all classes.",
-        "Keep character_spells and character_memmed_spells unchanged.",
-        "Watch older-client spellbook limits and translator clipping behavior."
+      "acceptance": [
+        "Add/use a character-scoped helper for lowest spell level across assigned classes.",
+        "Spell access is allowed if any assigned class can learn/cast the spell.",
+        "If multiple assigned classes get the same spell, required level is the lowest level among those assigned classes.",
+        "Scribing, memorization/cast validation, discipline learning, fizzle checks, and relevant spell-effect class/level limits use assigned-class rules where appropriate.",
+        "Spellbook and memmed-spell persistence remain per character and unchanged.",
+        "Global minimum spell level helpers are not used as a substitute for assigned-class-specific level resolution."
       ],
-      "acceptance_criteria": [
-        "Single-class spell access remains stock-compatible.",
-        "Multiclass character can scribe/learn spells or disciplines from any assigned class.",
-        "Shared spells use the lowest required level among assigned classes, not global minimum across all classes.",
-        "Paladin+Cleric shared heal test uses Cleric level if Cleric gets it earlier.",
-        "Spell casting validation agrees with scribing/learning eligibility.",
-        "No spellbook/memmed-spell schema split by class."
+      "verification": [
+        "Validate Paladin+Cleric shared heal uses Cleric level requirement when Cleric receives it earlier.",
+        "Validate a spell from an unassigned class remains unavailable.",
+        "Validate single-class spell access remains stock-equivalent.",
+        "Check older-client spellbook volume/translator clipping risk and document any unresolved limit.",
+        "Compile relevant server targets if available."
       ],
-      "tests": [
-        "Single-class scribe/cast regression.",
-        "Paladin+Cleric shared heal level test.",
-        "Hybrid caster + pure caster spell level comparison.",
-        "Discipline learning test for melee assigned class.",
-        "Relog and verify spellbook persistence.",
-        "Check older-client spellbook capacity behavior where practical."
-      ],
-      "risks": [
-        "Spell group cache query may embed single-class assumptions.",
-        "Older clients may clip large spellbooks.",
-        "Spell effects may have class/level gates separate from normal cast checks."
-      ],
-      "execution_mode": "auto_pr",
-      "repo": "EQEmu-Monomyth",
-      "order": 5
+      "source_anchor": "Audit Spell Access Implementation Plan.",
+      "notion_slice_id": null,
+      "notion_page_url": null,
+      "slice_instance_id": "8e6a1eb7-7813-4ced-9b29-861f4b3ce19d",
+      "branch": null,
+      "head_commit": null,
+      "pr_url": null,
+      "pr_number": null,
+      "attempt_count": 0,
+      "started_at": null,
+      "updated_at": "2026-05-09T13:11:18Z",
+      "last_run_summary": null,
+      "blocked_reason": null,
+      "human_notes": "Do not change packet layouts or widen spellbook packet structs.",
+      "resume_instruction": "Resume this slice only after verifying dependencies and preserving class_mask-based multiclass architecture."
     },
     {
       "id": "MC-006",
-      "title": "Preserve visible-class compatibility and add GM multiclass tooling",
+      "parent_id": null,
+      "title": "Add GM tooling for multiclass assignment and inspection",
+      "summary": "Add safe admin/test tooling to set, clear, and inspect assigned class masks for development validation while preserving display class compatibility.",
+      "status": "ready",
       "priority": "P1",
-      "status": "open",
+      "phase": "multiclass-tooling",
+      "order": 60,
+      "repo": "https://github.com/zutfen/EQEmu-Monomyth",
+      "execution_mode": "auto_pr",
       "depends_on": [
         "MC-001",
-        "MC-002",
-        "MC-003",
-        "MC-004",
-        "MC-005"
+        "MC-002"
       ],
-      "slice_instance_id": "977286aa46fb4d02a492e60d22f6688f",
-      "objective": "Keep client-visible class behavior stable while giving admins a clean way to assign and verify multiclass data.",
-      "context": [
-        "Client packets expose exactly one class.",
-        "Primary/display class should remain stable for char select, who list, titles, faction, item restrictions, and similar UI-facing paths.",
-        "This slice is compatibility and operator tooling, not broad gameplay expansion."
+      "files": [
+        "zone/gm_commands",
+        "zone/gm_commands/set",
+        "zone/gm_commands/show",
+        "zone/client.h",
+        "zone/client.cpp",
+        "zone/zonedb.cpp"
       ],
-      "files_to_inspect_or_change": [
-        "world/worlddb.cpp",
-        "world/client.cpp",
-        "common/eq_packet_structs.h",
-        "zone/gm_commands/*",
-        "zone/inventory.cpp",
-        "zone/guild_mgr.cpp",
-        "zone/titles.cpp",
-        "zone/client.cpp"
+      "acceptance": [
+        "GM/admin tooling can display primary/display class and assigned class mask/classes.",
+        "GM/admin tooling can set a valid class mask for a target character.",
+        "Tooling enforces display class included, max 3 assigned classes, and valid playable class bits.",
+        "Invalid mask changes fail closed with clear operator feedback.",
+        "Tooling persists mask changes and refreshes runtime derived state without requiring packet layout changes."
       ],
-      "implementation_notes": [
-        "Confirm char select, name approval, spawn/profile, who list, titles, faction, and item restrictions still use primary/display class only.",
-        "Add GM command or quest hook to assign class_2/class_3 and display assigned-class set.",
-        "Do not widen packet structs.",
-        "Add clear validation: max three classes, primary class required, no duplicates, valid class IDs only.",
-        "Document intended display-class vs assigned-class split in code comments or docs."
+      "verification": [
+        "Use GM command to assign one, two, and three classes and verify persisted reload.",
+        "Attempt invalid masks: empty, display class missing, more than three bits, invalid class bit.",
+        "Confirm invalid attempts do not corrupt character_data.class_mask.",
+        "Compile relevant server targets if available."
       ],
-      "acceptance_criteria": [
-        "Char select and zoning remain client-compatible.",
-        "Visible/display class remains character_data.class_.",
-        "GM/admin can assign, clear, and inspect secondary/tertiary classes.",
-        "Invalid multiclass assignments are rejected with clear messages.",
-        "Item restrictions, faction, titles, and who list remain primary-class based unless explicitly changed later."
-      ],
-      "tests": [
-        "Verify char select shows primary class only.",
-        "Verify /who or equivalent visible class behavior remains primary class.",
-        "Use GM command/hook to set Paladin+Monk+Necromancer and inspect assigned classes.",
-        "Try duplicate/invalid class assignments and verify rejection.",
-        "Zone/relog after GM changes and verify persistence."
-      ],
-      "risks": [
-        "Accidental packet layout changes can break clients.",
-        "Operators may expect visible class to show multiclass data; document that this is intentionally server-side for now.",
-        "GM command naming may collide with existing command conventions."
-      ],
-      "execution_mode": "auto_pr",
-      "repo": "EQEmu-Monomyth",
-      "order": 6
+      "source_anchor": "Audit Compatibility + GM tooling, updated for class_mask.",
+      "notion_slice_id": null,
+      "notion_page_url": null,
+      "slice_instance_id": "d3c290c1-344d-4711-8443-2b5ad8a8bf01",
+      "branch": null,
+      "head_commit": null,
+      "pr_url": null,
+      "pr_number": null,
+      "attempt_count": 0,
+      "started_at": null,
+      "updated_at": "2026-05-09T13:11:18Z",
+      "last_run_summary": null,
+      "blocked_reason": null,
+      "human_notes": "Prefer a small explicit command over broad UI/client work. Client UI changes are non-goals.",
+      "resume_instruction": "Resume this slice only after verifying dependencies and preserving class_mask-based multiclass architecture."
     },
     {
       "id": "MC-007",
-      "title": "End-to-end multiclass regression pass",
+      "parent_id": null,
+      "title": "Compatibility regression and single-class parity pass",
+      "summary": "Perform a focused regression pass across client-visible class behavior, single-class parity, and core multiclass behavior after the first implementation slices land.",
+      "status": "ready",
       "priority": "P1",
-      "status": "open",
+      "phase": "multiclass-validation",
+      "order": 70,
+      "repo": "https://github.com/zutfen/EQEmu-Monomyth",
+      "execution_mode": "auto_pr",
       "depends_on": [
         "MC-003",
         "MC-004",
         "MC-005",
         "MC-006"
       ],
-      "slice_instance_id": "8d3fd329e7574afc9c9976b92f1de1a2",
-      "objective": "Validate the complete server-side multiclass feature against representative class combinations and stock single-class behavior.",
-      "context": [
-        "This is a focused validation/remediation slice after core implementation lands.",
-        "Do not add new feature scope unless required to fix regressions from MC-001 through MC-006."
-      ],
-      "files_to_inspect_or_change": [
-        "zone/client.cpp",
-        "zone/aa.cpp",
-        "zone/spells.cpp",
-        "zone/spell_effects.cpp",
-        "common/skill_caps.cpp",
+      "files": [
         "world/worlddb.cpp",
-        "GM command files touched by earlier slices"
+        "world/client.cpp",
+        "common/eq_packet_structs.h",
+        "zone/inventory.cpp",
+        "zone/guild_mgr.cpp",
+        "zone/titles.cpp",
+        "zone/client.cpp",
+        "zone/zonedb.cpp"
       ],
-      "implementation_notes": [
-        "Create a concise manual test matrix for one-, two-, and three-class characters.",
-        "Exercise at least one tank/melee/caster trio, one priest/hybrid shared-spell pair, and one pure single-class regression.",
-        "Patch only confirmed regressions caused by multiclass changes.",
-        "Capture any remaining out-of-scope findings as future backlog candidates."
+      "acceptance": [
+        "Character select continues to expose only primary/display class.",
+        "Name approval, spawn/profile structs, who list, titles, faction, and item restriction paths remain display-class based unless explicitly changed later.",
+        "Single-class characters behave stock-equivalent for skills, AA, and spells.",
+        "Invalid class masks are rejected or normalized fail-closed before gameplay logic uses them.",
+        "Known follow-up risks are documented for item restrictions, bots/mercs, titles, faction, spellbook overflow, and client-era differences."
       ],
-      "acceptance_criteria": [
-        "Single-class regression matrix passes.",
-        "Paladin+Monk+Necromancer skill cap matrix passes.",
-        "Paladin+Cleric shared spell level matrix passes.",
-        "AA union purchase/use matrix passes.",
-        "Char select/zoning compatibility remains intact.",
-        "Any remaining known limitations are documented."
+      "verification": [
+        "Run compile/build validation if available.",
+        "Run manual login, char select, zoning, skill, AA, and spell smoke tests.",
+        "Search diff for packet struct changes and confirm none were introduced.",
+        "Search code for obsolete multiclass persistence slot references and confirm none were introduced by this backlog\u2019s implementation path.",
+        "Produce concise regression notes with any follow-up backlog recommendations."
       ],
-      "tests": [
-        "Single class: baseline skill, AA, spell behavior.",
-        "Two class: Paladin+Cleric spell sharing and AA visibility.",
-        "Three class: Paladin+Monk+Necromancer skill caps and mixed spell/AA access.",
-        "Relog and zoning persistence checks.",
-        "Older-client spellbook capacity smoke test where practical."
-      ],
-      "risks": [
-        "Some EQEmu behavior may require live/manual validation instead of automated tests.",
-        "Large spellbooks may expose client-era limits.",
-        "Edge cases may emerge in class-specific spell effects or AA restrictions."
-      ],
-      "execution_mode": "auto_pr",
-      "repo": "EQEmu-Monomyth",
-      "order": 7
-    }
-  ],
-  "future_candidates": [
-    {
-      "id": "MC-FUTURE-001",
-      "title": "Multiclass-aware item restrictions",
-      "reason": "Deferred to keep initial implementation client-safe and avoid UI/game-balance ambiguity."
-    },
-    {
-      "id": "MC-FUTURE-002",
-      "title": "Multiclass-aware titles/faction/who display",
-      "reason": "Deferred because client-visible systems expose one class and should remain display-class based initially."
-    },
-    {
-      "id": "MC-FUTURE-003",
-      "title": "Player-facing multiclass selection UI or quest flow",
-      "reason": "Initial scope should use GM/quest hooks for validation before building user-facing flows."
-    },
-    {
-      "id": "MC-FUTURE-004",
-      "title": "Bot/merc multiclass support audit",
-      "reason": "Audit notes bot/merc class paths are separate and should be handled independently later."
+      "source_anchor": "Audit Client Compatibility Risks and Testing Strategy.",
+      "notion_slice_id": null,
+      "notion_page_url": null,
+      "slice_instance_id": "697fefed-4492-4e43-b793-06690021e7f0",
+      "branch": null,
+      "head_commit": null,
+      "pr_url": null,
+      "pr_number": null,
+      "attempt_count": 0,
+      "started_at": null,
+      "updated_at": "2026-05-09T13:11:18Z",
+      "last_run_summary": null,
+      "blocked_reason": null,
+      "human_notes": "Human review recommended after this pass before broadening multiclass into item restrictions, faction, titles, bots, or client UI.",
+      "resume_instruction": "Resume this slice only after verifying dependencies and preserving class_mask-based multiclass architecture."
     }
   ]
 }
