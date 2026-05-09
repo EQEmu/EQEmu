@@ -17,7 +17,7 @@
 		},
 		{
 			"name": "linux-clang",
-			"displayName": "Linux-Ninja",
+			"displayName": "Linux-Ninja (Clang)",
 			"generator": "Ninja",
 			"binaryDir": "${sourceDir}/build",
 			"cacheVariables": {
@@ -39,7 +39,7 @@
 		},
 		{
 			"name": "linux-clang-ccache",
-			"displayName": "Linux-Ninja (Ccache)",
+			"displayName": "Linux-Ninja (Clang, Ccache)",
 			"generator": "Ninja",
 			"binaryDir": "${sourceDir}/build",
 			"cacheVariables": {
