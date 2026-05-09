@@ -16,6 +16,17 @@
 			}
 		},
 		{
+			"name": "linux-clang",
+			"displayName": "Linux-Ninja",
+			"generator": "Ninja",
+			"binaryDir": "${sourceDir}/build",
+			"cacheVariables": {
+				"EQEMU_BUILD_TESTS": "ON",
+				"CMAKE_C_COMPILER": "clang",
+				"CMAKE_CXX_COMPILER": "clang++"
+			}
+		},
+		{
 			"name": "linux-ccache",
 			"displayName": "Linux-Ninja (Ccache)",
 			"generator": "Ninja",
@@ -24,6 +35,19 @@
 				"CMAKE_C_COMPILER_LAUNCHER": "ccache",
 				"CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
 				"EQEMU_BUILD_TESTS": "ON"
+			}
+		},
+		{
+			"name": "linux-clang-ccache",
+			"displayName": "Linux-Ninja (Ccache)",
+			"generator": "Ninja",
+			"binaryDir": "${sourceDir}/build",
+			"cacheVariables": {
+				"CMAKE_C_COMPILER_LAUNCHER": "ccache",
+				"CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+				"EQEMU_BUILD_TESTS": "ON",
+				"CMAKE_C_COMPILER": "clang",
+				"CMAKE_CXX_COMPILER": "clang++"
 			}
 		},
 		{
