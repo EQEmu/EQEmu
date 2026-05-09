@@ -39,7 +39,7 @@ void bot_command_sit_in_combat(Client* c, const Seperator* sep)
 				Class::Cleric
 			)
 		};
-		p.examples_two =
+		p.examples_two = 
 		{
 			"To set all bots to sit/med in combat:",
 			fmt::format(

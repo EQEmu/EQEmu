@@ -18,7 +18,7 @@ class PFSArchive : public Archive {
 public:
     PFSArchive();
     virtual ~PFSArchive();
-
+    
     virtual bool Open(std::string filename);
     virtual bool Close();
     virtual bool Get(std::string filename, char **buffer, size_t& buffer_size);

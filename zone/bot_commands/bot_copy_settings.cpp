@@ -74,7 +74,7 @@ void bot_command_copy_settings(Client* c, const Seperator* sep)
 		{
 			"[spellsettings] will copy ^spellsettings options",
 			"[spelltypesettings] copies all spell type settings",
-			"[all] copies all settings"
+			"[all] copies all settings" 
 		};
 		p.options_two =
 		{
@@ -106,24 +106,24 @@ void bot_command_copy_settings(Client* c, const Seperator* sep)
 	{
 		"all",
 		"misc",
-		"spellsettings",
-		"spelltypesettings",
-		"spellholds",
-		"spelldelays",
-		"spellminthresholds",
+		"spellsettings", 
+		"spelltypesettings", 
+		"spellholds", 
+		"spelldelays", 
+		"spellminthresholds", 
 		"spellmaxthresholds",
 		"spellresistlimits",
 		"spellaggrochecks",
-		"spellminmanapct",
-		"spellmaxmanapct",
-		"spellminhppct",
-		"spellmaxhppct",
-		"spellidlepriority",
+		"spellminmanapct", 
+		"spellmaxmanapct", 
+		"spellminhppct", 
+		"spellmaxhppct", 
+		"spellidlepriority", 
 		"spellengagedpriority",
 		"spellpursuepriority",
 		"spelltargetcounts",
 		"spellannouncecasts",
-		"blockedbuffs",
+		"blockedbuffs", 
 		"blockedpetbuffs"
 	};
 
@@ -233,7 +233,7 @@ void bot_command_copy_settings(Client* c, const Seperator* sep)
 		c->Message(Chat::Yellow, "Could not find %s.", sep->arg[1]);
 		return;
 	}
-
+	
 	if (!to->IsBot()) {
 		c->Message(Chat::Yellow, "%s is not a bot.", to->GetCleanName());
 		return;
@@ -242,7 +242,7 @@ void bot_command_copy_settings(Client* c, const Seperator* sep)
 	if (!to->GetOwner()) {
 		c->Message(Chat::Yellow, "Could not find %s's owner.", to->GetCleanName());
 	}
-
+	
 	if (to->GetOwner() != c) {
 		c->Message(Chat::Yellow, "You must name a spawned bot that you own to use this command.");
 		return;

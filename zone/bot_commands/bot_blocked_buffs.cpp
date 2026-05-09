@@ -37,20 +37,20 @@ void bot_command_blocked_buffs(Client* c, const Seperator* sep)
 		p.description = { "Allows you to set, view and wipe beneficial blocked buffs for the selected bots." };
 		p.notes = { "- You can 'set' spells to be blocked, 'remove' spells from the blocked list, 'list' the current blocked spells or 'wipe' the entire list." };
 		p.example_format = { fmt::format("{} [add [ID] | remove [ID] | list | wipe] [actionable, default: target]", sep->arg[0]) };
-		p.examples_one =
-		{
-			"To add Courage(Spell ID #202) to the targeted bot's blocked list:",
-			fmt::format("{} add 202", sep->arg[0])
+		p.examples_one = 
+		{ 
+			"To add Courage(Spell ID #202) to the targeted bot's blocked list:", 
+			fmt::format("{} add 202", sep->arg[0]) 
 		};
-		p.examples_two =
-		{
-			"To view the targeted bot's blocked buff list:",
-			fmt::format("{} list", sep->arg[0])
+		p.examples_two = 
+		{ 
+			"To view the targeted bot's blocked buff list:", 
+			fmt::format("{} list", sep->arg[0]) 
 		};
-		p.examples_three =
-		{
-			"To wipe all Warriors bots' blocked buff list:",
-			fmt::format( "{} wipe byclass {}", sep->arg[0], Class::Warrior)
+		p.examples_three = 
+		{ 
+			"To wipe all Warriors bots' blocked buff list:", 
+			fmt::format( "{} wipe byclass {}", sep->arg[0], Class::Warrior) 
 		};
 		p.actionables = { "target, byname, ownergroup, ownerraid, targetgroup, namesgroup, healrotationtargets, mmr, byclass, byrace, spawned" };
 
@@ -81,7 +81,7 @@ void bot_command_blocked_buffs(Client* c, const Seperator* sep)
 	}
 
 	std::string arg1 = sep->arg[1];
-	std::string arg2 = sep->arg[2];
+	std::string arg2 = sep->arg[2];	
 	int ab_arg = 2;
 	bool add = false;
 	bool remove = false;
@@ -191,7 +191,7 @@ void bot_command_blocked_buffs(Client* c, const Seperator* sep)
 					}
 				}
 			}
-
+			
 			if (!found) {
 				c->Message(
 					Chat::Yellow,
@@ -234,7 +234,7 @@ void bot_command_blocked_buffs(Client* c, const Seperator* sep)
 					spell_id
 				).c_str()
 			);
-		}
+		}	
 	}
 }
 

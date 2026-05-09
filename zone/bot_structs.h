@@ -128,7 +128,7 @@ struct BotSpellSettings {
 	uint16      ae_or_group_target_count;   // require target count to cast an AE or Group spell type
 	uint16      announce_cast;              // announce when casting a certain spell type
 	Timer       recast_timer;               // recast timer based off delay
-	Timer       ai_delay;                   // spell timer based off delay
+	Timer       ai_delay;                   // spell timer based off delay	
 };
 
 struct BotSpellTypeOrder {

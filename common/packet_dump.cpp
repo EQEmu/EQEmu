@@ -96,7 +96,7 @@ std::string DumpPacketHexToString(const uchar* buf, uint32 size, uint32 cols, ui
 		return "";
 
 	out << "\n";
-
+	
 	// Output as HEX
 	char output[4];
 	int j = 0;
@@ -157,7 +157,7 @@ void DumpPacket(uint16 opcode, const EQ::Net::Packet &p, bool iShowInfo) {
 		std::cout << "Dumping ServerPacket: 0x" << std::hex << std::setfill('0') << std::setw(4) << opcode << std::dec;
 		std::cout << " size:" << p.Length() << std::endl;
 	}
-
+	
 	std::cout << p.ToString() << std::endl;
 }
 

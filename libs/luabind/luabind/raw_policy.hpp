@@ -72,11 +72,11 @@ namespace luabind {
 	  , detail::null_type
 	>
 	inline raw(LUABIND_PLACEHOLDER_ARG(N))
-	{
+	{ 
 		return detail::policy_cons<
 			detail::raw_policy<N>
 		  , detail::null_type
-		>();
+		>(); 
 	}
 
 } // namespace luabind

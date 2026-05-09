@@ -152,7 +152,7 @@ namespace luabind
 #define LUABIND_OPERATOR_PARAMS(z, n, data) const A##n & a##n
 
     template<
-        class R
+        class R 
         BOOST_PP_ENUM_TRAILING_PARAMS(N, class A)
     >
     typename boost::mpl::if_<

@@ -37,7 +37,7 @@ using namespace std;
  unsigned shorts are adequate because, worst case
  even in a zone that is 6000x6000 with a small node
  size of 30x30, there are only 40000 nodes.
-
+ 
  quadrent definitions:
  quad 1 (nodes[0]):
  x>=0, y>=0
@@ -47,7 +47,7 @@ using namespace std;
  x<0, y<0
  quad 4 (nodes[3]):
  x>=0, y<0
-
+ 
  */
 #define MAX_POLY_VTX 24		//arbitrary, im too lazy to figure it out
 					//cut a triangle at most 6 times....
@@ -62,12 +62,12 @@ public:
 	GPoint();
 	GPoint(VERTEX &v);
 	GPoint(float x, float y, float z);
-
+	
 	inline void operator()(float nx, float ny, float nz) { x = nx; y = ny; z = nz; }
-
+	
 	GPoint cross(const GPoint &them) const;
 	float dot3(const GPoint &them) const;
-
+	
 	float x;
 	float y;
 	float z;
@@ -80,13 +80,13 @@ public:
 	GVector();
 	GVector(const GPoint &them);
 	GVector(float x, float y, float z, float w = 1.0f);
-
+	
 	inline void operator()(float nx, float ny, float nz, float nw) { x = nx; y = ny; z = nz; W = nw; }
 	float dot4(const GVector &them) const;
 	float dot4(const GPoint &them) const;
 	void normalize();
 	float length();
-
+	
 	float W;
 };
 
@@ -101,32 +101,32 @@ class QTBuilder {
 public:
 	QTBuilder();
 	~QTBuilder();
-
+	
 	bool build(const char *shortname);
 	bool build_eqg(const char *shortname);
 	bool writeMap(const char *file);
-
+	
 	bool FaceInNode(const QTNode *q, const FACE *f);
 protected:
-
+	
 	void AddFace(VERTEX &v1, VERTEX &v2, VERTEX &v3);
-
+	
 	int ClipPolygon(POLYGON *poly, GVector *plane);
-
+	
 	//dynamic during load
 //	vector<VERTEX> _VertexList;
 	vector<FACE> _FaceList;
-
+	
 	//static once loaded
 //	unsigned long vertexCount;
 	unsigned long faceCount;
 //	VERTEX * vertexBlock;
 	FACE * faceBlock;
-
+	
 	VERTEX tempvtx[MAX_POLY_VTX];
-
+	
 	QTNode *_root;
-
+	
 	static void NormalizeN(FACE *p);
 
 #ifdef COUNT_MACTHES
@@ -143,28 +143,28 @@ class QTNode {
 public:
 	QTNode(QTBuilder *builder, float Tminx, float Tmaxx, float Tminy, float Tmaxy);
 	~QTNode();
-
+	
 	void clearNodes();
-
+	
 	void doSplit();
 	void divideYourself(int depth);
-
+	
 	void buildVertexes();
 
 //	bool writeFile(FILE *out);
-
+	
 	unsigned long countNodes() const;
 	unsigned long countFacelists() const;
-
+	
 	void fillBlocks(nodeHeader *heads, unsigned long *flist, unsigned long &hindex, unsigned long &findex);
-
+	
 	float minx;
 	float miny;
 	float maxx;
 	float maxy;
 	unsigned long nfaces;
 	vector<FaceRecord> faces;
-
+	
 	/*
 	quadrent definitions:
 		quad 1 (node1):
@@ -182,7 +182,7 @@ public:
 	QTNode *node4;
 	GPoint v[8];
 	bool final;
-
+	
 protected:
 	QTBuilder *builder;
 };

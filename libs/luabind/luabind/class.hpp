@@ -64,7 +64,7 @@
 	support the __concat metamethod. This is a bit tricky, since it cannot be
 	treated as a normal operator. It is a binary operator but we want to use the
 	__tostring implementation for both arguments.
-
+	
 */
 
 #include <luabind/prefix.hpp>
@@ -126,7 +126,7 @@ namespace boost
 } // namespace boost
 
 namespace luabind
-{
+{	
 	namespace detail
 	{
 		struct unspecified {};
@@ -225,7 +225,7 @@ namespace luabind
 		// range [start_index, lua_gettop()]
 
 		LUABIND_API std::string stack_content_by_name(lua_State* L, int start_index);
-
+	
 		struct LUABIND_API create_class
 		{
 			static int stage1(lua_State* L);
@@ -252,7 +252,7 @@ namespace luabind
 		private:
 			template<class U> void operator,(U const&) const;
 			void operator=(static_scope const&);
-
+			
 			T& self;
 		};
 
@@ -261,7 +261,7 @@ namespace luabind
 		struct LUABIND_API class_base : scope
 		{
 		public:
-			class_base(char const* name);
+			class_base(char const* name);		
 
 			struct base_desc
 			{
@@ -484,7 +484,7 @@ namespace luabind
 
 	// registers a class in the lua environment
 	template<class T, class X1, class X2, class X3>
-	struct class_: detail::class_base
+	struct class_: detail::class_base 
 	{
 		typedef class_<T, X1, X2, X3> self_t;
 
@@ -564,7 +564,7 @@ namespace luabind
 #ifndef NDEBUG
 			detail::check_link_compatibility();
 #endif
-				init();
+		   	init(); 
 		}
 
 		template<class F>
@@ -741,9 +741,9 @@ namespace luabind
 		{
 			return detail::enum_maker<self_t>(*this);
 		}
-
+		
 		detail::static_scope<self_t> scope;
-
+		
 	private:
 		void operator=(class_ const&);
 
@@ -773,12 +773,12 @@ namespace luabind
 				,	no_bases
 			>::type bases_t;
 
-			typedef typename
+			typedef typename 
 				boost::mpl::if_<detail::is_bases<bases_t>
 					,	bases_t
 					,	bases<bases_t>
 				>::type Base;
-
+	
             class_base::init(
                 typeid(T)
               , detail::registered_class<T>::id
@@ -876,3 +876,4 @@ namespace luabind
 #endif
 
 #endif // LUABIND_CLASS_HPP_INCLUDED
+

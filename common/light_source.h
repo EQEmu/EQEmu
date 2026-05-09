@@ -67,7 +67,7 @@ namespace EQ
 
 		extern uint8 TypeToLevel(uint8 light_type);
 		extern bool IsLevelGreater(uint8 left_type, uint8 right_type);
-
+	
 	}; /*lightsource*/
 
 	struct LightSource_Struct {

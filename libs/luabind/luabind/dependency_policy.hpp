@@ -27,7 +27,7 @@
 #include <luabind/config.hpp>
 #include <luabind/detail/policy.hpp>
 
-namespace luabind { namespace detail
+namespace luabind { namespace detail 
 {
 	// makes A dependent on B, meaning B will outlive A.
 	// internally A stores a reference to B

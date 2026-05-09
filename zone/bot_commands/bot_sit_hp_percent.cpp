@@ -39,8 +39,8 @@ void bot_command_sit_hp_percent(Client* c, const Seperator* sep)
 				Class::Cleric
 			)
 		};
-		p.examples_two =
-		{
+		p.examples_two = 
+		{ 
 			"To set all bots to sit at 50% HP:",
 			fmt::format(
 				"{} 50 spawned",

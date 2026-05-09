@@ -29,8 +29,8 @@ void bot_command_distance_ranged(Client* c, const Seperator* sep)
 		BotCommandHelpParams p;
 
 		p.description = { "Sets the distance bots will attempt to stay away from their target to cast or use ranged items." };
-		p.notes =
-		{
+		p.notes = 
+		{ 
 			"- Bots will stay between half the value of the setting and the current value. IE, if set to 60, bots will stay between 30 and 60.",
 			"- Casters will never go closer than their maximum melee range.",
 			"- Archery & Throwing bots will never get closer than the minimum value for ranged to work, or beyond the range of their items."

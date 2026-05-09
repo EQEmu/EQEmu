@@ -25,8 +25,8 @@ closedir(D);
 foreach my $mapfile (@mapfiles) {
 	my $result = "Unknown action..\n";
 	print("processing map: '$mapfile'\n");
-    if($OS eq "Windows"){ $result = `zone convert_map $mapfile`; }
-	if($OS eq "Linux"){ $result = `./zone convert_map $mapfile`; }
+    if($OS eq "Windows"){ $result = `zone convert_map $mapfile`; } 
+	if($OS eq "Linux"){ $result = `./zone convert_map $mapfile`; } 
 	print("-- $result");
 }
 

@@ -31,27 +31,27 @@ void bot_command_behind_mob(Client* c, const Seperator* sep)
 		p.description = { "Toggles whether or not bots will stay behind the mob during combat." };
 		p.notes = { "- Bots that are taunting will remain in front of their target"};
 		p.example_format = { fmt::format("{} [value] [actionable]", sep->arg[0]) };
-		p.examples_one =
-		{
-			"To set Monks to stay behind the mob:",
-			fmt::format("{} 1 byclass {}", sep->arg[0], Class::Monk)
+		p.examples_one = 
+		{ 
+			"To set Monks to stay behind the mob:", 
+			fmt::format("{} 1 byclass {}", sep->arg[0], Class::Monk) 
 		};
-		p.examples_two =
-		{
-			"To force all bots to stay behind mobs:",
-			fmt::format("{} 1 spawned", sep->arg[0])
+		p.examples_two = 
+		{ 
+			"To force all bots to stay behind mobs:", 
+			fmt::format("{} 1 spawned", sep->arg[0]) 
 		};
-		p.examples_three =
-		{
-			"To check the behind mob status of all bots:",
-			fmt::format("{} current spawned", sep->arg[0])
+		p.examples_three = 
+		{ 
+			"To check the behind mob status of all bots:", 
+			fmt::format("{} current spawned", sep->arg[0]) 
 		};
 		p.actionables = { "target, byname, ownergroup, ownerraid, targetgroup, namesgroup, healrotationtargets, mmr, byclass, byrace, spawned" };
 
 		std::string popup_text = c->SendBotCommandHelpWindow(p);
 		popup_text = DialogueWindow::Table(popup_text);
 
-		c->SendPopupToClient(sep->arg[0], popup_text.c_str());
+		c->SendPopupToClient(sep->arg[0], popup_text.c_str());		
 
 		if (RuleB(Bots, SendClassRaceOnHelp)) {
 			c->Message(

@@ -192,7 +192,7 @@ namespace Titanium
 		const uint64 CURSOR_BITMASK = 0x0000000200000000;
 		const uint64 POSSESSIONS_BITMASK = (EQUIPMENT_BITMASK | GENERAL_BITMASK | CURSOR_BITMASK); // based on 34-slot count (RoF+)
 		const uint64 CORPSE_BITMASK = (GENERAL_BITMASK | CURSOR_BITMASK | (EQUIPMENT_BITMASK << 34)); // based on 34-slot count (RoF+)
-
+		
 
 		const char* GetInvPossessionsSlotName(int16 inv_slot);
 		const char* GetInvCorpseSlotName(int16 inv_slot);
@@ -304,7 +304,7 @@ namespace Titanium
 
 	namespace spells {
 		inline EQ::versions::ClientVersion GetSkillsRef() { return EQ::versions::ClientVersion::Titanium; }
-
+		
 		enum class CastingSlot : uint32 {
 			Gem1 = 0,
 			Gem2 = 1,
@@ -326,7 +326,7 @@ namespace Titanium
 		const int SPELL_ID_MAX = 9999;
 		const int SPELLBOOK_SIZE = 400;
 		const int SPELL_GEM_COUNT = static_cast<uint32>(CastingSlot::MaxGems);
-
+		
 		const int LONG_BUFFS = 25;
 		const int SHORT_BUFFS = 12;
 		const int DISC_BUFFS = 1;

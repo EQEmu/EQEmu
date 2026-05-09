@@ -20,7 +20,7 @@
 
 namespace TEMPLATE
 {
-
+	
 	// put constants here and #include appropriately
-
+	
 }; /* TEMPLATE */

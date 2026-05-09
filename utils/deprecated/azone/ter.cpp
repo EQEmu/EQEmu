@@ -94,7 +94,7 @@ printf("Writting TER to '%s'\n", filename);
 FILE *ttt = fopen(filename, "wb");
 fwrite(buffer, 1, buf_len, ttt);
 fclose(ttt);
-
+  
   if(filename != zone_name)
     delete[] filename;
 
@@ -115,7 +115,7 @@ fclose(ttt);
     buffer += sizeof(ter_header);
   } else
     return 0;
-
+  
   ter_tmp = buffer + thdr->list_len;
 
   if(thdr->version == 3)
@@ -186,10 +186,10 @@ printf("%s: Material count: %d, list len=%d, line count=%d\n", zone_name, thdr->
 
   this->model_data.zone_model = new Zone_Model;
   zm = this->model_data.zone_model;
-
+  
   zm->vert_count = thdr->vert_count;
   zm->poly_count = thdr->tri_count;
-
+  
   zm->verts = new Vertex *[zm->vert_count];
   zm->polys = new Polygon *[zm->poly_count];
 
@@ -254,17 +254,17 @@ printf("%s: Material count: %d, list len=%d, line count=%d\n", zone_name, thdr->
 	  //thundercrest
 	  buffer = ter_orig + 0x62230-4;
   }*/
-
+ 
 /*  buffer = ter_orig + 0x382BB - 4;
 
   printf("Good Delta %d 0x%x\n", buffer-ter_tmp, buffer-ter_tmp);*/
-
+  
 /*
   uchar *pptr2 =  (buffer - (sizeof(ter_vertex)*1));
 printf("v dump start: 0x%x\n", (pptr2-ter_orig));
   print_hex((const char *)pptr2, (buffer-pptr2)+sizeof(ter_vertex)*10);
 */
-
+  
 printf("%d verts start at %d (0x%x)\n", zm->vert_count, (buffer-ter_orig), (buffer-ter_orig));
 print_hex((const char *)(buffer-16), sizeof(ter_vertex)*3+16);
 
@@ -352,12 +352,12 @@ printf("%d tris start at %d (0x%x)\n", zm->poly_count, (buffer-ter_orig), (buffe
 		buffer += sizeof(ter_triangle);
 	}
 	printf("Skipped %d, %d total\n", skipped, zm->poly_count);
-
+  
   zm->poly_count = j;
-
+  
   zm->tex_count = thdr->mat_count;
   zm->tex = new Texture *[thdr->mat_count];
-
+  
   for(i = 0; i < (int)thdr->mat_count; ++i) {
     zm->tex[i] = new Texture;
     zm->tex[i]->frame_count = 1;
@@ -376,7 +376,7 @@ printf("%d tris start at %d (0x%x)\n", zm->poly_count, (buffer-ter_orig), (buffe
   }
   // zm->tex[thdr->mat_count] = new Texture;
   // zm->tex[thdr->mat_count]->filename = NULL;
-
+  
   delete[] mlist;
 
   this->status = 1;

@@ -38,7 +38,7 @@ void bot_command_attack(Client *c, const Seperator *sep)
 		c->Message(Chat::Yellow, "You must <target> an enemy to use this command");
 		return;
 	}
-
+	
 	if (RuleB(Bots, BotsRequireLoS) && !c->DoLosChecks(target_mob)) {
 		c->Message(Chat::Red, "You must have Line of Sight to use this command.");
 		return;

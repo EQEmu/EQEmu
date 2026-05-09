@@ -27,7 +27,7 @@ void bot_command_max_melee_range(Client* c, const Seperator* sep)
 
 	if (helper_is_help_or_usage(sep->arg[1])) {
 		BotCommandHelpParams p;
-
+		
 		p.description = { "Toggles whether or not bots will stay at max melee range during combat."};
 		p.notes = {
 			fmt::format(

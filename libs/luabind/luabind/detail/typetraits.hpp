@@ -30,7 +30,7 @@
 #include <boost/type_traits/is_const.hpp>
 #include <luabind/detail/primitives.hpp>
 
-namespace luabind { namespace detail
+namespace luabind { namespace detail 
 {
 
 #ifdef BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION

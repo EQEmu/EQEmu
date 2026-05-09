@@ -33,7 +33,7 @@ void command_petitems(Client *c, const Seperator *sep)
 	if (!t || !t->IsPet()) {
 		c->Message(Chat::White, "You must have a pet or target a bot's pet to use this command.");
 		return;
-	}
+	}	
 
 	Mob* o = t->GetOwner();
 	if (!o) {

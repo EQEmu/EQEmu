@@ -33,7 +33,7 @@ void command_profanity(Client *c, const Seperator *sep)
 		c->Message(Chat::White, "Usage: #profanity reload - Reloads the profanity list");
 		return;
 	}
-
+	
 	bool is_add = !strcasecmp(sep->arg[1], "add");
 	bool is_clear = !strcasecmp(sep->arg[1], "clear");
 	bool is_delete = !strcasecmp(sep->arg[1], "delete");
@@ -138,7 +138,7 @@ void command_profanity(Client *c, const Seperator *sep)
 				profanity_list.size(),
 				profanity_list.size() != 1 ? "ies" : "y"
 			);
-
+			
 			for (const auto& profanity : profanity_list) {
 				popup_message.append(
 					fmt::format(
@@ -151,7 +151,7 @@ void command_profanity(Client *c, const Seperator *sep)
 				profanity_index++;
 			}
 		}
-
+	
 		c->SendPopupToClient(
 			popup_title.c_str(),
 			popup_message.c_str()

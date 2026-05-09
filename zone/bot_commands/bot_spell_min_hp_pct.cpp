@@ -27,7 +27,7 @@ void bot_command_spell_min_hp_pct(Client* c, const Seperator* sep)
 
 	if (helper_is_help_or_usage(sep->arg[1])) {
 		BotCommandHelpParams p;
-
+		
 		p.description = { "Controls at what health percentage a bot will stop casting different spell types." };
 		p.example_format =
 		{

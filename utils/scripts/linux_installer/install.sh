@@ -57,7 +57,7 @@ export apt_options="-y -qq" # Set autoconfirm and silent install
 if [ ! -f ./install_variables.txt ]; then
 
 	read -n1 -r -p "Press any key to continue..." key
-
+	
 	#::: Setting up user environment (eqemu)
 	echo "First, we need to set your passwords..."
 	echo "Make sure that you remember these and keep them somewhere"
@@ -76,7 +76,7 @@ if [ ! -f ./install_variables.txt ]; then
 	#::: Write install variables (later use)
 	echo "mysql_root:$eqemu_db_root_password" > install_variables.txt
 
-	#::: Setup MySQL server
+	#::: Setup MySQL server 
 	read -p "Enter Database Name (single word, no special characters, lower case):" eqemu_db_name
 	read -p "Enter (Database) MySQL EQEmu Server username: " eqemu_db_username
 	read -p "Enter (Database) MySQL EQEmu Server password: " eqemu_db_password
@@ -123,7 +123,7 @@ if [[ "$OS" == "Debian" ]]; then
 	apt-get $apt_options install libsodium18
 	apt-get $apt_options install libjson-perl
 	apt-get $apt_options install libssl-dev
-
+	
 	# Install libsodium
 	wget http://ftp.us.debian.org/debian/pool/main/libs/libsodium/libsodium-dev_1.0.11-2_amd64.deb -O /home/eqemu/libsodium-dev.deb
         wget http://ftp.us.debian.org/debian/pool/main/libs/libsodium/libsodium18_1.0.11-2_amd64.deb -O /home/eqemu/libsodium18.deb
@@ -132,7 +132,7 @@ if [[ "$OS" == "Debian" ]]; then
 	# Cleanup after ourselves
 	rm -f /home/eqemu/libsodium-dev.deb
 	rm -f /home/eqemu/libsodium18.deb
-
+	
 	#::: Install FTP for remote FTP access
 	echo "proftpd-basic shared/proftpd/inetd_or_standalone select standalone" | debconf-set-selections
 	apt-get -y -q install proftpd
@@ -171,13 +171,13 @@ elif [[ "$OS" == "red_hat" ]]; then
                 libuuid-devel \
                 libsodium \
                 libsodium-devel \
-                openssl-devel
+                openssl-devel 
 
 	yum -y groupinstall \
 		"Development Tools" \
 		"Basic Web Server" \
-		"Compatibility Libraries"
-	# Deal with the cmake 3 prerequisite on RHEL/CentOS 6/7 Note: Might break with RHEL/CentOS 8
+		"Compatibility Libraries" 
+	# Deal with the cmake 3 prerequisite on RHEL/CentOS 6/7 Note: Might break with RHEL/CentOS 8 
 	alternatives --install /usr/local/bin/cmake cmake /usr/bin/cmake3 20 \
 	--slave /usr/local/bin/ctest ctest /usr/bin/ctest3 \
 	--slave /usr/local/bin/cpack cpack /usr/bin/cpack3 \
@@ -212,7 +212,7 @@ elif [[ "$OS" == "fedora_core" ]]; then
                 libuuid-devel \
                 libsodium \
                 libsodium-devel \
-                openssl-devel
+                openssl-devel 
 
         dnf -y group install "Development Tools" "Basic Web Server" "C Development Tools and Libraries"
 fi
@@ -263,6 +263,6 @@ ln -s maps Maps
 perl $eqemu_server_directory/server/eqemu_server.pl new_server
 
 #::: Chown files
-chown eqemu:eqemu $eqemu_server_directory/ -R
+chown eqemu:eqemu $eqemu_server_directory/ -R 
 chmod 755 $eqemu_server_directory/server/*.pl
 chmod 755 $eqemu_server_directory/server/*.sh

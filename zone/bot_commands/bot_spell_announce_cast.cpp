@@ -205,7 +205,7 @@ void bot_command_spell_announce_cast(Client* c, const Seperator* sep) {
 					"{} says, 'I currently {} announce [{}] casts.'",
 					my_bot->GetCleanName(),
 					(my_bot->GetSpellTypeAnnounceCast(spell_type) ? "do" : "do not"),
-					Bot::GetSpellTypeNameByID(spell_type)
+					Bot::GetSpellTypeNameByID(spell_type)					
 				).c_str()
 			);
 		}

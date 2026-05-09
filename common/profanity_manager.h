@@ -33,7 +33,7 @@ namespace EQ
 
 		static bool AddProfanity(DBcore *db, std::string profanity);
 		static bool RemoveProfanity(DBcore *db, std::string profanity);
-
+		
 		static void RedactMessage(char *message);
 		static void RedactMessage(std::string &message);
 
@@ -50,7 +50,7 @@ namespace EQ
 		static bool load_database_entries(DBcore *db);
 		static bool clear_database_entries(DBcore *db);
 		static bool check_for_existing_entry(const std::string& profanity);
-
+		
 	};
 
 } /*EQEmu*/

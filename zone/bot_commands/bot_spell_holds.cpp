@@ -36,8 +36,8 @@ void bot_command_spell_holds(Client* c, const Seperator* sep)
 			fmt::format("{} [Type ID] [value] [actionable]", sep->arg[0])
 		};
 		p.examples_one =
-		{
-			"To set all bots to hold DoTs:",
+		{ 
+			"To set all bots to hold DoTs:", 
 			fmt::format(
 				"{} {} 1 spawned",
 				sep->arg[0],

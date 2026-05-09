@@ -36,7 +36,7 @@ namespace luabind { namespace detail
 			{
 			}
 
-		~stack_pop()
+		~stack_pop() 
 		{
 			lua_pop(m_state, m_n);
 		}

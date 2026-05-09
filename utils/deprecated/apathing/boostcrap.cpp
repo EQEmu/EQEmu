@@ -32,12 +32,12 @@ Fear Pathing generation utility.
 	and does not free the old edges
 */
 void build_boost_graph(MyGraph &vg, property_map<MyGraph, edge_weight_t>::type &weightmap, map<PathEdge *, EdgeDesc> &em, PathGraph *big, bool set_weights) {
-
+	
 	list<PathEdge*>::iterator cur,end;
 	list<PathNode*>::iterator curn,endn;
 	PathNode *n;
 	PathEdge *e;
-
+	
 	//first we need to number our nodes...
 	curn = big->nodes.begin();
 	endn = big->nodes.end();
@@ -47,11 +47,11 @@ void build_boost_graph(MyGraph &vg, property_map<MyGraph, edge_weight_t>::type &
 		n->node_id = r;
 		r++;
 	}
-
+	
 	typedef std::pair < int, int > E;	//our edge type
-
-	weightmap = get(edge_weight, vg);
-
+	
+	weightmap = get(edge_weight, vg); 
+	
 	//now add all our edges to the graph
 	cur = big->edges.begin();
 	end = big->edges.end();
@@ -59,7 +59,7 @@ void build_boost_graph(MyGraph &vg, property_map<MyGraph, edge_weight_t>::type &
 		e = *cur;
 		if(e->from == e->to)
 			continue;
-
+		
 //		printf("A %d/%d (%.3f,%.3f,%.3f) -> (%.3f,%.3f,%.3f) d=%.3f\n", r, big->edges.size(), e->from->x, e->from->y, e->from->z, e->to->x, e->to->y, e->to->z, e->from->Dist2(e->to));
 		EdgeDesc ed;
 		bool inserted;
@@ -73,15 +73,15 @@ void build_boost_graph(MyGraph &vg, property_map<MyGraph, edge_weight_t>::type &
 	}
 	//now we should have a nice happy undirected graph...
 }
-
+	
 void run_min_spanning_tree(MyGraph &vg, property_map<MyGraph, edge_weight_t>::type &weightmap, map<PathEdge *, EdgeDesc> &em, PathGraph *big, int start_node) {
 	int noedge = 0;
 	list<PathEdge *> out_paths;
-
+	
 	vector < EdgeDesc > spanning_tree;
-
+	
 	kruskal_minimum_spanning_tree(vg, back_inserter(spanning_tree));
-
+	
 	vector < EdgeDesc >::iterator cur,end;
 	list<PathEdge*>::iterator cure,ende;
 	cur = spanning_tree.begin();
@@ -99,16 +99,16 @@ void run_min_spanning_tree(MyGraph &vg, property_map<MyGraph, edge_weight_t>::ty
 	}
 	noedge = big->edges.size() - out_paths.size() - 1;
 	printf("Ran Min Spanning Tree: %d paths were eliminated.\n", noedge);
-
-
+	
+	
 	/*
 	//make our results list.
 	vector < VertDesc > p(num_vertices(vg));
-
+	
 	//finally run the stupid algorithm.
 	prim_minimum_spanning_tree(vg, &p[0], root_vertex(start_node));
-
-
+	
+	
 	for (std::size_t i = 0; i != p.size(); ++i) {
 		if (p[i] != i) {
 			out_paths.push_back(new PathEdge(big->nodes[p[i]], big->nodes[i]));
@@ -118,25 +118,25 @@ void run_min_spanning_tree(MyGraph &vg, property_map<MyGraph, edge_weight_t>::ty
 		}
 	}
 	printf("Ran Min Spanning Tree: %d nodes were disconnected.\n", noedge);
-
-
+	
+	
 	*/
-
+	
 	//now swap out our edge list to the MST.
 	big->edges = out_paths;
 }
 
 void find_disjoint_grids(Map *map, MyGraph &vg, PathGraph *big, const char *fname, vector<int> &start_nodes, vector<PathGraph *> &disjoints) {
-
+	
 	vector< vector<int> > D;
 	vector<int> counts;
 	vector<int> disjoint_counts;
 	vector<int> first_node;
-
+	
 	//color the graph and get us the info we need to do out job
 	color_disjoint_graphs(big, vg, map, fname, D, counts, disjoint_counts, first_node);
-
-
+	
+	
 	//find the biggest grid, that one gets to be included no matter what
 	int best_graph = 0;
 	int best_count = counts[0];
@@ -148,8 +148,8 @@ void find_disjoint_grids(Map *map, MyGraph &vg, PathGraph *big, const char *fnam
 		}
 	}
 	disjoint_counts[best_graph] = 1;
-
-
+	
+	
 	//break up the graphs based on color if we want them.
 	vector<int>::iterator ccur,djcur,fcur,cend;
 	list<PathEdge*>::iterator cur,end;
@@ -164,15 +164,15 @@ void find_disjoint_grids(Map *map, MyGraph &vg, PathGraph *big, const char *fnam
 		int count = *ccur;
 		int dj = *djcur;
 //		int fn = *fcur;
-
+		
 		if(dj < 1)
 			continue;   //skip disjoint sets not marked for use.
-
+		
 		if(count < MIN_DISJOINT_NODES)
 			continue;   //make sure we have a reasonable node count
-
+		
 		pg = new PathGraph();
-
+		
 		cur = big->edges.begin();
 		end = big->edges.end();
 		for(; cur != end; cur++) {
@@ -186,16 +186,16 @@ void find_disjoint_grids(Map *map, MyGraph &vg, PathGraph *big, const char *fnam
 				pg->edges.push_back(e);
 			}
 		}
-
+		
 		//get our list of nodes based on our edge list.
 		rebuild_node_list(pg->edges, pg->nodes, NULL);
-
+		
 		disjoints.push_back(pg);
 		start_nodes.push_back(1);   //each graph only contains its own nodes, so any node will work.
 	}
-
-
-
+	
+	
+	
 	/*
 	int best_graph = 0;
 	int best_count = counts[0];
@@ -207,12 +207,12 @@ void find_disjoint_grids(Map *map, MyGraph &vg, PathGraph *big, const char *fnam
 		}
 //		printf("Graph %d has %d edges\n", r, counts[r]);
 	}
-
+	
 	start_node = first_node[best_graph];
 	printf("Best sub-graph: chose #%d of %d, has %d nodes, and contains node %d\n", best_graph, counts.size()-1, best_count, start_node);
 	//todo: eliminate other graphs...
 	*/
-
+	
 /*	list<PathEdge*>::iterator cure,ende;
 	PathEdge *e;
 	cure = big->edges.begin();
@@ -234,7 +234,7 @@ static const int INT_LIMIT = (std::numeric_limits < int >::max)();
 
 void color_disjoint_graphs(
 	PathGraph *big,
-	MyGraph &vg,
+	MyGraph &vg, 
 	Map *map,
 	const char *fname,
 
@@ -243,15 +243,15 @@ void color_disjoint_graphs(
 	vector<int> &disjoint_counts,   //output
 	vector<int> &first_node			//output
 ) {
-
-
+	
+	
 	int count = big->nodes.size();
 //	int r;
-
+	
 //	vector< vector<int> > D(count, vector<int>(count, INT_LIMIT));
 //	vector<int> counts(1, 0);
 //	vector<int> first_node(1, 0);
-
+	
 	//make sure everything is inited right...
 	D.resize(0);
 	D.resize(count, vector<int>(count, INT_LIMIT));
@@ -261,22 +261,22 @@ void color_disjoint_graphs(
 	disjoint_counts[0] = 0;
 	first_node.resize(1);
 	first_node[0] = 0;
-
+	
 	//make up a weight map with all 1s, done while building now
 /*	property_map < MyGraph, edge_weight_t >::type w = get(edge_weight, vg);
 	graph_traits < MyGraph >::edge_iterator e, e_end;
 	for (boost::tie(e, e_end) = edges(vg); e != e_end; ++e)
 		w[*e] = 1;*/
-
-
+	
+	
 	johnson_all_pairs_shortest_paths(vg, D);
-
+	
 	list<PathNode*>::iterator cur,end,cur2;
 	PathNode *n,*f;
-
+	
 	int cur_color = 1;
 	int cc,djc;
-
+	
 	//clear node colors
 	cur = big->nodes.begin();
 	end = big->nodes.end();
@@ -284,8 +284,8 @@ void color_disjoint_graphs(
 		n = *cur;
 		n->color = 0;
 	}
-
-
+	
+	
 	//color the graph based on reachability, basically labeling subgraphs
 	//this finds the number of nodes reachable from each node
 	//which is used to pick the best disconnected graph in the tree.
@@ -300,13 +300,13 @@ void color_disjoint_graphs(
 
 		cc = 1;
 		djc = 0;
-
+		
 		if(n->disjoint)
 			djc++;
-
+		
 		n->color = cur_color;
 		cur_color++;
-
+		
 		cur2 = cur;
 		for(; cur2 != end; cur2++) {
 			f = *cur2;
@@ -321,43 +321,43 @@ void color_disjoint_graphs(
 		disjoint_counts.push_back(djc);
 		first_node.push_back(n->node_id);
 	}
-
-#ifdef DRAW_ALL_COLORS
+	
+#ifdef DRAW_ALL_COLORS	
 
 	if(fname != NULL) {
 		printf("Drawing with %d seperate sub-graphs from %d nodes and %d edges\n", cur_color-1, big->nodes.size(), big->edges.size());
-
+		
 		FILE *pngout;
 		pngout = fopen(fname, "wb");
 		if(pngout == NULL) {
 			printf("Unable to open %s\n", fname);
 			return;
 		}
-
+		
 		gdImagePtr im;
 		int minx = int(map->GetMinX());
 		int maxx = int(map->GetMaxX());
 		int miny = int(map->GetMinY());
 		int maxy = int(map->GetMaxY());
-
+		
 		im = gdImageCreate((maxx - minx)/IMAGE_SCALE, (maxy - miny)/IMAGE_SCALE);
 	//	im = gdImageCreate(maxx - minx, maxy - miny);
-
+		
 		//allocate this first, to make it the BG color.
 		/*int black =*/ gdImageColorAllocate(im, 0, 0, 0);
-
+		
 	//	int grey = gdImageColorAllocate(im, 100, 100, 100);
-
+		
 		int *clist = new int[cur_color];
 		int r;
 		for(r = 0; r < cur_color; r++) {
 			clist[r] = gdImageColorAllocate(im, rand()%255, rand()%255, rand()%255);
 		}
-
+		
 		{
 			list<PathEdge*>::iterator cur,end;
 			PathEdge *e;
-
+			
 			cur = big->edges.begin();
 			end = big->edges.end();
 			for(; cur != end; cur++) {
@@ -374,12 +374,12 @@ void color_disjoint_graphs(
 			}
 		}
 		delete[] clist;
-
+		
 		gdImagePng(im, pngout);
 		gdImageDestroy(im);
-
+		
 		fclose(pngout);
-
+		
 		printf("Wrote image: %s\n", fname);
 	}
 #endif 	//DRAW_ALL_COLORS
@@ -393,7 +393,7 @@ void calc_path_lengths(Map *map, MyGraph &vg, PathGraph *big, map<PathEdge *, Ed
 	vector< vector<int> > D;
 	list<PathNode*>::iterator cur,end;
 	PathNode *n;
-
+	
 	/*
 		Node distances:
 		1. find the root node.
@@ -401,21 +401,21 @@ void calc_path_lengths(Map *map, MyGraph &vg, PathGraph *big, map<PathEdge *, Ed
 			 - the node with the shortest of these longest paths is the root
 		2. record each node's distance from that root node
 	*/
-
+	
 	//color the graph and get us the info we need to do out job
 	color_disjoint_graphs(big, vg, map, fname, D, counts, disjoint_counts, first_node);
-
-
+	
+	
 	vector<int>::iterator curp,endp;
-
+	
 	int shortest_node = 0;
 	int shortest = 0xFFFFFF;
 	int the_longest = 0;
 	int longest_node = 0;
-
+	
 	//stores the longest path from each node
 	vector<int> longest_dists(D.size(), 0);
-
+	
 	//find the node with the longest path of all, so we know what
 	//tree we are trying to find the root of
 	cur = big->nodes.begin();
@@ -435,15 +435,15 @@ void calc_path_lengths(Map *map, MyGraph &vg, PathGraph *big, map<PathEdge *, Ed
 			if(*curp > longest)
 				longest = *curp;
 		}
-
+		
 		longest_dists[n->node_id] = longest;
-
+		
 		if(longest > the_longest) {
 			the_longest = longest;
 			longest_node = n->node_id;
 		}
 	}
-
+	
 	//find the node with the shortest, longest path
 	//the idea is to locate the 'root' of the tree.
 	cur = big->nodes.begin();
@@ -453,16 +453,16 @@ void calc_path_lengths(Map *map, MyGraph &vg, PathGraph *big, map<PathEdge *, Ed
 		vector<int> &cv = D[n->node_id];
 		if(cv[longest_node] == INT_LIMIT)
 			continue;	//this node cannot reach the root
-
+		
 		int longest = longest_dists[n->node_id];
 		//n->longest_path = longest;
-
+		
 		if(longest < shortest) {
 			shortest = longest;
 			shortest_node = n->node_id;
 		}
 	}
-
+	
 	//now we have our root, set each node to their distance from the root
 	vector<int> &root_dists = D[shortest_node];
 printf("The tree's root is %d\n", shortest_node);
@@ -475,15 +475,15 @@ printf("The tree's root is %d\n", shortest_node);
 		else
 			n->longest_path = root_dists[n->node_id];
 	}
-
-
-
-
-
+	
+	
+	
+	
+	
 	/*
 	  	the reachability is the number of nodes which we could possibly get to
 	  	by traveling each direction across an edge.
-
+	  
 		to find reachability:
 		loop through each edge e
 			Remove that edge from the graph
@@ -495,13 +495,13 @@ printf("The tree's root is %d\n", shortest_node);
 	*/
 	property_map<MyGraph, edge_weight_t>::type weightmap;
 	weightmap = get(edge_weight, vg);
-
+	
 	int tc,fc;
 	int from_color, to_color;
-
+	
 	printf("Finding lengths (%d dots)", 1+big->edges.size()/10);
 	int pos = 0;
-
+	
 	PathEdge *e;
 	list<PathEdge*>::iterator cur4,end4;
 	cur4 = big->edges.begin();
@@ -512,24 +512,24 @@ printf("The tree's root is %d\n", shortest_node);
 			fflush(stdout);
 		}
 		e = *cur4;
-
+		
 		//remove this edge from the boost graph..
 		remove_edge(em[e], vg);
-
+		
 		//color the graph and get us the info we need to do our job
 		//char out[64];
 		//sprintf(out, "lengraph-%d.png", pos);
-		color_disjoint_graphs(big, vg, map,
-			NULL,
+		color_disjoint_graphs(big, vg, map, 
+			NULL, 
 			D, counts, disjoint_counts, first_node);
-
+		
 		//add the edge back in
 		EdgeDesc ed;
 		bool inserted;
 		tie(ed, inserted) = add_edge(e->from->node_id, e->to->node_id, vg);
 		em[e] = ed;
 		weightmap[em[e]] = int(e->from->Dist2(e->to));	//cause its a new edge
-
+		
 		//make sure this stupid thing worked.
 		if(e->from->color == e->to->color) {
 			printf("Cycle detected in MST... WTF?\n");
@@ -539,7 +539,7 @@ printf("The tree's root is %d\n", shortest_node);
 		}
 		from_color = e->from->color;
 		to_color = e->to->color;
-
+		
 		//count our crap.
 		tc = 0;
 		fc = 0;
@@ -552,14 +552,14 @@ printf("The tree's root is %d\n", shortest_node);
 			else if(n->color == from_color)
 				fc++;
 		}
-
+		
 		//put it on our edge
 		e->normal_reach = tc;
 		e->reverse_reach = fc;
 	}
-
+	
 	printf("\n");
-
+	
 	//re-color the graph, since we dicked with it above
 	color_disjoint_graphs(big, vg, map, fname, D, counts, disjoint_counts, first_node);
 	choose_biggest_graph(big, counts, first_node);
@@ -572,13 +572,13 @@ void just_color_the_damned_thing(Map *map, PathGraph *big, const char *fname) {
 	property_map<MyGraph, edge_weight_t>::type weightlist_mst;
 	std::map<PathEdge *, EdgeDesc> edgemap_mst;
 	build_boost_graph(vg, weightlist_mst, edgemap_mst, big, true);
-
+	
 	vector<int> counts;
 	vector<int> disjoint_counts;
 	vector<int> first_node;
 	vector< vector<int> > D;
 	list<PathNode*>::iterator cur,end;
-
+	
 	color_disjoint_graphs(big, vg, map, fname, D, counts, disjoint_counts, first_node);
 }
 
@@ -588,8 +588,8 @@ void calc_path_lengths(Map *map, MyGraph &vg, PathGraph *big, vector< vector<int
 //	vector< vector<int> > D;
 	vector<int> counts;
 	vector<int> first_node;
-
-
+	
+	
 	choose_biggest_graph(big, counts, first_node);
 }
 */
@@ -607,12 +607,12 @@ void choose_biggest_graph(PathGraph *big, vector<int> &counts, vector<int> &firs
 		}
 		printf("Graph %d has %d edges\n", r, counts[r]);
 	}
-
+	
 	printf("Best Tree: Detected %d graphs in the MST, selected #%d\n", counts.size(), best_graph);
-
+	
 	list<PathNode*> new_nodes;
 	list<PathEdge*> new_edges;
-
+	
 	//rebuild the node list to include only nodes which are in
 	//the best graph, also only keeping the edges which connect them.
 	std::map<PathNode *, int> havenodelist;
@@ -621,7 +621,7 @@ void choose_biggest_graph(PathGraph *big, vector<int> &counts, vector<int> &firs
 	end4 = big->edges.end();
 	for(; cur4 != end4; cur4++) {
 		PathEdge *e = *cur4;
-
+		
 		//remove the edge if it is not the main color
 		//this also causes the removal of the nodes if they
 		//are not used in any other edges.
@@ -635,9 +635,9 @@ printf("Miscolor.\n");
 		if(e->to->color != best_graph) {
 			continue;
 		}
-
+		
 		new_edges.push_back(e);
-
+		
 		if(havenodelist.count(e->from) != 1) {
 			e->from->final_id = new_nodes.size();
 			new_nodes.push_back(e->from);
@@ -649,20 +649,20 @@ printf("Miscolor.\n");
 			havenodelist[e->to] = 1;
 		}
 	}
-
-	printf("Best Tree: Removed %d nodes and %d edges which were disconnected.\n",
+	
+	printf("Best Tree: Removed %d nodes and %d edges which were disconnected.\n", 
 		big->nodes.size() - new_nodes.size(), big->edges.size() - new_edges.size());
 	big->nodes = new_nodes;
 	big->edges = new_edges;
 }
 
 void consolidate_cross_graphs(Map *map, PathGraph *big, PathGraph *excess, MyGraph &cross_graph, const char *fname) {
-
+	
 	vector< vector<int> > D;
 	vector<int> counts;
 	vector<int> disjoint_counts;
 	vector<int> first_node;
-
+	
 	//color the graph and get us the info we need to do our job
 	color_disjoint_graphs(big, cross_graph, map, fname, D, counts, disjoint_counts, first_node);
 }
@@ -675,20 +675,20 @@ void find_path_info(Map *map, MyGraph &vg, vector< vector<PathEdge*> > &path_fin
 		path_finding.resize(0);
 		path_finding.resize(size, tmp);
 	}
-
+	
 	vector< vector<int> > D;
 	vector<int> counts;
 	vector<int> disjoint_counts;
 	vector<int> first_node;
-
+	
 	//color the graph and get us the info we need to do our job
 	color_disjoint_graphs(big, vg, map, NULL, D, counts, disjoint_counts, first_node);
-
+	
 	//figure out what edges link to each node.
 	std::map<PathNode*, vector<PathEdge*> > node_edges;
 	find_node_edges(big, node_edges);
-
-
+	
+	
 	//for each node, find best edge to reach each other node.
 	list<PathNode*>::iterator cur,end;
 	PathNode *n;
@@ -717,7 +717,7 @@ void find_path_info(Map *map, MyGraph &vg, vector< vector<PathEdge*> > &path_fin
 				pf[r] = NULL;
 				continue;
 			}
-
+			
 			//else, node r reachable from us, find best edge.
 			cure = el.begin();
 			ende = el.end();

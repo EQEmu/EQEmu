@@ -67,10 +67,10 @@ void bot_command_default_settings(Client* c, const Seperator* sep)
 			"[misc] restores all miscellaneous options such as:",
 			"- ^showhelm, ^followd, ^stopmeleelevel, ^enforcespellsettings, ^bottoggleranged, ^petsettype, ^behindmob, ^distanceranged, ^illusionblock, ^sitincombat, ^sithppercent and ^sitmanapercent",
 		};
-		p.options_three =
-		{
+		p.options_three = 
+		{ 
 			"<br>",
-			"**The remaining options restore that specific type**"
+			"**The remaining options restore that specific type**" 
 		};
 
 		std::string popup_text = c->SendBotCommandHelpWindow(p);
@@ -92,8 +92,8 @@ void bot_command_default_settings(Client* c, const Seperator* sep)
 		return;
 	}
 
-	std::vector<std::string> options =
-	{
+	std::vector<std::string> options = 
+	{ 
 		"all",
 		"misc",
 		"spellsettings",
@@ -237,12 +237,12 @@ void bot_command_default_settings(Client* c, const Seperator* sep)
 		}
 
 		bot_stance = my_bot->GetBotStance();
-
+		
 		if (default_all) {
 			for (uint16 i = BotBaseSettings::START; i <= BotBaseSettings::END; ++i) {
 				my_bot->SetBotBaseSetting(i, my_bot->GetDefaultBotBaseSetting(i, bot_stance));
 			}
-
+			
 			for (uint16 i = BotSettingCategories::START_NO_BASE; i <= BotSettingCategories::END; ++i) {
 				for (uint16 x = BotSpellTypes::START; x <= BotSpellTypes::END; ++x) {
 					my_bot->SetBotSetting(i, x, my_bot->GetDefaultSetting(i, x, bot_stance));
@@ -280,7 +280,7 @@ void bot_command_default_settings(Client* c, const Seperator* sep)
 						my_bot->SetBotSetting(i, x, my_bot->GetDefaultSetting(i, x, bot_stance));
 					}
 				}
-
+				
 				output = "spell type settings were reset";
 			}
 		}
@@ -297,7 +297,7 @@ void bot_command_default_settings(Client* c, const Seperator* sep)
 				for (uint16 i = BotSpellTypes::START; i <= BotSpellTypes::END; ++i) {
 					my_bot->SetBotSetting(setting_type, i, my_bot->GetDefaultSetting(setting_type, i, bot_stance));
 				}
-
+				
 				output = fmt::format(
 					"{} settings were reset for all spell types",
 					Bot::GetBotSpellCategoryName(Bot::GetBotSpellCategoryIDByShortName(option_arg))

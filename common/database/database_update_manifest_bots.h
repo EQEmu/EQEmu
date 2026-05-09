@@ -225,11 +225,11 @@ INNER JOIN bot_stances bs ON bd.bot_id = bs.bot_id
 WHERE bd.follow_distance != 184
 GROUP BY bd.bot_id;
 
-INSERT INTO bot_settings
+INSERT INTO bot_settings 
 SELECT 0, bd.bot_id, bs.stance_id, 3, 0, bd.stop_melee_level, 'BaseSetting', 'StopMeleeLevel'
 FROM bot_data bd
 INNER JOIN bot_stances bs ON bd.bot_id = bs.bot_id
-WHERE (CASE
+WHERE (CASE 
 	WHEN bd.class IN (2, 6, 10, 11, 12, 13, 14) THEN 13
    ELSE 255
 END) != bd.stop_melee_level
@@ -553,7 +553,7 @@ UPDATE bot_spells_entries SET `type` = 17 WHERE `spell_id` = 3229;
 		.condition = "empty",
 		.match = "",
 		.sql = R"(
-INSERT INTO `bot_spells_entries` (`npc_spells_id`, `spell_id`, `type`, `minlevel`, `maxlevel`)
+INSERT INTO `bot_spells_entries` (`npc_spells_id`, `spell_id`, `type`, `minlevel`, `maxlevel`) 
 VALUES
 (3006, 9957, 100, 20, 254),
 (3006, 9956, 100, 20, 254),
@@ -1127,7 +1127,7 @@ FROM bot_spells_entries
 WHERE `npc_spells_id` = 3005
 AND `type` = 10;
 
-INSERT INTO `bot_spells_entries` (`npc_spells_id`, `spell_id`, `type`, `minlevel`, `maxlevel`, `priority`)
+INSERT INTO `bot_spells_entries` (`npc_spells_id`, `spell_id`, `type`, `minlevel`, `maxlevel`, `priority`) 
 VALUES
 (3003, 10173, 24, 72, 76, 3),
 (3003, 10174, 24, 72, 76, 2),

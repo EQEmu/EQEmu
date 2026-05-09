@@ -38,8 +38,8 @@ void bot_command_illusion_block(Client* c, const Seperator* sep)
 				sep->arg[0]
 			)
 		};
-		p.examples_two =
-		{
+		p.examples_two = 
+		{ 
 			"To set all bots to block illusions:",
 			fmt::format(
 				"{} 1 spawned",

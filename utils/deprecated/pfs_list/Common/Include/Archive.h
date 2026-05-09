@@ -9,7 +9,7 @@ class Archive {
 public:
     Archive() { }
     virtual ~Archive() { }
-
+    
     virtual bool Open(std::string filename) = 0;
     virtual bool Close() = 0;
     virtual bool Get(std::string filename, char** buffer, size_t& buffer_size) = 0;

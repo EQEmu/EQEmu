@@ -94,10 +94,10 @@ void Embperl::DoInit()
 	perl_construct(my_perl);
 	perl_parse(my_perl, xs_init, argc, argv, nullptr);
 	perl_run(my_perl);
-
+	
 	//a little routine we use a lot.
 	eval_pv("sub my_eval { eval $_[0];}", TRUE);    //dies on error
-
+	
 	//ruin the perl exit and command:
 	eval_pv("sub my_exit {}", TRUE);
 	eval_pv("sub my_sleep {}", TRUE);
@@ -109,7 +109,7 @@ void Embperl::DoInit()
 		GvCV_set(sleepgp, perl_get_cv("my_sleep", TRUE));    //dies on error
 		GvIMPORTED_CV_on(sleepgp);
 	}
-
+	
 	//declare our file eval routine.
 	try {
 		init_eval_file();

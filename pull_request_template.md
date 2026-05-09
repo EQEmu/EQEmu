@@ -17,7 +17,7 @@ Please delete options that are not relevant.
 
 Attach images and describe testing done to validate functionality.
 
-Clients tested:
+Clients tested: 
 
 # Checklist
 

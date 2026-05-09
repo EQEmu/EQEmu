@@ -30,7 +30,7 @@ void command_sensetrap(Client *c, const Seperator *sep)
 		c->Message(Chat::White, "You do not have the Sense Traps skill.");
 		return;
 	}
-
+	
 	if (DistanceSquaredNoZ(c->GetPosition(), target->GetPosition()) > RuleI(Adventure, LDoNTrapDistanceUse)) {
 		c->Message(
 			Chat::White,
@@ -40,7 +40,7 @@ void command_sensetrap(Client *c, const Seperator *sep)
 			).c_str()
 		);
 	}
-
+	
 	c->HandleLDoNSenseTraps(target, c->GetSkill(EQ::skills::SkillSenseTraps), LDoNTypeMechanical);
 }
 

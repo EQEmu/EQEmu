@@ -12,12 +12,12 @@ void decompress(char *p, char *p2, int len, int uLen) {
   d_stream.zalloc = (alloc_func)0;
   d_stream.zfree = (free_func)0;
   d_stream.opaque = (voidpf)0;
-
+  
   d_stream.next_in  = p;
   d_stream.avail_in = len;
   d_stream.next_out = p2;
   d_stream.avail_out = uLen;
-
+  
   inflateInit(&d_stream);
   status = inflate(&d_stream, Z_NO_FLUSH);
   inflateEnd(&d_stream);
@@ -32,18 +32,18 @@ int S3D_Init(s3d_object *obj, FILE *fp) {
   struct_fn_entry *s3d_fn_entry;
 
   uint32 *offsets;
-
+  
   char *temp, *temp2;
   int i, j, pos, inf, tmp, running = 0;
 
   obj->fp = fp;
-
+  
   fread(&s3d_header, sizeof(struct_header), 1, fp);
   if(s3d_header.magicCookie[0] != 'P' || s3d_header.magicCookie[1] != 'F' || s3d_header.magicCookie[2] != 'S' || s3d_header.magicCookie[3] != ' ')
     return -1;
   fseek(fp, s3d_header.offset, SEEK_SET);
   fread(&s3d_dir_header, sizeof(struct_directory_header), 1, fp);
-
+  
   obj->count = s3d_dir_header.count;
   obj->filenames = (char **) malloc(s3d_dir_header.count * sizeof(char *));
   obj->files = (uint32 *) malloc((s3d_dir_header.count - 1) * sizeof(uint32));
@@ -116,7 +116,7 @@ size_t S3D_GetFile(s3d_object *obj, char *filename, uchar **out) {
       fread(&s3d_dir, sizeof(struct_directory), 1, obj->fp);
       fseek(obj->fp, s3d_dir.offset, SEEK_SET);
       buf = (uchar *) malloc(s3d_dir.size);
-
+      
       inf = 0;
       while(inf < s3d_dir.size) {
         fread(&s3d_data, sizeof(struct_data_block), 1, obj->fp);
@@ -126,7 +126,7 @@ size_t S3D_GetFile(s3d_object *obj, char *filename, uchar **out) {
         free(temp2);
         inf += s3d_data.inflen;
       }
-
+      
       *out = buf;
       return inf;
     }

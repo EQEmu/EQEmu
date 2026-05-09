@@ -114,7 +114,7 @@ namespace luabind { namespace detail
 		}
 		static T data() { return reinterpret_cast<T>(decorated_type_array); }
 #else
-
+	
 		static void(*data())(T)
 		{ return (void(*)(T))0; }
 

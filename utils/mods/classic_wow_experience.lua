@@ -9,14 +9,14 @@ end
 function GetExperienceForKill(e)
 	local ML = e.other:GetLevel();
 	local CL = e.self:GetLevel();
-
+	
 	if(ML > CL) then
 		local lmod = (ML - CL) * 0.05;
 		if(lmod > 1.0) then
 			lmod = 1.0;
 		end
 		e.ReturnValue = BaseXP(ML) * (1 + lmod);
-	elseif(ML < CL) then
+	elseif(ML < CL) then	
 		local lmod = (CL - ML) * 0.05;
 		if(lmod > 1.0) then
 			lmod = 1.0;
@@ -25,14 +25,14 @@ function GetExperienceForKill(e)
 	else
 		e.ReturnValue = BaseXP(ML);
 	end
-
+	
 	e.IgnoreDefault = true;
 	return e;
 end
 
 function BaseXP(L)
 	local base = L * 5;
-
+	
 	if(L < 60) then
 		base = base + 45;
 	elseif(L < 70) then
@@ -42,7 +42,7 @@ function BaseXP(L)
 	else
 		base = base + 1875;
 	end
-
+	
 	return base;
 end
 
@@ -59,8 +59,8 @@ function GetEXPForLevel(e)
 		5400,
 		6500,
 		7600,
-		8700,
-		9800,
+		8700, 
+		9800, 
 		11000,
 		12300,
 		13600,
@@ -89,11 +89,11 @@ function GetEXPForLevel(e)
 		66200,
 		70200,
 		74300,
-		78500,
-		82800,
-		87100,
-		91600,
-		96300,
+		78500,	
+		82800,	
+		87100,	
+		91600,	
+		96300,	
 		101000,
 		105800,
 		110700,
@@ -140,13 +140,13 @@ function GetEXPForLevel(e)
 		27300000,
 		32800000
 	};
-
+	
 	if(e.level < 1) then
 		e.ReturnValue = 0;
 		e.IgnoreDefault = true;
 		return e;
 	end
-
+	
 	if(e.level > 91) then
 		e.ReturnValue = exp_table[91];
 		e.IgnoreDefault = true;

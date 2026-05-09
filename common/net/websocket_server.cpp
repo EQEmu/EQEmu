@@ -69,7 +69,7 @@ EQ::Net::WebsocketServer::WebsocketServer(const std::string &addr, int port)
 		if (iter != _impl->connections.end()) {
 			iter->second->GetTCPConnection()->Write(data, size);
 		}
-
+		
 		return websocketpp::lib::error_code();
 	});
 
@@ -95,7 +95,7 @@ EQ::Net::WebsocketServer::WebsocketServer(const std::string &addr, int port)
 	_impl->login_handler = [](const WebsocketServerConnection* connection, const std::string& user, const std::string& pass) {
 		WebsocketLoginStatus ret;
 		ret.account_name = "admin";
-
+		
 		if (connection->RemoteIP() == "127.0.0.1" || connection->RemoteIP() == "::") {
 			ret.logged_in = true;
 			return ret;
@@ -144,8 +144,8 @@ Json::Value EQ::Net::WebsocketServer::HandleRequest(WebsocketServerConnection *c
 void EQ::Net::WebsocketServer::SetMethodHandler(const std::string &method, MethodHandler handler, int required_status)
 {
 	//Reserved method names
-	if (method == "subscribe" ||
-		method == "unsubscribe" ||
+	if (method == "subscribe" || 
+		method == "unsubscribe" || 
 		method == "login") {
 		return;
 	}
@@ -190,7 +190,7 @@ Json::Value EQ::Net::WebsocketServer::Login(WebsocketServerConnection *connectio
 
 		auto user = params[0].asString();
 		auto pass = params[1].asString();
-
+		
 		auto r = _impl->login_handler(connection, user, pass);
 
 		if (r.logged_in) {

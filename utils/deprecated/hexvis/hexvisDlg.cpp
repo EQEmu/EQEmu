@@ -137,9 +137,9 @@ BOOL CHexvisDlg::OnInitDialog()
 	//  when the application's main window is not a dialog
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
-
+	
 	m_packetBody.SetEventMask(m_packetBody.GetEventMask() | ENM_UPDATE | ENM_SELCHANGE);
-
+	
 	CHARFORMAT cf;
 	cf.cbSize = sizeof(cf);
 	cf.dwMask = CFM_FACE;
@@ -147,7 +147,7 @@ BOOL CHexvisDlg::OnInitDialog()
 	m_packetBody.SetDefaultCharFormat(cf);
 
 	m_packetBody.parent = this;
-
+	
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
@@ -168,7 +168,7 @@ void CHexvisDlg::OnSysCommand(UINT nID, LPARAM lParam)
 //  to draw the icon.  For MFC applications using the document/view model,
 //  this is automatically done for you by the framework.
 
-void CHexvisDlg::OnPaint()
+void CHexvisDlg::OnPaint() 
 {
 	if (IsIconic())
 	{
@@ -203,7 +203,7 @@ HCURSOR CHexvisDlg::OnQueryDragIcon()
 void CHexvisDlg::OnProcess() {
 	CString packet;
 	m_packetBody.GetWindowText(packet);
-
+	
 	m_offsetStart = -1;
 	m_digits.clear();
 	m_digits.reserve(packet.GetLength()/3);
@@ -211,7 +211,7 @@ void CHexvisDlg::OnProcess() {
 
 	m_processed = false;
 
-
+	
 	int linelen;
 	const char *start = packet.GetBuffer(0);
 	const char *cur = start;
@@ -312,7 +312,7 @@ void CHexvisDlg::DisplayDigits() {
 	m_packetBody.SetSel(0, -1);
 	m_packetBody.SetSelectionCharFormat(cf);*/
 
-
+	
 	/*CHARFORMAT cf;
 	cf.cbSize = sizeof(cf);
 	cf.dwMask = CFM_COLOR;
@@ -326,7 +326,7 @@ void CHexvisDlg::DisplayDigits() {
 	/*
 	CHARFORMAT cf;
 	cf.cbSize = sizeof(cf);
-
+	
 	cf.cbSize = sizeof(CHARFORMAT);
 	cf.dwMask = CFM_BOLD|CFM_COLOR|CFM_ITALIC|CFM_STRIKEOUT|CFM_UNDERLINE;
 	cf.dwEffects = 0;
@@ -340,7 +340,7 @@ void CHexvisDlg::DisplayDigits() {
 	if(f.strikethrough)
 		cf.dwEffects |= CFE_STRIKEOUT;
 	//f.inverse
-
+	
 	cf.crTextColor = lt_colors[(f.bold?10:0) + f.color_index];
 	//bg_color_index
 
@@ -353,7 +353,7 @@ void CHexvisDlg::ProcessLine(const char *line, int len) {
 	int numlen = 0;
 	bool maybe_hex = false;
 	bool found_offset = false;
-
+	
 	for(; len > 0; len--, line++) {
 		switch(*line) {
 		case 'a':
@@ -539,8 +539,8 @@ void CHexvisDlg::AnalyzeBytes(int byte) {
 	if(maxlen >= sizeof(long)) {
 		const unsigned long *le = (const unsigned long *) bptr;
 		signed long sle = *le;
-		unsigned long be =
-			  ((*le & 0x000000FF) <<24)
+		unsigned long be = 
+			  ((*le & 0x000000FF) <<24) 
 			| ((*le & 0x0000FF00L)<<8)
 			| ((*le & 0x00FF0000L)>>8)
 			| ((*le & 0xFF000000L)>>24)
@@ -552,7 +552,7 @@ void CHexvisDlg::AnalyzeBytes(int byte) {
 
 		s.Format("0x%08lX = %ld = %lu", be, sbe, be);
 		m_long_be.SetWindowText(s);
-
+		
 		std::string tt;
 		time_t t = *le;
 		const char *p = ctime(&t);
@@ -590,8 +590,8 @@ void CHexvisDlg::AnalyzeBytes(int byte) {
 	if(maxlen >= sizeof(__int64)) {
 		const unsigned __int64 *le = (const unsigned __int64 *) bptr;
 		signed __int64 sle = *le;
-		unsigned __int64 be =
-			  ((*le & 0x00000000000000FF)<<56)
+		unsigned __int64 be = 
+			  ((*le & 0x00000000000000FF)<<56) 
 			| ((*le & 0x000000000000FF00)<<40)
 			| ((*le & 0x0000000000FF0000)<<24)
 			| ((*le & 0x00000000FF000000)<<8)
@@ -614,23 +614,23 @@ void CHexvisDlg::AnalyzeBytes(int byte) {
 
 }
 
-void CHexvisDlg::OnUpdatePacketBody()
+void CHexvisDlg::OnUpdatePacketBody() 
 {
 	// TODO: If this is a RICHEDIT control, the control will not
 	// send this notification unless you override the CDialog::OnInitDialog()
 	// function to send the EM_SETEVENTMASK message to the control
 	// with the ENM_UPDATE flag ORed into the lParam mask.
-
+	
 	// TODO: Add your control notification handler code here
 }
 
-void CHexvisDlg::OnSelchangePacketBody(NMHDR* pNMHDR, LRESULT* pResult)
+void CHexvisDlg::OnSelchangePacketBody(NMHDR* pNMHDR, LRESULT* pResult) 
 {
 	SELCHANGE *pSelChange = reinterpret_cast<SELCHANGE *>(pNMHDR);
 	// TODO: The control will not send this notification unless you override the
 	// CDialog::OnInitDialog() function to send the EM_SETEVENTMASK message
 	// to the control with the ENM_SELCHANGE flag ORed into the lParam mask.
-
+	
 	static int line_mid = 3*8;
 	static int ascii_start = 3*16 + 3;
 	static int ascii_end = 3*16 + 5 + 16;
@@ -676,7 +676,7 @@ void CHexvisDlg::OnSelchangePacketBody(NMHDR* pNMHDR, LRESULT* pResult)
 				int seloffset = lstart + 3*coffset;
 				if(coffset >= 8)
 					seloffset += 2;
-
+				
 
 				//they have selected byte 'abscoffset'
 				AnalyzeBytes(abscoffset);
@@ -686,7 +686,7 @@ void CHexvisDlg::OnSelchangePacketBody(NMHDR* pNMHDR, LRESULT* pResult)
 			}
 		}
 	}
-
+	
 	*pResult = 0;
 }
 
@@ -714,7 +714,7 @@ void CHexvisDlg::SelectByte(int byte) {
 	m_packetBody.SetSel(seloffset, seloffset + 2);
 }
 
-void CHexvisDlg::OnClear()
+void CHexvisDlg::OnClear() 
 {
 	m_processed = false;
 	m_activeByte = -1;
@@ -745,7 +745,7 @@ static __int64 _strtoll(char *str)
 }
 
 
-void CHexvisDlg::OnFindNumber()
+void CHexvisDlg::OnFindNumber() 
 {
 	if(!m_processed || m_digits.empty())
 		return;
@@ -771,7 +771,7 @@ void CHexvisDlg::OnFindNumber()
 		eval = sval;
 		sval++;
 	}
-
+	
 	m_status.SetWindowText("Searching...");
 
 	bool found = false;
@@ -850,8 +850,8 @@ bool CHexvisDlg::FindNumber(int byte, const FindSpec *f) {
 	if(maxlen >= sizeof(long)) {
 		const unsigned long *le = (const unsigned long *) bptr;
 		signed long sle = *le;
-		unsigned long be =
-			  ((*le & 0x000000FF) <<24)
+		unsigned long be = 
+			  ((*le & 0x000000FF) <<24) 
 			| ((*le & 0x0000FF00L)<<8)
 			| ((*le & 0x00FF0000L)>>8)
 			| ((*le & 0xFF000000L)>>24)
@@ -880,7 +880,7 @@ bool CHexvisDlg::FindNumber(int byte, const FindSpec *f) {
 		}
 	}
 
-
+	
 	if(f->fval != 0.0f && maxlen >= sizeof(float)) {
 		const float *fv = (const float *) bptr;
 
@@ -918,8 +918,8 @@ bool CHexvisDlg::FindNumber(int byte, const FindSpec *f) {
 	if(maxlen >= sizeof(__int64)) {
 		const unsigned __int64 *le = (const unsigned __int64 *) bptr;
 		signed __int64 sle = *le;
-		unsigned __int64 be =
-			  ((*le & 0x00000000000000FF)<<56)
+		unsigned __int64 be = 
+			  ((*le & 0x00000000000000FF)<<56) 
 			| ((*le & 0x000000000000FF00)<<40)
 			| ((*le & 0x0000000000FF0000)<<24)
 			| ((*le & 0x00000000FF000000)<<8)
@@ -929,7 +929,7 @@ bool CHexvisDlg::FindNumber(int byte, const FindSpec *f) {
 			| ((*le & 0xFF00000000000000)>>56)
 			;
 		signed __int64 sbe = be;
-
+		
 		if(*le == f->intval) {
 			m_status.SetWindowText("Found as a native int64");
 			_findDebug();
@@ -984,20 +984,20 @@ void CHexvisDlg::NextLine() {
 		SelectByte(max-1);
 }
 
-void CHexvisDlg::OnLoadFile()
+void CHexvisDlg::OnLoadFile() 
 {
-	CFileDialog *fileopendialog = new CFileDialog( true, NULL, NULL,
-		OFN_HIDEREADONLY ,
+	CFileDialog *fileopendialog = new CFileDialog( true, NULL, NULL, 
+		OFN_HIDEREADONLY , 
 		"Any Raw File (*.*)|*.*||", this );
 
 	if ( fileopendialog->DoModal() == IDOK ) {
 		HANDLE hFile;
-		hFile = CreateFile(fileopendialog->GetPathName(),
+		hFile = CreateFile(fileopendialog->GetPathName(), 
                      GENERIC_READ,
-                     FILE_SHARE_READ,
+                     FILE_SHARE_READ, 
                      NULL,
-                     OPEN_EXISTING,
-                     FILE_ATTRIBUTE_NORMAL,
+                     OPEN_EXISTING, 
+                     FILE_ATTRIBUTE_NORMAL, 
                      NULL);
 		if(hFile == INVALID_HANDLE_VALUE) {
 			m_status.SetWindowText("Failed to open file.");
@@ -1021,19 +1021,19 @@ void CHexvisDlg::OnLoadFile()
 		}
 
 		CloseHandle(hFile);
-
+		
 		DisplayDigits();
-
+		
 		m_processed = true;
-
+		
 		//this will trigger the sel change
 		m_packetBody.SetSel(8, 9);
-
+		
 		m_status.SetWindowText("Press clear to process another block");
 	}
 }
 
-void CHexvisDlg::OnCopyToClip()
+void CHexvisDlg::OnCopyToClip() 
 {
 	bool v = m_processed;
 	if(v) {

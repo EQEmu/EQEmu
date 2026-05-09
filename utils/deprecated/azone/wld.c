@@ -31,7 +31,7 @@ FRAGMENT_FUNC(Data03) {
 #ifdef FRAG_DEBUG
   printf("Data03: %p %p\n", obj, *obj);
 #endif
-
+  
   pos = sizeof(long);
   for(i = 0; i < tex->count; ++i) {
     nameLen = *((short *) (buf + pos));
@@ -56,7 +56,7 @@ FRAGMENT_FUNC(Data04) {
 #ifdef FRAG_DEBUG
   printf("Data04: %p %p\n", obj, *obj);
 #endif
-
+  
   flags = *((long *) buf);
   pos = sizeof(long) * 2;
   if(flags & (1 << 2))
@@ -104,7 +104,7 @@ FRAGMENT_FUNC(Data15) {
   }
 
   free(name);
-
+  
   place->trans[0] = hdr->trans[0];
   place->trans[1] = hdr->trans[1];
   place->trans[2] = hdr->trans[2];
@@ -154,10 +154,10 @@ FRAGMENT_FUNC(Data21) {
 }
 
 FRAGMENT_FUNC(Data22) {
-
+ 
   int pos;
 
-  uchar *data6area ;
+  uchar *data6area ; 
 
   struct_Data22 *data = (struct_Data22 *) buf;
 
@@ -165,7 +165,7 @@ FRAGMENT_FUNC(Data22) {
     return -1;
 
   pos = sizeof(struct_Data22) + (12 * data->size1) + (8 * data->size2);
-
+ 
   // Derision: We don't need any of the data from this fragment for determining the water/lava
   // areas, however I left the following code here for possible future use.
   // The four floats are the x,y,z of the centre of the region and the max distance of any point
@@ -186,7 +186,7 @@ FRAGMENT_FUNC(Data22) {
   f3 = *((float *) (data6area+8));
   f4 = *((float *) (data6area+12));
   //if(data->flags==0x181) printf("Frag 36 reference?: %ld\n", *((long *) (data6area+20)));
-
+  
 
   return 0;
 }
@@ -194,7 +194,7 @@ FRAGMENT_FUNC(Data22) {
 FRAGMENT_FUNC(Data29) {
 
 	long  a,flags, numregions, lenstr;
-
+  
 	struct_Data29 *data29 = (struct_Data29 *) malloc(sizeof(struct_Data29));
 
 	*obj = (void *) data29;
@@ -214,13 +214,13 @@ FRAGMENT_FUNC(Data29) {
 		return 0 ;
 	}
 	data29->str = (char *)malloc(lenstr);
-
+	
 	char *encstr;
 
 	encstr =  buf+8+(++a*4);
 	decode(encstr, lenstr);
 	strcpy(data29->str, encstr);
-	if(lenstr>=2)
+	if(lenstr>=2) 
 		if(!strncmp(encstr,"WT",2)) data29->region_type = 1; // Water
 		else if(!strncmp(encstr,"LA",2)) data29->region_type = 2; // Lava
 		else if(!strncmp(encstr,"DR",2)) data29->region_type = 3; // Zone Line ?
@@ -270,7 +270,7 @@ FRAGMENT_FUNC(Data31) {
 #ifdef FRAG_DEBUG
   printf("Data31: %p %p\n", obj, *obj);
 #endif
-
+  
   pos = sizeof(long) * 2;
 
   for(i = 0; i < tex->count; ++i) {
@@ -459,7 +459,7 @@ int WLD_GetZoneMesh(wld_object *obj, ZoneMesh *mesh) {
 
 	if(temp != NULL)
 	  mesh->tex = temp->tex;
-
+  
   for(i = 0; i < obj->fragCount; ++i) {
     if(obj->frags[i]->type != 0x36)
       continue;

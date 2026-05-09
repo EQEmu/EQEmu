@@ -68,43 +68,43 @@ void Client::SendPathPacket(const std::vector<FindPerson_Point> &points) {
 			if (Admin() > AccountStatus::Steward) {
 				Message(Chat::System, "Too few points");
 			}
-
+		
 			EQApplicationPacket outapp(OP_FindPersonReply, 0);
 			QueuePacket(&outapp);
 			return;
 		}
-
+		
 		if (points.size() > 36) {
 			if (Admin() > AccountStatus::Steward) {
 				Message(Chat::System, "Too many points %u", points.size());
 			}
-
+		
 			EQApplicationPacket outapp(OP_FindPersonReply, 0);
 			QueuePacket(&outapp);
 			return;
 		}
-
+		
 		if (Admin() > AccountStatus::Steward) {
 			Message(Chat::System, "Total points %u", points.size());
 		}
-
+		
 		int len = sizeof(FindPersonResult_Struct) + (points.size() + 1) * sizeof(FindPerson_Point);
 		auto outapp = new EQApplicationPacket(OP_FindPersonReply, len);
 		FindPersonResult_Struct* fpr = (FindPersonResult_Struct*)outapp->pBuffer;
-
+		
 		std::vector<FindPerson_Point>::iterator cur, end;
 		cur = points.begin();
 		end = points.end();
 		unsigned int r;
 		for (r = 0; cur != end; ++cur, r++) {
 			fpr->path[r] = *cur;
-
+		
 		}
 		//put the last element into the destination field
 		--cur;
 		fpr->path[r] = *cur;
 		fpr->dest = *cur;
-
+		
 		FastQueuePacket(&outapp);
 	})
 	.Run();

@@ -28,7 +28,7 @@ class TaskScheduler
 public:
 	TaskScheduler();
 	TaskScheduler(size_t threads);
-
+			
 	~TaskScheduler();
 
 	void Start(size_t threads);
@@ -45,7 +45,7 @@ public:
 				return fn(std::forward<Args>(args)...);
 			}
 		);
-
+			
 		AddTask([task] { (*task)(); });
 		return task->get_future();
 	}
