@@ -14,12 +14,12 @@ perl utils/scripts/build/tag-version.pl
 
 mkdir -p build && cd build && \
   cmake -DEQEMU_BUILD_TESTS=ON \
-      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+      -DCMAKE_BUILD_TYPE=Release \
       -DEQEMU_BUILD_STATIC=ON \
       -DEQEMU_BUILD_LOGIN=ON \
       -DEQEMU_BUILD_LUA=ON \
       -DEQEMU_BUILD_PERL=ON \
-      -DCMAKE_CXX_FLAGS_RELWITHDEBINFO:STRING="-g -Wno-everything" \
+      -DCMAKE_CXX_FLAGS_RELEASE:STRING="-g -Wno-everything" \
       -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
       -G 'Unix Makefiles' \
       .. && make -j$((`nproc`-2))
