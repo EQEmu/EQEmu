@@ -91,7 +91,7 @@ OrientedBoundingBox::OrientedBoundingBox(const glm::vec3 &pos, const glm::vec3 &
 
 	//rotate
 	transformation = CreateRotateMatrix(rot.x * 3.14159f / 180.0f, rot.y * 3.14159f / 180.0f, rot.z * 3.14159f / 180.0f);
-	
+
 	//scale
 	transformation = CreateScaleMatrix(scale.x, scale.y, scale.z) * transformation;
 
@@ -109,6 +109,6 @@ bool OrientedBoundingBox::ContainsPoint(const glm::vec3 &p) const {
 		box_space_p.z >= min_z && box_space_p.z <= max_z) {
 		return true;
 	}
-	
+
 	return false;
 }

@@ -48,13 +48,13 @@ col5 = '{0}'.format(' ' * 8)
 
 def main():
     """ main """
-    
+
     if not create_output_directory():
         exit()
-    
+
     if not open_output_files():
         exit()
-    
+
     print 'Locating project paths...'
     locate_project_paths()
     print '..project count: {0}'.format(len(project_paths))
@@ -67,29 +67,29 @@ def main():
     check_for_version_discrepancies()
     close_output_files()
     print '\n__fin__'
-    
+
     return
 
 
 def create_output_directory():
     """ Check for output directory - create if does not exist """
-    
+
     try:
         output_path = '{0}/utils/scripts/vcxproj_dependencies_output'.format(base_path)
         if not os.path.exists(output_path):
             os.mkdir(output_path)
-        
+
         return True
-    
+
     except IOError:
         print('(Exception Error: {0}) create_output_directory()'.format(sys.exc_info()[0]))
-        
+
         return False
 
 
 def open_output_files():
     """ Open all output files """
-    
+
     try:
         file_name = '{0}/utils/scripts/vcxproj_dependencies_output/ProjectPaths.txt'.format(base_path)
         out_files['ProjectPaths'] = open(file_name, 'w')
@@ -104,19 +104,19 @@ def open_output_files():
         for file in out_files:
             out_files[file].write('>> \'VCXProj-Dependencies\' {0} file\n'.format(file))
             out_files[file].write('>> file generated @ {0}\n\n'.format(ctime(time())))
-        
+
         return True
-    
+
     except IOError:
         print('(Exception Error: {0}) open_output_files()'.format(sys.exc_info()[0]))
         close_output_files()
-        
+
         return False
 
 
 def locate_project_paths():
     """ Locate vcxproj files in the build folder """
-    
+
     for root, dirs, files in os.walk('{0}/build'.format(base_path)):
         for name in files:
             project = name.split('.')[0]
@@ -129,13 +129,13 @@ def locate_project_paths():
                     project_paths.append(os.path.join(root, name).replace('\\', '/').lower())
     for path in project_paths:
         out_files['ProjectPaths'].write('{0};\n'.format(path))
-    
+
     return
 
 
 def fixup_path(project_path, dependency_path):
     """ Fix-up malformed dependency paths """
-    
+
     trailing = dependency_path.replace('\\', '/')
     if '../' in trailing:
         if trailing[:3] == '../':  # windows
@@ -154,13 +154,13 @@ def fixup_path(project_path, dependency_path):
             trailing = trailing.lower()
     else:
         trailing = trailing.lower()
-    
+
     return trailing
 
 
 def parse_project_files():
     """ Parse each vcxproj file's xml data """
-    
+
     for key1 in project_paths:
         with open(key1, 'r') as vcxproj_file:
             project_dependencies[key1] = {}
@@ -219,20 +219,20 @@ def parse_project_files():
                                 for path in paths:
                                     project_dependencies[key1][key2][key3][key4].append(fixup_path(key1, path))
         vcxproj_file.close()
-    
+
     return
 
 
 def build_master_dependencies():
     """ Build master dependencies list """
-    
+
     def write(message):
         """ internal 'ProjectDependencies' write method - performed here so processing takes place after fix-up """
-        
+
         out_files['ProjectDependencies'].write('{0}\n'.format(message))
-        
+
         return
-    
+
     for key1 in project_dependencies:
         write('{0}<Project Path="{1}">'.format(col1, key1))
         for key2 in project_dependencies[key1]:
@@ -252,27 +252,27 @@ def build_master_dependencies():
     master_dependencies.sort()
     for path in master_dependencies:
         out_files['MasterDependencies'].write('{0}\n'.format(path))
-    
+
     return
 
 
 def check_for_version_discrepancies():
     """ Check for dependency version discrepancies """
-    
+
     def twrite(message):
         """ internal 'ContextTree' write method """
-        
+
         out_files['ContextTree'].write('{0}\n'.format(message))
-        
+
         return
-    
+
     def rwrite(message):
         """ internal 'DiscrepancyReport' write method """
-        
+
         out_files['DiscrepancyReport'].write('{0}\n'.format(message))
-        
+
         return
-    
+
     libraries = [
         'mysql',
         'zlib',
@@ -698,42 +698,42 @@ def check_for_version_discrepancies():
                                             build
                                         )
                                     )
-    
+
     return
 
 
 def find_hint_in_path(hint, path):
     """
     Helper function for parsing and checking for hints in paths
-    
+
     Hints strings should be split ('|') and passed as a singular hint into this function
-    
+
     """
-    
+
     if hint == '' or path == '':
         return -1
-    
+
     joined_index = hint.find('##')
     pretext_index = hint.find('&&')
     if joined_index == -1 and pretext_index == -1:
         if '^' in hint or '@' in hint:
             print '..malformed or improper handling of hint: \'{0}\' path: \'{1}\''.format(hint, path)
-            
+
             return -1
-        
+
         explicit_index = hint.find('!!')
         if explicit_index == -1:
             return path.find(hint)
-        
+
         else:
             explicit_hint = hint[:explicit_index]
             found_index = path.find(explicit_hint)
             if (len(explicit_hint) + found_index) == len(path):
                 return found_index
-        
+
             else:
                 return -1
-    
+
     elif (not joined_index == -1 and pretext_index == -1) or\
             (not joined_index == -1 and not pretext_index == -1 and joined_index < pretext_index):
         start_index = 0
@@ -743,11 +743,11 @@ def find_hint_in_path(hint, path):
             found_index = find_hint_in_path(partial_hint, path[start_index:])
             if found_index == -1:
                 return found_index
-            
+
             start_index = found_index + len(partial_hint)
-        
+
         return start_index
-    
+
     elif (joined_index == -1 and not pretext_index == -1) or\
             (not joined_index == -1 and not pretext_index == -1 and joined_index > pretext_index):
         pretext_hints = hint.split('&&', 1)
@@ -756,7 +756,7 @@ def find_hint_in_path(hint, path):
             found_index = find_hint_in_path(pretext_hints[0], path)
             if found_index == -1:
                 return found_index
-        
+
         start_index = found_index + len(pretext_hints[0])
         partial_hints = pretext_hints[1].split('@', 1)
         for partial_hint in partial_hints:
@@ -771,21 +771,21 @@ def find_hint_in_path(hint, path):
                         print '..unhandled hint method: \'{0}\''.format(partial_hints[1])
                     else:
                         return found_index
-        
+
         return -1
-        
+
     else:
         return -1
 
 
 def close_output_files():
     """ Close all output files """
-    
+
     while not len(out_files) == 0:
         key = out_files.keys()[0]
         out_files[key].close()
         del out_files[key]
-    
+
     return
 
 

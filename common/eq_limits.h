@@ -40,7 +40,7 @@ namespace EQ
 			int16 CharacterCreationLimit;
 			size_t SayLinkBodySize;
 			uint32 BazaarTraderLimit;
-			
+
 			LookupEntry(const LookupEntry *lookup_entry) { }
 			LookupEntry(
 				EQ::expansions::Expansion Expansion,
@@ -67,7 +67,7 @@ namespace EQ
 		const LookupEntry* StaticLookup(versions::ClientVersion client_version);
 
 	} /*constants*/
-	
+
 	namespace inventory {
 		struct LookupEntry {
 			// note: 'PossessionsBitmask' needs to be attuned to the client version with the highest number
@@ -165,7 +165,7 @@ namespace EQ
 		const LookupEntry* StaticLookup(versions::MobVersion mob_version);
 
 	} /*inventory*/
-	
+
 	namespace behavior {
 		struct LookupEntry {
 			bool CoinHasWeight;
@@ -200,7 +200,7 @@ namespace EQ
 			int NPCBuffs;
 			int PetBuffs;
 			int MercBuffs;
-			
+
 			LookupEntry(const LookupEntry *lookup_entry) { }
 			LookupEntry(
 				int SpellIdMax,
@@ -226,9 +226,9 @@ namespace EQ
 				MercBuffs(MercBuffs)
 			{ }
 		};
-		
+
 		void InitializeDynamicLookups();
-		
+
 		const LookupEntry* DynamicLookup(versions::ClientVersion client_version, bool gm_flag);
 		const LookupEntry* DynamicNonGMLookup(versions::ClientVersion client_version);
 		const LookupEntry* DynamicGMLookup(versions::ClientVersion client_version);

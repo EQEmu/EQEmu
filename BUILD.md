@@ -25,7 +25,7 @@ For Linux you simply can install the dependencies from your package manager, bel
 ### Running CMake
 
 ##### Windows
-The following is a modified command our automated build server uses to run CMake via the release vcpkg export and its toolchain file. 
+The following is a modified command our automated build server uses to run CMake via the release vcpkg export and its toolchain file.
 
 	mkdir build
 	cd build
@@ -46,7 +46,7 @@ Inside the build directory a file EQEmu.sln should be produced by a successful r
 	msbuild EQEmu.sln /p:Configuration=Release
 
 ##### Linux
-From the build directory you can simply call make to build.  
+From the build directory you can simply call make to build.
 
 For example.
 

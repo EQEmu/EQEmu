@@ -154,7 +154,7 @@
 	p->SetOpcode(OP_Unknown);
 
 #define FINISH_VAR_DECODE() \
-	delete[] __eq_buffer; 
+	delete[] __eq_buffer;
 
 //call to finish an encoder using SETUP_DIRECT_DECODE
 #define FINISH_DIRECT_DECODE() \

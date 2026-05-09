@@ -200,7 +200,7 @@ void bot_command_cast(Client* c, const Seperator* sep)
 			aa_id = Strings::ToInt(arg2);
 		}
 
-		aa_type = true;		
+		aa_type = true;
 	}
 
 	if (!arg1.compare("spellid")) {
@@ -375,9 +375,9 @@ void bot_command_cast(Client* c, const Seperator* sep)
 			case BotSpellTypes::Resurrect:
 				if (!tar->IsCorpse() || !tar->CastToCorpse()->IsPlayerCorpse()) {
 					c->Message(
-						Chat::Yellow, 
+						Chat::Yellow,
 						fmt::format(
-							"[{}] is not a player's corpse.", 
+							"[{}] is not a player's corpse.",
 							tar->GetCleanName()
 						).c_str()
 					);
@@ -394,7 +394,7 @@ void bot_command_cast(Client* c, const Seperator* sep)
 					c->Message(
 						Chat::Yellow,
 						fmt::format(
-							"[{}] is an invalid target. Only players in your group or raid are eligible targets.", 
+							"[{}] is an invalid target. Only players in your group or raid are eligible targets.",
 							tar->GetCleanName()
 						).c_str()
 					);
@@ -418,7 +418,7 @@ void bot_command_cast(Client* c, const Seperator* sep)
 					c->Message(
 						Chat::Yellow,
 						fmt::format(
-							"You cannot attack [{}].", 
+							"You cannot attack [{}].",
 							tar->GetCleanName()
 						).c_str()
 					);

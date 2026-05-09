@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Variables
 ROOT_PASSWORD="eqemu"
 MARIADB_CONFIG="/etc/mysql/mariadb.conf.d/50-server.cnf"

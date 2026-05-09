@@ -33,7 +33,7 @@
 #include <boost/mpl/or.hpp>
 #include <boost/preprocessor/repeat.hpp>
 #include <boost/preprocessor/iteration/iterate.hpp>
-#include <boost/preprocessor/repetition/enum.hpp> 
+#include <boost/preprocessor/repetition/enum.hpp>
 #include <boost/preprocessor/repetition/enum_params.hpp>
 #include <boost/preprocessor/repetition/enum_binary_params.hpp>
 #include <boost/preprocessor/punctuation/comma_if.hpp>
@@ -123,11 +123,11 @@ namespace luabind
 					{
 						assert(lua_gettop(L) == top - m_params + 1);
 #ifndef LUABIND_NO_EXCEPTIONS
-						throw luabind::error(L); 
+						throw luabind::error(L);
 #else
 						error_callback_fun e = get_error_callback();
 						if (e) e(L);
-	
+
 						assert(0 && "the lua function threw an error and exceptions are disabled."
 								" If you want to handle the error you can use luabind::set_error_callback()");
 						std::terminate();
@@ -170,14 +170,14 @@ namespace luabind
 
 					detail::push_args_from_tuple<1>::apply(L, m_args, p);
 					if (m_fun(L, boost::tuples::length<Tuple>::value, 1))
-					{ 
+					{
 						assert(lua_gettop(L) == top - m_params + 1);
 #ifndef LUABIND_NO_EXCEPTIONS
 						throw error(L);
 #else
 						error_callback_fun e = get_error_callback();
 						if (e) e(L);
-	
+
 						assert(0 && "the lua function threw an error and exceptions are disabled."
 								" If you want to handle the error you can use luabind::set_error_callback()");
 						std::terminate();
@@ -267,7 +267,7 @@ namespace luabind
 #else
 						error_callback_fun e = get_error_callback();
 						if (e) e(L);
-	
+
 						assert(0 && "the lua function threw an error and exceptions are disabled."
 								" If you want to handle the error you can use luabind::set_error_callback()");
 						std::terminate();
@@ -294,7 +294,7 @@ namespace luabind
 #else
 						error_callback_fun e = get_error_callback();
 						if (e) e(L);
-	
+
 						assert(0 && "the lua function threw an error and exceptions are disabled."
 							" If you want to handle the error you can use luabind::set_error_callback()");
 						std::terminate();

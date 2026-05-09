@@ -69,7 +69,7 @@ void WebInterface::OnCall(uint16 opcode, EQ::Net::Packet &p)
 	catch (std::exception &) {
 		params = nullptr;
 	}
-	
+
 	//optional "id" needs to be string
 	try {
 		id = root["id"].asString();

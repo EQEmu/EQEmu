@@ -28,7 +28,7 @@
 #include <boost/mpl/aux_/msvc_eti_base.hpp>
 
 #ifdef BOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION
-# define LUABIND_USE_VALUE_WRAPPER_TAG 
+# define LUABIND_USE_VALUE_WRAPPER_TAG
 #else
 #endif
 
@@ -53,9 +53,9 @@ namespace luabind {
 #ifdef LUABIND_USE_VALUE_WRAPPER_TAG
 template<class T>
 struct value_wrapper_traits;
-    
-namespace detail 
-{ 
+
+namespace detail
+{
 
   BOOST_MPL_HAS_XXX_TRAIT_DEF(value_wrapper_tag);
 
@@ -135,7 +135,7 @@ namespace detail
 {
   template<class T>
   typename is_value_wrapper<T>::type is_value_wrapper_arg_check(T const*);
-  
+
   yes_t to_yesno(boost::mpl::true_);
   no_t to_yesno(boost::mpl::false_);
 
@@ -144,7 +144,7 @@ namespace detail
   {
       static typename boost::add_reference<T>::type x;
 
-      BOOST_STATIC_CONSTANT(bool, value = 
+      BOOST_STATIC_CONSTANT(bool, value =
           sizeof(to_yesno(is_value_wrapper_arg_check(&x)))
             == sizeof(yes_t)
       );

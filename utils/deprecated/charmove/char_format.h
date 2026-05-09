@@ -8,7 +8,7 @@
 #pragma pack(1)
 struct CharHeader {
 	uint32 char_magic;
-	
+
 	//character_ data
 	char name[64];
 	float x;
@@ -18,19 +18,19 @@ struct CharHeader {
 	uint16 zone_id;
 	uint32 profile_length;
 	uint32 extprofile_length;
-	
+
 	//faction_values
 	uint32 faction_value_count;
-	
+
 	//inventory
 	uint32 inventory_count;
-	
+
 	//sharedbank
 	uint32 sharedbank_count;
-	
+
 	//quest_globals
 	uint32 quest_globals_count;
-	
+
 	/*
 	Variable length fields:
 	byte PlayerProfile[profile_length];
@@ -39,7 +39,7 @@ struct CharHeader {
 	InventoryEntry inventory[inventory_count];
 	InventoryEntry sharedbank[sharedbank_count];
 	QuestGlobalEntry quest_globals[quest_globals_count];
-	
+
 	*/
 };
 
@@ -65,7 +65,7 @@ struct QuestGlobalEntry {
 	char	value[66];
 	sint32	expdate;
 };
-  
+
 
 #pragma pack()
 

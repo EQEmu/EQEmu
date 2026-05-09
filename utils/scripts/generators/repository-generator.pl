@@ -8,14 +8,17 @@
 # modules
 #############################################
 use warnings FATAL => 'all';
-no warnings 'experimental::smartmatch';
-use experimental 'smartmatch';
 use File::Find;
 use Data::Dumper;
 use DBI;
 use DBD::mysql;
 use JSON;
 my $json = new JSON();
+
+sub in_list {
+    my ($needle, $haystack) = @_;
+    return scalar grep { $_ eq $needle } @{$haystack};
+}
 
 if (!$ARGV[0]) {
     print "\@example      perl ~/code/utils/scripts/generators/repository-generator.pl ~/server/ [table|all] [base|extended|all]\n";
@@ -152,18 +155,18 @@ foreach my $table_to_generate (@tables) {
     );
 
     foreach my $category (@categories) {
-        if ($table_to_generate ~~ $database_schema->{$category}) {
+        if (in_list($table_to_generate, $database_schema->{$category})) {
             $table_found_in_schema = 1;
         }
     }
 
-    if ($table_to_generate ~~ @table_ignore_list) {
+    if (in_list($table_to_generate, \@table_ignore_list)) {
         print "Table [$table_to_generate] is on ignore list... skipping...\n";
         $table_found_in_schema = 0;
     }
 
     my $cereal_enabled = 0;
-    if ($table_to_generate ~~ @cereal_enabled_tables) {
+    if (in_list($table_to_generate, \@cereal_enabled_tables)) {
         $cereal_enabled = 1;
     }
 
@@ -425,7 +428,7 @@ foreach my $table_to_generate (@tables) {
     my $primary_key         = ($table_primary_key{$table_to_generate} ? $table_primary_key{$table_to_generate} : "");
     my $database_connection = "database";
 
-    if ($table_to_generate ~~ $database_schema->{"content_tables"}) {
+    if (in_list($table_to_generate, $database_schema->{"content_tables"})) {
         $database_connection = "content_db";
     }
 

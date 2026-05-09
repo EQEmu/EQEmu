@@ -29,7 +29,7 @@ namespace EQ
 		int8 ConvertEquipmentSlotToTextureIndex(const InventorySlot& inventory_slot);
 		int16 ConvertTextureIndexToEquipmentIndex(int8 texture_index);
 	}
-	
+
 	class InventorySlot {
 	public:
 		InventorySlot() : _type_index(invtype::TYPE_INVALID), _slot_index(invslot::SLOT_INVALID), _container_index(invbag::SLOT_INVALID), _socket_index(invaug::SOCKET_INVALID), _typeless(false) { }

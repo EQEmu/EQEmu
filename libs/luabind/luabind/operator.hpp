@@ -60,7 +60,7 @@ namespace luabind { namespace detail {
         return x;
     }
 #endif
-    
+
 }} // namespace luabind
 
 namespace luabind { namespace operators {
@@ -68,7 +68,7 @@ namespace luabind { namespace operators {
    #define BOOST_PP_ITERATION_PARAMS_1 (3, \
        (0, LUABIND_MAX_ARITY, <luabind/detail/call_operator_iterate.hpp>))
    #include BOOST_PP_ITERATE()
-    
+
 }} // namespace luabind::operators
 
 #include <boost/preprocessor/iteration/local.hpp>
@@ -82,7 +82,7 @@ namespace luabind {
         {
             return 0;
         }
-        
+
 #define BOOST_PP_LOCAL_MACRO(n) \
         template<BOOST_PP_ENUM_PARAMS(n, class A)> \
         BOOST_PP_CAT(operators::call_operator, n)< \
@@ -126,13 +126,13 @@ namespace detail {
     };
 
     template<class Derived, class A, class B>
-    struct binary_operator 
+    struct binary_operator
         : operator_<binary_operator<Derived, A, B> >
     {
         binary_operator(int) {}
 
         template<class T, class Policies>
-        struct apply 
+        struct apply
         {
             typedef typename unwrap_parameter_type<T, A>::type arg0;
             typedef typename unwrap_parameter_type<T, B>::type arg1;
@@ -151,11 +151,11 @@ namespace detail {
     };
 
     template<class Derived, class A>
-    struct unary_operator 
+    struct unary_operator
         : operator_<unary_operator<Derived, A> >
     {
         unary_operator(int) {}
-        
+
         template<class T, class Policies>
         struct apply
         {
@@ -336,7 +336,7 @@ namespace luabind {
 #endif
         return s.str();
     }
-    
+
     LUABIND_UNARY_OPERATOR(tostring, tostring_operator, tostring)
     LUABIND_UNARY_OPERATOR(unm, -, operator-)
 
@@ -348,7 +348,7 @@ namespace luabind {
         LUABIND_ANONYMOUS_FIX const_self_type const_self;
 
     } // namespace unnamed
-    
+
 } // namespace luabind
 
 #endif // OPERATOR_040729_HPP

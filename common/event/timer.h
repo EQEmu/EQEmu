@@ -33,7 +33,7 @@ public:
 
 	Timer(callback_t cb);
 	Timer(uint64_t duration_ms, bool repeats, callback_t cb);
-	
+
 	~Timer();
 
 	void Start(uint64_t duration_ms, bool repeats);
@@ -41,7 +41,7 @@ public:
 
 private:
 	void Execute();
-	
+
 	std::unique_ptr<uv_timer_t> m_timer;
 	callback_t m_cb;
 };

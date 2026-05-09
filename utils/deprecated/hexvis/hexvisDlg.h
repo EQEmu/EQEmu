@@ -69,7 +69,7 @@ protected:
 	void AnalyzeBytes(int byte);
 	void SelectByte(int byte);
 	void build_hex_line(const char *buffer, unsigned long length, unsigned long offset, unsigned char padding);
-	
+
 	typedef struct {
 		unsigned __int64 intval;
 		double dval;

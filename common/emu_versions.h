@@ -66,7 +66,7 @@ namespace EQ
 		const char* ClientVersionName(ClientVersion client_version);
 		uint32 ConvertClientVersionToClientVersionBit(ClientVersion client_version);
 		ClientVersion ConvertClientVersionBitToClientVersion(uint32 client_version_bit);
-		
+
 		enum class MobVersion : uint32 {
 			Unknown = 0,
 			Client62,

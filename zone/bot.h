@@ -96,7 +96,7 @@ namespace BotSettingCategories {
 	constexpr uint8 SpellTypeMinManaPct               = 7;
 	constexpr uint8 SpellTypeMaxManaPct               = 8;
 	constexpr uint8 SpellTypeMinHPPct                 = 9;
-	constexpr uint8 SpellTypeMaxHPPct                 = 10;	
+	constexpr uint8 SpellTypeMaxHPPct                 = 10;
 	constexpr uint8 SpellTypeIdlePriority             = 11;
 	constexpr uint8 SpellTypeEngagedPriority          = 12;
 	constexpr uint8 SpellTypePursuePriority           = 13;
@@ -160,7 +160,7 @@ namespace BotPriorityCategories {
 namespace BotBaseSettings {
 	constexpr uint16 ShowHelm                         = 1;
 	constexpr uint16 FollowDistance                   = 2;
-	constexpr uint16 StopMeleeLevel                   = 3;	
+	constexpr uint16 StopMeleeLevel                   = 3;
 	constexpr uint16 EnforceSpellSettings             = 4;
 	constexpr uint16 RangedSetting                    = 5;
 	constexpr uint16 PetSetTypeSetting                = 6;
@@ -479,7 +479,7 @@ public:
 	void SetCommandedSpell(bool value) { _commandedSpell = value;  }
 	bool IsPullingSpell() const { return _pullingSpell; }
 	void SetPullingSpell(bool value) { _pullingSpell = value; }
-	
+
 	void SetGuardMode();
 	void SetHoldMode();
 
@@ -542,7 +542,7 @@ public:
 	bool IsValidMezTarget(Mob* owner, Mob* npc, uint16 spell_id);
 
 	// Cast checks
-	bool PrecastChecks(Mob* tar, uint16 spell_type);	
+	bool PrecastChecks(Mob* tar, uint16 spell_type);
 	bool CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool prechecks = false, bool ae_check = false);
 	bool IsImmuneToBotSpell(uint16 spell_id, Mob* caster);
 	bool CanCastSpellType(uint16 spell_type, uint16 spell_id, Mob* tar);
@@ -593,7 +593,7 @@ public:
 	void ResetBotSpellSettings();
 
 	void CopyBotBlockedBuffs(Bot* to);
-	void CopyBotBlockedPetBuffs(Bot* to);	
+	void CopyBotBlockedPetBuffs(Bot* to);
 	void CleanBotBlockedBuffs();
 	void ClearBotBlockedBuffs() { bot_blocked_buffs.clear(); }
 	bool IsBlockedBuff(int32 spell_id) override;
@@ -650,7 +650,7 @@ public:
 	bool GetBehindMob() const { return _behindMobStatus; }
 	void SetBehindMob(bool value) { _behindMobStatus = value; }
 	bool GetMaxMeleeRange() const { return _maxMeleeRangeStatus; }
-	void SetMaxMeleeRange(bool value) { _maxMeleeRangeStatus = value; }	
+	void SetMaxMeleeRange(bool value) { _maxMeleeRangeStatus = value; }
 	uint8 GetStopMeleeLevel() const { return _stopMeleeLevel; }
 	void SetStopMeleeLevel(uint8 level) { _stopMeleeLevel = level; }
 	uint32 GetBotDistanceRanged() const { return _distanceRanged; }
@@ -1202,7 +1202,7 @@ private:
 	bool _hasLoS;
 	bool _commandedSpell;
 	bool _pullingSpell;
-	
+
 	bool _illusionBlock;
 	std::vector<BotSpellSettings> m_bot_spell_settings;
 	std::vector<Mob*> _spell_target_list;

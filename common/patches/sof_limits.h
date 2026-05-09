@@ -304,7 +304,7 @@ namespace SoF
 
 	namespace spells {
 		inline EQ::versions::ClientVersion GetSkillsRef() { return EQ::versions::ClientVersion::SoF; }
-		
+
 		enum class CastingSlot : uint32 {
 			Gem1 = 0,
 			Gem2 = 1,
@@ -330,7 +330,7 @@ namespace SoF
 		// - The profile allocation HAS increased to 10 at this point
 		const int SPELL_GEM_COUNT = static_cast<uint32>(CastingSlot::MaxGems);
 		const int SPELL_GEM_PROFILE_SIZE = 10; // special case declaration
-		
+
 		const int LONG_BUFFS = 25;
 		const int SHORT_BUFFS = 15;
 		const int DISC_BUFFS = 1;
