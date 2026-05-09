@@ -923,7 +923,7 @@ void Client::SendAlternateAdvancementRank(int aa_id, int level) {
 		return;
 	}
 
-	if(!(ability->classes & (1 << GetClass()))) {
+	if (!(ability->classes & (GetClassMask() << 1))) {
 		return;
 	}
 
@@ -1570,8 +1570,14 @@ bool Mob::CanUseAlternateAdvancementRank(AA::Rank *rank)
 		return false;
 	}
 
-	if (!(a->classes & (1 << GetClass()))) {
-		return false;
+	if (IsClient()) {
+		if (!(a->classes & (CastToClient()->GetClassMask() << 1))) {
+			return false;
+		}
+	} else {
+		if (!(a->classes & (1 << GetClass()))) {
+			return false;
+		}
 	}
 
 	// Passive and Active Shroud AAs, skip for now
