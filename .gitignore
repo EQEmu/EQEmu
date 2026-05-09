@@ -19,6 +19,9 @@
 
 .bash_history
 
+# graphify
+graphify-out/
+
 # CMake
 CMakeCache.txt
 CMakeFiles
