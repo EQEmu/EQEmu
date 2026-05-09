@@ -266,7 +266,7 @@ def loadclientopcodes():
         dprint('entering \'loadclientopcodes()\'\n')
 
     bad_clients = []
-    
+
     for client in client_list:
         try:
             short_name = '/patch_{0}.conf'.format(client)
@@ -275,7 +275,7 @@ def loadclientopcodes():
                 base_path,
                 short_name
             )
-            
+
             vprint(file_name)
 
             with open(file_name, 'r') as data_file:
@@ -348,7 +348,7 @@ def loadclientopcodes():
 
     for bad_client in bad_clients:
         vprint('Deleting \'{0}\' client from search criteria...'.format(bad_client))
-            
+
         client_list.remove(bad_client)
 
         dprint('->delete: \'{0}\' client\n'.format(bad_client))
@@ -518,7 +518,7 @@ def loadservertalkopcodes():
                 val_end = val_begin + 6
 
                 servertalk_opcodes[key_value] = data_line[val_begin:val_end]
-                
+
                 if VERBOSE:
                     dprint('../common/servertalk.h({0}:{1}) \'Servers\' [{2}] = {3}\n'.format(
                         line_no,
@@ -532,7 +532,7 @@ def loadservertalkopcodes():
         if VERBOSE:
             dprint('->close: \'{0}\'\n'.format(file_name))
 
-        
+
     except:
         print('(Exception Error: {0}) loadservertalkopcodes()'.format(sys.exc_info()[0]))
 
@@ -576,7 +576,7 @@ def loadclienttranslators():
                 base_path,
                 short_name
             )
-            
+
             vprint(file_name)
 
             with open(file_name, 'r') as data_file:
@@ -594,7 +594,7 @@ def loadclienttranslators():
 
                     if val_begin < 0 or val_end < 0:
                         continue
-                    
+
                     if data_line[:1] == 'E':
                         client_encodes[client].append(data_line[val_begin:val_end])
 
@@ -608,7 +608,7 @@ def loadclienttranslators():
                             ))
                     elif data_line[:1] == 'D':
                         client_decodes[client].append(data_line[val_begin:val_end])
-                        
+
                         if VERBOSE:
                             dprint('..{0}({1}:{2}) \'DECODE\' [{3}] = {4}\n'.format(
                                 short_name,
@@ -696,7 +696,7 @@ def discoverserverhandlers():
                     continue
 
                 locations[server].append('/{0}/{1}'.format(server_dirs[server], file_name))
-    
+
     for server in server_list:
         if not server in server_handlers:
             server_handlers[server] = {}
@@ -1346,7 +1346,7 @@ def discoverservertalkhandlers():
                     continue
 
                 locations[server].append('/{0}/{1}'.format(server_dirs[server], file_name))
-    
+
     for server in server_list:
         if not server in servertalk_handlers:
             servertalk_handlers[server] = {}
@@ -1753,9 +1753,9 @@ def openoutputfiles():
                 base_path,
                 client
             )
-            
+
             vprint(file_name)
-            
+
             out_files[client] = open(file_name, 'w')
 
             if VERBOSE:
@@ -1805,7 +1805,7 @@ def openoutputfiles():
             '>> \'Opcode-Handler\' analysis for ServerTalk\n'
             '>> file generated @ {0}\n\n'.format(ctime(time()))
         )
-        
+
         if VERBOSE:
             dprint('leaving \'openoutputfiles()\'\n\n')
 
@@ -1842,7 +1842,7 @@ def openoutputfiles():
             out_files['ServerTalk'].close()
 
             del out_files['ServerTalk']
-        
+
         if VERBOSE:
             dprint('leaving \'openoutputfiles(): EXCEPTION ERROR\'\n\n')
 
@@ -1905,7 +1905,7 @@ def parseclientopcodedata():
 
         if VERBOSE:
             dprint('->parse: \'{0}\' client\n'.format(client))
-    
+
     if VERBOSE:
         dprint('leaving \'parseclientopcodedata()\'\n\n')
 

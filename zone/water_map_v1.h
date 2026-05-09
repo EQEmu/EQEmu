@@ -37,7 +37,7 @@ class WaterMapV1 : public WaterMap
 public:
 	WaterMapV1();
 	~WaterMapV1();
-	
+
 	virtual WaterRegionType ReturnRegionType(const glm::vec3& location) const;
 	virtual bool InWater(const glm::vec3& location) const;
 	virtual bool InVWater(const glm::vec3& location) const;
@@ -45,7 +45,7 @@ public:
 	virtual bool InLiquid(const glm::vec3& location) const;
 	virtual bool InPvP(const glm::vec3& location) const;
 	virtual bool InZoneLine(const glm::vec3& location) const;
-	
+
 protected:
 	virtual bool Load(FILE *fp);
 

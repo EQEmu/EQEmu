@@ -73,7 +73,7 @@ void bot_command_inventory_give(Client* c, const Seperator* sep)
 
 		if (!byname) {
 			++ab_arg;
-		}	
+		}
 	}
 
 	std::vector<Bot*> sbl;

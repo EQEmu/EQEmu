@@ -33,7 +33,7 @@ bool PFSArchive::Open(std::string filename)
     if(header->magic[0] != 'P' ||
         header->magic[1] != 'F' ||
         header->magic[2] != 'S' ||
-        header->magic[3] != ' ') 
+        header->magic[3] != ' ')
     {
         Close();
         return false;
@@ -61,7 +61,7 @@ bool PFSArchive::Open(std::string filename)
             position = directory->offset;
             memset(temp_buffer, 0, directory->size);
             inflate = 0;
-            
+
             while(inflate < directory->size) {
                 BufferRead(data_block, PFSDataBlock);
                 BufferReadLength(temp_buffer2, data_block->deflate_length);
@@ -72,7 +72,7 @@ bool PFSArchive::Open(std::string filename)
             position = temp_position;
             filename_header = (PFSFilenameHeader*)&temp_buffer[0];
             temp_position = sizeof(PFSFilenameHeader);
-            
+
             for(j = 0; j < filename_header->filename_count; ++j)
 			{
 				filename_entry = (PFSFilenameEntry*)&temp_buffer[temp_position];
@@ -122,9 +122,9 @@ bool PFSArchive::Close()
 	return false;
 }
 
-//I would love to get rid of the allocations in the while loop below but sadly 
-//I can't predict the size of data blocks well enough to be able to and feel 
-//comfortable with it (I could however reduce the number of times I need to 
+//I would love to get rid of the allocations in the while loop below but sadly
+//I can't predict the size of data blocks well enough to be able to and feel
+//comfortable with it (I could however reduce the number of times I need to
 //reallocate with a little clever logic which i think I will do
 bool PFSArchive::Get(std::string filename, char **buffer, size_t& buffer_size) {
     size_t sz = _filenames.size();
@@ -145,10 +145,10 @@ bool PFSArchive::Get(std::string filename, char **buffer, size_t& buffer_size) {
             while(inflate < directory->size) {
                 BufferRead(data_block, PFSDataBlock);
                 temp = new char[data_block->deflate_length];
-                
+
                 memcpy(temp, &_buffer[position], data_block->deflate_length);
                 position += data_block->deflate_length;
-                
+
                 decompress(temp, data_block->deflate_length, *buffer + inflate, data_block->inflate_length);
                 delete[] temp;
                 inflate += data_block->inflate_length;
@@ -184,7 +184,7 @@ bool PFSArchive::GetFiles(std::string ext, std::list<std::string>& files) {
         if(!strcmp(_filenames[i].c_str() + (flen - elen), ext.c_str()) || all_files)
             files.push_back(_filenames[i]);
     }
-    
+
     return files.size() > 0;
 }
 

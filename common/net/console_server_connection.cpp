@@ -40,7 +40,7 @@ EQ::Net::ConsoleServerConnection::ConsoleServerConnection(ConsoleServer *parent,
 	m_connection->OnDisconnect(std::bind(&ConsoleServerConnection::OnDisconnect, this, std::placeholders::_1));
 	m_connection->Start();
 	ClearBuffer();
-	
+
 	auto addr = m_connection->RemoteIP();
 
 	SendLine(fmt::format("Establishing connection from: {0}:{1}", addr, m_connection->RemotePort()));
@@ -104,12 +104,12 @@ void EQ::Net::ConsoleServerConnection::QueueMessage(const std::string &msg)
 	}
 	else {
 		std::string cmd(m_line, m_line + m_cursor);
-		
+
 		size_t len = m_user.length() + 2 + cmd.length();
 		for (size_t i = 0; i < len; ++i) {
 			Send("\x08");
 		}
-		
+
 		if (msg.length() < cmd.length()) {
 			Send(msg);
 			size_t blank_spaces = 2 + cmd.length() - msg.length();

@@ -29,17 +29,17 @@
 #  include <memory>
 # endif
 
-namespace luabind { namespace detail { 
+namespace luabind { namespace detail {
 
 namespace has_get_pointer_
 {
 
-  struct any 
-  { 
+  struct any
+  {
       template<class T> any(T const&);
   };
 
-  struct no_overload_tag 
+  struct no_overload_tag
   {};
 
   typedef char (&yes)[1];
@@ -70,11 +70,11 @@ namespace has_get_pointer_
 }} // namespace detail::has_get_pointer_
 # endif
 
-detail::has_get_pointer_::no_overload_tag 
+detail::has_get_pointer_::no_overload_tag
   get_pointer(detail::has_get_pointer_::any);
 
 # ifdef BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP
-namespace detail { namespace has_get_pointer_ 
+namespace detail { namespace has_get_pointer_
 {
 # endif
 

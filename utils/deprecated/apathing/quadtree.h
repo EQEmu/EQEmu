@@ -39,28 +39,28 @@ class QTNode {
 public:
 	QTNode(Map *_map, float _dist2, float Tminx, float Tmaxx, float Tminy, float Tmaxy);
 	~QTNode();
-	
+
 	void clearNodes();
-	
+
 	void doSplit();
 	void divideYourself(int depth);
-	
+
 	void buildVertexes();
-	
+
 	unsigned long countQTNodes() const;	//counts QT nodes
 	unsigned long countPathNodes() const;	//counts PathNodes
-	
+
 	void fillBlocks(PathTree_Struct *heads, PathPointRef *flist, unsigned long &hindex, unsigned long &findex);
-	
+
 	float minx;
 	float miny;
 	float maxx;
 	float maxy;
 	unsigned long nnodes;
 	list<PathNode *> nodes;
-	
+
 	bool IsInNode(const QTNode *n, const PathNode *o);
-	
+
 	/*
 	quadrent definitions:
 		quad 1 (node1):
@@ -78,7 +78,7 @@ public:
 	QTNode *node4;
 	GPoint v[8];
 	bool final;
-	
+
 	Map *map;
 	float search_dist2;
 };

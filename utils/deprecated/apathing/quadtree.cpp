@@ -2,19 +2,19 @@
 
 	Father Nitwit's Fear Pathing File Maker Thing
 	Copyright (C) 2005 Father Nitwit (eqemu@8ass.com)
-	
+
 	I'll release thisunder the GPL, even though I hate the GPL.
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation; version 2 of the License.
-  
+
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY except by those people which sell it, which
 	are required to give you total support for your newly bought product;
 	without even the implied warranty of MERCHANTABILITY or FITNESS FOR
 	A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-	
+
 	  You should have received a copy of the GNU General Public License
 	  along with this program; if not, write to the Free Software
 	  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -26,7 +26,7 @@
 	nodes reachable within a defined distance from the bounds
 	of that quadtree node. Therefor this distance should be
 	the maximum distance used to search for a node.
-	
+
 	In case this distance is not big enough, we also store a
 	complete list of reachable nodes at each quadtree level, so
 	the root has all nodes for sure. This makes it possible to
@@ -53,7 +53,7 @@ QTNode::QTNode(Map *_map, float dist2, float Tminx, float Tmaxx, float Tminy, fl
 	search_dist2 = dist2;	//this is a distance-squared
 	final = false;
 	buildVertexes();
-	
+
 }
 
 QTNode::~QTNode() {
@@ -80,7 +80,7 @@ void QTNode::clearNodes() {
 void QTNode::fillBlocks(PathTree_Struct *heads, PathPointRef *flist, unsigned long &hindex, unsigned long &findex) {
 	PathTree_Struct *head = &heads[hindex];
 	hindex++;
-	
+
 	head->minx = minx;
 	head->maxx = maxx;
 	head->miny = miny;
@@ -106,7 +106,7 @@ void QTNode::fillBlocks(PathTree_Struct *heads, PathPointRef *flist, unsigned lo
 	} else {
 		head->flags = 0;
 		//branch node.
-		
+
 		if(node1 != NULL) {
 			head->nodes[0] = hindex;
 			node1->fillBlocks(heads, flist, hindex, findex);
@@ -175,49 +175,49 @@ unsigned long QTNode::countPathNodes() const {
 }
 
 void QTNode::divideYourself(int depth) {
-//	printf("Dividing in box (%.2f -> %.2f, %.2f -> %.2f) at depth %d with %d nodes.\n", 
+//	printf("Dividing in box (%.2f -> %.2f, %.2f -> %.2f) at depth %d with %d nodes.\n",
 //		minx, maxx, miny, maxy, depth, nodes.size());
-	
+
 	unsigned long cc;
 	cc = nodes.size();
 #ifdef MAX_QUADRENT_NODES
 	if(cc <= MAX_QUADRENT_NODES) {
 #ifdef SPLIT_DEBUG
-printf("Stopping (nodecount) on box (%.2f -> %.2f, %.2f -> %.2f) at depth %d with %d nodes.\n", 
+printf("Stopping (nodecount) on box (%.2f -> %.2f, %.2f -> %.2f) at depth %d with %d nodes.\n",
 		minx, maxx, miny, maxy, depth, cc);
 #endif
 		final = true;
 		return;
 	}
 #endif
-	
+
 #ifdef MIN_QUADRENT_SIZE
 	if((maxx - minx) < MIN_QUADRENT_SIZE || (maxy - miny) < MIN_QUADRENT_SIZE) {
 #ifdef SPLIT_DEBUG
-printf("Stopping on box (size) (%.2f -> %.2f, %.2f -> %.2f) at depth %d with %d nodes.\n", 
+printf("Stopping on box (size) (%.2f -> %.2f, %.2f -> %.2f) at depth %d with %d nodes.\n",
 		minx, maxx, miny, maxy, depth, cc);
 #endif
 		final = true;
 		return;
 	}
 #endif
-	
+
 	doSplit();
-	
+
 	//get counts on our split
 	float c1, c2, c3, c4;
 	c1 = node1? node1->nodes.size() : 0;
 	c2 = node2? node2->nodes.size() : 0;
 	c3 = node3? node3->nodes.size() : 0;
 	c4 = node4? node4->nodes.size() : 0;
-	
+
 #ifdef MIN_QUADRENT_GAIN
 	int miss = 0;
 	float gain1 = 1.0 - c1 / cc;
 	float gain2 = 1.0 - c2 / cc;
 	float gain3 = 1.0 - c3 / cc;
 	float gain4 = 1.0 - c4 / cc;
-	
+
 	//see how many missed the gain mark
 	if(gain1 < MIN_QUADRENT_GAIN)
 		miss++;
@@ -227,34 +227,34 @@ printf("Stopping on box (size) (%.2f -> %.2f, %.2f -> %.2f) at depth %d with %d 
 		miss++;
 	if(gain4 < MIN_QUADRENT_GAIN)
 		miss++;
-	
+
 	if(miss > MAX_QUADRENT_MISSES) {
 #ifdef SPLIT_DEBUG
-printf("Stopping (gain) on box (%.2f -> %.2f, %.2f -> %.2f) at depth %d with %d nodes.\n", 
+printf("Stopping (gain) on box (%.2f -> %.2f, %.2f -> %.2f) at depth %d with %d nodes.\n",
 		minx, maxx, miny, maxy, depth, cc);
 #endif
 		final = true;
 		return;
 	}
 #endif
-	
-	
+
+
 	//if all nodes pass through all quadrents, then we are done
 	//partially obsoleted by gain test.
 	if(c1 == c2 && c1 == c3 && c1 == c4) {
 #ifdef SPLIT_DEBUG
-printf("Stopping (empty) on box (%.2f -> %.2f, %.2f -> %.2f) at depth %d with %d nodes.\n", 
+printf("Stopping (empty) on box (%.2f -> %.2f, %.2f -> %.2f) at depth %d with %d nodes.\n",
 		minx, maxx, miny, maxy, depth, cc);
 printf("Our counts: %.3f, %.3f, %.3f, %.3f\n", c1, c2, c3, c4);
 #endif
 		final = true;
 		return;
 	}
-	
+
 	//there are prolly some more intelligent stopping criteria...
-	
+
 	depth++;
-	
+
 	if(node1 != NULL)
 		node1->divideYourself(depth);
 	if(node2 != NULL)
@@ -263,18 +263,18 @@ printf("Our counts: %.3f, %.3f, %.3f, %.3f\n", c1, c2, c3, c4);
 		node3->divideYourself(depth);
 	if(node4 != NULL)
 		node4->divideYourself(depth);
-	
-	
+
+
 }
 
 void QTNode::buildVertexes() {
 
 	v[0].x = v[1].x = v[2].x = v[3].x = minx;
 	v[4].x = v[5].x = v[6].x = v[7].x = maxx;
-	
+
 	v[0].y = v[1].y = v[4].y = v[5].y = miny;
 	v[2].y = v[3].y = v[6].y = v[7].y = maxy;
-	
+
 	v[0].z = v[3].z = v[4].z = v[7].z = -999999;
 	v[1].z = v[2].z = v[5].z = v[6].z = 9999999;
 }
@@ -283,7 +283,7 @@ bool QTNode::IsInNode(const QTNode *n, const PathNode *o) {
 	if(		o->x >= n->minx && o->x < n->maxx
 		&&	o->y >= n->miny && o->y < n->maxy )
 		return(true);
-	
+
 	//well its not inside the node, so see if it is reachable from it
 
 	//4 points of this node
@@ -296,19 +296,19 @@ bool QTNode::IsInNode(const QTNode *n, const PathNode *o) {
 		||	o->Dist2(&pt3) < search_dist2
 		||	o->Dist2(&pt4) < search_dist2)
 		return(true);
-	
+
 	//not inside, and not reachable...
-	
+
 	return(false);
 }
 
 void QTNode::doSplit() {
-	
-	
+
+
 	//find midpoints...
 	float midx = minx + (maxx - minx) / 2.0;
 	float midy = miny + (maxy - miny) / 2.0;
-	
+
 	//ordering following definitions in map.h
 	node1 = new QTNode(map, search_dist2, midx, maxx, midy, maxy);
 	node2 = new QTNode(map, search_dist2, minx, midx, midy, maxy);
@@ -318,7 +318,7 @@ void QTNode::doSplit() {
 		printf("Error: unable to allocate new QTNode, giving up.\n");
 		return;
 	}
-	
+
 //	unsigned long l;
 //	l = faces.size();
 //	for(r = 0; r < l; r++) {
@@ -337,7 +337,7 @@ void QTNode::doSplit() {
 		if(IsInNode(node4, cur))
 			node4->nodes.push_back(cur);
 	}
-	
+
 	//clean up empty sets.
 	if(node1->nodes.size() == 0) {
 		delete node1;
@@ -355,7 +355,7 @@ void QTNode::doSplit() {
 		delete node4;
 		node4 = NULL;
 	}
-	
+
 }
 
 

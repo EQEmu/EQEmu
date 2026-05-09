@@ -27,7 +27,7 @@
 #include <luabind/config.hpp>
 #include <luabind/detail/policy.hpp>
 
-namespace luabind { namespace detail 
+namespace luabind { namespace detail
 {
 	struct yield_policy
 	{

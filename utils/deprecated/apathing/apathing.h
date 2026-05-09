@@ -9,12 +9,12 @@
 #define DB_PASSWORD "pw4eqserver"
 #define DB_NAME "peq"
 
-//for now, all of these were arbitrarily chosen 
+//for now, all of these were arbitrarily chosen
 
 //load up doors as spawn points, since they are also valid locations
 extern bool INCLUDE_DOORS;
 
-//this is the furthest a mob can be from a fear point and still expect 
+//this is the furthest a mob can be from a fear point and still expect
 //to find the node.
 extern float FEAR_MAXIMUM_DISTANCE;
 
@@ -114,7 +114,7 @@ public:
 		forced = false;
 		disjoint = false;
 	}
-	
+
 	int node_id;
 	int final_id;
 // inherited:
@@ -122,15 +122,15 @@ public:
 //	float y;
 //	float z;
 //	VertDesc vert;
-	
+
 	int color;
 	int longest_path;
-	
+
 	char valid:1,
 		 forced:1,
 		 disjoint:1,
 		 extra:5;
-	
+
 	float Dist2(const GPoint *o) const {
 		float tmp;
 		float sum;
@@ -155,7 +155,7 @@ public:
 	}
 	PathNode *from;
 	PathNode *to;
-	
+
 	int normal_reach;
 	int reverse_reach;
 	bool valid;
@@ -182,11 +182,11 @@ public:
 			}
 		}
 	}
-	
+
 	void add_edge(PathNode *b, PathNode *e) {
 		edges.push_back(new PathEdge(b, e));
 	}
-	
+
 	void add_edges(list<PathEdge *> &o) {
 		list<PathEdge *>::iterator cur,end;
 		cur = o.begin();
@@ -195,10 +195,10 @@ public:
 			edges.push_back(*cur);
 		}
 	}
-	
+
 	list<PathNode *> nodes;
 	list<PathEdge *> edges;
-	
+
 	//used for graph color accounts
 	int curcolor;
 	int ccount;
@@ -282,7 +282,7 @@ void find_node_edges(PathGraph *big, std::map<PathNode*, vector<PathEdge*> > &no
 void validate_edges(Map *map, PathGraph *big);
 
 void DrawGradientLine(gdImagePtr im, GPoint *first, GPoint *second, vector<ColorRecord> &colors);
-void allocateGradient(gdImagePtr im, float r1, float g1, float b1, float r2, float g2, float b2, 
+void allocateGradient(gdImagePtr im, float r1, float g1, float b1, float r2, float g2, float b2,
 	float min, float max, float divs, vector<ColorRecord> &colors);
 
 

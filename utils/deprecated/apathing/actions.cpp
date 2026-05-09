@@ -66,7 +66,7 @@ void rebuild_node_list(list<PathEdge *> &edges, list<PathNode *> &nodes, list<Pa
 //void edge_stats(list<PathEdge *> &edges, const char *s);
 
 void DrawGradientLine(gdImagePtr im, GPoint *first, GPoint *second, vector<ColorRecord> &colors);
-void allocateGradient(gdImagePtr im, float r1, float g1, float b1, float r2, float g2, float b2, 
+void allocateGradient(gdImagePtr im, float r1, float g1, float b1, float r2, float g2, float b2,
 	float min, float max, float divs, vector<ColorRecord> &colors);
 */
 
@@ -75,15 +75,15 @@ void repair_a_high_waypoint(Map *map, PathNode *it) {
 	pt.x = it->x;
 	pt.y = it->y;
 	pt.z = it->z + 10;
-	
+
 	float newz = map->FindBestZ(map->GetRoot(), pt, &res);
-	
+
 	if(newz == BEST_Z_INVALID) {
 		pt.x += X_JITTER;
 		pt.y += Y_JITTER;
 		newz = map->FindBestZ(map->GetRoot(), pt, &res);
 	}
-	
+
 	if(newz != BEST_Z_INVALID) {
 		newz += 6;	//just some arbitrary height
 		float diff = it->z - newz;
@@ -117,7 +117,7 @@ void repair_high_waypoints(Map *map, list<PathGraph*> &db_paths, list<PathNode*>
 			repair_a_high_waypoint(map, *cur2);
 		}
 	}
-	
+
 	list<PathNode*>::iterator cur3,end3;
 	cur3 = db_spawns.begin();
 	end3 = db_spawns.end();
@@ -130,34 +130,34 @@ bool almost_colinear(PathNode *first, PathNode *second, PathNode *third) {
 	//basically a dot product and a compare.
 	GVector v1(*first, *second);
 	GVector v2(*second, *third);
-	
+
 	//the - operator is apparently not working or something
 	v1.x = second->x - first->x;
 	v1.y = second->y - first->y;
 	v1.z = second->z - first->z;
-	
+
 	v2.x = third->x - second->x;
 	v2.y = third->y - second->y;
 	v2.z = third->z - second->z;
-	
+
 	//just another option to consider:
 	//v1.z = 0;
 	//v2.z = 0;
-	
-	
+
+
 /*	printf("(%.3f, %.3f, %.3f) (%.3f, %.3f, %.3f) (%.3f, %.3f, %.3f)\n",
 		first->x, first->y, first->z,
 		second->x, second->y, second->z,
 		third->x, third->y, third->z);
 	printf("v1(%.3f, %.3f) v2(%.3f, %.3f)\n", v1.x, v1.y, v2.x, v2.y);
 //	printf("BB(%.3f, %.3f) BB(%.3f, %.3f)\n", , ,, );
-*/	
-	
+*/
+
 	v1.normalize();
 	v2.normalize();
-	
+
 	float cos_angle = v1.dot3(v2);
-	
+
 	return(cos_angle > ALMOST_COLINEAR_COS);
 }
 
@@ -177,19 +177,19 @@ void reduce_waypoints(list<PathGraph*> &db_paths) {
 		PathGraph *g = *cur;
 		if(g->nodes.size() < 3)
 			continue;
-		
+
 		list<PathNode*>::iterator cur2,end2,trail;
 		PathNode *first,*second,*last;
 RESTART_WP_REDUCE:
 		cur2 = g->nodes.begin();
 		end2 = g->nodes.end();
-		
+
 		first = *cur2;
 		cur2++;
 		second = *cur2;
 		trail = cur2;
 		cur2++;
-		
+
 		int pos = 2;
 		for(; cur2 != end2; cur2++) {
 
@@ -197,17 +197,17 @@ RESTART_WP_REDUCE:
 			if(almost_colinear(first, second, last)) {
 				//we are removing the second one
 				wp_reduce_count++;
-				
+
 				//	*trail, second, (*trail)->x, (*trail)->y, (*trail)->z);
 				//trail = cur2;
-				
+
 				//need to do something with its old edges...
 				//we can assume at this point that there is only
 				//one edge starting from us and one edge ending at us
 				list<PathEdge*>::iterator cure, ende, rme = g->edges.end();
 				cure = g->edges.begin();
 				ende = g->edges.end();
-				
+
 				bool found_one = false;
 				for(; cure != ende; cure++) {
 					if((*cure)->to == second) {
@@ -224,13 +224,13 @@ RESTART_WP_REDUCE:
 				}
 				if(rme != g->edges.end())
 					g->edges.erase(rme);
-				
+
 				g->nodes.erase(trail);
 				delete second;
 				//this is doing something fucked up, so we'll play dumb
 				goto RESTART_WP_REDUCE;
 			} else {
-				
+
 				first = second;
 				trail++;
 			}
@@ -238,7 +238,7 @@ RESTART_WP_REDUCE:
 			second = last;
 		}
 	}
-	
+
 }
 
 void break_long_lines(list<PathGraph*> &db_paths) {
@@ -247,55 +247,55 @@ void break_long_lines(list<PathGraph*> &db_paths) {
 	generating several more nodes along paths in a controlled fashion.
 */
 	GVector v1;
-	
+
 	GPoint curp;
 	GPoint last;
-	
+
 	PathEdge *e,*ee;
 	PathNode *n, *last_node;
-	
+
 	float cutlen2 = SPLIT_LINE_LENGTH*SPLIT_LINE_LENGTH;
 	list<PathEdge*>::iterator cur4,end4;
-	
-	
+
+
 	list<PathGraph*>::iterator cur, end;
 	cur = db_paths.begin();
 	end = db_paths.end();
 	for(; cur != end; cur++) {
 		PathGraph *g = *cur;
-	
+
 		cur4 = g->edges.begin();
 		end4 = g->edges.end();
 		for(; cur4 != end4; cur4++) {
 			e = *cur4;
-			
+
 			//first check length of the edge...
 			float len2 = e->from->Dist2(e->to);
 			if(len2 < cutlen2)
 				continue;
-			
+
 
 			float len = sqrt(len2);
 			v1.x = (e->to->x - e->from->x)/len;
 			v1.y = (e->to->y - e->from->y)/len;
 			v1.z = (e->to->z - e->from->z)/len;
-			
+
 			float cuts = len / SPLIT_LINE_INTERVAL;
-			
+
 			v1 *= len / cuts;
-			
+
 			curp = *e->from;
 			last_node = e->from;	//first source is the original from node
 			for(; cuts > 1; cuts -= 1) {
 				curp += v1;
-				
+
 				n = new PathNode(curp);
 				ee = new PathEdge(last_node, n);
 				last_node = n;
-				
+
 				g->edges.push_back(ee);
 				g->nodes.push_back(n);
-				
+
 				broke_paths++;
 			}
 			//set the old edge to point from the last break to the original end node
@@ -309,15 +309,15 @@ void break_long_lines(list<PathGraph*> &db_paths) {
 void combine_trivial_grids(Map *map, list<PathGraph*> &db_paths) {
 	list<PathGraph*>::iterator cur, end, check_cur, check_end;
 	PathGraph *g;
-	
+
 	float CloseEnough2 = CLOSE_ENOUGH*CLOSE_ENOUGH;
-	
+
 	int cur_pos = 0;
 	int r;
 	bool merge;		//do we merge the current two grids
 	PathNode *match1 = NULL, *match2 = NULL;	//the two points causing the merge
 	PathGraph *look = NULL;	//the grid were looking at for merging into
-	
+
 //we are restarting so we dont have to deal with iterators
 //when we delete a grid... they make my life difficult
 RESTART_TRIVIAL_COMBINE:
@@ -330,9 +330,9 @@ RESTART_TRIVIAL_COMBINE:
 		check_cur = cur;
 		check_cur++;
 		check_end = db_paths.end();
-		
+
 		merge = false;
-		
+
 		for(; check_cur != check_end && !merge; check_cur++) {
 			look = *check_cur;
 			if(g == look)
@@ -355,18 +355,18 @@ RESTART_TRIVIAL_COMBINE:
 				}
 			}
 		}
-		
+
 		if(look && merge) {
 			/*printf("Merge on (%.3f, %.3f, %.3f) (%.3f, %.3f, %.3f)\n",
 			match1->x, match1->y, match1->z,
 			match2->x, match2->y, match2->z);
 			*/
-			
+
 			//merge look into cur
 			//this may or may not be a good idea:
 //			look->nodes.reserve(look->nodes.size() + g->nodes.size());
 //			look->edges.reserve(look->edges.size() + g->edges.size() + 1);
-			
+
 			//steal all the nodes
 			list<PathNode*>::iterator cur2,end2;
 			cur2 = g->nodes.begin();
@@ -375,9 +375,9 @@ RESTART_TRIVIAL_COMBINE:
 				if(*cur2 != match1)
 					look->nodes.push_back(*cur2);
 			}
-			
+
 			match1->valid = false;
-			
+
 			//steal all the edges
 			list<PathEdge*>::iterator cur4,end4;
 			cur4 = g->edges.begin();
@@ -391,14 +391,14 @@ RESTART_TRIVIAL_COMBINE:
 					e->from = match2;
 				look->edges.push_back(e);
 			}
-			
+
 			//stop it from freeing up all the stuff we just stole.
 			g->nodes.clear();
 			g->edges.clear();
 			delete g;
-			
+
 			trivial_merge_count++;
-			
+
 			db_paths.erase(cur);
 			goto RESTART_TRIVIAL_COMBINE;
 		}
@@ -417,26 +417,26 @@ run algorithm to connect all grids to eachother
 */
 	list<PathGraph*>::iterator cur, end, check_cur, check_end;
 	PathGraph *g;
-	
+
 	int cur_pos = 0;
-	
+
 	float md2 = MERGE_MIN_SECOND_DIST*MERGE_MIN_SECOND_DIST;
-	
+
 	float dist, dist2, cdist;
 	PathGraph *source1 = NULL, *source2 = NULL;
 	PathNode *match1 = NULL, *match2 = NULL;	//the two points closest together
 	PathNode *match3 = NULL, *match4 = NULL;	//the two points 2nd closest
 //	VERTEX p1, p2, liz_res;
-	
+
 	PathGraph *look = NULL;	//the grid were looking at for merging into
-	
+
 	bool printing = false;
 //	if(db_paths.size() > 100) {
 		printf("Combining Grids (%d dots)", db_paths.size());
 		fflush(stdout);
 		printing = true;
 //	}
-	
+
 //we are restarting so we dont have to deal with iterators
 //when we delete a grid... they make my life difficult
 RESTART_CLOSEST_COMBINE:
@@ -452,12 +452,12 @@ RESTART_CLOSEST_COMBINE:
 		//check_cur++;
 		check_cur = db_paths.begin();
 		check_end = db_paths.end();
-		
+
 		if(printing) {
 			printf(".");
 			fflush(stdout);
 		}
-		
+
 		dist = 9999999999e100f;
 		dist2 = 9999999999e100f;
 		match1 = NULL;
@@ -466,7 +466,7 @@ RESTART_CLOSEST_COMBINE:
 		match4 = NULL;
 		source1 = NULL;
 		source2 = NULL;
-		
+
 		//for each other grid
 		for(; check_cur != check_end; check_cur++) {
 			look = *check_cur;
@@ -487,10 +487,10 @@ RESTART_CLOSEST_COMBINE:
 					cdist = git->Dist2(*cur3);
 					if(cdist > dist2)
 						continue;	//not a candidate
-					
+
 					if(!CheckLOS(map, git, *cur3))
 						continue;	//cannot see
-					
+
 					if(cdist < dist) {
 						//new closest
 						//demote this closest to #2 if its far enough away
@@ -500,7 +500,7 @@ RESTART_CLOSEST_COMBINE:
 							match4 = match2;
 							source2 = source1;
 						}
-						
+
 						//setup new closest
 						dist = cdist;
 						match1 = git;
@@ -516,22 +516,22 @@ RESTART_CLOSEST_COMBINE:
 				}
 			}
 		}
-		
+
 		if(look != NULL && source1 != NULL) {
 			/*printf("Link on (%.3f, %.3f, %.3f) (%.3f, %.3f, %.3f) at dist %.3f\n",
 			match1->x, match1->y, match1->z,
 			match2->x, match2->y, match2->z, dist);
 			printf("Combine %d nodes with %d nodes.\n", source1->nodes.size(), g->nodes.size());
 			*/
-			
+
 			//merge look into cur
 			//this may or may not be a good idea:
 //			source1->nodes.reserve(look->nodes.size() + g->nodes.size());
 //			source1->edges.reserve(look->edges.size() + g->edges.size() + 1);
-			
+
 			//steal all the nodes
 			/* this just gets done later by re-node so dont do it now.
-			
+
 			list<PathNode*>::iterator cur2,end2;
 			cur2 = g->nodes.begin();
 			end2 = g->nodes.end();
@@ -540,7 +540,7 @@ RESTART_CLOSEST_COMBINE:
 				if(*cur2 != match1)
 					source1->nodes.push_back(*cur2);
 			}*/
-			
+
 			//steal all the edges
 			list<PathEdge*>::iterator cur4,end4;
 			cur4 = g->edges.begin();
@@ -556,8 +556,8 @@ RESTART_CLOSEST_COMBINE:
 				source1->edges.push_back(e);
 			}
 
-			
-			
+
+
 			check_cur = cur;
 			check_cur++;
 			check_end = db_paths.end();
@@ -575,41 +575,41 @@ RESTART_CLOSEST_COMBINE:
 						e->from = match2;
 				}
 			}
-			
+
 			closest_merge_count++;
 		}
-		
+
 		//kinda a hack... assume the 'same node merge' code will bridge this
 		//new point with the other point in the real 'source2' graph.
 		if(source2 != NULL) {
 			/*printf("Link2 on (%.3f, %.3f, %.3f) (%.3f, %.3f, %.3f) at dist %.3f\n",
 			match3->x, match3->y, match3->z,
 			match4->x, match4->y, match4->z, dist);*/
-			
+
 			PathNode *n = new PathNode(*match4);
 			source1->nodes.push_back(n);
 			source1->add_edge(match3, n);
-			
+
 			closest_merge2_count++;
 		}
-		
-		
+
+
 		if(source1 != NULL) {
 			//stop it from freeing up all the stuff we just stole.
 			g->nodes.clear();
 			g->edges.clear();
 			delete g;
-			
+
 			db_paths.erase(cur);
 			goto RESTART_CLOSEST_COMBINE;
 		}
 	}
-	
+
 	if(printing) {
 		printf("\n");
 	}
-	
-	
+
+
 	//finally just do a dummy merge of the remaining grids into the first one
 	g = db_paths.front();
 	cur = db_paths.begin();
@@ -618,8 +618,8 @@ RESTART_CLOSEST_COMBINE:
 	for(; cur != end; cur++) {
 		g->add_edges((*cur)->edges);
 	}
-	
-	
+
+
 	//rebuild our node array based on the edges we have...
 	//this is because there is some sort of error where a node is used in
 	//an edge which is supposed to have been combined with another node.
@@ -646,7 +646,7 @@ RESTART_CLOSEST_COMBINE:
 		}
 	}*/
 	rebuild_node_list(g->edges, g->nodes);
-	
+
 	printf("Closest Merge: re-node yeilded %d nodes and %d edges\n", g->nodes.size(), g->edges.size());
 }
 
@@ -658,11 +658,11 @@ RESTART_CLOSEST_COMBINE:
 	end = db_paths.end();
 	for(; cur != end; cur++) {
 		PathGraph *g = *cur;
-		
+
 		//this may or may not be a good idea:
 		big->nodes.reserve(big->nodes.size() + g->nodes.size());
 		big->edges.reserve(big->edges.size() + g->edges.size());
-		
+
 		//steal all the nodes
 		list<PathNode*>::iterator cur2,end2;
 		cur2 = g->nodes.begin();
@@ -670,7 +670,7 @@ RESTART_CLOSEST_COMBINE:
 		for(; cur2 != end2; cur2++) {
 			big->nodes.push_back(*cur2);
 		}
-		
+
 		//steal all the edges
 		list<PathEdge*>::iterator cur4,end4;
 		cur4 = g->edges.begin();
@@ -678,13 +678,13 @@ RESTART_CLOSEST_COMBINE:
 		for(; cur4 != end4; cur4++) {
 			big->edges.push_back(*cur4);
 		}
-		
+
 		g->nodes.clear();
 		g->edges.clear();
 		delete g;
 	}
 	db_paths.clear();
-	
+
 	list<PathNode*>::iterator cur3,end3;
 	big->nodes.reserve(big->nodes.size() + db_spawns.size());
 	cur3 = db_spawns.begin();
@@ -692,14 +692,14 @@ RESTART_CLOSEST_COMBINE:
 	for(; cur3 != end3; cur3++) {
 		big->nodes.push_back(*cur3);
 	}
-	
+
 	db_spawns.clear();
-	
-	
+
+
 }
 */
 
-void link_spawns(Map *map, PathGraph *big, list<PathNode*> &db_spawns, 
+void link_spawns(Map *map, PathGraph *big, list<PathNode*> &db_spawns,
   float maxdist, map< pair<PathNode *, PathNode *>, bool > *edgelist) {
 /*
 
@@ -716,28 +716,28 @@ run algorithm to connect all spawn points to the big grid
    - connect to 1 or 2 of the closest points (prolly 2 if possible)
    - avoid large Z variance if possible
 */
-	
+
 	//still not sure if this actually does us any good.
 //	big->nodes.reserve(big->nodes.size() + db_spawns.size());
-	
-	
+
+
 	printf("Linking (%d dots)", db_spawns.size());
 	fflush(stdout);
 	float md2 = SPAWN_MIN_SECOND_DIST*SPAWN_MIN_SECOND_DIST;
 	float maxdist2 = maxdist*maxdist;
-	
+
 	float dist,tmp;
 	PathNode *closest = NULL;
 	float dist2;
 	PathNode *closest2 = NULL;
 	float dist3;
 	PathNode *closest3 = NULL;
-	
+
 	VERTEX p1, liz_res /*, p2*/;
-	
+
 	list<PathNode*>::iterator cur,end;
 	list<PathNode*>::iterator cur3,end3;
-	
+
 	cur3 = db_spawns.begin();
 	end3 = db_spawns.end();
 	for(; cur3 != end3; cur3++) {
@@ -748,7 +748,7 @@ run algorithm to connect all spawn points to the big grid
 		p1.x = n->x; p1.y = n->y; p1.z = n->z;
 		//elevate a little, to about eye height
 		p1.z += 6.0f;
-		
+
 		//make sure this spawn point is even within the map
 		NodeRef mynode;
 		mynode = map->SeekNode(map->GetRoot(), p1.x, p1.y);
@@ -760,20 +760,20 @@ run algorithm to connect all spawn points to the big grid
 			link_spawn_invalid++;
 			continue;
 		}
-		
+
 		dist = 999999e100f;
 		closest = NULL;
 		dist2 = 999999e100f;
 		closest2 = NULL;
 		dist3 = 999999e100f;
 		closest3 = NULL;
-		
+
 		cur = big->nodes.begin();
 		end = big->nodes.end();
 		for(; cur != end; cur++) {
 			if(n == *cur)
 				continue;	//dont link to ourself
-			
+
 			//if an edge list was supplied, make sure this edge isnt on it
 			if(edgelist) {
 				pair<PathNode *, PathNode *> id;
@@ -788,23 +788,23 @@ run algorithm to connect all spawn points to the big grid
 					continue;	//found in the list
 			}
 
-			//get the distance between the 
+			//get the distance between the
 			tmp = n->Dist2(*cur);
 			if(tmp > dist2)
 				continue;
-			
+
 			if(!CheckLOS(map, n, *cur))
 				continue;	//cannot see
-			
+
 			//we can see to it, see if its closer
 			if(tmp < dist) {
 				//its a new closest
-				
+
 				//see if we bump #2
 				if(SPAWN_LINK_TWICE && closest && dist < dist2 && closest->Dist2(*cur) > md2) {
 					//the old #1 replaces #2
 					//see if we bump #3
-					if(SPAWN_LINK_THRICE && closest2 && dist2 < dist3 
+					if(SPAWN_LINK_THRICE && closest2 && dist2 < dist3
 						&& closest2->Dist2(*cur) > md2
 						&& closest2->Dist2(closest) > md2) {
 						dist3 = dist2;
@@ -813,14 +813,14 @@ run algorithm to connect all spawn points to the big grid
 					dist2 = dist;
 					closest2 = closest;
 				}
-					
+
 				dist = tmp;
 				closest = *cur;
 			}
 			//we can assume closest is set, or else we would never get here
 			 else if(SPAWN_LINK_TWICE && tmp < dist2 && closest->Dist2(*cur) > md2) {
 				//see if we bump #3
-				if(SPAWN_LINK_THRICE && closest2 && dist2 < dist3 
+				if(SPAWN_LINK_THRICE && closest2 && dist2 < dist3
 					&& closest2->Dist2(*cur) > md2
 					&& closest2->Dist2(closest) > md2) {
 					dist3 = dist2;
@@ -835,21 +835,21 @@ run algorithm to connect all spawn points to the big grid
 				closest3 = *cur;
 			 }
 		}
-		
+
 		if(closest == NULL || dist > maxdist2) {
 			link_spawn_nocount++;
 			//should delete this point....
 			continue;
 		}
-		
+
 /*printf("SL (%.3f, %.3f, %.3f) (%.3f, %.3f, %.3f) d2=%.3f\n",
 		n->x, n->y, n->z,
 		closest->x, closest->y, closest->z, n->Dist2(closest));
 		link_spawn_count++;
-*/		
-		
+*/
+
 		big->add_edge(n, closest);
-		
+
 		if(SPAWN_LINK_TWICE && closest2 && dist2 < maxdist2) {
 
 /*printf("SL2 (%.3f, %.3f, %.3f) (%.3f, %.3f, %.3f) d2=%.3f\n",
@@ -867,7 +867,7 @@ run algorithm to connect all spawn points to the big grid
 			link_spawn3_count++;
 		}
 	}
-	
+
 	printf("\n");
 }
 
@@ -875,31 +875,31 @@ map< pair<PathNode *, PathNode *>, bool > _los_cache;
 
 bool CheckLOS(Map *map, PathNode *from, PathNode *to) {
 	static VERTEX p1, p2, liz_res;	//no reason to allocate them several times
-	
+
 	//hack to make order on the ID not matter
 	if(int32(from) < int32(to)) {
 		PathNode *tmp = from;
 		from = to;
 		to = tmp;
 	}
-	
+
 	pair<PathNode *, PathNode *> id(from, to);
 	if(_los_cache.count(id) == 1) {
 		los_cache_hits++;
 		return(_los_cache[id]);
 	}
-	
+
 	//if its a candidate, check LOS
 	p1.x = from->x; p1.y = from->y; p1.z = from->z;
 	p2.x = to->x; p2.y = to->y; p2.z = to->z;
 	//elevate a little, to about eye height
 	p1.z += 6.0f; p2.z += 6.0f;
-	
+
 	bool res = !map->LineIntersectsZone(p1, p2, 0.5, &liz_res);
-	
+
 	_los_cache[id] = res;
 	los_cache_misses++;
-	
+
 	return(res);
 }
 
@@ -916,14 +916,14 @@ run an algorithm to remove redundancy:
 	list<PathEdge*>::iterator cur4,end4;
 	PathNode *n,*f;
 	PathEdge *e;
-	
+
 	combined_grid_points = 0;
 	combine_broke_los = 0;
 	float ce2 = close_enough*close_enough;
 	bool merge;
 	int cur_pos = 0, stat = 0;
 	int r;
-	
+
 	printf("Combining.");
 	fflush(stdout);
 
@@ -932,12 +932,12 @@ run an algorithm to remove redundancy:
 	//build our node->edge map for use later checking combine LOS
 	std::map<PathNode*, vector<PathEdge*> > node_edges;
 	vector<PathEdge*>::iterator curE,endE;
-	
+
 	cur4 = big->edges.begin();
 	end4 = big->edges.end();
 	for(; cur4 != end4; cur4++) {
 		e = *cur4;
-		
+
 		if(node_edges.count(e->from) == 1) {
 			node_edges[e->from].push_back(e);
 		} else {
@@ -945,7 +945,7 @@ run an algorithm to remove redundancy:
 			t[0] = e;
 			node_edges[e->from] = t;
 		}
-		
+
 		if(node_edges.count(e->to) == 1) {
 			node_edges[e->to].push_back(e);
 		} else {
@@ -954,9 +954,9 @@ run an algorithm to remove redundancy:
 			node_edges[e->to] = t;
 		}
 	}
-	
+
 #endif
-	
+
 //restart since deleting a node pisses the iterators off and
 //im too lazy to figure out how to make them happy right now
 RESTART_GRID_CLEAN:
@@ -974,10 +974,10 @@ RESTART_GRID_CLEAN:
 		cur2 = cur;
 		cur2++;
 		merge = false;
-		
+
 		if(!n->valid)
 			continue;
-		
+
 		for(; cur2 != end; cur2++) {
 			f = *cur2;
 			if(n == f)
@@ -985,13 +985,13 @@ RESTART_GRID_CLEAN:
 			if(n->Dist2(f) > ce2) {
 				continue;
 			}
-			
+
 #ifdef COMBINE_CHECK_ALL_LOS
 			//we should merge these. Now we wanna check to make sure combining
 			//them will not cause the old node's edges to become invalid.
-			
+
 			badlos = false;
-			
+
 			if(node_edges.count(f) == 1) {
 				curE = node_edges[f].begin();
 				endE = node_edges[f].end();
@@ -1012,7 +1012,7 @@ RESTART_GRID_CLEAN:
 					}
 				}
 			}
-			
+
 /*			cur4 = big->edges.begin();
 			end4 = big->edges.end();
 			for(; cur4 != end4; cur4++) {
@@ -1050,7 +1050,7 @@ RESTART_GRID_CLEAN:
 //		printf("checked %d, merge? %d\n", cur_pos, merge);
 		if(merge) {
 			f = *cur2;
-			
+
 			//normally we merge into n, from f.
 			//if f is forced, then we must reverse that...
 			if(f->forced) {
@@ -1059,7 +1059,7 @@ RESTART_GRID_CLEAN:
 				f = n;
 				n = tmp;
 			}
-			
+
 			//steal all its edges...
 			//changing references to old node to point to the other node
 			cur4 = big->edges.begin();
@@ -1071,7 +1071,7 @@ RESTART_GRID_CLEAN:
 				if(e->from == f)
 					e->from = n;
 			}
-			
+
 #ifdef COMBINE_CHECK_ALL_LOS
 			//merge over the edge list too..
 			if(node_edges.count(f) == 1 && node_edges.count(n) == 1) {
@@ -1084,18 +1084,18 @@ RESTART_GRID_CLEAN:
 				}
 			}
 #endif
-			
+
 			combined_grid_points++;
-			
+
 			/*printf("Removed point using %d (0x%x and 0x%x)\n", cur_pos, n, f);
-			
+
 			printf("Pts (%.3f, %.3f, %.3f) (%.3f, %.3f, %.3f) at dist %.3f\n",
 			n->x, n->y, n->z,
 			f->x, f->y, f->z, n->Dist2(f));*/
-			
+
 			//who needs to free memory, when we can leak it....
 			//delete f;
-			
+
 			big->nodes.erase(cur2);
 			goto RESTART_GRID_CLEAN;
 		}
@@ -1111,16 +1111,16 @@ void draw_paths(Map *map, list<PathEdge *> &edges, list<PathEdge *> &edges2, con
 		printf("Unable to open %s\n", fname);
 		return;
 	}
-	
+
 	list<PathEdge*>::iterator cur,end;
 	PathEdge *e;
-	
+
 	gdImagePtr im;
 	int minx = int(map->GetMinX());
 	int maxx = int(map->GetMaxX());
 	int miny = int(map->GetMinY());
 	int maxy = int(map->GetMaxY());
-	
+
 //	float minz = map->GetMinZ();
 //	float maxz = map->GetMaxZ();
 	//find better z ranges
@@ -1139,16 +1139,16 @@ void draw_paths(Map *map, list<PathEdge *> &edges, list<PathEdge *> &edges2, con
 		if((*cur)->to->z > maxz)
 			maxz = (*cur)->to->z;
 	}
-	
-	
+
+
 	im = gdImageCreate((maxx - minx)/IMAGE_SCALE, (maxy - miny)/IMAGE_SCALE);
-	
+
 	//allocate this first, to make it the BG color.
-	/*int black =*/ gdImageColorAllocate(im, 0, 0, 0); 
-	
+	/*int black =*/ gdImageColorAllocate(im, 0, 0, 0);
+
 	int blue = gdImageColorAllocate(im, 200, 200, 255);
-	
-	
+
+
 	//draw our EQ map
 	cur = edges2.begin();
 	end = edges2.end();
@@ -1164,18 +1164,18 @@ void draw_paths(Map *map, list<PathEdge *> &edges, list<PathEdge *> &edges2, con
 		y2 /= IMAGE_SCALE;
 		gdImageLine(im, x1, y1, x2, y2, blue);
 	}
-	
-	
+
+
 	GPoint p1, p2;
 	vector<ColorRecord> colors;
 	allocateGradient(im, 255, 255, 0, 255, 0, 0, minz, maxz, 100, colors);
-	
+
 	//draw the edges supplied with gradient lines
 	cur = edges.begin();
 	end = edges.end();
 	for(; cur != end; cur++) {
 		e = *cur;
-		
+
 		p1 = *e->from;
 		p2 = *e->to;
 		p1.x -= minx;
@@ -1188,12 +1188,12 @@ void draw_paths(Map *map, list<PathEdge *> &edges, list<PathEdge *> &edges2, con
 		p2.y /= IMAGE_SCALE;
 		DrawGradientLine(im, &p1, &p2, colors);
 	}
-	
+
 	gdImagePng(im, pngout);
 	gdImageDestroy(im);
-	
+
 	fclose(pngout);
-	
+
 	printf("Wrote image: %s\n", fname);
 }
 
@@ -1205,12 +1205,12 @@ void draw_paths2(Map *map, list<PathEdge *> &edges, list<PathEdge *> &edges2, li
 		printf("Unable to open %s\n", fname);
 		return;
 	}
-	
+
 	list<PathEdge*>::iterator cur,end;
 	list<PathNode*>::iterator curn,endn;
 	PathEdge *e;
 	PathNode *n;
-	
+
 	gdImagePtr im;
 	int minx = int(map->GetMinX());
 	int maxx = int(map->GetMaxX());
@@ -1236,26 +1236,26 @@ void draw_paths2(Map *map, list<PathEdge *> &edges, list<PathEdge *> &edges2, li
 		if((*cur)->to->z > maxz)
 			maxz = (*cur)->to->z;
 	}
-	
+
 	im = gdImageCreate((maxx - minx)/IMAGE_SCALE, (maxy - miny)/IMAGE_SCALE);
-	
+
 	//allocate this first, to make it the BG color.
 	/*int black =*/ gdImageColorAllocate(im, 0, 0, 0);
-	
+
 	int grey = gdImageColorAllocate(im, 100, 100, 100);
 	int purple = gdImageColorAllocate(im, 255, 100, 255);
-	
-//	int red = gdImageColorAllocate(im, 190, 0, 0); 
+
+//	int red = gdImageColorAllocate(im, 190, 0, 0);
 	int axis = gdImageColorAllocate(im, 75, 0, 0);
 	int blue = gdImageColorAllocate(im, 200, 200, 255);
 	int green = gdImageColorAllocate(im, 0, 255, 0);
-	
-	
+
+
 	//draw the axes
 	gdImageLine(im, -minx/IMAGE_SCALE, 0, -minx/IMAGE_SCALE, (maxy - miny)/IMAGE_SCALE, axis);
 	gdImageLine(im, 0, -miny/IMAGE_SCALE, (maxx - minx)/IMAGE_SCALE, -miny/IMAGE_SCALE, axis);
-	
-	
+
+
 	//draw the original paths in grey
 	//draw these first cause they are messy and not important really
 	cur = edges.begin();
@@ -1272,8 +1272,8 @@ void draw_paths2(Map *map, list<PathEdge *> &edges, list<PathEdge *> &edges2, li
 		y2 /= IMAGE_SCALE;
 		gdImageLine(im, x1, y1, x2, y2, grey);
 	}
-	
-	
+
+
 	//draw the EQ map second, so we can see it
 	cur = edges3.begin();
 	end = edges3.end();
@@ -1283,28 +1283,28 @@ void draw_paths2(Map *map, list<PathEdge *> &edges, list<PathEdge *> &edges2, li
 		int y1 = int(e->from->y) - miny;
 		int x2 = int(e->to->x) - minx;
 		int y2 = int(e->to->y) - miny;
-		
+
 		//invert the EQ map in screen coords
 		/*int tmp;
 		tmp = x1; x1 = y1; y1 = tmp;
 		tmp = x2; x2 = y2; y2 = tmp;*/
-		
+
 		x1 /= IMAGE_SCALE;
 		y1 /= IMAGE_SCALE;
 		x2 /= IMAGE_SCALE;
 		y2 /= IMAGE_SCALE;
 		gdImageLine(im, x1, y1, x2, y2, blue);
 	}
-	
+
 	GPoint p1, p2;
 	vector<ColorRecord> colors;
 	allocateGradient(im, 255, 255, 0, 255, 0, 0, minz, maxz, 100, colors);
-	
+
 	cur = edges2.begin();
 	end = edges2.end();
 	for(; cur != end; cur++) {
 		e = *cur;
-		
+
 		if(e->valid) {
 			p1 = *e->from;
 			p2 = *e->to;
@@ -1330,7 +1330,7 @@ void draw_paths2(Map *map, list<PathEdge *> &edges, list<PathEdge *> &edges2, li
 //			printf("L (%d,%d,%.1f) -> (%d,%d,%.1f) dist=%.3f\n", x1, y1, e->from->z, x2, y2, e->to->z, e->from->Dist2(e->to));
 		}
 	}
-	
+
 	curn = spawns.begin();
 	endn = spawns.end();
 	for(; curn != endn; curn++) {
@@ -1341,12 +1341,12 @@ void draw_paths2(Map *map, list<PathEdge *> &edges, list<PathEdge *> &edges2, li
 		y1 /= IMAGE_SCALE;
 		gdImageSetPixel(im, x1, y1, purple);
 	}
-	
+
 	gdImagePng(im, pngout);
 	gdImageDestroy(im);
-	
+
 	fclose(pngout);
-	
+
 	printf("Wrote image: %s\n", fname);
 }
 
@@ -1359,13 +1359,13 @@ void check_edge_los(Map *map, PathGraph *big) {
 	end = big->edges.end();
 	for(; cur != end;) {
 		e = *cur;
-		
+
 /*		//if its a candidate, check LOS
 		p1.x = e->from->x; p1.y = e->from->y; p1.z = e->from->z;
 		p2.x = (e->to)->x; p2.y = (e->to)->y; p2.z = (e->to)->z;
 		//elevate a little, to about eye height
 		p1.z += 6.0f; p2.z += 6.0f;
-		
+
 		if(map->LineIntersectsZone(p1, p2, 0.1, &liz_res)) {*/
 		if(!CheckLOS(map, e->from, e->to)) {
 			tmp = cur;
@@ -1376,7 +1376,7 @@ void check_edge_los(Map *map, PathGraph *big) {
 			cur++;
 		}
 	}
-	
+
 }
 
 
@@ -1384,25 +1384,25 @@ void check_long_edge_los(Map *map, PathGraph *big) {
 #ifdef LONG_PATH_CHECK_LOS
 	list<PathEdge*>::iterator cur,end,tmp;
 	PathEdge *e;
-	
+
 	float ml2 = LONG_PATH_CHECK_LOS*LONG_PATH_CHECK_LOS;
 //	VERTEX p1, p2, liz_res;
 	cur = big->edges.begin();
 	end = big->edges.end();
 	for(; cur != end;) {
 		e = *cur;
-		
+
 		if(e->from->Dist2(e->to) < ml2) {
 			cur++;
 			continue;
 		}
-		
+
 /*		//if its a candidate, check LOS
 		p1.x = e->from->x; p1.y = e->from->y; p1.z = e->from->z;
 		p2.x = (e->to)->x; p2.y = (e->to)->y; p2.z = (e->to)->z;
 		//elevate a little, to about eye height
 		p1.z += 6.0f; p2.z += 6.0f;
-		
+
 		if(map->LineIntersectsZone(p1, p2, 0.1, &liz_res)) {*/
 		if(!CheckLOS(map, e->from, e->to)) {
 			tmp = cur;
@@ -1413,20 +1413,20 @@ void check_long_edge_los(Map *map, PathGraph *big) {
 			cur++;
 		}
 	}
-#endif	
+#endif
 }
 
 //take rgb as floats for simplicity
-void allocateGradient(gdImagePtr im, float r1, float g1, float b1, float r2, float g2, float b2, 
+void allocateGradient(gdImagePtr im, float r1, float g1, float b1, float r2, float g2, float b2,
 	float min, float max, float divs, vector<ColorRecord> &colors) {
-	
+
 	float step = (max - min) / divs;
 	float rstep = (r2 - r1)/divs;
 	float gstep = (g2 - g1)/divs;
 	float bstep = (b2 - b1)/divs;
-	
+
 	ColorRecord c;
-	
+
 	c.height = min;
 	float r;
 	for(r = 0; r < divs; r++) {
@@ -1442,33 +1442,33 @@ void allocateGradient(gdImagePtr im, float r1, float g1, float b1, float r2, flo
 
 void DrawGradientLine(gdImagePtr im, GPoint *first, GPoint *second, vector<ColorRecord> &colors) {
 	GVector v1(*first, *second);
-	
+
 //	float len = sqrt(first->Dist2(second));
-	
+
 	//the - operator is apparently not working or something
 	v1.x = second->x - first->x;
 	v1.y = second->y - first->y;
 	v1.z = second->z - first->z;
-	
+
 //	float len = v1.length();
-	
+
 //	v1.normalize();	//calcs length again, but im lazy.
-	
-	
+
+
 	GPoint cur(*first);
 	GPoint last;
-	
+
 	float step = 1/100.0f;
 	float pos;
-	
+
 	v1 *= step;
 
 /*printf("Line From (%.3f, %.3f, %.3f) (%.3f, %.3f, %.3f)\n",
 		first->x, first->y, first->z,
 		second->x, second->y, second->z);*/
-	
+
 	vector<ColorRecord>::iterator curc,end;
-	
+
 	for(pos = 0; pos < 1; pos += step) {
 		last = cur;
 		cur += v1;
@@ -1481,11 +1481,11 @@ void DrawGradientLine(gdImagePtr im, GPoint *first, GPoint *second, vector<Color
 		}
 		int ccolor;
 		if(curc == end) {
-//			printf("Unable to find color at height %.3f (range %.3f -> %.3f)\n", 
+//			printf("Unable to find color at height %.3f (range %.3f -> %.3f)\n",
 //				last.z, colors[0].height, colors[colors.size()-1].height);
 			ccolor = colors[colors.size()-1].color;
 		} else {
-//			printf("Found color at height %.3f (range %.3f -> %.3f)\n", 
+//			printf("Found color at height %.3f (range %.3f -> %.3f)\n",
 //				last.z, colors[0].height, colors[colors.size()-1].height);
 			ccolor = (*curc).color;
 		}
@@ -1521,13 +1521,13 @@ bool edges_cross(PathEdge *e1, PathEdge *e2, GPoint &out) {
  (p2->x > p1->x? \
  (p1->z + ((inter - p1->x)/(p2->x - p1->x) * (p2->z - p1->z))) \
  :(p2->z + ((inter - p2->x)/(p1->x - p2->x) * (p1->z - p2->z))))
-	
+
  	if(e1 == e2)
  		return(false);
-	
+
 	float denom = IntersectDenom(e1->from, e1->to, e2->from, e2->to);
 	if(denom != 0) {
-		
+
 		//see if this is at the end points... that dosent count.
 		//caught below by strict inequality
 /*		if(		CheckEqualXY(e1->from, e2->from)
@@ -1536,23 +1536,23 @@ bool edges_cross(PathEdge *e1, PathEdge *e2, GPoint &out) {
 			||	CheckEqualXY(e1->to, e2->to) ) {
 				return(false);
 		}*/
-		
-		
+
+
 		//the lines intersect, check segments now
 		float xinter = IntersectX(e1->from, e1->to, e2->from, e2->to, denom);
 		float yinter = IntersectY(e1->from, e1->to, e2->from, e2->to, denom);
-		
+
 		//need to add a Z check in here
 		float zinter1 = IntersectZfromX(e1->from, e1->to, xinter);
 		float zinter2 = IntersectZfromX(e2->from, e2->to, xinter);
-		
+
 		float dist = zinter1 - zinter2;
 		zinter1 += dist * 0.5;		//middle ground on intersect point.
-		
+
 		if(dist < 0) {	//z2 is above z1
 			dist = 0 - dist;
 		}
-		
+
 		if(dist > CROSS_MAX_Z_DIFF)
 			return(false);
 
@@ -1577,37 +1577,37 @@ bool edges_cross(PathEdge *e1, PathEdge *e2, GPoint &out) {
 void count_crossing_lines(list<PathEdge *> &edges, PathGraph *out, PathGraph *excess, map<PathEdge*, vector<GPoint> > &cross_list) {
 	list<PathEdge*>::iterator cur,end,cur2;
 	PathEdge *e, *look;
-	
+
 	out->edges.resize(0);
 	excess->edges.resize(0);
-	
+
 	float cml2 = CROSS_MIN_LENGTH*CROSS_MIN_LENGTH;
-	
+
 	cur = edges.begin();
 	end = edges.end();
 	vector<GPoint> hits;
 	GPoint hit;
 	for(; cur != end; cur++) {
 		e = *cur;
-		
+
 		//assume that small edges dont matter...
 		if(e->from->Dist2(e->to) < cml2)
 			continue;
-		
+
 		hits.clear();
 		int count = 0;
-		
+
 		cur2 = edges.begin();
 		for(; cur2 != end; cur2++) {
 			look = *cur2;
-			
+
 			if(edges_cross(e, look, hit)) {
 				count++;
 				hits.push_back(hit);
 			}
 		}
-		
-		
+
+
 		if(count >= CROSS_REDUCE_COUNT) {
 			out->edges.push_back(e);
 			cross_edge_count++;
@@ -1616,7 +1616,7 @@ void count_crossing_lines(list<PathEdge *> &edges, PathGraph *out, PathGraph *ex
 			excess->edges.push_back(e);
 		}
 	}
-	
+
 	rebuild_node_list(out->edges, out->nodes, &excess->nodes);
 }
 
@@ -1625,7 +1625,7 @@ void rebuild_node_list(list<PathEdge *> &edges, list<PathNode *> &nodes, list<Pa
 	if(excess_nodes != NULL) {
 		in_nodes = nodes;
 	}
-	
+
 	nodes.resize(0);
 	std::map<PathNode *, int> havenodelist;
 	list<PathEdge*>::iterator cur4,end4;
@@ -1642,7 +1642,7 @@ void rebuild_node_list(list<PathEdge *> &edges, list<PathNode *> &nodes, list<Pa
 			havenodelist[e->to] = 1;
 		}
 	}
-	
+
 	//if they wanted a list of nodes not used, give it to them.
 	if(excess_nodes != NULL) {
 		list<PathNode *>::iterator cur, end;
@@ -1658,23 +1658,23 @@ void rebuild_node_list(list<PathEdge *> &edges, list<PathNode *> &nodes, list<Pa
 void cut_crossed_grids(PathGraph *big, map<PathEdge*, vector<GPoint> > &cross_list) {
 	map<PathEdge*, vector<GPoint> >::iterator cur,end;
 	vector<GPoint>::iterator curp, endp;
-	
+
 	cur = cross_list.begin();
 	end = cross_list.end();
 	for(; cur != end; cur++) {
 		PathEdge *e = cur->first;
 		vector<GPoint> &it = cur->second;
-		
+
 		sort(it.begin(), it.end());
-		
+
 		//if the first point is to the left of our from, reverse the ordering
 		if(*e->from > it[0]) {
 			reverse(it.begin(), it.end());
 		}
-		
+
 		PathNode *last,*curn;
 		last = e->from;
-		
+
 		curp = it.begin();
 		endp = it.end();
 		for(; curp != endp; curp++) {
@@ -1686,14 +1686,14 @@ void cut_crossed_grids(PathGraph *big, map<PathEdge*, vector<GPoint> > &cross_li
 		}
 		e->from = last;
 	}
-	
+
 }
 
 //written fast cause I dont care
 bool load_eq_map(const char *zone, PathGraph *eqmap) {
 	char buf[256];
 	FILE *in;
-	
+
 	//try to locate the file
 	sprintf(buf, "eqmaps/%s.txt", zone);
 	in = fopen(buf, "r");
@@ -1705,10 +1705,10 @@ bool load_eq_map(const char *zone, PathGraph *eqmap) {
 			return(false);
 		}
 	}
-	
+
 	//assume that a map file is smaller than a meg
 	char *file = new char[1024 * 1024];
-	
+
 	//read the whole thing in at once
 	int len;
 	len = fread(file, 1, 1024*1024, in);
@@ -1716,19 +1716,19 @@ bool load_eq_map(const char *zone, PathGraph *eqmap) {
 		printf("Unable to read EQ map file.\n");
 		return(false);
 	}
-	
+
 	fclose(in);
-	
-	
+
+
 	//start parsing it
 	int pos = 0;
 	char *start, *next;
-	
+
 	next = file;
-	
+
 	while(pos < len) {
 		start = next;
-		
+
 		//find the end of the line
 		for(; pos < len; pos++, next++) {
 			if(*next == '\n' || *next == '\r')
@@ -1744,7 +1744,7 @@ bool load_eq_map(const char *zone, PathGraph *eqmap) {
 			next++;	//skip over it too.
 			pos++;
 		}
-		
+
 		//now start is our line, and next is in position, parse start.
 		GPoint p1, p2, color;
 		//apparently the map files allready use our inverted XY
@@ -1762,16 +1762,16 @@ bool load_eq_map(const char *zone, PathGraph *eqmap) {
 			//cannot parse this line...
 			continue;
 		}
-		
+
 		//invert our XY, and +-
 		float tmp;
 		tmp = p1.x; p1.x = -p1.y; p1.y = -tmp;
 		tmp = p2.x; p2.x = -p2.y; p2.y = -tmp;
-		
+
 		//color is prolly really integers
-		
+
 		//now we have our points...
-		
+
 		//sloppily add both nodes and the edge, prolly uses a lot more nodes than needed
 		PathNode *n1, *n2;
 		n1 = new PathNode(p1);
@@ -1780,9 +1780,9 @@ bool load_eq_map(const char *zone, PathGraph *eqmap) {
 		eqmap->nodes.push_back(n2);
 		eqmap->add_edge(n1, n2);
 	}
-	
+
 	delete[] file;
-	
+
 	return(true);
 }
 
@@ -1794,30 +1794,30 @@ void write_eq_map(list<PathEdge *> &edges, const char *fname) {
 		printf("Unable to open EQ Client map %s\n", fname);
 		return;
 	}
-	
+
 	list<PathEdge*>::iterator cur,end;
 	PathEdge *e;
-	
+
 	//draw our EQ map
 	cur = edges.begin();
 	end = edges.end();
 	for(; cur != end; cur++) {
 		e = *cur;
-		
+
 		GPoint p1(*e->from), p2(*e->to);
 //		float tmp;
 //		tmp = p1.x; p1.x = -p1.y; p1.y = -tmp;
 //		tmp = p2.x; p2.x = -p2.y; p2.y = -tmp;
 		p1.x = -p1.x; p1.y = -p1.y;
 		p2.x = -p2.x; p2.y = -p2.y;
-		
+
 		fprintf(mapout, "L %.3f, %.3f, %.3f,  %.3f, %.3f, %.3f,  255, 165, 0\n",
 			p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
-		
+
 	}
-	
+
 	fclose(mapout);
-	
+
 	printf("Wrote EQ Client map: %s\n", fname);
 }
 
@@ -1830,45 +1830,45 @@ QTNode *build_quadtree(Map *map, PathGraph *big) {
 		printf("Unable to allocate new QTNode.\n");
 		return(false);
 	}
-	
-	_root->nodes = big->nodes;	
+
+	_root->nodes = big->nodes;
 			list<PathNode *>::iterator curs,end;
 		curs = _root->nodes.begin();
 		end = _root->nodes.end();
 //int findex = 0;
 		for(; curs != end; curs++) {
 }
-		
+
 	_root->divideYourself(0);
-	
+
 	return(_root);
 }
 
 bool write_path_file(QTNode *_root, PathGraph *big, const char *file, vector< vector<PathEdge*> > &path_finding) {
 	if(_root == NULL)
 		return(false);
-	
+
 	//im too lazy to give reasons for errors
 	FILE *out = fopen(file, "w");
 	if(out == NULL) {
 		printf("Unable to open output file '%s'.\n", file);
 		return(false);
 	}
-	
+
 	PathFile_Header head;
 	head.version = PATHFILE_VERSION;
 	head.node_count = big->nodes.size();
 	head.link_count = big->edges.size() * 2;	//each edge has a to and from node
 	head.qtnode_count = _root->countQTNodes();
 	head.nodelist_count = _root->countPathNodes();
-	
+
 	if(fwrite(&head, sizeof(head), 1, out) != 1) {
 		printf("Error writting path file header.\n");
 		fclose(out);
 		return(false);
-		
+
 	}
-	
+
 	printf("Path File: %lu fear nodes, %lu fear links, %u  QT nodes, %lu node lists\n", head.node_count, head.link_count, head.qtnode_count, head.nodelist_count);
 
 	//build our blocks...
@@ -1876,28 +1876,28 @@ bool write_path_file(QTNode *_root, PathGraph *big, const char *file, vector< ve
 	PathLink_Struct *linkBlock = new PathLink_Struct[head.link_count];
 	//too big to store right now, since we dont _NEED_ it...
 //	PathNodeRef *reachability = new PathNodeRef[head.node_count*head.node_count/2];
-	
+
 	PathNode *n;
 	PathEdge *e;
 	list<PathEdge*>::iterator cur4,end4;
 	list<PathNode *>::iterator cur, end;
-	
+
 	PathNode_Struct *curn = nodeBlock;
 	PathLink_Struct *curl = linkBlock;
-	
+
 	cur = big->nodes.begin();
 	end = big->nodes.end();
-	
+
 	//number all the nodes for a final time.
 	int index = 0;
 	for(; cur != end; cur++, index++) {
 		(*cur)->node_id = index;
 	}
-	
+
 	//maps to get edge list offsets for our pathing stuff
 	std::map<PathEdge *, PathLinkOffsetRef> to_edges;
 	std::map<PathEdge *, PathLinkOffsetRef> from_edges;
-	
+
 	uint32 eoffset = 0;
 	//fill the node block and edge block,  N*E complexity
 	cur = big->nodes.begin();
@@ -1914,7 +1914,7 @@ int nn = 0;
 		curn->z = n->z;
 		curn->link_offset = eoffset;
 		curn->distance = n->longest_path;
-		
+
 		int ecount = 0;
 		cur4 = big->edges.begin();
 		end4 = big->edges.end();
@@ -1945,25 +1945,25 @@ int nn = 0;
 		}
 		curn->link_count = ecount;
 	}
-	
+
 	//write vertexBlock
 	if(fwrite(nodeBlock, sizeof(PathNode_Struct), head.node_count, out) != head.node_count) {
 		printf("Error writting path file nodes.\n");
 		fclose(out);
 		return(false);
-		
+
 	}
-	
+
 	//write faceBlock
 	if(fwrite(linkBlock, sizeof(PathLink_Struct), head.link_count, out) != head.link_count) {
 		printf("Error writting path file edges.\n");
 		fclose(out);
 		return(false);
 	}
-	
+
 	delete[] nodeBlock;
 	delete[] linkBlock;
-	
+
 	//make our node blocks to write out...
 	PathTree_Struct *qtnodes = new PathTree_Struct[head.qtnode_count];
 	PathPointRef *nodelist = new PathPointRef[head.nodelist_count];
@@ -1972,12 +1972,12 @@ int nn = 0;
 		fclose(out);
 		return(false);
 	}
-	
+
 	//extract the quad tree structure into linear arrays
 	unsigned long hindex = 0;
 	unsigned long findex = 0;
 	_root->fillBlocks(qtnodes, nodelist, hindex, findex);
-	
+
 	if(fwrite(qtnodes, sizeof(PathTree_Struct), head.qtnode_count, out) != head.qtnode_count) {
 		printf("Error writting path file quadtree nodes.\n");
 		fclose(out);
@@ -1988,10 +1988,10 @@ int nn = 0;
 		fclose(out);
 		return(false);
 	}
-	
+
 	delete[] qtnodes;
 	delete[] nodelist;
-	
+
 	//assumes that path_finding is not empty
 	PathLinkOffsetRef *refs = new PathLinkOffsetRef[head.node_count];
 	//finally make our path finding blocks.
@@ -2024,7 +2024,7 @@ int nn = 0;
 			}
 			refs[o] = rese->second;
 		}
-		
+
 		if(fwrite(refs, sizeof(PathLinkOffsetRef), head.node_count, out) != head.node_count) {
 			printf("Error writting path file's pathing information for node %d/%d.\n", i, head.node_count);
 			fclose(out);
@@ -2032,9 +2032,9 @@ int nn = 0;
 		}
 	}
 	delete[] refs;
-	
+
 	fclose(out);
-	
+
 	return(true);
 }
 
@@ -2044,16 +2044,16 @@ void edge_stats(list<PathEdge *> &edges, const char *s) {
 	list<PathEdge*>::iterator cur,end;
 	cur = edges.begin();
 	end = edges.end();
-	
+
 	printf("Long edges for %s:\n", s);
-	
+
 	float watchlen = 1000*1000;
-	
+
 	for(; cur != end; cur++) {
 		PathEdge *e = *cur;
 		float d2 = e->from->Dist2(e->to);
 		if(d2 > watchlen) {
-			printf("LL (%.3f,%.3f,%.3f) -> (%.3f,%.3f,%.3f) d2=%.3f\n", e->from->x, e->from->y, e->from->z, e->to->x, e->to->y, e->to->z, d2);			
+			printf("LL (%.3f,%.3f,%.3f) -> (%.3f,%.3f,%.3f) d2=%.3f\n", e->from->x, e->from->y, e->from->z, e->to->x, e->to->y, e->to->z, d2);
 		}
 	}
 }*/
@@ -2062,12 +2062,12 @@ void find_node_edges(PathGraph *big,
 	std::map<PathNode*, vector<PathEdge*> > &node_edges) {
 	list<PathEdge*>::iterator curE,endE;
 	PathEdge *e;
-	
+
 	curE = big->edges.begin();
 	endE = big->edges.end();
 	for(; curE != endE; curE++) {
 		e = *curE;
-		
+
 		if(node_edges.count(e->from) == 1) {
 			node_edges[e->from].push_back(e);
 		} else {
@@ -2075,7 +2075,7 @@ void find_node_edges(PathGraph *big,
 			t[0] = e;
 			node_edges[e->from] = t;
 		}
-		
+
 		if(node_edges.count(e->to) == 1) {
 			node_edges[e->to].push_back(e);
 		} else {
@@ -2089,13 +2089,13 @@ void find_node_edges(PathGraph *big,
 void validate_edges(Map *map, PathGraph *big) {
 	list<PathEdge*>::iterator curE,endE;
 	PathEdge *e;
-	
+
 	curE = big->edges.begin();
 	endE = big->edges.end();
 	int r;
 	for(r = 0; curE != endE; curE++, r++) {
 		e = *curE;
-		
+
 		if(!CheckLOS(map, e->from, e->to)) {
 			printf("Edge %d does not have LOS. Between nodes %d and %d.\n", r, e->from->node_id, e->to->node_id);
 			e->valid = false;

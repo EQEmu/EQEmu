@@ -35,7 +35,7 @@ END_MESSAGE_MAP()
 /////////////////////////////////////////////////////////////////////////////
 // HexRichEdit message handlers
 
-void HexRichEdit::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) 
+void HexRichEdit::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 {
 	// TODO: Add your message handler code here and/or call default
 	switch(nChar) {
@@ -56,11 +56,11 @@ void HexRichEdit::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 			parent->NextLine();
 		return;
 	}
-	
+
 	CRichEditCtrl::OnKeyDown(nChar, nRepCnt, nFlags);
 }
 
-void HexRichEdit::OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags) 
+void HexRichEdit::OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags)
 {
 	switch(nChar) {
 	case VK_LEFT:
@@ -70,6 +70,6 @@ void HexRichEdit::OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags)
 		return;	/* just make sure these dont get processed */
 	}
 	// TODO: Add your message handler code here and/or call default
-	
+
 	CRichEditCtrl::OnKeyUp(nChar, nRepCnt, nFlags);
 }

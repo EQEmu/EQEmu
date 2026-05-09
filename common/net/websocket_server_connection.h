@@ -36,8 +36,8 @@ namespace EQ
 		class WebsocketServerConnection
 		{
 		public:
-			WebsocketServerConnection(WebsocketServer *parent, 
-				std::shared_ptr<TCPConnection> connection, 
+			WebsocketServerConnection(WebsocketServer *parent,
+				std::shared_ptr<TCPConnection> connection,
 				std::shared_ptr<websocket_connection> ws_connection);
 			~WebsocketServerConnection();
 

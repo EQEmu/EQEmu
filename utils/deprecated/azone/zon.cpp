@@ -43,26 +43,26 @@ int ZonLoader::Open(char *base_path, char *zone_name, Archive *archive) {
 	const char *tfn = archive->FindExtension(".ter");
 	if(tfn == NULL)
 		return(0);
-	
+
 	if(this->terloader.Open(NULL, (char *) tfn, archive) == 0) {
 		printf("failed to direct load TER file in %s\n", zone_name);
 		return(0);
 	}
 	printf("Got direct TER, it is %p\n", terloader.model_data.zone_model);
 	this->model_data.zone_model = terloader.model_data.zone_model;
-	  
+
     return 1;
   }
 
   filename = new char[strlen(fn)+1];
   strcpy(filename, fn);
-  
+
   if(!archive->GetFile(filename, &buffer, &buf_len)) {
 	  printf("Unable to load '%s' from '%s'\n", filename, zone_name);
     delete[] filename;
     return 0;
   }
-  
+
 printf("Writting ZON to '%s'\n", filename);
 FILE *ttt = fopen(filename, "wb");
 fwrite(buffer, 1, buf_len, ttt);
@@ -131,7 +131,7 @@ fclose(ttt);
   this->model_data.plac_count = 0;
   // this->model_data.placeable = new Placeable *[this->model_data.plac_count];
   this->model_data.placeable = 0;
-  
+
   plac = (zon_placeable *) buffer;
   base[0] = plac->x;
   base[1] = plac->y;
@@ -216,7 +216,7 @@ fclose(ttt);
       else {
         for(k = 0; k < j; ++k) {
           for(l = 0; l < this->model_data.models[k]->tex_count; ++l) {
-            if(this->model_data.models[k]->tex[l]->filenames[0] == this->model_data.models[j]->tex[i]->filenames[0] || 
+            if(this->model_data.models[k]->tex[l]->filenames[0] == this->model_data.models[j]->tex[i]->filenames[0] ||
                (this->model_data.models[k]->tex[l]->filenames[0] &&
                 this->model_data.models[j]->tex[i]->filenames[0] &&
                 !strcmp(this->model_data.models[k]->tex[l]->filenames[0], this->model_data.models[j]->tex[i]->filenames[0]))) {

@@ -43,12 +43,12 @@ inline void decompress(char *p, char *p2, int len, int uLen) {
   d_stream.zalloc = (alloc_func)0;
   d_stream.zfree = (free_func)0;
   d_stream.opaque = (voidpf)0;
-  
+
   d_stream.next_in  = (Bytef *) p;
   d_stream.avail_in = len;
   d_stream.next_out = (Bytef *) p2;
   d_stream.avail_out = uLen;
-  
+
   inflateInit(&d_stream);
   status = inflate(&d_stream, Z_NO_FLUSH);
   inflateEnd(&d_stream);
@@ -94,7 +94,7 @@ int PFSLoader::Open(FILE *fp) {
 
   fseek(fp, s3d_header.offset, SEEK_SET);
   fread(&s3d_dir_header, sizeof(struct_directory_header), 1, fp);
-  
+
   this->count = s3d_dir_header.count - 1;
   this->filenames = new char *[s3d_dir_header.count];
   this->files = new uint32[s3d_dir_header.count - 1];
@@ -176,7 +176,7 @@ const char *PFSLoader::FindExtension(const char *ext) {
   int i;
 
   int elen = strlen(ext);
-  
+
   for(i = 0; i < this->count; ++i) {
     int flen = strlen(this->filenames[i]);
 	if(flen <= elen)
@@ -201,7 +201,7 @@ int PFSLoader::GetFile(char *name, uchar **buf, int *len) {
       fread(&s3d_dir, sizeof(struct_directory), 1, this->fp);
       fseek(this->fp, s3d_dir.offset, SEEK_SET);
       *buf = new uchar[s3d_dir.size];
-      
+
       inf = 0;
       while(inf < (int)s3d_dir.size) {
         fread(&s3d_data, sizeof(struct_data_block), 1, this->fp);

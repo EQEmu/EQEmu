@@ -202,7 +202,7 @@ void EQ::MemoryBuffer::Resize(size_t sz)
 		memcpy(temp, buffer_, capacity_);
 		delete[] buffer_;
 		buffer_ = temp;
-		
+
 		capacity_ = new_size;
 		size_ = sz;
 	}
@@ -217,7 +217,7 @@ void EQ::MemoryBuffer::Clear()
 		delete[] buffer_;
 		buffer_ = nullptr;
 	}
-	
+
 	size_ = 0;
 	capacity_ = 0;
 	write_pos_ = 0;
