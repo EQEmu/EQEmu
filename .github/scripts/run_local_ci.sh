@@ -5,6 +5,9 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$repo_root"
 
 run_common_checks() {
+  tmp_home="$(mktemp -d)"
+  export HOME="$tmp_home"
+  export GIT_CONFIG_GLOBAL="$tmp_home/.gitconfig"
   git config --global --add safe.directory "$repo_root"
   go install github.com/rhysd/actionlint/cmd/actionlint@latest
   export PATH="$PATH:$HOME/go/bin:/root/go/bin"
