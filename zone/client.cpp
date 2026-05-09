@@ -3185,7 +3185,12 @@ bool Client::CanHaveSkill(EQ::skills::SkillType skill_id) const
 		skill_id = EQ::skills::Skill2HPiercing;
 	}
 
-	return SkillCaps::Instance()->GetSkillCap(GetClass(), skill_id, RuleI(Character, MaxLevel)).cap > 0;
+	for (uint8 cls : GetAssignedClasses()) {
+		if (SkillCaps::Instance()->GetSkillCap(cls, skill_id, RuleI(Character, MaxLevel)).cap > 0) {
+			return true;
+		}
+	}
+	return false;
 }
 
 uint16 Client::MaxSkill(EQ::skills::SkillType skill_id, uint8 class_id, uint8 level) const
@@ -3201,6 +3206,18 @@ uint16 Client::MaxSkill(EQ::skills::SkillType skill_id, uint8 class_id, uint8 le
 	return SkillCaps::Instance()->GetSkillCap(class_id, skill_id, level).cap;
 }
 
+uint16 Client::MaxSkillAcrossAssignedClasses(EQ::skills::SkillType skill_id, uint8 level) const
+{
+	uint16 max_cap = 0;
+	for (uint8 cls : GetAssignedClasses()) {
+		uint16 cap = MaxSkill(skill_id, cls, level);
+		if (cap > max_cap) {
+			max_cap = cap;
+		}
+	}
+	return max_cap;
+}
+
 uint8 Client::GetSkillTrainLevel(EQ::skills::SkillType skill_id, uint8 class_id)
 {
 	if (
@@ -3212,6 +3229,18 @@ uint8 Client::GetSkillTrainLevel(EQ::skills::SkillType skill_id, uint8 class_id)
 	}
 
 	return SkillCaps::Instance()->GetSkillTrainLevel(class_id, skill_id, RuleI(Character, MaxLevel));
+}
+
+uint8 Client::GetSkillTrainLevelAcrossAssignedClasses(EQ::skills::SkillType skill_id)
+{
+	uint8 max_train = 0;
+	for (uint8 cls : GetAssignedClasses()) {
+		uint8 train = GetSkillTrainLevel(skill_id, cls);
+		if (train > max_train) {
+			max_train = train;
+		}
+	}
+	return max_train;
 }
 
 uint16 Client::GetMaxSkillAfterSpecializationRules(EQ::skills::SkillType skillid, uint16 maxSkill)
@@ -12154,7 +12183,7 @@ void Client::MaxSkills()
 		auto current_skill_value = (
 			EQ::skills::IsSpecializedSkill(s.first) ?
 			MAX_SPECIALIZED_SKILL :
-			SkillCaps::Instance()->GetSkillCap(GetClass(), s.first, GetLevel()).cap
+			MaxSkillAcrossAssignedClasses(s.first, GetLevel())
 		);
 
 		if (GetSkill(s.first) < current_skill_value) {

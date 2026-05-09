@@ -3,6 +3,8 @@
 ### Multiclass
 
 * Strengthen `SetClassMask` validation to reject empty masks and masks with invalid/non-playable class bits (MC-002)
+* Refactor skill caps to use the maximum cap across all assigned classes (MC-003)
+* Fix `GetSkillTrainLevel` loop bug where the lookup key was not recomputed per level iteration
 
 ## [23.10.3] 9/16/2025
 

@@ -3191,7 +3191,7 @@ void Perl_Client_ResetLeadershipAA(Client* self)
 
 uint8 Perl_Client_GetSkillTrainLevel(Client* self, int skill_id)
 {
-	return self->GetSkillTrainLevel(static_cast<EQ::skills::SkillType>(skill_id), self->GetClass());
+	return self->GetSkillTrainLevelAcrossAssignedClasses(static_cast<EQ::skills::SkillType>(skill_id));
 }
 
 bool Perl_Client_AreTasksCompleted(Client* self, perl::array task_ids)

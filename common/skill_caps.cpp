@@ -76,9 +76,9 @@ uint8 SkillCaps::GetSkillTrainLevel(uint8 class_id, EQ::skills::SkillType skill_
 		return 0;
 	}
 
-	const uint8    max_level = level > skill_cap_max_level ? level : skill_cap_max_level;
-	const uint64_t key       = (class_id * 1000000) + (level * 1000) + static_cast<uint32>(skill_id);
+	const uint8 max_level = level > skill_cap_max_level ? level : skill_cap_max_level;
 	for (uint8 current_level = 1; current_level <= max_level; current_level++) {
+		const uint64_t key = (class_id * 1000000) + (current_level * 1000) + static_cast<uint32>(skill_id);
 		auto pos = m_skill_caps.find(key);
 		if (pos != m_skill_caps.end()) {
 			return current_level;

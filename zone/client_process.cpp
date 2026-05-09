@@ -1643,7 +1643,7 @@ void Client::OPGMTraining(const EQApplicationPacket *app)
 		if (sk == EQ::skills::SkillTinkering && GetRace() != Race::Gnome) {
 			gmtrain->skills[sk] = 0; //Non gnomes can't tinker!
 		} else {
-			gmtrain->skills[sk] = GetMaxSkillAfterSpecializationRules((EQ::skills::SkillType)sk, MaxSkill((EQ::skills::SkillType)sk, GetClass(), RuleI(Character, MaxLevel)));
+			gmtrain->skills[sk] = GetMaxSkillAfterSpecializationRules((EQ::skills::SkillType)sk, MaxSkillAcrossAssignedClasses((EQ::skills::SkillType)sk, RuleI(Character, MaxLevel)));
 			//this is the highest level that the trainer can train you to, this is enforced clientside so we can't just
 			//Set it to 1 with CanHaveSkill or you wont be able to train past 1.
 		}
@@ -1763,7 +1763,7 @@ void Client::OPGMTrainSkill(const EQApplicationPacket *app)
 
 		if (skilllevel == 0) {
 			//this is a new skill..
-			uint16 t_level = GetSkillTrainLevel(skill, GetClass());
+			uint16 t_level = GetSkillTrainLevelAcrossAssignedClasses(skill);
 
 			if (t_level == 0) {
 				LogSkills("Tried to train a new skill [{}] which is invalid for this race/class.", skill);
