@@ -1,49 +1,50 @@
 {
-  "version": 3,
-  "cmakeMinimumRequired": {
-    "major": 3,
-    "minor": 19,
-    "patch": 0
-  },
-  "configurePresets": [
-    {
-      "name": "linux-debug",
-      "displayName": "Linux Debug",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
-        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
-        "EQEMU_BUILD_LOGIN": "ON",
-        "EQEMU_BUILD_TESTS": "ON",
-        "EQEMU_ADD_PROFILER": "ON"
-      }
-    },
-    {
-      "name": "linux-release",
-      "displayName": "Linux Release",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/release",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_C_COMPILER_LAUNCHER": "ccache",
-        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
-        "EQEMU_BUILD_LOGIN": "ON"
-      }
-    },
-  {
-      "name": "win-msvc",
-      "displayName": "Windows MSVC (VS 2022)",
-      "generator": "Visual Studio 17 2022",
-      "binaryDir": "${sourceDir}/build/${presetName}",
-      "architecture": { "value": "x64" },
-      "cacheVariables": {
-        "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
-        "EQEMU_BUILD_LOGIN": "ON",
-        "EQEMU_BUILD_TESTS": "ON"
-      }
-    }
-  ]
+	"version": 3,
+	"cmakeMinimumRequired": {
+		"major": 3,
+		"minor": 20,
+		"patch": 0
+	},
+	"configurePresets": [
+		{
+			"name": "linux",
+			"displayName": "Linux-Ninja",
+			"generator": "Ninja",
+			"binaryDir": "${sourceDir}/build",
+			"cacheVariables": {
+				"EQEMU_BUILD_TESTS": "ON"
+			}
+		},
+		{
+			"name": "linux-ccache",
+			"displayName": "Linux-Ninja (Ccache)",
+			"generator": "Ninja",
+			"binaryDir": "${sourceDir}/build",
+			"cacheVariables": {
+				"CMAKE_C_COMPILER_LAUNCHER": "ccache",
+				"CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+				"EQEMU_BUILD_TESTS": "ON"
+			}
+		},
+		{
+			"name": "win-msvc-2022",
+			"displayName": "Windows MSVC (VS 2022)",
+			"generator": "Visual Studio 17 2022",
+			"binaryDir": "${sourceDir}/build",
+			"architecture": { "value": "x64" },
+			"cacheVariables": {
+				"EQEMU_BUILD_TESTS": "ON"
+			}
+		},
+		{
+			"name": "win-msvc-2026",
+			"displayName": "Windows MSVC (VS 2026)",
+			"generator": "Visual Studio 18 2026",
+			"binaryDir": "${sourceDir}/build",
+			"architecture": { "value": "x64" },
+			"cacheVariables": {
+				"EQEMU_BUILD_TESTS": "ON"
+			}
+		}
+	]
 }

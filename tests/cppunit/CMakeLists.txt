@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.20.0)
-
 set(cppunit_sources
 	collectoroutput.cpp
 	compileroutput.cpp

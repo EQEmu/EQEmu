@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.20)
-
 set(ucs_sources
 	chatchannel.cpp
 	clientlist.cpp
@@ -24,7 +22,6 @@ install(TARGETS ucs RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 add_definitions(-DUCS)
 
 target_link_libraries(ucs common)
-target_include_directories(ucs PRIVATE ..)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 set_property(TARGET ucs PROPERTY FOLDER executables/servers)

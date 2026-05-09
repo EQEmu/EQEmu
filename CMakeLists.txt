@@ -27,34 +27,35 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 #explicitly set CMP0167 for Find Boost
 if(POLICY CMP0167)
-  cmake_policy(SET CMP0167 NEW)
+	cmake_policy(SET CMP0167 NEW)
 endif()
 
-if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
-	set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Build type")
-endif()
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-option(EQEMU_BUILD_PCH "Build with precompiled headers (Windows)" ON)
+option(EQEMU_BUILD_PCH "Build with precompiled headers" ON)
+
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 
 if(MSVC)
-	add_compile_options(/bigobj)
-	add_compile_definitions(_CRT_SECURE_NO_WARNINGS NOMINMAX WIN32_LEAN_AND_MEAN CRASH_LOGGING)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+	# Always build with debug symbols
+	add_compile_options("$<$<CONFIG:RELEASE>:/Zi>")
+	add_link_options("$<$<CONFIG:RELEASE>:/DEBUG /OPT:REF /OPT:ICF>")
 
-	option(EQEMU_DISABLE_MSVC_WARNINGS "Disable MSVC compile warnings." OFF)
-	if(EQEMU_DISABLE_MSVC_WARNINGS)
-		add_compile_options(/W0 /wd4005 /wd4996 /nologo /Os)
-	endif()
+	add_compile_options(/bigobj /MP)
+	add_compile_definitions(_CRT_SECURE_NO_WARNINGS NOMINMAX WIN32_LEAN_AND_MEAN CRASH_LOGGING)
 
 	option(EQEMU_MSVC_DEBUG_CRT "Use the debug CRT on MSVC debug builds" OFF)
 	if(EQEMU_MSVC_DEBUG_CRT)
 		add_compile_definitions(_CRT_DBG_MAP_ALLOC)
 	endif()
 else()
+	add_compile_options("$<$<CONFIG:RELEASE>:-g>")
+
 	add_compile_definitions(HAS_UNION_SEMUN)
 endif()
 

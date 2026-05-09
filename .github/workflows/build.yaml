@@ -39,7 +39,7 @@ jobs:
       - name: Configure
         run: |
           cmake -S . -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DEQEMU_BUILD_TESTS=ON \
@@ -69,7 +69,7 @@ jobs:
 
       - name: Enable long paths
         run: git config --global core.longpaths true
-        
+
       - name: Setup MSVC environment
         uses: TheMrMilchmann/setup-msvc-dev@v4
         with:
@@ -89,7 +89,7 @@ jobs:
         shell: pwsh
         run: |
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
-            -DCMAKE_BUILD_TYPE=RelWithDebInfo `
+            -DCMAKE_BUILD_TYPE=Release `
             -DEQEMU_BUILD_TESTS=ON `
             -DEQEMU_BUILD_LOGIN=ON `
             -DEQEMU_BUILD_LUA=ON `
@@ -98,8 +98,8 @@ jobs:
 
       - name: Build
         shell: pwsh
-        run: cmake --build build --config RelWithDebInfo --target ALL_BUILD -- /m
+        run: cmake --build build --config Release --target ALL_BUILD -- /m
 
       - name: Test
         working-directory: build
-        run: ./bin/RelWithDebInfo/tests.exe
+        run: ./bin/Release/tests.exe

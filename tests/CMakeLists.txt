@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.20.0)
-
 add_subdirectory(cppunit)
 
 set(tests_sources
@@ -22,7 +20,6 @@ set(tests_headers
 add_executable(tests ${tests_sources} ${tests_headers})
 
 target_link_libraries(tests common cppunit)
-target_include_directories(tests PRIVATE ..)
 
 install(TARGETS tests RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
 
