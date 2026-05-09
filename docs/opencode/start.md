@@ -9,7 +9,7 @@ Root fields:
 - `source`: provenance for the backlog
   - `kind`: source type, such as `audit_report`
   - `summary`: short source summary
-  - `primary_goal`: main implementation goal
+  - `primary_goal`: primary implementation goal
 - `defaults`: shared execution policy
   - `repo`: repository name, currently `EQEmu-Monomyth`
   - `execution_mode`: default run mode
@@ -40,15 +40,15 @@ Queue item fields:
 
 ## Session Rules
 
-1. Start by switching to the local `main` branch.
-2. Pull the latest remote changes for `main`.
-3. Fetch origin and verify local `main` is synchronized with `origin/main` before reading the queue:
+1. Start by switching to the local `master` branch.
+2. Pull the latest remote changes for `master`.
+3. Fetch origin and verify local `master` is synchronized with `origin/master` before reading the queue:
    - `git fetch origin`
    - `git rev-parse HEAD`
-   - `git rev-parse origin/main`
+    - `git rev-parse origin/master`
    - `git status --short --branch`
-   - Continue only if `HEAD == origin/main` and the branch status does not report ahead, behind, or diverged.
-4. If switching to `main`, pulling latest `main`, fetching origin, or the synchronization check fails, stop immediately and record the failure in `docs/backlog.json.last_run_summary` for the active item only if an item was already selected; otherwise stop and report the repo-state failure.
+    - Continue only if `HEAD == origin/master` and the branch status does not report ahead, behind, or diverged.
+4. If switching to `master`, pulling latest `master`, fetching origin, or the synchronization check fails, stop immediately and record the failure in `docs/backlog.json.last_run_summary` for the active item only if an item was already selected; otherwise stop and report the repo-state failure.
 5. Do not continue work from an already checked-out feature branch unless I explicitly told you to resume that same branch.
 
 ## PR Reconciliation Rules
@@ -113,7 +113,7 @@ Queue item fields:
    - `repo == "EQEmu-Monomyth"`
    - every item listed in `depends_on` has `status == "done"`
 5. If the selector prints no item, stop and explain that no eligible item exists. Do not enumerate every queue item.
-6. Before starting work, print only the selected item `id`, `status`, `order`, `branch`, `pr_url`, and `head_commit` from the synchronized `main` checkout. If the item was previously completed in a merged PR but still appears open on synchronized `main`, stop and report the ledger inconsistency instead of reimplementing it.
+6. Before starting work, print only the selected item `id`, `status`, `order`, `branch`, `pr_url`, and `head_commit` from the synchronized `master` checkout. If the item was previously completed in a merged PR but still appears open on synchronized `master`, stop and report the ledger inconsistency instead of reimplementing it.
 7. Never select items with status:
    - `blocked`
    - `done`
@@ -121,15 +121,15 @@ Queue item fields:
 
 ## Execution Rules
 
-1. After selecting the item, create a fresh branch from updated `main`.
-   - If status is `ci_failed` or `changes_requested` and the item already has a branch, check out that existing branch after synchronizing `main` instead of creating a new branch.
+1. After selecting the item, create a fresh branch from updated `master`.
+   - If status is `ci_failed` or `changes_requested` and the item already has a branch, check out that existing branch after synchronizing `master` instead of creating a new branch.
    - When resuming a `ci_failed` or `changes_requested` item, transition it back to `in_progress` before making fixes.
 2. Limit edits to the files listed on the queue item unless acceptance criteria cannot be met without a minimal adjacent edit. If scope expands, document exactly why in `last_run_summary`.
 3. Implement only the selected queue item. Do not begin work on any other queue item in this session.
 4. Satisfy the listed acceptance criteria and verification requirements for the selected item.
 5. Run the full local equivalent of `.github/workflows/ci.yml` before PR submission.
-   - Preferred command from the finalized branch state: `.github/scripts/run_ci_equivalent.sh origin/main HEAD`.
-   - First reproduce the workflow planner against the branch diff from synchronized `origin/main`: identify the selected Go modules, whether frontend assets changed, whether `.github/scripts/**` changed, and whether review-sensitive paths changed using the same path rules as `plan-ci`.
+    - Preferred command from the finalized branch state: `.github/scripts/run_ci_equivalent.sh origin/master HEAD`.
+    - First reproduce the workflow planner against the branch diff from synchronized `origin/master`: identify the selected Go modules, whether frontend assets changed, whether `.github/scripts/**` changed, and whether review-sensitive paths changed using the same path rules as `plan-ci`.
    - For every selected Go module, run exactly the PR lint tooling from `ci.yml`: install `staticcheck@v0.6.0`, install `golangci-lint@v1.64.5`, run `gofmt -l` over all Go files in the selected module and fail if it prints any path, run `go vet ./...`, run `staticcheck ./...`, and run the workflow errcheck gate (`golangci-lint run ./internal/memory/...` for `gateway`, `golangci-lint run ./internal/...` for `cca`).
    - For every selected Go module, run the PR test gate: `go test ./...`.
    - For every selected Go module, also run the merge build gate that `ci.yml` runs after merge: `go build ./...`.
@@ -194,7 +194,7 @@ The PR description must include:
 - Do not silently skip CI.
 - For the selected item, `done` means the agent completed implementation, local verification, and pre-PR queue bookkeeping on the branch; the next session's branch/PR gate verifies whether the submitted PR is still open before selecting more work.
 - After PR creation, no status-only edits, commits, or pushes are allowed. Same-branch fixes require explicit human instruction.
-- After merge, do not push completion metadata to the old PR branch; update `docs/backlog.json` directly on synchronized `main`.
+- After merge, do not push completion metadata to the old PR branch; update `docs/backlog.json` directly on synchronized `master`.
 - Never create, push, or leave behind a commit whose only purpose is marking the queue item done after the implementation commit or after PR creation. Queue completion belongs with the implementation before the first branch push.
 - If the selected item appears ambiguous, too large, or blocked by an unrecorded design decision, stop and explain instead of improvising a broader change.
 
