@@ -7207,6 +7207,19 @@ ALTER TABLE `character_parcels_containers`
 )",
 		.content_schema_update = false
 	},
+	ManifestEntry{
+		.version = 9329,
+		.description = "2026_05_09_character_data_class_mask.sql",
+		.check = "SHOW COLUMNS FROM `character_data` LIKE 'class_mask'",
+		.condition = "empty",
+		.match = "",
+		.sql = R"(
+ALTER TABLE `character_data`
+	ADD COLUMN `class_mask` INT UNSIGNED NOT NULL DEFAULT '0' AFTER `class`;
+UPDATE `character_data` SET `class_mask` = POW(2, `class` - 1) WHERE `class` BETWEEN 1 AND 16 AND `class_mask` = 0;
+)",
+		.content_schema_update = false
+	},
 // -- template; copy/paste this when you need to create a new entry
 //	ManifestEntry{
 //		.version = 9228,

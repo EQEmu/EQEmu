@@ -51,6 +51,7 @@ public:
 		uint8_t     gender;
 		uint16_t    race;
 		uint8_t     class_;
+		uint32_t    class_mask;
 		uint32_t    level;
 		uint32_t    deity;
 		uint32_t    birthday;
@@ -167,6 +168,7 @@ public:
 			"gender",
 			"race",
 			"`class`",
+			"class_mask",
 			"level",
 			"deity",
 			"birthday",
@@ -279,6 +281,7 @@ public:
 			"gender",
 			"race",
 			"`class`",
+			"class_mask",
 			"level",
 			"deity",
 			"birthday",

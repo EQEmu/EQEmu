@@ -541,6 +541,12 @@ public:
 	inline uint8 GetLevel2() const { return m_pp.level2; }
 	inline uint16 GetBaseRace() const { return m_pp.race; }
 	inline uint16 GetBaseClass() const { return m_pp.class_; }
+
+	uint32_t GetClassMask() const;
+	bool HasAssignedClass(uint8 class_id) const;
+	std::vector<uint8> GetAssignedClasses() const;
+	bool SetClassMask(uint32_t new_mask);
+
 	inline uint8 GetBaseGender() const { return m_pp.gender; }
 	inline uint8 GetBaseFace() const { return m_pp.face; }
 	inline uint8 GetBaseHairColor() const { return m_pp.haircolor; }
@@ -2135,6 +2141,7 @@ private:
 	PlayerProfile_Struct m_pp;
 	ExtendedProfile_Struct m_epp;
 	EQ::InventoryProfile m_inv;
+	uint32_t m_class_mask;
 	Object* m_tradeskill_object;
 	PetInfo m_petinfo; // current pet data, used while loading from and saving to DB
 	PetInfo m_suspendedminion; // pet data for our suspended minion.

@@ -271,6 +271,7 @@ Client::Client() : Mob(
 	//for good measure:
 	memset(&m_pp, 0, sizeof(m_pp));
 	memset(&m_epp, 0, sizeof(m_epp));
+	m_class_mask = 0;
 	PendingTranslocate = false;
 	PendingSacrifice = false;
 	sacrifice_caster_id = 0;
@@ -582,6 +583,7 @@ Client::Client(EQStreamInterface *ieqs) : Mob(
 	//for good measure:
 	memset(&m_pp, 0, sizeof(m_pp));
 	memset(&m_epp, 0, sizeof(m_epp));
+	m_class_mask = 0;
 	PendingTranslocate = false;
 	PendingSacrifice = false;
 	sacrifice_caster_id = 0;
@@ -13319,4 +13321,54 @@ bool Client::UncompleteTask(int task_id)
 	);
 
 	return task_state->UncompleteTask(task_id);
+}
+
+uint32_t Client::GetClassMask() const
+{
+	return m_class_mask;
+}
+
+bool Client::HasAssignedClass(uint8 class_id) const
+{
+	if (class_id < Class::Warrior || class_id > Class::Berserker) {
+		return false;
+	}
+
+	return (m_class_mask & GetPlayerClassBit(class_id)) != 0;
+}
+
+std::vector<uint8> Client::GetAssignedClasses() const
+{
+	std::vector<uint8> classes;
+	for (uint8 c = Class::Warrior; c <= Class::Berserker; ++c) {
+		if (m_class_mask & GetPlayerClassBit(c)) {
+			classes.push_back(c);
+		}
+	}
+	return classes;
+}
+
+bool Client::SetClassMask(uint32_t new_mask)
+{
+	if (!IsPlayerClass(GetClass())) {
+		return false;
+	}
+
+	if (!(new_mask & GetPlayerClassBit(GetClass()))) {
+		return false;
+	}
+
+	uint8 count = 0;
+	for (uint8 c = Class::Warrior; c <= Class::Berserker; ++c) {
+		if (new_mask & GetPlayerClassBit(c)) {
+			count++;
+		}
+	}
+
+	if (count > 3) {
+		return false;
+	}
+
+	m_class_mask = new_mask;
+	return true;
 }

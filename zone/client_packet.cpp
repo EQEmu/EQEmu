@@ -28,6 +28,7 @@
 #include "common/repositories/adventure_members_repository.h"
 #include "common/repositories/buyer_buy_lines_repository.h"
 #include "common/repositories/character_corpses_repository.h"
+#include "common/repositories/character_data_repository.h"
 #include "common/repositories/character_instance_safereturns_repository.h"
 #include "common/repositories/character_pet_name_repository.h"
 #include "common/repositories/character_stats_record_repository.h"
@@ -1364,6 +1365,14 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	database.LoadCharacterPotionBelt(cid, &m_pp); /* Load Character Potion Belt */
 	database.LoadCharacterCurrency(cid, &m_pp); /* Load Character Currency into PP */
 	database.LoadCharacterData(cid, &m_pp, &m_epp); /* Load Character Data from DB into PP as well as E_PP */
+	{
+		const auto& e = CharacterDataRepository::FindOne(database, cid);
+		if (e.id) {
+			m_class_mask = e.class_mask;
+		} else {
+			m_class_mask = GetPlayerClassBit(m_pp.class_);
+		}
+	}
 	database.LoadCharacterSkills(cid, &m_pp); /* Load Character Skills */
 	database.LoadCharacterInspectMessage(cid, &m_inspect_message); /* Load Character Inspect Message */
 	database.LoadCharacterSpellBook(cid, &m_pp); /* Load Character Spell Book */

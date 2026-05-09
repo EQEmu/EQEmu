@@ -1085,6 +1085,7 @@ bool ZoneDatabase::SaveCharacterData(
 	e.gender                  = pp->gender;
 	e.race                    = pp->race;
 	e.class_                  = pp->class_;
+	e.class_mask              = c->GetClassMask();
 	e.level                   = pp->level;
 	e.deity                   = pp->deity;
 	e.birthday                = pp->birthday;
