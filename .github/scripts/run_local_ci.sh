@@ -6,11 +6,13 @@ cd "$repo_root"
 
 run_common_checks() {
   tmp_home="$(mktemp -d)"
+  tmp_bin="$(mktemp -d)"
   export HOME="$tmp_home"
   export GIT_CONFIG_GLOBAL="$tmp_home/.gitconfig"
+  export GOBIN="$tmp_bin"
   git config --global --add safe.directory "$repo_root"
   go install github.com/rhysd/actionlint/cmd/actionlint@latest
-  export PATH="$PATH:$HOME/go/bin:/root/go/bin"
+  export PATH="$tmp_bin:$PATH:$HOME/go/bin:/root/go/bin"
   actionlint
 
   if git grep -nI -E "[[:blank:]]$" -- \
