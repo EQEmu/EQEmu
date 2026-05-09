@@ -37,7 +37,7 @@ endif()
 
 if(UNIX)
 	target_link_libraries(tests "${CMAKE_DL_LIBS}")
-	target_link_libraries(tests "z")
+	target_link_libraries(tests ZLIB::ZLIB)
 	target_link_libraries(tests "m")
 	if(NOT DARWIN)
 		target_link_libraries(tests "rt")
