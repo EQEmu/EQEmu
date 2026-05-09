@@ -943,8 +943,10 @@ public:
 	void ShowSkillsWindow();
 
 	uint16 MaxSkill(EQ::skills::SkillType skill_id, uint8 class_id, uint8 level) const;
-	inline uint16 MaxSkill(EQ::skills::SkillType skill_id) const { return MaxSkill(skill_id, GetClass(), GetLevel()); }
+	uint16 MaxSkillAcrossAssignedClasses(EQ::skills::SkillType skill_id, uint8 level) const;
+	inline uint16 MaxSkill(EQ::skills::SkillType skill_id) const { return MaxSkillAcrossAssignedClasses(skill_id, GetLevel()); }
 	uint8 GetSkillTrainLevel(EQ::skills::SkillType skill_id, uint8 class_id);
+	uint8 GetSkillTrainLevelAcrossAssignedClasses(EQ::skills::SkillType skill_id);
 	void MaxSkills();
 
 	void SendTradeskillSearchResults(const std::string &query, unsigned long objtype, unsigned long someid);

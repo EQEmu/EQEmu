@@ -3390,7 +3390,7 @@ void Lua_Client::ResetLeadershipAA()
 uint8 Lua_Client::GetSkillTrainLevel(int skill_id)
 {
 	Lua_Safe_Call_Int();
-	return self->GetSkillTrainLevel(static_cast<EQ::skills::SkillType>(skill_id), self->GetClass());
+	return self->GetSkillTrainLevelAcrossAssignedClasses(static_cast<EQ::skills::SkillType>(skill_id));
 }
 
 bool Lua_Client::AreTasksCompleted(luabind::object task_ids)
