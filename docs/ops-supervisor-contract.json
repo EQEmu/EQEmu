@@ -1,0 +1,10 @@
+{
+  "local_ci_commands": [
+    "./.github/scripts/run_local_ci.sh"
+  ],
+  "required_checks": [
+    "Lint and Static Checks",
+    "C++ Unit Tests"
+  ],
+  "required_ai_review": true
+}

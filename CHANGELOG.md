@@ -3,6 +3,7 @@
 ### Multiclass
 
 * Strengthen `SetClassMask` validation to reject empty masks and masks with invalid/non-playable class bits (MC-002)
+* Union AA eligibility across all assigned classes so multiclass characters can see, purchase, and use AAs from any assigned class (MC-004)
 * Refactor skill caps to use the maximum cap across all assigned classes (MC-003)
 * Fix `GetSkillTrainLevel` loop bug where the lookup key was not recomputed per level iteration
 
