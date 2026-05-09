@@ -30,7 +30,7 @@
       "id": "MC-001",
       "title": "Add schema and runtime assigned-class set",
       "priority": "P0",
-      "status": "queued",
+      "status": "open",
       "depends_on": [],
       "slice_instance_id": "8f14a1e8f0ef49a6a964e024b33c3b7a",
       "objective": "Persist up to three assigned classes per character without changing client-facing packet layouts.",
@@ -72,13 +72,16 @@
         "Repository regeneration may be required.",
         "Migration ordering can break fresh installs if not added in the expected EQEmu style.",
         "Hidden assumptions may treat class_ as mutable runtime authority."
-      ]
+      ],
+      "execution_mode": "auto_pr",
+      "repo": "EQEmu-Monomyth",
+      "order": 1
     },
     {
       "id": "MC-002",
       "title": "Introduce central multiclass helper layer",
       "priority": "P0",
-      "status": "queued",
+      "status": "open",
       "depends_on": [
         "MC-001"
       ],
@@ -119,13 +122,16 @@
       "risks": [
         "Helper signatures may need adjustment once AA/spell call sites are touched.",
         "Missed direct GetClass() gates can create partial multiclass behavior."
-      ]
+      ],
+      "execution_mode": "auto_pr",
+      "repo": "EQEmu-Monomyth",
+      "order": 2
     },
     {
       "id": "MC-003",
       "title": "Refactor skill caps to use highest assigned-class cap",
       "priority": "P0",
-      "status": "queued",
+      "status": "open",
       "depends_on": [
         "MC-001",
         "MC-002"
@@ -170,13 +176,16 @@
         "Training level and skill cap behavior may differ by client/era.",
         "Starting skills may need separate treatment from max caps.",
         "Confirmed bug fix in common/skill_caps.cpp could affect stock behavior if not scoped carefully."
-      ]
+      ],
+      "execution_mode": "auto_pr",
+      "repo": "EQEmu-Monomyth",
+      "order": 3
     },
     {
       "id": "MC-004",
       "title": "Union AA eligibility across assigned classes",
       "priority": "P0",
-      "status": "queued",
+      "status": "open",
       "depends_on": [
         "MC-001",
         "MC-002"
@@ -220,13 +229,16 @@
         "Grant-only AA edge cases.",
         "Titanium/older-client AA display differences.",
         "AA ranks with class assumptions outside simple class bitmasks."
-      ]
+      ],
+      "execution_mode": "auto_pr",
+      "repo": "EQEmu-Monomyth",
+      "order": 4
     },
     {
       "id": "MC-005",
       "title": "Share spell and discipline access across assigned classes",
       "priority": "P0",
-      "status": "queued",
+      "status": "open",
       "depends_on": [
         "MC-001",
         "MC-002"
@@ -272,13 +284,16 @@
         "Spell group cache query may embed single-class assumptions.",
         "Older clients may clip large spellbooks.",
         "Spell effects may have class/level gates separate from normal cast checks."
-      ]
+      ],
+      "execution_mode": "auto_pr",
+      "repo": "EQEmu-Monomyth",
+      "order": 5
     },
     {
       "id": "MC-006",
       "title": "Preserve visible-class compatibility and add GM multiclass tooling",
       "priority": "P1",
-      "status": "queued",
+      "status": "open",
       "depends_on": [
         "MC-001",
         "MC-002",
@@ -328,13 +343,16 @@
         "Accidental packet layout changes can break clients.",
         "Operators may expect visible class to show multiclass data; document that this is intentionally server-side for now.",
         "GM command naming may collide with existing command conventions."
-      ]
+      ],
+      "execution_mode": "auto_pr",
+      "repo": "EQEmu-Monomyth",
+      "order": 6
     },
     {
       "id": "MC-007",
       "title": "End-to-end multiclass regression pass",
       "priority": "P1",
-      "status": "queued",
+      "status": "open",
       "depends_on": [
         "MC-003",
         "MC-004",
@@ -381,7 +399,10 @@
         "Some EQEmu behavior may require live/manual validation instead of automated tests.",
         "Large spellbooks may expose client-era limits.",
         "Edge cases may emerge in class-specific spell effects or AA restrictions."
-      ]
+      ],
+      "execution_mode": "auto_pr",
+      "repo": "EQEmu-Monomyth",
+      "order": 7
     }
   ],
   "future_candidates": [
