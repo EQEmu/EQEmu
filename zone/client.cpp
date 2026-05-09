@@ -10780,11 +10780,11 @@ std::vector<int> Client::GetLearnableDisciplines(uint8 min_level, uint8 max_leve
 			continue;
 		}
 
-		if (max_level && spells[spell_id].classes[m_pp.class_ - 1] > max_level) {
+		if (max_level && GetSpellLevelForCharacter(spell_id) > max_level) {
 			continue;
 		}
 
-		if (min_level > 1 && spells[spell_id].classes[m_pp.class_ - 1] < min_level) {
+		if (min_level > 1 && GetSpellLevelForCharacter(spell_id) < min_level) {
 			continue;
 		}
 
@@ -10851,11 +10851,11 @@ std::vector<int> Client::GetScribeableSpells(uint8 min_level, uint8 max_level) {
 			continue;
 		}
 
-		if (max_level && spells[spell_id].classes[m_pp.class_ - 1] > max_level) {
+		if (max_level && GetSpellLevelForCharacter(spell_id) > max_level) {
 			continue;
 		}
 
-		if (min_level > 1 && spells[spell_id].classes[m_pp.class_ - 1] < min_level) {
+		if (min_level > 1 && GetSpellLevelForCharacter(spell_id) < min_level) {
 			continue;
 		}
 
@@ -10888,7 +10888,7 @@ std::vector<int> Client::GetScribeableSpells(uint8 min_level, uint8 max_level) {
 			if (g != spell_group_cache.end()) {
 				for (const auto& s : g->second) {
 					if (
-						EQ::ValueWithin(spells[s].classes[m_pp.class_ - 1], min_level, max_level) &&
+						EQ::ValueWithin(GetSpellLevelForCharacter(s), min_level, max_level) &&
 						s == spell_id &&
 						scribeable
 					) {
@@ -13408,4 +13408,20 @@ bool Client::SetClassMask(uint32_t new_mask)
 
 	m_class_mask = new_mask;
 	return true;
+}
+
+uint8 Client::GetSpellLevelForCharacter(uint16 spell_id) const
+{
+	if (!IsValidSpell(spell_id)) {
+		return UINT8_MAX;
+	}
+
+	uint8 lowest = UINT8_MAX;
+	for (uint8 c : GetAssignedClasses()) {
+		uint8 level = spells[spell_id].classes[c - 1];
+		if (level < lowest) {
+			lowest = level;
+		}
+	}
+	return lowest;
 }

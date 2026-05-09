@@ -65,7 +65,7 @@ void command_scribespell(Client *c, const Seperator *sep)
 		if (
 			spells[spell_id].classes[Class::Warrior] != 0 &&
 			spells[spell_id].skill != EQ::skills::SkillTigerClaw &&
-			spells[spell_id].classes[t->GetPP().class_ - 1] > 0 &&
+			t->GetSpellLevelForCharacter(spell_id) > 0 &&
 			!IsDiscipline(spell_id)
 		) {
 			auto book_slot = t->GetNextAvailableSpellBookSlot();

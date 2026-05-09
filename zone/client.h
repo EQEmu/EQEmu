@@ -546,6 +546,7 @@ public:
 	bool HasAssignedClass(uint8 class_id) const;
 	std::vector<uint8> GetAssignedClasses() const;
 	bool SetClassMask(uint32_t new_mask);
+	uint8 GetSpellLevelForCharacter(uint16 spell_id) const;
 
 	inline uint8 GetBaseGender() const { return m_pp.gender; }
 	inline uint8 GetBaseFace() const { return m_pp.face; }

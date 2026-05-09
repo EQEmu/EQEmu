@@ -592,6 +592,7 @@ public:
 	inline void ChangeDrakkinDetails(uint8 in) { drakkin_details = in; }
 	inline uint32 GetArmorTint(uint8 i) const { return armor_tint.Slot[(i < EQ::textures::materialCount) ? i : 0].Color; }
 	inline uint8 GetClass() const { return class_; }
+	uint8 GetEffectiveSpellLevel(uint16 spell_id) const;
 	inline uint8 GetLevel() const { return level; }
 	inline uint8 GetOrigLevel() const { return orig_level; }
 	inline const char* GetName() const { return name; }

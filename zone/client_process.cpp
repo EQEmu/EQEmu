@@ -1171,13 +1171,13 @@ void Client::OPMemorizeSpell(const EQApplicationPacket* app)
 		m->scribing != memSpellForget &&
 		(
 			!IsPlayerClass(GetClass()) ||
-			GetLevel() < spells[m->spell_id].classes[GetClass() - 1]
+			GetLevel() < GetSpellLevelForCharacter(m->spell_id)
 		)
 	) {
 		MessageString(
 			Chat::Red,
 			SPELL_LEVEL_TO_LOW,
-			std::to_string(spells[m->spell_id].classes[GetClass() - 1]).c_str(),
+			std::to_string(GetSpellLevelForCharacter(m->spell_id)).c_str(),
 			spells[m->spell_id].name
 		);
 		return;

@@ -7242,12 +7242,23 @@ uint16 Mob::GetWeaponSpeedbyHand(uint16 hand) {
 	return weapon_speed;
 }
 
+uint8 Mob::GetEffectiveSpellLevel(uint16 spell_id) const
+{
+	if (!IsValidSpell(spell_id)) {
+		return UINT8_MAX;
+	}
+	if (IsClient()) {
+		return CastToClient()->GetSpellLevelForCharacter(spell_id);
+	}
+	return spells[spell_id].classes[(GetClass() % 17) - 1];
+}
+
 int8 Mob::GetDecayEffectValue(uint16 spell_id, uint16 spelleffect) {
 
 	if (!IsValidSpell(spell_id))
 		return false;
 
-	int spell_level = spells[spell_id].classes[(GetClass()%17) - 1];
+	int spell_level = GetEffectiveSpellLevel(spell_id);
 	int effect_value = 0;
 	int lvlModifier = 100;
 
