@@ -13354,6 +13354,14 @@ bool Client::SetClassMask(uint32_t new_mask)
 		return false;
 	}
 
+	if (new_mask == 0) {
+		return false;
+	}
+
+	if (new_mask & ~static_cast<uint32_t>(Class::ALL_CLASSES_BITMASK)) {
+		return false;
+	}
+
 	if (!(new_mask & GetPlayerClassBit(GetClass()))) {
 		return false;
 	}

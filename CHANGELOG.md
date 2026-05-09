@@ -1,3 +1,9 @@
+## [Unreleased]
+
+### Multiclass
+
+* Strengthen `SetClassMask` validation to reject empty masks and masks with invalid/non-playable class bits (MC-002)
+
 ## [23.10.3] 9/16/2025
 
 ### Hotfix
