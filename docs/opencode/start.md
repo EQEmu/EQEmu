@@ -169,6 +169,23 @@ Queue item fields:
    - do not edit, commit, or push any post-PR metadata update
    - report the PR URL in the final response and stop; do not start another queue item in this run
 
+## C++ / CMake Verification Rules
+
+1. Do not claim local build prerequisites are missing until you have tried the repository's actual configured build path. Raw ad hoc compiler probes like `g++ -fsyntax-only zone/client.cpp` are not sufficient evidence because this repo depends on CMake, generated build flags, precompiled headers, include paths, and vcpkg toolchain wiring.
+2. Before saying "the CI workflow has the full environment" or similar, verify at least one of these locally from the repo root:
+   - reuse an existing configured build tree such as `build/linux` or `build/unit-tests` if present
+   - or run a fresh configure with the repo's vcpkg toolchain, for example `cmake -S . -B /tmp/eqemu-cmake-smoke -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_TOOLCHAIN_FILE=$PWD/submodules/vcpkg/scripts/buildsystems/vcpkg.cmake`
+3. For small C++ changes, prefer a targeted real build over hand-waving:
+   - if the affected object already exists in `build.ninja`, build that object directly, for example `ninja -C build/linux zone/CMakeFiles/zone.dir/client.cpp.o`
+   - otherwise build the smallest relevant target that includes the changed file
+4. Treat a successful configured CMake generate or successful targeted ninja object build as proof that local prerequisites are available for that verification scope. Do not tell the user that vcpkg, MySQL, or CMake dependencies are unavailable locally if these checks succeed.
+5. If configured local verification fails, quote the exact failing command and error. Distinguish between:
+   - missing host prerequisites
+   - missing vcpkg/submodule/bootstrap state
+   - unrelated compile errors introduced by the change
+   - full-target builds that are merely slow versus actually blocked
+6. Only fall back to CI-only verification claims after the configured local checks above have failed or are genuinely unavailable.
+
 ## Post-PR Reconciliation Rules
 
 1. After an item has branch or PR metadata, the runner must not edit files, commit, push, or select another queue item until the prior PR is resolved. Resolve the live PR state from GitHub by `pr_number` when present, otherwise by branch.
