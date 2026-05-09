@@ -1058,7 +1058,7 @@ bool Client::CheckFizzle(uint16 spell_id)
 	//Live AA - Spell Casting Expertise, Mastery of the Past
 	no_fizzle_level = aabonuses.MasteryofPast + itembonuses.MasteryofPast + spellbonuses.MasteryofPast;
 
-	if (spells[spell_id].classes[GetClass()-1] < no_fizzle_level) {
+	if (GetSpellLevelForCharacter(spell_id) < no_fizzle_level) {
 		return true;
 	}
 
@@ -1138,12 +1138,12 @@ bool Client::CheckFizzle(uint16 spell_id)
 	int par_skill;
 	int act_skill;
 
-	par_skill = spells[spell_id].classes[GetClass()-1] * 5 - 10;//IIRC even if you are lagging behind the skill levels you don't fizzle much
+	par_skill = GetSpellLevelForCharacter(spell_id) * 5 - 10;//IIRC even if you are lagging behind the skill levels you don't fizzle much
 	if (par_skill > 235) {
 		par_skill = 235;
 	}
 
-	par_skill += spells[spell_id].classes[GetClass()-1]; // maximum of 270 for level 65 spell
+	par_skill += GetSpellLevelForCharacter(spell_id); // maximum of 270 for level 65 spell
 
 	act_skill = GetSkill(spells[spell_id].skill);
 	act_skill += GetLevel(); // maximum of whatever the client can cheat
@@ -6150,6 +6150,18 @@ uint32 Client::GetHighestScribedSpellinSpellGroup(uint32 spell_group)
 std::unordered_map<uint32, std::vector<uint16>> Client::LoadSpellGroupCache(uint8 min_level, uint8 max_level) {
 	std::unordered_map<uint32, std::vector<uint16>> spell_group_cache;
 
+	std::string class_conditions;
+	auto assigned = GetAssignedClasses();
+	for (size_t i = 0; i < assigned.size(); ++i) {
+		if (i > 0) {
+			class_conditions += " OR ";
+		}
+		class_conditions += fmt::format("classes{} BETWEEN {} AND {}", assigned[i], min_level, max_level);
+	}
+	if (class_conditions.empty()) {
+		class_conditions = fmt::format("classes{} BETWEEN {} AND {}", m_pp.class_, min_level, max_level);
+	}
+
 	const auto query = fmt::format(
 		"SELECT a.spellgroup, a.id, a.rank "
 		"FROM spells_new a "
@@ -6158,8 +6170,8 @@ std::unordered_map<uint32, std::vector<uint16>> Client::LoadSpellGroupCache(uint
 		"FROM spells_new "
 		"GROUP BY spellgroup) "
 		"b ON a.spellgroup = b.spellgroup AND a.rank = b.rank "
-		"WHERE a.spellgroup IN (SELECT DISTINCT spellgroup FROM spells_new WHERE spellgroup != 0 and classes{} BETWEEN {} AND {}) ORDER BY `rank` DESC",
-		m_pp.class_, min_level, max_level
+		"WHERE a.spellgroup IN (SELECT DISTINCT spellgroup FROM spells_new WHERE spellgroup != 0 and ({class_conditions})) ORDER BY `rank` DESC",
+		fmt::arg("class_conditions", class_conditions)
 	);
 
 	auto results = content_db.QueryDatabase(query);

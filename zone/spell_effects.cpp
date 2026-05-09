@@ -4810,7 +4810,7 @@ int64 Mob::CalcAAFocus(focusType type, const AA::Rank &rank, uint16 spell_id)
 				break;
 
 			case SpellEffect::LimitMaxLevel:
-				spell_level = spell.classes[(GetClass() % 17) - 1];
+				spell_level = GetEffectiveSpellLevel(spell_id);
 				lvldiff     = spell_level - base_value;
 				// every level over cap reduces the effect by base2 percent unless from a clicky when
 				// ItemCastsUseFocus is true
@@ -4828,7 +4828,7 @@ int64 Mob::CalcAAFocus(focusType type, const AA::Rank &rank, uint16 spell_id)
 				break;
 
 			case SpellEffect::LimitMinLevel:
-				if ((spell.classes[(GetClass() % 17) - 1]) < base_value) {
+				if (GetEffectiveSpellLevel(spell_id) < base_value) {
 					LimitFailure = true;
 				}
 				break;
@@ -5536,7 +5536,7 @@ int64 Mob::CalcFocusEffect(focusType type, uint16 focus_id, uint16 spell_id, boo
 				if (IsNPC()) {
 					break;
 				}
-				spell_level = spell.classes[(GetClass() % 17) - 1];
+				spell_level = GetEffectiveSpellLevel(spell_id);
 				lvldiff     = spell_level - focus_spell.base_value[i];
 				// every level over cap reduces the effect by focus_spell.base2[i] percent unless from a clicky
 				// when ItemCastsUseFocus is true
@@ -5558,7 +5558,7 @@ int64 Mob::CalcFocusEffect(focusType type, uint16 focus_id, uint16 spell_id, boo
 				if (IsNPC()) {
 					break;
 				}
-				if (spell.classes[(GetClass() % 17) - 1] < focus_spell.base_value[i]) {
+				if (GetEffectiveSpellLevel(spell_id) < focus_spell.base_value[i]) {
 					return (0);
 				}
 				break;

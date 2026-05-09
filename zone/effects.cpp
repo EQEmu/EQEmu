@@ -135,7 +135,7 @@ int64 Mob::GetActSpellDamage(uint16 spell_id, int64 value, Mob* target) {
 			if (RuleB(Spells, IgnoreSpellDmgLvlRestriction) && !spells[spell_id].no_heal_damage_item_mod && itembonuses.SpellDmg) {
 				value -= GetExtraSpellAmt(spell_id, itembonuses.SpellDmg, base_value) * ratio / 100;
 
-			} else if (!spells[spell_id].no_heal_damage_item_mod && itembonuses.SpellDmg && spells[spell_id].classes[(GetClass() % 17) - 1] >= GetLevel() - 5) {
+			} else if (!spells[spell_id].no_heal_damage_item_mod && itembonuses.SpellDmg && GetEffectiveSpellLevel(spell_id) >= GetLevel() - 5) {
 				value -= GetExtraSpellAmt(spell_id, itembonuses.SpellDmg, base_value) * ratio / 100;
 			}
 
@@ -187,7 +187,7 @@ int64 Mob::GetActSpellDamage(uint16 spell_id, int64 value, Mob* target) {
 	else if (
 		!spells[spell_id].no_heal_damage_item_mod &&
 		GetSpellDmg() &&
-		spells[spell_id].classes[(GetClass() % 17) - 1] >= GetLevel() - 5
+		GetEffectiveSpellLevel(spell_id) >= GetLevel() - 5
 	) {
 		value -= GetExtraSpellAmt(spell_id, GetSpellDmg(), base_value);
 	}
@@ -291,7 +291,7 @@ int64 Mob::GetActDoTDamage(uint16 spell_id, int64 value, Mob* target, bool from_
 			else if (
 				!spells[spell_id].no_heal_damage_item_mod &&
 				GetSpellDmg() &&
-				spells[spell_id].classes[(GetClass() % 17) - 1] >= GetLevel() - 5
+				GetEffectiveSpellLevel(spell_id) >= GetLevel() - 5
 			) {
 				extra_dmg += GetExtraSpellAmt(spell_id, GetSpellDmg(), base_value)*ratio/100;
 			}
@@ -337,7 +337,7 @@ int64 Mob::GetActDoTDamage(uint16 spell_id, int64 value, Mob* target, bool from_
 			else if (
 				!spells[spell_id].no_heal_damage_item_mod &&
 				GetSpellDmg() &&
-				spells[spell_id].classes[(GetClass() % 17) - 1] >= GetLevel() - 5
+				GetEffectiveSpellLevel(spell_id) >= GetLevel() - 5
 			) {
 				extra_dmg += GetExtraSpellAmt(spell_id, GetSpellDmg(), base_value);
 			}
@@ -479,7 +479,7 @@ int64 Mob::GetActSpellHealing(uint16 spell_id, int64 value, Mob* target, bool fr
 		else if (
 			!spells[spell_id].no_heal_damage_item_mod &&
 			GetHealAmt() &&
-			spells[spell_id].classes[(GetClass() % 17) - 1] >= GetLevel() - 5
+			GetEffectiveSpellLevel(spell_id) >= GetLevel() - 5
 		) {
 			value += GetExtraSpellAmt(spell_id, GetHealAmt(), base_value); //Item Heal Amt Add before critical
 		}
@@ -533,7 +533,7 @@ int64 Mob::GetActSpellHealing(uint16 spell_id, int64 value, Mob* target, bool fr
 			else if (
 				!spells[spell_id].no_heal_damage_item_mod &&
 				GetHealAmt() &&
-				spells[spell_id].classes[(GetClass() % 17) - 1] >= GetLevel() - 5
+				GetEffectiveSpellLevel(spell_id) >= GetLevel() - 5
 			) {
 				extra_heal += GetExtraSpellAmt(spell_id, GetHealAmt(), base_value);
 			}
@@ -566,7 +566,7 @@ int32 Mob::GetActSpellCost(uint16 spell_id, int32 cost)
 		cost *= 2;
 
 	// Formula = Unknown exact, based off a random percent chance up to mana cost(after focuses) of the cast spell
-	if(itembonuses.Clairvoyance && spells[spell_id].classes[(GetClass()%17) - 1] >= GetLevel() - 5)
+	if(itembonuses.Clairvoyance && GetEffectiveSpellLevel(spell_id) >= GetLevel() - 5)
 	{
 		int mana_back = itembonuses.Clairvoyance * zone->random.Int(1, 100) / 100;
 		// Doesnt generate mana, so best case is a free spell
@@ -758,7 +758,7 @@ bool Client::MemorizeSpellFromItem(uint32 item_id) {
 		return false;
 	}
 
-	const auto class_bit = static_cast<uint32>(1 << (GetClass() - 1));
+	const auto class_bit = static_cast<uint32>(GetClassMask());
 
 	if (!(item->Classes & class_bit)) {
 		Message(Chat::Red, "Your class cannot learn from this scroll.");
@@ -773,7 +773,7 @@ bool Client::MemorizeSpellFromItem(uint32 item_id) {
 	}
 
 	const auto& spell = spells[spell_id];
-	const auto level_to_use = spell.classes[GetClass() - 1];
+	const auto level_to_use = GetSpellLevelForCharacter(static_cast<uint16>(spell_id));
 	if (level_to_use == 255) {
 		Message(Chat::Red, "Your class cannot learn from this scroll.");
 		SummonItem(item_id);
@@ -884,7 +884,7 @@ bool Client::UseDiscipline(uint32 spell_id, uint32 target) {
 
 	//can we use the spell?
 	const SPDat_Spell_Struct &spell = spells[spell_id];
-	uint8 level_to_use = spell.classes[GetClass() - 1];
+	uint8 level_to_use = GetSpellLevelForCharacter(spell_id);
 	if(level_to_use == 255) {
 		Message(Chat::Red, "Your class cannot learn from this tome.");
 		//should summon them a new one...
