@@ -52,6 +52,9 @@ jobs:
           submodules: false
           set-safe-directory: true
 
+      - name: Trust workspace for Git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Check GitHub Actions workflows
         run: go run github.com/rhysd/actionlint/cmd/actionlint@latest
 
@@ -146,6 +149,9 @@ jobs:
         with:
           submodules: recursive
           set-safe-directory: true
+
+      - name: Trust workspace for Git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Prepare caches
         run: |
