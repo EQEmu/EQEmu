@@ -36,6 +36,18 @@ CREATE TABLE `new_table`  (
 )",
 		.content_schema_update = false,
 	},
+	ManifestEntry{
+		.version = 2,
+		.description = "2026_05_10_character_data_add_class_mask",
+		.check = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'character_data' AND COLUMN_NAME = 'class_mask'",
+		.condition = "empty",
+		.match = "",
+		.sql = R"(
+ALTER TABLE `character_data` ADD COLUMN `class_mask` INT UNSIGNED NOT NULL DEFAULT 0 AFTER `class`;
+UPDATE `character_data` SET `class_mask` = POWER(2, `class` - 1) WHERE `class_mask` = 0 AND `class` BETWEEN 1 AND 16;
+)",
+		.content_schema_update = false,
+	},
 // Used for testing
 //	ManifestEntry{
 //		.version = 9229,
