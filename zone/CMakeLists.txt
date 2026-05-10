@@ -522,9 +522,11 @@ set(gm_command_sources
     gm_commands/set/set_alternate_currency.cpp
     gm_commands/set/set_animation.cpp
     gm_commands/set/set_anon.cpp
+    gm_commands/set/set_assign_class.cpp
     gm_commands/set/set_auto_login.cpp
     gm_commands/set/set_bind_point.cpp
     gm_commands/set/set_checksum.cpp
+    gm_commands/set/set_class_mask.cpp
     gm_commands/set/set_class_permanent.cpp
     gm_commands/set/set_crystals.cpp
     gm_commands/set/set_date.cpp
@@ -570,6 +572,7 @@ set(gm_command_sources
     gm_commands/set/set_time_zone.cpp
     gm_commands/set/set_title.cpp
     gm_commands/set/set_title_suffix.cpp
+    gm_commands/set/set_unassign_class.cpp
     gm_commands/set/set_weather.cpp
     gm_commands/set/set_zone.cpp
     gm_commands/show.cpp
@@ -592,6 +595,7 @@ set(gm_command_sources
     gm_commands/show/show_ip_lookup.cpp
     gm_commands/show/show_keyring.cpp
     gm_commands/show/show_line_of_sight.cpp
+    gm_commands/show/show_multiclass.cpp
     gm_commands/show/show_network.cpp
     gm_commands/show/show_network_stats.cpp
     gm_commands/show/show_npc_global_loot.cpp

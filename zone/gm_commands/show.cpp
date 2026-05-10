@@ -36,6 +36,7 @@ void ShowInventory(Client* c, const Seperator* sep);
 void ShowIPLookup(Client* c, const Seperator* sep);
 void ShowKeyring(Client* c, const Seperator* sep);
 void ShowLineOfSight(Client* c, const Seperator* sep);
+void ShowMulticlass(Client* c, const Seperator* sep);
 void ShowNetwork(Client* c, const Seperator* sep);
 void ShowNetworkStats(Client* c, const Seperator* sep);
 void ShowNPCGlobalLoot(Client* c, const Seperator* sep);
@@ -99,6 +100,7 @@ void command_show(Client *c, const Seperator *sep)
 		Cmd{.cmd = "ip_lookup", .u = "ip_lookup", .fn = ShowIPLookup, .a = {"#iplookup"}},
 		Cmd{.cmd = "keyring", .u = "keyring", .fn = ShowKeyring, .a = {"#showkeyring"}},
 		Cmd{.cmd = "line_of_sight", .u = "line_of_sight", .fn = ShowLineOfSight, .a = {"#checklos"}},
+		Cmd{.cmd = "multiclass", .u = "multiclass", .fn = ShowMulticlass, .a = {"#multiclass"}},
 		Cmd{.cmd = "network", .u = "network", .fn = ShowNetwork, .a = {"#network"}},
 		Cmd{.cmd = "network_stats", .u = "network_stats", .fn = ShowNetworkStats, .a = {"#netstats"}},
 		Cmd{.cmd = "npc_global_loot", .u = "npc_global_loot", .fn = ShowNPCGlobalLoot, .a = {"#shownpcgloballoot"}},

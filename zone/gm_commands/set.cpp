@@ -26,6 +26,8 @@ void SetAnon(Client *c, const Seperator *sep);
 void SetAutoLogin(Client *c, const Seperator *sep);
 void SetBindPoint(Client *c, const Seperator *sep);
 void SetChecksum(Client *c, const Seperator *sep);
+void SetAssignClass(Client *c, const Seperator *sep);
+void SetClassMask(Client *c, const Seperator *sep);
 void SetClassPermanent(Client *c, const Seperator *sep);
 void SetCrystals(Client *c, const Seperator *sep);
 void SetDate(Client *c, const Seperator *sep);
@@ -67,6 +69,7 @@ void SetSkillAllMax(Client *c, const Seperator *sep);
 void SetStartZone(Client *c, const Seperator *sep);
 void SetTemporaryName(Client *c, const Seperator *sep);
 void SetTexture(Client *c, const Seperator *sep);
+void SetUnassignClass(Client *c, const Seperator *sep);
 void SetTime(Client *c, const Seperator *sep);
 void SetTimeZone(Client *c, const Seperator *sep);
 void SetTitle(Client *c, const Seperator *sep);
@@ -89,10 +92,12 @@ void command_set(Client *c, const Seperator *sep)
 		Cmd{.cmd = "adventure_points", .u = "adventure_points [Theme ID] [Amount]", .fn = SetAdventurePoints, .a = {"#set_adventure_points"}},
 		Cmd{.cmd = "alternate_currency", .u = "alternate_currency [Currency ID] [Amount]", .fn = SetAlternateCurrency, .a = {"#setaltcurrency"}},
 		Cmd{.cmd = "animation", .u = "animation [Animation ID]", .fn = SetAnimation, .a = {"#setanim"}},
+		Cmd{.cmd = "assign_class", .u = "assign_class [Class ID] (adds class to multiclass mask)", .fn = SetAssignClass, .a = {"#assignclass"}},
 		Cmd{.cmd = "anon", .u = "anon [Character ID] [Anonymous Flag] or #set anon [Anonymous Flag]", .fn = SetAnon, .a = {"#setanon"}},
 		Cmd{.cmd = "auto_login", .u = "auto_login [0|1]", .fn = SetAutoLogin, .a = {"#setautologin"}},
 		Cmd{.cmd = "bind_point", .u = "bind_point", .fn = SetBindPoint, .a = {"#setbind"}},
 		Cmd{.cmd = "checksum", .u = "checksum", .fn = SetChecksum, .a = {"#updatechecksum"}},
+		Cmd{.cmd = "class_mask", .u = "class_mask [Mask] (bitmask of assigned classes, max 3)", .fn = SetClassMask, .a = {"#classmask"}},
 		Cmd{.cmd = "class_permanent", .u = "class_permanent [Class ID]", .fn = SetClassPermanent, .a = {"#permaclass"}},
 		Cmd{.cmd = "crystals", .u = "crystals [ebon|radiant] [Amount]", .fn = SetCrystals, .a = {"#setcrystals"}},
 		Cmd{.cmd = "date", .u = "date [Year] [Month] [Day] [Hour] [Minute] (Hour and Minute are optional)", .fn = SetDate, .a = {"#date"}},
@@ -138,6 +143,7 @@ void command_set(Client *c, const Seperator *sep)
 		Cmd{.cmd = "time_zone", .u = "time_zone [Hour] [Minute]", .fn = SetTimeZone, .a = {"#timezone"}},
 		Cmd{.cmd = "title", .u = "title [Title]", .fn = SetTitle, .a = {"#title"}},
 		Cmd{.cmd = "title_suffix", .u = "title_suffix [Title Suffix]", .fn = SetTitleSuffix, .a = {"#titlesuffix"}},
+		Cmd{.cmd = "unassign_class", .u = "unassign_class [Class ID] (removes class from multiclass mask)", .fn = SetUnassignClass, .a = {"#unassignclass"}},
 		Cmd{.cmd = "temporary_name", .u = "temporary_name [Name]", .fn = SetTemporaryName, .a = {"#tempname"}},
 		Cmd{.cmd = "weather", .u = "weather [0|1|2|3]", .fn = SetWeather, .a = {"#weather"}},
 		Cmd{.cmd = "zone", .u = "zone [option]", .fn = SetZoneData, .a = {"#zclip", "#zcolor", "#zheader", "#zonelock", "#zsafecoords", "#zsky", "#zunderworld"}},
