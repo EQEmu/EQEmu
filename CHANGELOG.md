@@ -2,6 +2,7 @@
 
 ### Multiclass
 
+* Add schema migration for `character_data.class_mask` column with backfill from primary class bit (MC-001)
 * Add GM commands for multiclass assignment and inspection: `#set class_mask`, `#set assign_class`, `#set unassign_class`, and `#show multiclass` (MC-006)
 * Share spell access using lowest assigned-class level so multiclass characters can scribe, memorize, and cast spells from any assigned class at the lowest available level (MC-005)
 * Strengthen `SetClassMask` validation to reject empty masks and masks with invalid/non-playable class bits (MC-002)
