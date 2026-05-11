@@ -49,7 +49,8 @@ enum class DynamicZoneType
 	Tutorial,
 	Task,
 	Mission, // Shared Task
-	Quest
+	Quest,
+	XPDZ
 };
 
 enum class DynamicZoneMemberStatus
@@ -158,6 +159,7 @@ public:
 	bool HasMembers() const { return !m_members.empty(); }
 	bool HasZoneInLocation() const { return m_has_zonein; }
 	bool IsExpedition() const { return m_type == DynamicZoneType::Expedition; }
+	bool IsXPDZ() const { return m_type == DynamicZoneType::XPDZ; }
 	bool IsExpired() const { return m_expire_time < std::chrono::system_clock::now(); }
 	bool IsInstanceID(uint32_t instance_id) const { return (m_instance_id != 0 && m_instance_id == instance_id); }
 	bool IsLocked() const { return m_is_locked; }
