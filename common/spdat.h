@@ -1587,6 +1587,7 @@ namespace SpellEffect {
 	constexpr int Duration_HP_Pct                 = 524; // implemented - Decrease Current Hit Points by % of Total Hit Points per Tick, up to a MAX per tick
 	constexpr int Duration_Mana_Pct               = 525; // implemented - Decrease Current Mana by % of Total Mana per Tick, up to a MAX per tick
 	constexpr int Duration_Endurance_Pct          = 526; // implemented - Decrease Current Endurance by % of Total Hit Points per Tick, up to a MAX per tick
+	constexpr int BazaarAndBack                   = 527; // custom Monomyth AA/spell effect for Bazaar travel and return state
 }
 
 #define DF_Permanent				50
