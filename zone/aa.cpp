@@ -1269,6 +1269,23 @@ void Client::ActivateAlternateAdvancementAbility(int rank_id, int target_id) {
 		return;
 	}
 
+	if (IsEffectInSpell(rank->spell, SpellEffect::BazaarAndBack)) {
+		if (IsDead() || IsUnconscious()) {
+			Message(Chat::Red, "You cannot use Bazaar-and-Back while dead or unconscious.");
+			return;
+		}
+
+		if (IsZoning()) {
+			Message(Chat::Red, "You cannot use Bazaar-and-Back while zoning.");
+			return;
+		}
+
+		if (IsCasting()) {
+			Message(Chat::Red, "You cannot use Bazaar-and-Back while casting.");
+			return;
+		}
+	}
+
 	if (!CanUseAlternateAdvancementRank(rank)) {
 		return;
 	}

@@ -67,6 +67,39 @@ bool ParseBazaarAndBackReturnState(const std::string& value, uint32& zone_id, ui
 	heading = Strings::ToFloat(parts[5]);
 	return zone_id != 0;
 }
+
+bool IsBazaarAndBackReturnStateValid(Client* client, uint32 zone_id, uint32 instance_id)
+{
+	if (!GetZoneVersionWithFallback(zone_id)) {
+		return false;
+	}
+
+	if (instance_id == 0) {
+		return true;
+	}
+
+	return database.VerifyInstanceAlive(instance_id, client->CharacterID()) && database.VerifyZoneInstance(zone_id, instance_id);
+}
+
+void SendClientToBazaarSafeLocation(Client* client)
+{
+	const uint32 bazaar_zone_id = RuleI(Monomyth, BazaarAndBackZoneID);
+	const float bazaar_x = RuleR(Monomyth, BazaarAndBackX);
+	const float bazaar_y = RuleR(Monomyth, BazaarAndBackY);
+	const float bazaar_z = RuleR(Monomyth, BazaarAndBackZ);
+	const float bazaar_heading = RuleR(Monomyth, BazaarAndBackHeading);
+
+	if (client->GetZoneID() == bazaar_zone_id) {
+		client->GMMove(bazaar_x, bazaar_y, bazaar_z, bazaar_heading);
+		return;
+	}
+
+	if (!GetZoneVersionWithFallback(bazaar_zone_id)) {
+		return;
+	}
+
+	client->MovePC(bazaar_zone_id, 0, bazaar_x, bazaar_y, bazaar_z, bazaar_heading);
+}
 } // namespace
 
 
@@ -707,6 +740,21 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 					break;
 				}
 
+				if (CastToClient()->IsDead() || CastToClient()->IsUnconscious()) {
+					CastToClient()->Message(Chat::Red, "You cannot use Bazaar-and-Back while dead or unconscious.");
+					break;
+				}
+
+				if (CastToClient()->IsZoning()) {
+					CastToClient()->Message(Chat::Red, "You cannot use Bazaar-and-Back while zoning.");
+					break;
+				}
+
+				if (CastToClient()->IsCasting()) {
+					CastToClient()->Message(Chat::Red, "You cannot use Bazaar-and-Back while casting.");
+					break;
+				}
+
 				if (CastToClient()->GetAggroCount() > 0) {
 					CastToClient()->Message(Chat::Red, "You cannot use Bazaar-and-Back while in combat.");
 					break;
@@ -724,6 +772,14 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 					if (!ParseBazaarAndBackReturnState(bucket_value, return_zone_id, return_instance_id, return_x, return_y, return_z, return_heading)) {
 						CastToClient()->DeleteBucket(kBazaarAndBackReturnBucket);
 						CastToClient()->Message(Chat::Red, "Your Bazaar-and-Back return state is invalid.");
+						SendClientToBazaarSafeLocation(CastToClient());
+						break;
+					}
+
+					if (!IsBazaarAndBackReturnStateValid(CastToClient(), return_zone_id, return_instance_id)) {
+						CastToClient()->DeleteBucket(kBazaarAndBackReturnBucket);
+						CastToClient()->Message(Chat::Red, "Your Bazaar-and-Back return point is no longer valid.");
+						SendClientToBazaarSafeLocation(CastToClient());
 						break;
 					}
 
@@ -734,6 +790,13 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 
 				if (zone->GetZoneID() == RuleI(Monomyth, BazaarAndBackZoneID)) {
 					CastToClient()->Message(Chat::Red, "You are already in the Bazaar.");
+					SendClientToBazaarSafeLocation(CastToClient());
+					break;
+				}
+
+				auto* bazaar_zone = GetZoneVersionWithFallback(RuleI(Monomyth, BazaarAndBackZoneID));
+				if (!bazaar_zone) {
+					CastToClient()->Message(Chat::Red, "The Bazaar destination is unavailable.");
 					break;
 				}
 
