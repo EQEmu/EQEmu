@@ -1178,6 +1178,33 @@ RULE_INT(EvolvingItems, DelayUponEquipping, 30000, "Delay in ms before an evolvi
 RULE_BOOL(EvolvingItems, DestroyAugmentsOnEvolve, false, "If this is enabled, any augments in an item will be destroyed when the item evolves. Otherwise, send augments to the player via the parcel system (requires that the Parcel System be enabled).")
 RULE_CATEGORY_END()
 
+RULE_CATEGORY(Monomyth)
+RULE_BOOL(Monomyth, BazaarAndBackEnabled, false, "Enable the Monomyth Bazaar-and-Back travel system.")
+RULE_INT(Monomyth, BazaarAndBackZoneID, 151, "Zone ID used as the Bazaar-and-Back destination.")
+RULE_REAL(Monomyth, BazaarAndBackX, 0.0, "X coordinate used as the Bazaar-and-Back destination.")
+RULE_REAL(Monomyth, BazaarAndBackY, 0.0, "Y coordinate used as the Bazaar-and-Back destination.")
+RULE_REAL(Monomyth, BazaarAndBackZ, 0.0, "Z coordinate used as the Bazaar-and-Back destination.")
+RULE_REAL(Monomyth, BazaarAndBackHeading, 0.0, "Heading used as the Bazaar-and-Back destination.")
+RULE_INT(Monomyth, BazaarAndBackCooldownSeconds, 180, "Cooldown in seconds between Bazaar-and-Back uses.")
+RULE_BOOL(Monomyth, EnchantedLegendaryEnabled, false, "Enable Monomyth enchanted and legendary item upgrade logic.")
+RULE_INT(Monomyth, EnchantedDropChance, 10, "Percent chance for an eligible drop to become enchanted.")
+RULE_INT(Monomyth, LegendaryUpgradeChance, 25, "Percent chance for an enchanted drop to upgrade to legendary.")
+RULE_INT(Monomyth, EnchantedStatMultiplierPercent, 200, "Percent multiplier applied to enchanted item stats.")
+RULE_INT(Monomyth, LegendaryStatMultiplierPercent, 300, "Percent multiplier applied to legendary item stats.")
+RULE_INT(Monomyth, LegendaryHeroicStatBase, 0, "Default heroic stat value applied to legendary items.")
+RULE_BOOL(Monomyth, DynamicZonesEnabled, false, "Enable Monomyth dynamic zone assignment systems.")
+RULE_INT(Monomyth, XPDZLockoutSeconds, 3600, "Lockout in seconds for Monomyth XP dynamic zones.")
+RULE_INT(Monomyth, RaidDZLockoutSeconds, 86400, "Lockout in seconds for Monomyth raid dynamic zones.")
+RULE_INT(Monomyth, XPDZLifetimeSeconds, 86400, "Lifetime in seconds for Monomyth XP dynamic zones.")
+RULE_INT(Monomyth, RaidDZLifetimeSeconds, 86400, "Lifetime in seconds for Monomyth raid dynamic zones.")
+RULE_INT(Monomyth, MaxActiveXPDZAssignments, 1, "Maximum active Monomyth XP dynamic zone assignments per character.")
+RULE_INT(Monomyth, MaxActiveRaidDZAssignments, 1, "Maximum active Monomyth raid dynamic zone assignments per character.")
+RULE_BOOL(Monomyth, PetGearBagEnabled, false, "Enable the Monomyth Pet Gear Bag system.")
+RULE_INT(Monomyth, PetGearBagHashRefreshIntervalSeconds, 6, "Interval in seconds between Pet Gear Bag hash refreshes.")
+RULE_BOOL(Monomyth, PetGearBagBankScanningEnabled, false, "Enable Pet Gear Bag scanning of bank inventory.")
+RULE_BOOL(Monomyth, PetGearBagCharmEligible, false, "Allow charm-slot items to be considered by the Pet Gear Bag system.")
+RULE_CATEGORY_END()
+
 #undef RULE_CATEGORY
 #undef RULE_INT
 #undef RULE_REAL
