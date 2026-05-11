@@ -25,6 +25,7 @@
 #include "common/misc_functions.h"
 #include "common/rulesys.h"
 #include "common/spdat.h"
+#include "common/strings.h"
 #include "zone/bot.h"
 #include "zone/lua_parser.h"
 #include "zone/quest_parser_collection.h"
@@ -37,6 +38,36 @@
 extern Zone* zone;
 extern volatile bool is_zone_loaded;
 extern WorldServer worldserver;
+
+namespace {
+constexpr const char* kBazaarAndBackReturnBucket = "monomyth_bazaar_and_back_return";
+
+std::string BuildBazaarAndBackReturnState(uint32 zone_id, uint32 instance_id, float x, float y, float z, float heading)
+{
+	return std::to_string(zone_id) + "|" +
+		std::to_string(instance_id) + "|" +
+		std::to_string(x) + "|" +
+		std::to_string(y) + "|" +
+		std::to_string(z) + "|" +
+		std::to_string(heading);
+}
+
+bool ParseBazaarAndBackReturnState(const std::string& value, uint32& zone_id, uint32& instance_id, float& x, float& y, float& z, float& heading)
+{
+	auto parts = Strings::Split(value, '|');
+	if (parts.size() != 6) {
+		return false;
+	}
+
+	zone_id = Strings::ToUnsignedInt(parts[0]);
+	instance_id = Strings::ToUnsignedInt(parts[1]);
+	x = Strings::ToFloat(parts[2]);
+	y = Strings::ToFloat(parts[3]);
+	z = Strings::ToFloat(parts[4]);
+	heading = Strings::ToFloat(parts[5]);
+	return zone_id != 0;
+}
+} // namespace
 
 
 // the spell can still fail here, if the buff can't stack
@@ -663,6 +694,61 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 					if(!target_zone)
 						GMMove(x, y, z, heading);
 				}
+				break;
+			}
+
+			case SpellEffect::BazaarAndBack:
+			{
+				if (!IsClient()) {
+					break;
+				}
+
+				if (!RuleB(Monomyth, BazaarAndBackEnabled)) {
+					break;
+				}
+
+				if (CastToClient()->GetAggroCount() > 0) {
+					CastToClient()->Message(Chat::Red, "You cannot use Bazaar-and-Back while in combat.");
+					break;
+				}
+
+				const auto bucket_value = CastToClient()->GetBucket(kBazaarAndBackReturnBucket);
+				if (!bucket_value.empty()) {
+					uint32 return_zone_id = 0;
+					uint32 return_instance_id = 0;
+					float return_x = 0.0f;
+					float return_y = 0.0f;
+					float return_z = 0.0f;
+					float return_heading = 0.0f;
+
+					if (!ParseBazaarAndBackReturnState(bucket_value, return_zone_id, return_instance_id, return_x, return_y, return_z, return_heading)) {
+						CastToClient()->DeleteBucket(kBazaarAndBackReturnBucket);
+						CastToClient()->Message(Chat::Red, "Your Bazaar-and-Back return state is invalid.");
+						break;
+					}
+
+					CastToClient()->DeleteBucket(kBazaarAndBackReturnBucket);
+					CastToClient()->MovePC(return_zone_id, return_instance_id, return_x, return_y, return_z, return_heading);
+					break;
+				}
+
+				if (zone->GetZoneID() == RuleI(Monomyth, BazaarAndBackZoneID)) {
+					CastToClient()->Message(Chat::Red, "You are already in the Bazaar.");
+					break;
+				}
+
+				CastToClient()->SetBucket(
+					kBazaarAndBackReturnBucket,
+					BuildBazaarAndBackReturnState(zone->GetZoneID(), zone->GetInstanceID(), GetX(), GetY(), GetZ(), GetHeading())
+				);
+				CastToClient()->MovePC(
+					RuleI(Monomyth, BazaarAndBackZoneID),
+					0,
+					RuleR(Monomyth, BazaarAndBackX),
+					RuleR(Monomyth, BazaarAndBackY),
+					RuleR(Monomyth, BazaarAndBackZ),
+					RuleR(Monomyth, BazaarAndBackHeading)
+				);
 				break;
 			}
 

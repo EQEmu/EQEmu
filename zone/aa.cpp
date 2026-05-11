@@ -22,6 +22,7 @@
 #include "common/eqemu_logsys.h"
 #include "common/events/player_event_logs.h"
 #include "common/races.h"
+#include "common/rulesys.h"
 #include "common/repositories/aa_ability_repository.h"
 #include "common/repositories/aa_rank_effects_repository.h"
 #include "common/repositories/aa_rank_prereqs_repository.h"
@@ -1263,6 +1264,11 @@ void Client::ActivateAlternateAdvancementAbility(int rank_id, int target_id) {
 		return;
 	}
 
+	if (IsEffectInSpell(rank->spell, SpellEffect::BazaarAndBack) && GetAggroCount() > 0) {
+		Message(Chat::Red, "You cannot use Bazaar-and-Back while in combat.");
+		return;
+	}
+
 	if (!CanUseAlternateAdvancementRank(rank)) {
 		return;
 	}
@@ -1282,6 +1288,15 @@ void Client::ActivateAlternateAdvancementAbility(int rank_id, int target_id) {
 	if (ability->charges > 0 && charges < 1)
 		return;
 
+	int timer_duration = rank->recast_time - GetAlternateAdvancementCooldownReduction(rank);
+	if (timer_duration < 0) {
+		timer_duration = 0;
+	}
+
+	if (IsEffectInSpell(rank->spell, SpellEffect::BazaarAndBack) && timer_duration == 0) {
+		timer_duration = RuleI(Monomyth, BazaarAndBackCooldownSeconds);
+	}
+
 	//check cooldown
 	if (!p_timers.Expired(&database, rank->spell_type + pTimerAAStart, false)) {
 		uint32 aaremain = p_timers.GetRemainingTime(rank->spell_type + pTimerAAStart);
@@ -1299,11 +1314,6 @@ void Client::ActivateAlternateAdvancementAbility(int rank_id, int target_id) {
 		}
 
 		return;
-	}
-
-	int timer_duration = rank->recast_time - GetAlternateAdvancementCooldownReduction(rank);
-	if (timer_duration < 0) {
-		timer_duration = 0;
 	}
 
 	if (!IsCastWhileInvisibleSpell(rank->spell))
