@@ -129,7 +129,10 @@ int command_init(void)
 		command_add("doanim", "[Animation ID|Animation Name] [Speed] - Send an animation by ID or name at the specified speed to you or your target (Speed is optional)", AccountStatus::Guide, command_doanim) ||
 		command_add("dye", "[slot|'help'] [red] [green] [blue] [use_tint] - Dyes the specified armor slot to Red, Green, and Blue provided, allows you to bypass darkness limits.", AccountStatus::ApprenticeGuide, command_dye) ||
 		command_add("dz", "Manage expeditions and dynamic zone instances", AccountStatus::QuestTroupe, command_dz) ||
+		command_add("dzadd", "<player_name> - Invite a player to your expedition or dynamic zone (leader only)", AccountStatus::Player, command_dzadd) ||
 		command_add("dzkickplayers", "Removes all players from current expedition. (/kickplayers alternative for pre-RoF clients)", AccountStatus::Player, command_dzkickplayers) ||
+		command_add("dzleader", "<player_name> - Transfer expedition leadership to another member (leader only)", AccountStatus::Player, command_dzleader) ||
+		command_add("dzquit", "Leave your current expedition or dynamic zone", AccountStatus::Player, command_dzquit) ||
 		command_add("editmassrespawn", "[name-search] [second-value] - Mass (Zone wide) NPC respawn timer editing command", AccountStatus::GMAdmin, command_editmassrespawn) ||
 		command_add("emote", "[Name|World|Zone] [type] [message] - Send an emote message by name, to the world, or to your zone (^ separator allows multiple messages to be sent at once)", AccountStatus::QuestTroupe, command_emote) ||
 		command_add("emptyinventory", "Clears your or your target's entire inventory (Equipment, General, Bank, and Shared Bank)", AccountStatus::GMImpossible, command_emptyinventory) ||

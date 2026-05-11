@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+### Dynamic Zone Player Commands (THJ-FND-008)
+
+* Add `#dzadd <player_name>` — invite a player to your expedition or dynamic zone (leader only)
+* Add `#dzleader <player_name>` — transfer expedition leadership to another member (leader only)
+* Add `#dzquit` — leave your current expedition or dynamic zone
+* All three commands are registered at `AccountStatus::Player` level for ordinary player access
+* Commands delegate to existing `DynamicZone::DzAddPlayer`, `DzMakeLeader`, and `DzQuit` which already enforce leader authority, target eligibility, single-active-instance-per-type, auto-promotion on leader quit, and DZ destruction when membership reaches zero
+
 ### Multiclass
 
 * Add schema migration for `character_data.class_mask` column with backfill from primary class bit (MC-001)
