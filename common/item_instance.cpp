@@ -23,10 +23,146 @@
 #include "common/shareddb.h"
 #include "common/strings.h"
 
+#include <algorithm>
+#include <cmath>
 #include <climits>
+#include <limits>
 
 int32 next_item_serial_number = 1;
 std::unordered_set<uint64> guids{};
+
+namespace {
+	constexpr char kEnchantTierCustomDataKey[] = "thj_enchant_tier";
+	constexpr uint8 kMaxEnchantmentTier = 2;
+
+	enum EnchantmentTier : uint8 {
+		EnchantmentTierNormal = 0,
+		EnchantmentTierEnchanted = 1,
+		EnchantmentTierLegendary = 2
+	};
+
+	enum LegendaryHeroicStatPolicy : int {
+		LegendaryHeroicStatPolicyNone = 0,
+		LegendaryHeroicStatPolicyPrimary = 1,
+		LegendaryHeroicStatPolicyPrimaryAndResists = 2
+	};
+
+	template <typename T>
+	void ScaleStatField(T& value, double multiplier)
+	{
+		const double scaled = std::round(static_cast<double>(value) * multiplier);
+		const double clamped = std::clamp(
+			scaled,
+			static_cast<double>(std::numeric_limits<T>::min()),
+			static_cast<double>(std::numeric_limits<T>::max())
+		);
+
+		value = static_cast<T>(clamped);
+	}
+
+	template <typename T>
+	void AddStatField(T& value, int bonus)
+	{
+		const long long adjusted = static_cast<long long>(value) + static_cast<long long>(bonus);
+		const long long clamped = std::clamp(
+			adjusted,
+			static_cast<long long>(std::numeric_limits<T>::min()),
+			static_cast<long long>(std::numeric_limits<T>::max())
+		);
+
+		value = static_cast<T>(clamped);
+	}
+
+	void ApplyEnchantmentMultiplier(EQ::ItemData& item, double multiplier)
+	{
+		ScaleStatField(item.CR, multiplier);
+		ScaleStatField(item.DR, multiplier);
+		ScaleStatField(item.PR, multiplier);
+		ScaleStatField(item.MR, multiplier);
+		ScaleStatField(item.FR, multiplier);
+		ScaleStatField(item.AStr, multiplier);
+		ScaleStatField(item.ASta, multiplier);
+		ScaleStatField(item.AAgi, multiplier);
+		ScaleStatField(item.ADex, multiplier);
+		ScaleStatField(item.ACha, multiplier);
+		ScaleStatField(item.AInt, multiplier);
+		ScaleStatField(item.AWis, multiplier);
+		ScaleStatField(item.HP, multiplier);
+		ScaleStatField(item.Mana, multiplier);
+		ScaleStatField(item.AC, multiplier);
+		ScaleStatField(item.SkillModValue, multiplier);
+		ScaleStatField(item.BaneDmgAmt, multiplier);
+		ScaleStatField(item.BardValue, multiplier);
+		ScaleStatField(item.ElemDmgAmt, multiplier);
+		ScaleStatField(item.Damage, multiplier);
+		ScaleStatField(item.CombatEffects, multiplier);
+		ScaleStatField(item.Shielding, multiplier);
+		ScaleStatField(item.StunResist, multiplier);
+		ScaleStatField(item.StrikeThrough, multiplier);
+		ScaleStatField(item.ExtraDmgAmt, multiplier);
+		ScaleStatField(item.SpellShield, multiplier);
+		ScaleStatField(item.Avoidance, multiplier);
+		ScaleStatField(item.Accuracy, multiplier);
+		ScaleStatField(item.FactionAmt1, multiplier);
+		ScaleStatField(item.FactionAmt2, multiplier);
+		ScaleStatField(item.FactionAmt3, multiplier);
+		ScaleStatField(item.FactionAmt4, multiplier);
+		ScaleStatField(item.Endur, multiplier);
+		ScaleStatField(item.DotShielding, multiplier);
+		ScaleStatField(item.Attack, multiplier);
+		ScaleStatField(item.Regen, multiplier);
+		ScaleStatField(item.ManaRegen, multiplier);
+		ScaleStatField(item.EnduranceRegen, multiplier);
+		ScaleStatField(item.Haste, multiplier);
+		ScaleStatField(item.DamageShield, multiplier);
+		ScaleStatField(item.BackstabDmg, multiplier);
+		ScaleStatField(item.DSMitigation, multiplier);
+		ScaleStatField(item.HeroicStr, multiplier);
+		ScaleStatField(item.HeroicInt, multiplier);
+		ScaleStatField(item.HeroicWis, multiplier);
+		ScaleStatField(item.HeroicAgi, multiplier);
+		ScaleStatField(item.HeroicDex, multiplier);
+		ScaleStatField(item.HeroicSta, multiplier);
+		ScaleStatField(item.HeroicCha, multiplier);
+		ScaleStatField(item.HeroicMR, multiplier);
+		ScaleStatField(item.HeroicFR, multiplier);
+		ScaleStatField(item.HeroicCR, multiplier);
+		ScaleStatField(item.HeroicDR, multiplier);
+		ScaleStatField(item.HeroicPR, multiplier);
+		ScaleStatField(item.HeroicSVCorrup, multiplier);
+		ScaleStatField(item.HealAmt, multiplier);
+		ScaleStatField(item.SpellDmg, multiplier);
+		ScaleStatField(item.Clairvoyance, multiplier);
+	}
+
+	void ApplyLegendaryHeroicStats(EQ::ItemData& item)
+	{
+		const int heroic_bonus = RuleI(Monomyth, LegendaryHeroicStatBase);
+		if (heroic_bonus == 0) {
+			return;
+		}
+
+		const int heroic_policy = RuleI(Monomyth, LegendaryHeroicStatPolicy);
+		if (heroic_policy >= LegendaryHeroicStatPolicyPrimary) {
+			AddStatField(item.HeroicStr, heroic_bonus);
+			AddStatField(item.HeroicInt, heroic_bonus);
+			AddStatField(item.HeroicWis, heroic_bonus);
+			AddStatField(item.HeroicAgi, heroic_bonus);
+			AddStatField(item.HeroicDex, heroic_bonus);
+			AddStatField(item.HeroicSta, heroic_bonus);
+			AddStatField(item.HeroicCha, heroic_bonus);
+		}
+
+		if (heroic_policy >= LegendaryHeroicStatPolicyPrimaryAndResists) {
+			AddStatField(item.HeroicMR, heroic_bonus);
+			AddStatField(item.HeroicFR, heroic_bonus);
+			AddStatField(item.HeroicCR, heroic_bonus);
+			AddStatField(item.HeroicDR, heroic_bonus);
+			AddStatField(item.HeroicPR, heroic_bonus);
+			AddStatField(item.HeroicSVCorrup, heroic_bonus);
+		}
+	}
+}
 
 static inline int32 GetNextItemInstSerialNumber()
 {
@@ -836,6 +972,8 @@ void EQ::ItemInstance::SetCustomDataString(const std::string& str)
 
 		SetCustomData(identifier, value);
 	}
+
+	RebuildItemData();
 }
 
 std::string EQ::ItemInstance::GetCustomData(const std::string& identifier) {
@@ -850,6 +988,10 @@ std::string EQ::ItemInstance::GetCustomData(const std::string& identifier) {
 void EQ::ItemInstance::SetCustomData(const std::string& identifier, const std::string& value) {
 	DeleteCustomData(identifier);
 	m_custom_data[identifier] = value;
+
+	if (identifier == kEnchantTierCustomDataKey) {
+		RebuildItemData();
+	}
 }
 
 void EQ::ItemInstance::SetCustomData(const std::string& identifier, int value) {
@@ -857,6 +999,10 @@ void EQ::ItemInstance::SetCustomData(const std::string& identifier, int value) {
 	std::stringstream ss;
 	ss << value;
 	m_custom_data[identifier] = ss.str();
+
+	if (identifier == kEnchantTierCustomDataKey) {
+		RebuildItemData();
+	}
 }
 
 void EQ::ItemInstance::SetCustomData(const std::string& identifier, float value) {
@@ -864,6 +1010,10 @@ void EQ::ItemInstance::SetCustomData(const std::string& identifier, float value)
 	std::stringstream ss;
 	ss << value;
 	m_custom_data[identifier] = ss.str();
+
+	if (identifier == kEnchantTierCustomDataKey) {
+		RebuildItemData();
+	}
 }
 
 void EQ::ItemInstance::SetCustomData(const std::string& identifier, bool value) {
@@ -871,6 +1021,10 @@ void EQ::ItemInstance::SetCustomData(const std::string& identifier, bool value) 
 	std::stringstream ss;
 	ss << value;
 	m_custom_data[identifier] = ss.str();
+
+	if (identifier == kEnchantTierCustomDataKey) {
+		RebuildItemData();
+	}
 }
 
 void EQ::ItemInstance::DeleteCustomData(const std::string& identifier) {
@@ -878,6 +1032,35 @@ void EQ::ItemInstance::DeleteCustomData(const std::string& identifier) {
 	if (iter != m_custom_data.end()) {
 		m_custom_data.erase(iter);
 	}
+
+	if (identifier == kEnchantTierCustomDataKey) {
+		RebuildItemData();
+	}
+}
+
+uint8 EQ::ItemInstance::GetEnchantmentTier() const
+{
+	auto iter = m_custom_data.find(kEnchantTierCustomDataKey);
+	if (iter == m_custom_data.end()) {
+		return EnchantmentTierNormal;
+	}
+
+	const auto tier = static_cast<uint8>(Strings::ToUnsignedInt(iter->second));
+	return std::min(tier, kMaxEnchantmentTier);
+}
+
+void EQ::ItemInstance::SetEnchantmentTier(uint8 tier)
+{
+	tier = std::min(tier, kMaxEnchantmentTier);
+
+	if (tier == EnchantmentTierNormal) {
+		m_custom_data.erase(kEnchantTierCustomDataKey);
+	}
+	else {
+		m_custom_data[kEnchantTierCustomDataKey] = std::to_string(tier);
+	}
+
+	RebuildItemData();
 }
 
 // Clone a type of EQ::ItemInstance object
@@ -947,6 +1130,8 @@ void EQ::ItemInstance::Initialize(SharedDatabase *db) {
 	else if (db && m_item->LoreGroup >= 1000) {
 		// not complete yet
 	}
+
+	RebuildItemData();
 }
 
 void EQ::ItemInstance::ScaleItem() {
@@ -1031,6 +1216,50 @@ void EQ::ItemInstance::ScaleItem() {
 	m_scaledItem->Clairvoyance = (uint32)((float)m_item->Clairvoyance*Mult);
 
 	m_scaledItem->CharmFileID = 0;	// this stops the client from trying to scale the item itself.
+}
+
+void EQ::ItemInstance::RebuildItemData()
+{
+	if (!m_item) {
+		return;
+	}
+
+	const uint8 enchantment_tier = GetEnchantmentTier();
+	const bool is_scaling_item = m_item->CharmFileID != 0;
+	const bool needs_dynamic_item_data = is_scaling_item || enchantment_tier != EnchantmentTierNormal;
+
+	if (!needs_dynamic_item_data) {
+		safe_delete(m_scaledItem);
+		return;
+	}
+
+	if (is_scaling_item) {
+		ScaleItem();
+	}
+	else if (m_scaledItem) {
+		*m_scaledItem = *m_item;
+	}
+	else {
+		m_scaledItem = new ItemData(*m_item);
+	}
+
+	if (enchantment_tier == EnchantmentTierNormal) {
+		return;
+	}
+
+	double multiplier = 1.0;
+	if (enchantment_tier == EnchantmentTierEnchanted) {
+		multiplier = static_cast<double>(RuleI(Monomyth, EnchantedStatMultiplierPercent)) / 100.0;
+	}
+	else if (enchantment_tier == EnchantmentTierLegendary) {
+		multiplier = static_cast<double>(RuleI(Monomyth, LegendaryStatMultiplierPercent)) / 100.0;
+	}
+
+	ApplyEnchantmentMultiplier(*m_scaledItem, multiplier);
+
+	if (enchantment_tier == EnchantmentTierLegendary) {
+		ApplyLegendaryHeroicStats(*m_scaledItem);
+	}
 }
 
 void EQ::ItemInstance::SetTimer(std::string name, uint32 time) {

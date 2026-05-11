@@ -88,6 +88,8 @@ public:
 	void SetCustomData(const std::string &identifier, bool value);
 	std::string GetCustomData(const std::string& identifier);
 	void DeleteCustomData(const std::string& identifier);
+	uint8 GetEnchantmentTier();
+	void SetEnchantmentTier(uint8 tier);
 	void SetScaling(bool v);
 	void SetScale(double scale_factor);
 	uint32 GetExp();

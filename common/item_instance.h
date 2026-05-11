@@ -187,6 +187,8 @@ namespace EQ
 		void SetCustomData(const std::string &identifier, float value);
 		void SetCustomData(const std::string &identifier, bool value);
 		void DeleteCustomData(const std::string& identifier);
+		uint8 GetEnchantmentTier() const;
+		void SetEnchantmentTier(uint8 tier);
 
 		// Allows treatment of this object as though it were a pointer to m_item
 		operator bool() const { return (m_item != nullptr); }
@@ -370,5 +372,7 @@ namespace EQ
 		std::map<uint8, ItemInstance*>         m_contents {}; // Zero-based index: min=0, max=9
 		std::map<std::string, std::string>     m_custom_data {};
 		mutable std::map<std::string, ::Timer> m_timers {};
+
+		void RebuildItemData();
 	};
 }

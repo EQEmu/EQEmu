@@ -1192,6 +1192,7 @@ RULE_INT(Monomyth, LegendaryUpgradeChance, 25, "Percent chance for an enchanted 
 RULE_INT(Monomyth, EnchantedStatMultiplierPercent, 200, "Percent multiplier applied to enchanted item stats.")
 RULE_INT(Monomyth, LegendaryStatMultiplierPercent, 300, "Percent multiplier applied to legendary item stats.")
 RULE_INT(Monomyth, LegendaryHeroicStatBase, 0, "Default heroic stat value applied to legendary items.")
+RULE_INT(Monomyth, LegendaryHeroicStatPolicy, 2, "Legendary heroic stat policy: 0 = disabled, 1 = primary heroic stats only, 2 = primary heroic stats plus heroic resists.")
 RULE_BOOL(Monomyth, DynamicZonesEnabled, false, "Enable Monomyth dynamic zone assignment systems.")
 RULE_INT(Monomyth, XPDZLockoutSeconds, 3600, "Lockout in seconds for Monomyth XP dynamic zones.")
 RULE_INT(Monomyth, RaidDZLockoutSeconds, 86400, "Lockout in seconds for Monomyth raid dynamic zones.")
