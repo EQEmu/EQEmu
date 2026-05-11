@@ -18,15 +18,59 @@
 #include "npc.h"
 
 #include "common/data_verification.h"
+#include "common/item_data.h"
 #include "common/loot.h"
 #include "common/repositories/criteria/content_filter_criteria.h"
 #include "common/repositories/global_loot_repository.h"
+#include "common/rulesys.h"
 #include "zone/client.h"
 #include "zone/entity.h"
 #include "zone/global_loot_manager.h"
 #include "zone/mob.h"
 #include "zone/quest_parser_collection.h"
 #include "zone/zonedb.h"
+
+namespace {
+bool IsEligibleForEnchantmentRoll(const EQ::ItemData *item)
+{
+	if (!item) {
+		return false;
+	}
+
+	if (item->ItemClass == EQ::item::ItemClassBag || item->ItemClass == EQ::item::ItemClassBook) {
+		return false;
+	}
+
+	switch (item->ItemType) {
+		case EQ::item::ItemTypeCoin:
+		case EQ::item::ItemTypeKey:
+		case EQ::item::ItemTypeKey2:
+		case EQ::item::ItemTypeSpell:
+		case EQ::item::ItemTypeScroll:
+		case EQ::item::ItemTypeAugmentation:
+			return false;
+		default:
+			break;
+	}
+
+	if (item->CharmFileID != 0) {
+		return false;
+	}
+
+	bool has_stats = (
+		item->HP != 0 || item->Mana != 0 || item->AC != 0 ||
+		item->Damage != 0 || item->Attack != 0 ||
+		item->AStr != 0 || item->ASta != 0 || item->AAgi != 0 ||
+		item->ADex != 0 || item->ACha != 0 || item->AInt != 0 || item->AWis != 0 ||
+		item->CR != 0 || item->DR != 0 || item->PR != 0 || item->MR != 0 || item->FR != 0 ||
+		item->HeroicStr != 0 || item->HeroicSta != 0 || item->HeroicAgi != 0 ||
+		item->HeroicDex != 0 || item->HeroicInt != 0 || item->HeroicWis != 0 ||
+		item->Regen != 0 || item->Haste != 0 || item->SpellDmg != 0 || item->HealAmt != 0
+	);
+
+	return has_stats;
+}
+}
 
 void NPC::AddLootTable(uint32 loottable_id, bool is_global)
 {
@@ -530,6 +574,25 @@ void NPC::AddLootDrop(
 	}
 
 	item->lootdrop_id = loot_drop.lootdrop_id;
+
+	if (RuleB(Monomyth, EnchantedLegendaryEnabled) && IsEligibleForEnchantmentRoll(item2)) {
+		if (zone->random.Int(1, 100) <= RuleI(Monomyth, EnchantedDropChance)) {
+			if (zone->random.Int(1, 100) <= RuleI(Monomyth, LegendaryUpgradeChance)) {
+				item->custom_data = "thj_enchant_tier^2^";
+				LogLoot(
+					"NPC [{}] Item [{}] ({}) upgraded to LEGENDARY",
+					GetName(), item2->Name, item2->ID
+				);
+			} else {
+				item->custom_data = "thj_enchant_tier^1^";
+				LogLoot(
+					"NPC [{}] Item [{}] ({}) upgraded to ENCHANTED",
+					GetName(), item2->Name, item2->ID
+				);
+			}
+		}
+	}
+
 	m_loot_items.push_back(item);
 
 	if (found) {
