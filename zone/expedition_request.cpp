@@ -164,7 +164,7 @@ bool ExpeditionRequest::SaveLeaderLockouts(const std::vector<DzLockout>& lockout
 bool ExpeditionRequest::CheckMembersForConflicts(const std::vector<std::string>& member_names)
 {
 	// order of member_names is preserved by queries for use with max member truncation
-	auto entries = DynamicZonesRepository::GetCharactersWithDz(database, member_names, static_cast<int>(DynamicZoneType::Expedition));
+	auto entries = DynamicZonesRepository::GetCharactersWithDz(database, member_names, static_cast<int>(m_dz->IsXPDZ() ? DynamicZoneType::XPDZ : DynamicZoneType::Expedition));
 	if (entries.empty())
 	{
 		LogExpeditions("Failed to load members for expedition request");

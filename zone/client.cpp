@@ -10248,6 +10248,16 @@ DynamicZone* Client::CreateExpeditionFromTemplate(uint32_t dz_template_id)
 	return nullptr;
 }
 
+DynamicZone* Client::CreateXPDZ(uint32 zone_id, uint32 version, const std::string& name, uint32 min_players, uint32 max_players)
+{
+	uint32_t duration = RuleI(Monomyth, XPDZLifetimeSeconds);
+	DynamicZone dz{ zone_id, version, duration, DynamicZoneType::XPDZ };
+	dz.SetName(name);
+	dz.SetMinPlayers(min_players);
+	dz.SetMaxPlayers(max_players);
+	return DynamicZone::TryCreate(*this, dz, false);
+}
+
 void Client::CreateTaskDynamicZone(int task_id, DynamicZone& dz_request)
 {
 	if (task_state)
@@ -10263,7 +10273,7 @@ DynamicZone* Client::GetExpedition() const
 		for (uint32_t dz_id : m_dynamic_zone_ids)
 		{
 			auto it = zone->dynamic_zone_cache.find(dz_id);
-			if (it != zone->dynamic_zone_cache.end() && it->second->IsExpedition())
+			if (it != zone->dynamic_zone_cache.end() && (it->second->IsExpedition() || it->second->IsXPDZ()))
 			{
 				return it->second.get();
 			}

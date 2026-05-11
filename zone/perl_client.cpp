@@ -1843,6 +1843,11 @@ DynamicZone* Perl_Client_CreateExpeditionFromTemplate(Client* self, uint32_t dz_
 	return self->CreateExpeditionFromTemplate(dz_template_id);
 }
 
+DynamicZone* Perl_Client_CreateXPDZ(Client* self, std::string zone_name, uint32_t version, std::string dz_name, uint32_t min_players, uint32_t max_players)
+{
+	return self->CreateXPDZ(ZoneID(zone_name), version, dz_name, min_players, max_players);
+}
+
 void Perl_Client_CreateTaskDynamicZone(Client* self, int task_id, perl::reference table_ref)
 {
 	perl::hash table = table_ref;
@@ -3471,6 +3476,7 @@ void perl_register_client()
 	package.add("CreateExpedition", (DynamicZone*(*)(Client*, std::string, uint32, uint32, std::string, uint32, uint32, bool))&Perl_Client_CreateExpedition);
 	package.add("CreateExpeditionFromTemplate", &Perl_Client_CreateExpeditionFromTemplate);
 	package.add("CreateTaskDynamicZone", &Perl_Client_CreateTaskDynamicZone);
+	package.add("CreateXPDZ", &Perl_Client_CreateXPDZ);
 	package.add("DecreaseByID", &Perl_Client_DecreaseByID);
 	package.add("DescribeSpecialAbilities", &Perl_Client_DescribeSpecialAbilities);
 	package.add("DeleteAccountBucket", &Perl_Client_DeleteAccountBucket);
