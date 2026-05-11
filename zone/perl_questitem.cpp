@@ -268,6 +268,16 @@ void Perl_QuestItem_SetScaling(EQ::ItemInstance* self, bool is_scaling)
 	self->SetScaling(is_scaling);
 }
 
+uint8 Perl_QuestItem_GetEnchantmentTier(EQ::ItemInstance* self)
+{
+	return self->GetEnchantmentTier();
+}
+
+void Perl_QuestItem_SetEnchantmentTier(EQ::ItemInstance* self, uint8 tier)
+{
+	self->SetEnchantmentTier(tier);
+}
+
 void Perl_QuestItem_SetTimer(EQ::ItemInstance* self, std::string timer_name, uint32 timer)
 {
 	self->SetTimer(timer_name, timer);
@@ -405,6 +415,7 @@ void perl_register_questitem()
 	package.add("GetColor", &Perl_QuestItem_GetColor);
 	package.add("GetCustomData", &Perl_QuestItem_GetCustomData);
 	package.add("GetCustomDataString", &Perl_QuestItem_GetCustomDataString);
+	package.add("GetEnchantmentTier", &Perl_QuestItem_GetEnchantmentTier);
 	package.add("GetEvolveActivated", &Perl_QuestItem_GetEvolveActivated);
 	package.add("GetEvolveAmount", &Perl_QuestItem_GetEvolveAmount);
 	package.add("GetEvolveCharacterID", &Perl_QuestItem_GetEvolveCharacterID);
@@ -450,6 +461,7 @@ void perl_register_questitem()
 	package.add("SetCustomData", (void(*)(EQ::ItemInstance*, std::string, float))&Perl_QuestItem_SetCustomData);
 	package.add("SetCustomData", (void(*)(EQ::ItemInstance*, std::string, int))&Perl_QuestItem_SetCustomData);
 	package.add("SetCustomData", (void(*)(EQ::ItemInstance*, std::string, std::string))&Perl_QuestItem_SetCustomData);
+	package.add("SetEnchantmentTier", &Perl_QuestItem_SetEnchantmentTier);
 	package.add("SetEvolveAmount", &Perl_QuestItem_SetEvolveAmount);
 	package.add("SetEvolveProgression", &Perl_QuestItem_SetEvolveProgression);
 	package.add("SetEXP", &Perl_QuestItem_SetEXP);

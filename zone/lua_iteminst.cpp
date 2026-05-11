@@ -243,6 +243,18 @@ void Lua_ItemInst::DeleteCustomData(const std::string& identifier) {
 	self->DeleteCustomData(identifier);
 }
 
+uint8 Lua_ItemInst::GetEnchantmentTier()
+{
+	Lua_Safe_Call_Int();
+	return self->GetEnchantmentTier();
+}
+
+void Lua_ItemInst::SetEnchantmentTier(uint8 tier)
+{
+	Lua_Safe_Call_Void();
+	self->SetEnchantmentTier(tier);
+}
+
 void Lua_ItemInst::SetScale(double scale_factor) {
 	Lua_Safe_Call_Void();
 	self->SetExp((int)(scale_factor*10000+.5));
@@ -480,6 +492,7 @@ luabind::scope lua_register_iteminst() {
 	.def("GetColor", (uint32(Lua_ItemInst::*)(void))&Lua_ItemInst::GetColor)
 	.def("GetCustomData", (std::string(Lua_ItemInst::*)(const std::string &))&Lua_ItemInst::GetCustomData)
 	.def("GetCustomDataString", (std::string(Lua_ItemInst::*)(void))&Lua_ItemInst::GetCustomDataString)
+	.def("GetEnchantmentTier", (uint8(Lua_ItemInst::*)(void))&Lua_ItemInst::GetEnchantmentTier)
 	.def("GetExp", (uint32(Lua_ItemInst::*)(void))&Lua_ItemInst::GetExp)
 	.def("GetEvolveActivated", (bool(Lua_ItemInst::*)(void))&Lua_ItemInst::GetEvolveActivated)
 	.def("GetEvolveAmount", (uint64(Lua_ItemInst::*)(void))&Lua_ItemInst::GetEvolveAmount)
@@ -526,6 +539,7 @@ luabind::scope lua_register_iteminst() {
 	.def("SetCustomData", (void(Lua_ItemInst::*)(const std::string&,float))&Lua_ItemInst::SetCustomData)
 	.def("SetCustomData", (void(Lua_ItemInst::*)(const std::string&,int))&Lua_ItemInst::SetCustomData)
 	.def("SetCustomData", (void(Lua_ItemInst::*)(const std::string&,const std::string&))&Lua_ItemInst::SetCustomData)
+	.def("SetEnchantmentTier", (void(Lua_ItemInst::*)(uint8))&Lua_ItemInst::SetEnchantmentTier)
 	.def("SetEvolveAmount", (void(Lua_ItemInst::*)(uint64))&Lua_ItemInst::SetEvolveAmount)
 	.def("SetEvolveProgression", (void(Lua_ItemInst::*)(float))&Lua_ItemInst::SetEvolveProgression)
 	.def("SetExp", (void(Lua_ItemInst::*)(uint32))&Lua_ItemInst::SetExp)
