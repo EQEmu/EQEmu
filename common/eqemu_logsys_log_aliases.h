@@ -922,6 +922,16 @@
         OutF(logsys, Logs::Detail, Logs::NetTCP, __FILE__, __func__, __LINE__, message, ##__VA_ARGS__);\
 } while (0)
 
+#define LogMonomyth(message, ...) do {\
+    if (auto logsys = EQEmuLogSys::Instance(); logsys && logsys->IsLogEnabled(Logs::General, Logs::Monomyth))\
+        OutF(logsys, Logs::General, Logs::Monomyth, __FILE__, __func__, __LINE__, message, ##__VA_ARGS__);\
+} while (0)
+
+#define LogMonomythDetail(message, ...) do {\
+    if (auto logsys = EQEmuLogSys::Instance(); logsys && logsys->IsLogEnabled(Logs::Detail, Logs::Monomyth))\
+        OutF(logsys, Logs::Detail, Logs::Monomyth, __FILE__, __func__, __LINE__, message, ##__VA_ARGS__);\
+} while (0)
+
 #define Log(debug_level, log_category, message, ...) do {\
     if (auto logsys = EQEmuLogSys::Instance(); logsys && logsys->IsLogEnabled(debug_level, log_category))\
         logsys->Out(debug_level, log_category, __FILE__, __func__, __LINE__, message, ##__VA_ARGS__);\
