@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org).
 
 ## [Unreleased]
+- Added: Enchanted/Legendary random loot upgrade rolls at NPC drop time (THJ-FND-005). Eligible loot items roll for Enchanted (default 10%) then Legendary (default 25% conditional) when the `Monomyth:EnchantedLegendaryEnabled` rule is true. Tier metadata persists via `custom_data` through looting, corpse serialization, and inventory. Disabling the rule restores normal loot behavior with no residual effects.
 - Added: Bazaar-and-Back AA travel with instance-aware return state persistence.
 - Added: Enchanted and Legendary item-instance metadata with deterministic stat reconstruction from persisted `custom_data` through inventory, corpse, zoning, and reload paths.
 - Fixed: Combat use is now blocked with a player-facing message.
