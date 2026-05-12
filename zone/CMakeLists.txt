@@ -401,7 +401,10 @@ set(gm_command_sources
     gm_commands/door_manipulation.cpp
     gm_commands/dye.cpp
     gm_commands/dz.cpp
+    gm_commands/dzadd.cpp
     gm_commands/dzkickplayers.cpp
+    gm_commands/dzleader.cpp
+    gm_commands/dzquit.cpp
     gm_commands/editmassrespawn.cpp
     gm_commands/emote.cpp
     gm_commands/emptyinventory.cpp
