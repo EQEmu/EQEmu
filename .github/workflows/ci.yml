@@ -46,9 +46,11 @@ jobs:
             lua5.4 \
             ninja-build \
             perl \
+            pkg-config \
             python3 \
             shellcheck \
-            yamllint
+            yamllint \
+            zip
 
       - name: Checkout source
         uses: actions/checkout@v5
