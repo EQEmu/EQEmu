@@ -28,6 +28,7 @@
 #include "zone/mob.h"
 #include "zone/zonedb.h"
 
+#include <climits>
 #include <string>
 
 // need to pass in a char array of 64 chars
@@ -471,12 +472,32 @@ void Mob::SetPetID(uint16 NewPetID) {
 	}
 }
 
-void NPC::GetPetState(SpellBuff_Struct *pet_buffs, uint32 *items, char *name) {
+void NPC::GetPetState(SpellBuff_Struct *pet_buffs, PetItemInfo *items, char *name) {
 	//save the pet name
 	strn0cpy(name, GetName(), 64);
 
-	//save their items, we only care about what they are actually wearing
-	memcpy(items, equipment, sizeof(uint32) * EQ::invslot::EQUIPMENT_COUNT);
+	for (int slot_id = EQ::invslot::EQUIPMENT_BEGIN; slot_id <= EQ::invslot::EQUIPMENT_END; ++slot_id) {
+		items[slot_id] = PetItemInfo{};
+
+		auto *inst = GetInv().GetItem(slot_id);
+		if (!inst || !inst->GetItem()) {
+			continue;
+		}
+
+		items[slot_id].item_id             = inst->GetItem()->ID;
+		items[slot_id].charges             = inst->GetCharges() >= 0 ? inst->GetCharges() : INT16_MAX;
+		items[slot_id].color               = inst->GetColor();
+		items[slot_id].attuned             = inst->IsAttuned();
+		items[slot_id].custom_data         = inst->GetCustomDataString();
+		items[slot_id].ornament_icon       = inst->GetOrnamentationIcon();
+		items[slot_id].ornament_idfile     = inst->GetOrnamentationIDFile();
+		items[slot_id].ornament_hero_model = inst->GetOrnamentHeroModel();
+		items[slot_id].guid                = inst->GetSerialNumber();
+
+		for (int aug_slot = EQ::invaug::SOCKET_BEGIN; aug_slot <= EQ::invaug::SOCKET_END; ++aug_slot) {
+			items[slot_id].augment_ids[aug_slot] = inst->GetAugmentItemID(aug_slot);
+		}
+	}
 
 	//save their buffs.
 	for (int i=EQ::invslot::EQUIPMENT_BEGIN; i < GetPetMaxTotalSlots(); i++) {
@@ -499,7 +520,7 @@ void NPC::GetPetState(SpellBuff_Struct *pet_buffs, uint32 *items, char *name) {
 	}
 }
 
-void NPC::SetPetState(SpellBuff_Struct *pet_buffs, uint32 *items) {
+void NPC::SetPetState(SpellBuff_Struct *pet_buffs, const PetItemInfo *items, const uint32 *legacy_items) {
 	//restore their buffs...
 
 	int i;
@@ -567,22 +588,45 @@ void NPC::SetPetState(SpellBuff_Struct *pet_buffs, uint32 *items) {
 	}
 
 	//restore their equipment...
+	ClearLootItems();
+
 	for (i = EQ::invslot::EQUIPMENT_BEGIN; i <= EQ::invslot::EQUIPMENT_END; i++) {
-		if (items[i] == 0) {
+		const auto &item_info = items[i];
+		const uint32 item_id = item_info.item_id ? item_info.item_id : (legacy_items ? legacy_items[i] : 0);
+		if (item_id == 0) {
 			continue;
 		}
 
-		const EQ::ItemData *item2 = database.GetItem(items[i]);
+		const EQ::ItemData *item2 = database.GetItem(item_id);
 
 		if (item2) {
 			bool noDrop           = (item2->NoDrop == 0); // Field is reverse logic
 			bool petCanHaveNoDrop = (RuleB(Pets, CanTakeNoDrop) && _CLIENTPET(this) && GetPetType() <= PetType::Normal);
 
 			if (!noDrop || petCanHaveNoDrop) {
-				AddLootDrop(item2, LootdropEntriesRepository::NewNpcEntity(), true);
+				auto *loot_item = new LootItem{};
+				loot_item->item_id = item_id;
+				loot_item->equip_slot = i;
+				loot_item->charges = item_info.item_id ? item_info.charges : 0;
+				loot_item->aug_1 = item_info.augment_ids[0];
+				loot_item->aug_2 = item_info.augment_ids[1];
+				loot_item->aug_3 = item_info.augment_ids[2];
+				loot_item->aug_4 = item_info.augment_ids[3];
+				loot_item->aug_5 = item_info.augment_ids[4];
+				loot_item->aug_6 = item_info.augment_ids[5];
+				loot_item->color = item_info.color;
+				loot_item->attuned = item_info.attuned;
+				loot_item->custom_data = item_info.custom_data;
+				loot_item->ornamenticon = item_info.ornament_icon;
+				loot_item->ornamentidfile = item_info.ornament_idfile;
+				loot_item->ornament_hero_model = item_info.ornament_hero_model;
+				loot_item->guid = item_info.guid;
+				m_loot_items.push_back(loot_item);
 			}
 		}
 	}
+
+	RebuildPetGearBagEquipment();
 }
 
 // Load the equipmentset from the DB. Might be worthwhile to load these into

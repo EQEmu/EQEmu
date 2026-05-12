@@ -30,6 +30,8 @@
 #include "zone/event_codes.h"
 #include "zone/position.h"
 
+#include <array>
+#include <string>
 #include <unordered_set>
 
 class Client;
@@ -213,6 +215,19 @@ struct PetInfo {
 	uint32	Items[EQ::invslot::EQUIPMENT_COUNT];
 	char	Name[64];
 	bool	taunting;
+};
+
+struct PetItemInfo {
+	uint32 item_id = 0;
+	uint16 charges = 0;
+	uint32 color = 0;
+	std::array<uint32, EQ::invaug::SOCKET_COUNT> augment_ids{};
+	bool attuned = false;
+	std::string custom_data;
+	uint32 ornament_icon = 0;
+	uint32 ornament_idfile = 0;
+	int32 ornament_hero_model = 0;
+	uint64 guid = 0;
 };
 
 struct ZoneSpellsBlocked {

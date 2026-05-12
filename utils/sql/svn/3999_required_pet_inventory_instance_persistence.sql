@@ -1,0 +1,15 @@
+ALTER TABLE `character_pet_inventory`
+	ADD COLUMN `charges` SMALLINT UNSIGNED NOT NULL DEFAULT '0' AFTER `item_id`,
+	ADD COLUMN `color` INT UNSIGNED NOT NULL DEFAULT '0' AFTER `charges`,
+	ADD COLUMN `augment_one` INT UNSIGNED NOT NULL DEFAULT '0' AFTER `color`,
+	ADD COLUMN `augment_two` INT UNSIGNED NOT NULL DEFAULT '0' AFTER `augment_one`,
+	ADD COLUMN `augment_three` INT UNSIGNED NOT NULL DEFAULT '0' AFTER `augment_two`,
+	ADD COLUMN `augment_four` INT UNSIGNED NOT NULL DEFAULT '0' AFTER `augment_three`,
+	ADD COLUMN `augment_five` INT UNSIGNED NOT NULL DEFAULT '0' AFTER `augment_four`,
+	ADD COLUMN `augment_six` INT UNSIGNED NOT NULL DEFAULT '0' AFTER `augment_five`,
+	ADD COLUMN `instnodrop` TINYINT UNSIGNED NOT NULL DEFAULT '0' AFTER `augment_six`,
+	ADD COLUMN `custom_data` TEXT NULL AFTER `instnodrop`,
+	ADD COLUMN `ornament_icon` INT UNSIGNED NOT NULL DEFAULT '0' AFTER `custom_data`,
+	ADD COLUMN `ornament_idfile` INT UNSIGNED NOT NULL DEFAULT '0' AFTER `ornament_icon`,
+	ADD COLUMN `ornament_hero_model` INT NOT NULL DEFAULT '0' AFTER `ornament_idfile`,
+	ADD COLUMN `guid` BIGINT UNSIGNED NOT NULL DEFAULT '0' AFTER `ornament_hero_model`;

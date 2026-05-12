@@ -36,10 +36,24 @@
 class BaseCharacterPetInventoryRepository {
 public:
 	struct CharacterPetInventory {
-		int32_t char_id;
-		int32_t pet;
-		int32_t slot;
-		int32_t item_id;
+		int32_t     char_id;
+		int32_t     pet;
+		int32_t     slot;
+		uint32_t    item_id;
+		uint16_t    charges;
+		uint32_t    color;
+		uint32_t    augment_one;
+		uint32_t    augment_two;
+		uint32_t    augment_three;
+		uint32_t    augment_four;
+		uint32_t    augment_five;
+		uint32_t    augment_six;
+		uint8_t     instnodrop;
+		std::string custom_data;
+		uint32_t    ornament_icon;
+		uint32_t    ornament_idfile;
+		int32_t     ornament_hero_model;
+		uint64_t    guid;
 	};
 
 	static std::string PrimaryKey()
@@ -54,6 +68,20 @@ public:
 			"pet",
 			"slot",
 			"item_id",
+			"charges",
+			"color",
+			"augment_one",
+			"augment_two",
+			"augment_three",
+			"augment_four",
+			"augment_five",
+			"augment_six",
+			"instnodrop",
+			"custom_data",
+			"ornament_icon",
+			"ornament_idfile",
+			"ornament_hero_model",
+			"guid",
 		};
 	}
 
@@ -64,6 +92,20 @@ public:
 			"pet",
 			"slot",
 			"item_id",
+			"charges",
+			"color",
+			"augment_one",
+			"augment_two",
+			"augment_three",
+			"augment_four",
+			"augment_five",
+			"augment_six",
+			"instnodrop",
+			"custom_data",
+			"ornament_icon",
+			"ornament_idfile",
+			"ornament_hero_model",
+			"guid",
 		};
 	}
 
@@ -104,10 +146,24 @@ public:
 	{
 		CharacterPetInventory e{};
 
-		e.char_id = 0;
-		e.pet     = 0;
-		e.slot    = 0;
-		e.item_id = 0;
+		e.char_id             = 0;
+		e.pet                 = 0;
+		e.slot                = 0;
+		e.item_id             = 0;
+		e.charges             = 0;
+		e.color               = 0;
+		e.augment_one         = 0;
+		e.augment_two         = 0;
+		e.augment_three       = 0;
+		e.augment_four        = 0;
+		e.augment_five        = 0;
+		e.augment_six         = 0;
+		e.instnodrop          = 0;
+		e.custom_data         = "";
+		e.ornament_icon       = 0;
+		e.ornament_idfile     = 0;
+		e.ornament_hero_model = 0;
+		e.guid                = 0;
 
 		return e;
 	}
@@ -144,10 +200,24 @@ public:
 		if (results.RowCount() == 1) {
 			CharacterPetInventory e{};
 
-			e.char_id = row[0] ? static_cast<int32_t>(atoi(row[0])) : 0;
-			e.pet     = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
-			e.slot    = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
-			e.item_id = row[3] ? static_cast<int32_t>(atoi(row[3])) : 0;
+			e.char_id             = row[0] ? static_cast<int32_t>(atoi(row[0])) : 0;
+			e.pet                 = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
+			e.slot                = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
+			e.item_id             = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
+			e.charges             = row[4] ? static_cast<uint16_t>(strtoul(row[4], nullptr, 10)) : 0;
+			e.color               = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
+			e.augment_one         = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
+			e.augment_two         = row[7] ? static_cast<uint32_t>(strtoul(row[7], nullptr, 10)) : 0;
+			e.augment_three       = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
+			e.augment_four        = row[9] ? static_cast<uint32_t>(strtoul(row[9], nullptr, 10)) : 0;
+			e.augment_five        = row[10] ? static_cast<uint32_t>(strtoul(row[10], nullptr, 10)) : 0;
+			e.augment_six         = row[11] ? static_cast<uint32_t>(strtoul(row[11], nullptr, 10)) : 0;
+			e.instnodrop          = row[12] ? static_cast<uint8_t>(strtoul(row[12], nullptr, 10)) : 0;
+			e.custom_data         = row[13] ? row[13] : "";
+			e.ornament_icon       = row[14] ? static_cast<uint32_t>(strtoul(row[14], nullptr, 10)) : 0;
+			e.ornament_idfile     = row[15] ? static_cast<uint32_t>(strtoul(row[15], nullptr, 10)) : 0;
+			e.ornament_hero_model = row[16] ? static_cast<int32_t>(atoi(row[16])) : 0;
+			e.guid                = row[17] ? static_cast<uint64_t>(strtoull(row[17], nullptr, 10)) : 0;
 
 			return e;
 		}
@@ -185,6 +255,20 @@ public:
 		v.push_back(columns[1] + " = " + std::to_string(e.pet));
 		v.push_back(columns[2] + " = " + std::to_string(e.slot));
 		v.push_back(columns[3] + " = " + std::to_string(e.item_id));
+		v.push_back(columns[4] + " = " + std::to_string(e.charges));
+		v.push_back(columns[5] + " = " + std::to_string(e.color));
+		v.push_back(columns[6] + " = " + std::to_string(e.augment_one));
+		v.push_back(columns[7] + " = " + std::to_string(e.augment_two));
+		v.push_back(columns[8] + " = " + std::to_string(e.augment_three));
+		v.push_back(columns[9] + " = " + std::to_string(e.augment_four));
+		v.push_back(columns[10] + " = " + std::to_string(e.augment_five));
+		v.push_back(columns[11] + " = " + std::to_string(e.augment_six));
+		v.push_back(columns[12] + " = " + std::to_string(e.instnodrop));
+		v.push_back(columns[13] + " = '" + Strings::Escape(e.custom_data) + "'");
+		v.push_back(columns[14] + " = " + std::to_string(e.ornament_icon));
+		v.push_back(columns[15] + " = " + std::to_string(e.ornament_idfile));
+		v.push_back(columns[16] + " = " + std::to_string(e.ornament_hero_model));
+		v.push_back(columns[17] + " = " + std::to_string(e.guid));
 
 		auto results = db.QueryDatabase(
 			fmt::format(
@@ -210,6 +294,20 @@ public:
 		v.push_back(std::to_string(e.pet));
 		v.push_back(std::to_string(e.slot));
 		v.push_back(std::to_string(e.item_id));
+		v.push_back(std::to_string(e.charges));
+		v.push_back(std::to_string(e.color));
+		v.push_back(std::to_string(e.augment_one));
+		v.push_back(std::to_string(e.augment_two));
+		v.push_back(std::to_string(e.augment_three));
+		v.push_back(std::to_string(e.augment_four));
+		v.push_back(std::to_string(e.augment_five));
+		v.push_back(std::to_string(e.augment_six));
+		v.push_back(std::to_string(e.instnodrop));
+		v.push_back("'" + Strings::Escape(e.custom_data) + "'");
+		v.push_back(std::to_string(e.ornament_icon));
+		v.push_back(std::to_string(e.ornament_idfile));
+		v.push_back(std::to_string(e.ornament_hero_model));
+		v.push_back(std::to_string(e.guid));
 
 		auto results = db.QueryDatabase(
 			fmt::format(
@@ -243,6 +341,20 @@ public:
 			v.push_back(std::to_string(e.pet));
 			v.push_back(std::to_string(e.slot));
 			v.push_back(std::to_string(e.item_id));
+			v.push_back(std::to_string(e.charges));
+			v.push_back(std::to_string(e.color));
+			v.push_back(std::to_string(e.augment_one));
+			v.push_back(std::to_string(e.augment_two));
+			v.push_back(std::to_string(e.augment_three));
+			v.push_back(std::to_string(e.augment_four));
+			v.push_back(std::to_string(e.augment_five));
+			v.push_back(std::to_string(e.augment_six));
+			v.push_back(std::to_string(e.instnodrop));
+			v.push_back("'" + Strings::Escape(e.custom_data) + "'");
+			v.push_back(std::to_string(e.ornament_icon));
+			v.push_back(std::to_string(e.ornament_idfile));
+			v.push_back(std::to_string(e.ornament_hero_model));
+			v.push_back(std::to_string(e.guid));
 
 			insert_chunks.push_back("(" + Strings::Implode(",", v) + ")");
 		}
@@ -276,10 +388,24 @@ public:
 		for (auto row = results.begin(); row != results.end(); ++row) {
 			CharacterPetInventory e{};
 
-			e.char_id = row[0] ? static_cast<int32_t>(atoi(row[0])) : 0;
-			e.pet     = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
-			e.slot    = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
-			e.item_id = row[3] ? static_cast<int32_t>(atoi(row[3])) : 0;
+			e.char_id             = row[0] ? static_cast<int32_t>(atoi(row[0])) : 0;
+			e.pet                 = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
+			e.slot                = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
+			e.item_id             = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
+			e.charges             = row[4] ? static_cast<uint16_t>(strtoul(row[4], nullptr, 10)) : 0;
+			e.color               = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
+			e.augment_one         = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
+			e.augment_two         = row[7] ? static_cast<uint32_t>(strtoul(row[7], nullptr, 10)) : 0;
+			e.augment_three       = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
+			e.augment_four        = row[9] ? static_cast<uint32_t>(strtoul(row[9], nullptr, 10)) : 0;
+			e.augment_five        = row[10] ? static_cast<uint32_t>(strtoul(row[10], nullptr, 10)) : 0;
+			e.augment_six         = row[11] ? static_cast<uint32_t>(strtoul(row[11], nullptr, 10)) : 0;
+			e.instnodrop          = row[12] ? static_cast<uint8_t>(strtoul(row[12], nullptr, 10)) : 0;
+			e.custom_data         = row[13] ? row[13] : "";
+			e.ornament_icon       = row[14] ? static_cast<uint32_t>(strtoul(row[14], nullptr, 10)) : 0;
+			e.ornament_idfile     = row[15] ? static_cast<uint32_t>(strtoul(row[15], nullptr, 10)) : 0;
+			e.ornament_hero_model = row[16] ? static_cast<int32_t>(atoi(row[16])) : 0;
+			e.guid                = row[17] ? static_cast<uint64_t>(strtoull(row[17], nullptr, 10)) : 0;
 
 			all_entries.push_back(e);
 		}
@@ -304,10 +430,24 @@ public:
 		for (auto row = results.begin(); row != results.end(); ++row) {
 			CharacterPetInventory e{};
 
-			e.char_id = row[0] ? static_cast<int32_t>(atoi(row[0])) : 0;
-			e.pet     = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
-			e.slot    = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
-			e.item_id = row[3] ? static_cast<int32_t>(atoi(row[3])) : 0;
+			e.char_id             = row[0] ? static_cast<int32_t>(atoi(row[0])) : 0;
+			e.pet                 = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
+			e.slot                = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
+			e.item_id             = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0;
+			e.charges             = row[4] ? static_cast<uint16_t>(strtoul(row[4], nullptr, 10)) : 0;
+			e.color               = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
+			e.augment_one         = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
+			e.augment_two         = row[7] ? static_cast<uint32_t>(strtoul(row[7], nullptr, 10)) : 0;
+			e.augment_three       = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
+			e.augment_four        = row[9] ? static_cast<uint32_t>(strtoul(row[9], nullptr, 10)) : 0;
+			e.augment_five        = row[10] ? static_cast<uint32_t>(strtoul(row[10], nullptr, 10)) : 0;
+			e.augment_six         = row[11] ? static_cast<uint32_t>(strtoul(row[11], nullptr, 10)) : 0;
+			e.instnodrop          = row[12] ? static_cast<uint8_t>(strtoul(row[12], nullptr, 10)) : 0;
+			e.custom_data         = row[13] ? row[13] : "";
+			e.ornament_icon       = row[14] ? static_cast<uint32_t>(strtoul(row[14], nullptr, 10)) : 0;
+			e.ornament_idfile     = row[15] ? static_cast<uint32_t>(strtoul(row[15], nullptr, 10)) : 0;
+			e.ornament_hero_model = row[16] ? static_cast<int32_t>(atoi(row[16])) : 0;
+			e.guid                = row[17] ? static_cast<uint64_t>(strtoull(row[17], nullptr, 10)) : 0;
 
 			all_entries.push_back(e);
 		}
@@ -386,6 +526,20 @@ public:
 		v.push_back(std::to_string(e.pet));
 		v.push_back(std::to_string(e.slot));
 		v.push_back(std::to_string(e.item_id));
+		v.push_back(std::to_string(e.charges));
+		v.push_back(std::to_string(e.color));
+		v.push_back(std::to_string(e.augment_one));
+		v.push_back(std::to_string(e.augment_two));
+		v.push_back(std::to_string(e.augment_three));
+		v.push_back(std::to_string(e.augment_four));
+		v.push_back(std::to_string(e.augment_five));
+		v.push_back(std::to_string(e.augment_six));
+		v.push_back(std::to_string(e.instnodrop));
+		v.push_back("'" + Strings::Escape(e.custom_data) + "'");
+		v.push_back(std::to_string(e.ornament_icon));
+		v.push_back(std::to_string(e.ornament_idfile));
+		v.push_back(std::to_string(e.ornament_hero_model));
+		v.push_back(std::to_string(e.guid));
 
 		auto results = db.QueryDatabase(
 			fmt::format(
@@ -412,6 +566,20 @@ public:
 			v.push_back(std::to_string(e.pet));
 			v.push_back(std::to_string(e.slot));
 			v.push_back(std::to_string(e.item_id));
+			v.push_back(std::to_string(e.charges));
+			v.push_back(std::to_string(e.color));
+			v.push_back(std::to_string(e.augment_one));
+			v.push_back(std::to_string(e.augment_two));
+			v.push_back(std::to_string(e.augment_three));
+			v.push_back(std::to_string(e.augment_four));
+			v.push_back(std::to_string(e.augment_five));
+			v.push_back(std::to_string(e.augment_six));
+			v.push_back(std::to_string(e.instnodrop));
+			v.push_back("'" + Strings::Escape(e.custom_data) + "'");
+			v.push_back(std::to_string(e.ornament_icon));
+			v.push_back(std::to_string(e.ornament_idfile));
+			v.push_back(std::to_string(e.ornament_hero_model));
+			v.push_back(std::to_string(e.guid));
 
 			insert_chunks.push_back("(" + Strings::Implode(",", v) + ")");
 		}

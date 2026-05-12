@@ -77,6 +77,7 @@ namespace EQ
 #include <cfloat>
 #include <set>
 #include <algorithm>
+#include <array>
 #include <memory>
 #include <deque>
 
@@ -507,6 +508,7 @@ public:
 	inline const EQ::InventoryProfile& GetInv() const { return m_inv; }
 	const std::vector<int16>& GetInventorySlots();
 	inline PetInfo* GetPetInfo(int pet_info_type) { return pet_info_type == PetInfoType::Suspended ? &m_suspendedminion : &m_petinfo; }
+	inline std::array<PetItemInfo, EQ::invslot::EQUIPMENT_COUNT>* GetPetItemInfo(int pet_info_type) { return pet_info_type == PetInfoType::Suspended ? &m_suspendedminion_items : &m_petinfo_items; }
 	inline InspectMessage_Struct& GetInspectMessage() { return m_inspect_message; }
 	inline const InspectMessage_Struct& GetInspectMessage() const { return m_inspect_message; }
 	void ReloadExpansionProfileSetting();
@@ -2150,7 +2152,9 @@ private:
 	uint32_t m_class_mask;
 	Object* m_tradeskill_object;
 	PetInfo m_petinfo; // current pet data, used while loading from and saving to DB
+	std::array<PetItemInfo, EQ::invslot::EQUIPMENT_COUNT> m_petinfo_items;
 	PetInfo m_suspendedminion; // pet data for our suspended minion.
+	std::array<PetItemInfo, EQ::invslot::EQUIPMENT_COUNT> m_suspendedminion_items;
 	uint16 m_pet_gear_bag_pet_id = 0;
 	uint64 m_pet_gear_bag_hash = 0;
 	MercInfo m_mercinfo[MAXMERCS]; // current mercenary
