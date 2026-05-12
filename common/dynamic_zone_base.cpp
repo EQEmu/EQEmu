@@ -117,6 +117,7 @@ void DynamicZoneBase::LoadRepositoryResult(DynamicZonesRepository::DynamicZoneIn
 	m_has_zonein         = dz_entry.has_zone_in != 0;
 	m_is_locked          = dz_entry.is_locked;
 	m_add_replay         = dz_entry.add_replay;
+	m_suspended_at       = dz_entry.suspended_at > 0 ? static_cast<uint64_t>(dz_entry.suspended_at) : 0;
 	// instance_list portion
 	m_zone_id            = dz_entry.zone;
 	m_zone_version       = dz_entry.version;
@@ -172,6 +173,7 @@ uint32_t DynamicZoneBase::SaveToDatabase()
 	dz.has_zone_in         = static_cast<uint8_t>(m_has_zonein);
 	dz.is_locked           = static_cast<int8_t>(m_is_locked);
 	dz.add_replay          = static_cast<int8_t>(m_add_replay);
+	dz.suspended_at        = static_cast<int64_t>(m_suspended_at);
 
 	dz = DynamicZonesRepository::InsertOne(GetDatabase(), std::move(dz));
 

@@ -1116,6 +1116,8 @@ RULE_INT(DynamicZone, ClientRemovalDelayMS, 60000, "Delay (milliseconds) until a
 RULE_BOOL(DynamicZone, EmptyShutdownEnabled, true, "Enable early instance shutdown for dynamic zones that have no members")
 RULE_INT(DynamicZone, EmptyShutdownDelaySeconds, 1500, "Seconds to set dynamic zone instance expiration if early shutdown enabled")
 RULE_BOOL(DynamicZone, EnableInDynamicZoneStatus, false, "Enables the 'In Dynamic Zone' member status in dynamic zone window. If false (live-like) players inside the dynamic zone will show as 'Online'")
+RULE_BOOL(DynamicZone, StatefulSuspendEnabled, false, "Allow expedition-style dynamic zones to enter a suspended offline state when their zone process shuts down empty")
+RULE_INT(DynamicZone, SuspendMaxDurationSeconds, 86400, "Maximum number of seconds a suspended dynamic zone may remain offline before it is force cleaned up")
 RULE_INT(DynamicZone, WorldProcessRate, 6000, "Timer interval (milliseconds) that systems check their dynamic zone states")
 RULE_CATEGORY_END()
 

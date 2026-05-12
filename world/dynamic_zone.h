@@ -28,6 +28,7 @@ enum class DynamicZoneStatus
 {
 	Unknown = 0,
 	Normal,
+	Suspended,
 	Expired,
 	ExpiredEmpty,
 };
@@ -42,6 +43,7 @@ public:
 	void SetSecondsRemaining(uint32_t seconds_remaining) override;
 
 	void CacheMemberStatuses();
+	bool Resume(uint32_t character_id);
 	DynamicZoneStatus Process();
 	bool SetNewLeader(uint32_t member_id);
 
@@ -62,6 +64,9 @@ private:
 	void SendZonesDynamicZoneDeleted();
 	void SendZonesExpireWarning(uint32_t minutes_remaining);
 	void SendZonesLeaderChanged();
+	bool CanSuspendStatefully() const;
+	bool HasExceededSuspendMaxDuration() const;
+	void Suspend();
 
 	bool m_is_pending_early_shutdown = false;
 	bool m_choose_leader_needed = false;

@@ -20,6 +20,7 @@
 #include "common/repositories/base/base_dynamic_zones_repository.h"
 
 #include "common/database.h"
+#include "common/rulesys.h"
 #include "fmt/ranges.h"
 
 class DynamicZonesRepository: public BaseDynamicZonesRepository {
@@ -89,6 +90,7 @@ public:
 		int      has_zone_in;
 		int8_t   is_locked;
 		int8_t   add_replay;
+		int64_t  suspended_at;
 		int      zone;
 		int      version;
 		int      is_global;
@@ -126,6 +128,7 @@ public:
 				dynamic_zones.has_zone_in,
 				dynamic_zones.is_locked,
 				dynamic_zones.add_replay,
+				dynamic_zones.suspended_at,
 				instance_list.zone,
 				instance_list.version,
 				instance_list.is_global,
@@ -167,6 +170,8 @@ public:
 		entry.has_zone_in         = strtol(row[col++], nullptr, 10) != 0;
 		entry.is_locked           = static_cast<int8_t>(strtol(row[col++], nullptr, 10));
 		entry.add_replay          = static_cast<int8_t>(strtol(row[col++], nullptr, 10));
+		entry.suspended_at        = row[col] ? static_cast<int64_t>(strtoll(row[col], nullptr, 10)) : 0;
+		++col;
 		// from instance_list
 		entry.zone                = strtol(row[col++], nullptr, 10);
 		entry.version             = strtol(row[col++], nullptr, 10);
@@ -184,9 +189,16 @@ public:
 
 		auto results = db.QueryDatabase(fmt::format(SQL(
 			{} WHERE
-				(instance_list.start_time + instance_list.duration) > UNIX_TIMESTAMP()
-				AND instance_list.never_expires = 0
-		), SelectDynamicZoneJoinInstance()));
+				(
+					(instance_list.start_time + instance_list.duration) > UNIX_TIMESTAMP()
+					AND instance_list.never_expires = 0
+				)
+				OR (
+					dynamic_zones.suspended_at IS NOT NULL
+					AND dynamic_zones.suspended_at > 0
+					AND (dynamic_zones.suspended_at + {}) > UNIX_TIMESTAMP()
+				)
+		), SelectDynamicZoneJoinInstance(), RuleI(DynamicZone, SuspendMaxDurationSeconds)));
 
 		if (results.Success())
 		{
@@ -283,6 +295,47 @@ public:
 		}
 	}
 
+	static void SetSuspendedAt(Database& db, uint32_t dz_id, uint32_t suspended_at)
+	{
+		if (dz_id != 0)
+		{
+			db.QueryDatabase(fmt::format(
+				"UPDATE dynamic_zones SET suspended_at = {} WHERE id = {}",
+				suspended_at,
+				dz_id
+			));
+		}
+	}
+
+	static void ClearSuspendedAt(Database& db, uint32_t dz_id)
+	{
+		if (dz_id != 0)
+		{
+			db.QueryDatabase(fmt::format("UPDATE dynamic_zones SET suspended_at = NULL WHERE id = {}", dz_id));
+		}
+	}
+
+	static bool IsSuspendedInstanceProtected(Database& db, uint16_t instance_id)
+	{
+		if (instance_id == 0)
+		{
+			return false;
+		}
+
+		auto results = db.QueryDatabase(fmt::format(SQL(
+			SELECT dynamic_zones.id
+			FROM dynamic_zones
+			WHERE
+				dynamic_zones.instance_id = {}
+				AND dynamic_zones.suspended_at IS NOT NULL
+				AND dynamic_zones.suspended_at > 0
+				AND (dynamic_zones.suspended_at + {}) > UNIX_TIMESTAMP()
+			LIMIT 1
+		), instance_id, RuleI(DynamicZone, SuspendMaxDurationSeconds)));
+
+		return results.Success() && results.RowCount() == 1;
+	}
+
 	static void UpdateSwitchID(Database& db, uint32_t dz_id, int dz_switch_id)
 	{
 		if (dz_id != 0)
@@ -361,7 +414,7 @@ public:
 		std::vector<uint32_t> all_entries;
 
 		// dzs with no members, missing instance, or expired instance
-		auto results = db.QueryDatabase(SQL(
+		auto results = db.QueryDatabase(fmt::format(SQL(
 			SELECT
 				dynamic_zones.id
 			FROM dynamic_zones
@@ -377,9 +430,17 @@ public:
 				instance_list.id IS NULL
 				OR dynamic_zone_members.member_count IS NULL
 				OR dynamic_zone_members.member_count = 0
-				OR ((instance_list.start_time + instance_list.duration) <= UNIX_TIMESTAMP()
-					AND instance_list.never_expires = 0);
-		));
+				OR (
+					(dynamic_zones.suspended_at IS NULL OR dynamic_zones.suspended_at = 0)
+					AND ((instance_list.start_time + instance_list.duration) <= UNIX_TIMESTAMP()
+						AND instance_list.never_expires = 0)
+				)
+				OR (
+					dynamic_zones.suspended_at IS NOT NULL
+					AND dynamic_zones.suspended_at > 0
+					AND (dynamic_zones.suspended_at + {}) <= UNIX_TIMESTAMP()
+				);
+		), RuleI(DynamicZone, SuspendMaxDurationSeconds)));
 
 		all_entries.reserve(results.RowCount());
 

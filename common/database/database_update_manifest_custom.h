@@ -48,6 +48,17 @@ UPDATE `character_data` SET `class_mask` = POWER(2, `class` - 1) WHERE `class_ma
 )",
 		.content_schema_update = false,
 	},
+	ManifestEntry{
+		.version = 3,
+		.description = "2026_05_12_dynamic_zones_add_suspended_at",
+		.check = "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'dynamic_zones' AND COLUMN_NAME = 'suspended_at'",
+		.condition = "empty",
+		.match = "",
+		.sql = R"(
+ALTER TABLE `dynamic_zones` ADD COLUMN `suspended_at` INT UNSIGNED NULL DEFAULT NULL AFTER `add_replay`;
+)",
+		.content_schema_update = false,
+	},
 // Used for testing
 //	ManifestEntry{
 //		.version = 9229,

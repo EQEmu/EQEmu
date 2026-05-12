@@ -300,7 +300,7 @@ bool Database::VerifyInstanceAlive(uint16 instance_id, uint32 character_id)
 		return false;
 	}
 
-	if (CheckInstanceExpired(instance_id)) {
+	if (CheckInstanceExpired(instance_id) && !DynamicZonesRepository::IsSuspendedInstanceProtected(*this, instance_id)) {
 		DeleteInstance(instance_id);
 		return false;
 	}
@@ -484,6 +484,11 @@ void Database::AssignRaidToInstance(uint32 raid_id, uint32 instance_id)
 
 void Database::DeleteInstance(uint16 instance_id)
 {
+	if (DynamicZonesRepository::IsSuspendedInstanceProtected(*this, instance_id)) {
+		LogDynamicZones("Skipping instance delete for suspended dynamic zone instance [{}]", instance_id);
+		return;
+	}
+
 	// I'm not sure why this isn't in here but we should add it in a later change and make sure it's tested
 	// InstanceListRepository::DeleteWhere(*this, fmt::format("id = {}", instance_id));
 	InstanceListPlayerRepository::DeleteWhere(*this, fmt::format("id = {}", instance_id));
@@ -553,7 +558,13 @@ void Database::PurgeExpiredInstances()
 	auto l = InstanceListRepository::GetWhere(
 		*this,
 		fmt::format(
-			"expire_at <= (UNIX_TIMESTAMP() - {}) and expire_at != 0 AND never_expires = 0",
+			"id NOT IN ("
+			"SELECT instance_id FROM dynamic_zones "
+			"WHERE suspended_at IS NOT NULL AND suspended_at > 0 "
+			"AND (suspended_at + {}) > UNIX_TIMESTAMP()"
+			") "
+			"AND expire_at <= (UNIX_TIMESTAMP() - {}) and expire_at != 0 AND never_expires = 0",
+			RuleI(DynamicZone, SuspendMaxDurationSeconds),
 			RuleI(Instances, ExpireOffsetTimeSeconds)
 		)
 	);

@@ -857,6 +857,20 @@ void ZoneServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p) {
 
 					ztz->response = 1;
 				} else {
+					if (ztz->requested_instance_id) {
+						auto resume_cle = ClientList::Instance()->FindCharacter(ztz->name);
+						if (!resume_cle || !dynamic_zone_manager.ResumeSuspendedDynamicZone(ztz->requested_instance_id, resume_cle->CharID())) {
+							LogDynamicZones(
+								"Denied suspended dynamic zone resume for client [{}] instance [{}]",
+								ztz->name,
+								ztz->requested_instance_id
+							);
+							ztz->response = 0;
+							SendPacket(pack);
+							break;
+						}
+					}
+
 					int server_id;
 					if ((server_id = ZSList::Instance()->TriggerBootup(ztz->requested_zone_id, ztz->requested_instance_id))) {
 						LogZoning(

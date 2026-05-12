@@ -47,6 +47,7 @@
 #include "common/strings.h"
 #include "common/zone_store.h"
 #include "world/clientlist.h"
+#include "world/dynamic_zone_manager.h"
 #include "world/login_server_list.h"
 #include "world/login_server.h"
 #include "world/sof_char_create_data.h"
@@ -1406,6 +1407,14 @@ void Client::EnterWorld(bool TryBootup) {
 	ZoneServer* zone_server = nullptr;
 	if (instance_id > 0)
 	{
+		if (!dynamic_zone_manager.ResumeSuspendedDynamicZone(instance_id, GetCharID()))
+		{
+			instance_id = 0;
+			database.MoveCharacterToInstanceSafeReturn(GetCharID(), zone_id, instance_id);
+			TellClientZoneUnavailable();
+			return;
+		}
+
 		if (!database.VerifyInstanceAlive(instance_id, GetCharID()) ||
 		    !database.VerifyZoneInstance(zone_id, instance_id))
 		{

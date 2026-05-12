@@ -131,6 +131,7 @@ public:
 	uint32_t GetMemberCount() const { return static_cast<uint32_t>(m_members.size()); }
 	uint32_t GetMinPlayers() const { return m_min_players; }
 	uint32_t GetSecondsRemaining() const;
+	uint64_t GetSuspendedAt() const { return m_suspended_at; }
 	uint16_t GetZoneID() const { return static_cast<uint16_t>(m_zone_id); }
 	uint32_t GetZoneIndex() const { return (m_instance_id << 16) | (m_zone_id & 0xffff); }
 	uint32_t GetZoneVersion() const { return m_zone_version; }
@@ -165,6 +166,7 @@ public:
 	bool IsExpired() const { return m_expire_time < std::chrono::system_clock::now(); }
 	bool IsInstanceID(uint32_t instance_id) const { return (m_instance_id != 0 && m_instance_id == instance_id); }
 	bool IsLocked() const { return m_is_locked; }
+	bool IsSuspended() const { return m_suspended_at > 0; }
 	bool IsValid() const { return m_instance_id != 0; }
 	bool IsSameDz(uint32_t zone_id, uint32_t instance_id) const { return zone_id == m_zone_id && instance_id == m_instance_id; }
 	void LoadTemplate(const DynamicZoneTemplatesRepository::DynamicZoneTemplates& dz_template);
@@ -185,6 +187,7 @@ public:
 	void SetSafeReturn(const DynamicZoneLocation& location, bool update_db = false);
 	void SetSafeReturn(uint32_t zone_id, float x, float y, float z, float heading, bool update_db = false);
 	void SetSwitchID(int dz_switch_id, bool update_db = false);
+	void SetSuspendedAt(uint64_t suspended_at) { m_suspended_at = suspended_at; }
 	void SetType(DynamicZoneType type) { m_type = type; }
 	void SetUUID(std::string uuid) { m_uuid = std::move(uuid); }
 	void SetZoneInLocation(const DynamicZoneLocation& location, bool update_db = false);
@@ -254,6 +257,7 @@ protected:
 	std::chrono::seconds m_duration = {};
 	std::chrono::time_point<std::chrono::system_clock> m_start_time;
 	std::chrono::time_point<std::chrono::system_clock> m_expire_time;
+	uint64_t m_suspended_at = 0;
 	std::vector<DynamicZoneMember> m_members;
 	std::vector<DzLockout> m_lockouts;
 
@@ -286,6 +290,7 @@ public:
 			m_duration,
 			m_start_time,
 			m_expire_time,
+			m_suspended_at,
 			m_members,
 			m_lockouts
 		);

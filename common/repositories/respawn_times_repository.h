@@ -63,4 +63,25 @@ public:
 	{
 		RespawnTimesRepository::DeleteWhere(db, fmt::format("`instance_id` = {}", id));
 	}
+
+	static int ShiftInstanceTimers(Database& db, uint16 instance_id, uint32_t suspended_at, uint32_t offline_seconds)
+	{
+		if (instance_id == 0 || suspended_at == 0 || offline_seconds == 0)
+		{
+			return 0;
+		}
+
+		auto results = db.QueryDatabase(fmt::format(
+			"UPDATE `{}` "
+			"SET `start` = `start` + {}, `expire_at` = `expire_at` + {} "
+			"WHERE `instance_id` = {} AND `expire_at` > {}",
+			TableName(),
+			offline_seconds,
+			offline_seconds,
+			instance_id,
+			suspended_at
+		));
+
+		return results.Success() ? results.RowsAffected() : 0;
+	}
 };

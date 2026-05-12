@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+### Stateful Offline Dynamic Zones (THJ-FND-015)
+
+* Add additive stateful DZ suspend/resume support behind `DynamicZone:StatefulSuspendEnabled` with `DynamicZone:SuspendMaxDurationSeconds`
+* Persist `dynamic_zones.suspended_at`, preserve suspended DZ metadata, membership, lockouts, instance rows, and skip purge/delete paths until the suspend max duration is exceeded
+* Resume suspended DZs by shifting instance lifetime and `respawn_times` forward by offline duration before zone boot so state restores without offline respawn advancement
+
 ### Pet Gear Bag 6-Second Hash Refresh (THJ-FND-012)
 
 * Add FNV-1a deterministic hash over pet gear bag contents (item IDs, bag slots, charges, augment IDs) that detects inventory changes without a full equipment rebuild
