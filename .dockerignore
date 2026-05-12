@@ -1,8 +1,12 @@
 # Build context exclusions for containers/eqemu-server/Dockerfile.
 # Goal: ship engine source + submodule contents, skip local build outputs
 # and metadata that would balloon context size or pollute the image.
+#
+# NOTE: .git is intentionally NOT excluded — vcpkg validates its baseline
+# against its submodule's git history (.git/modules/submodules/vcpkg/),
+# and the `submodules/vcpkg/.git` gitlink file points back into the
+# parent's .git/modules. First run failed when this was excluded.
 
-.git
 build/
 **/build/
 .vscode/
