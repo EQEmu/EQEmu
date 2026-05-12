@@ -21,6 +21,7 @@
 
 # graphify
 graphify-out/
+graphify-input/
 
 # CMake
 CMakeCache.txt
