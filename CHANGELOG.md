@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+### Pet Gear Bag 6-Second Hash Refresh (THJ-FND-012)
+
+* Add FNV-1a deterministic hash over pet gear bag contents (item IDs, bag slots, charges, augment IDs) that detects inventory changes without a full equipment rebuild
+* Periodic hash-comparison loop runs every `Monomyth.PetGearBagHashRefreshIntervalSeconds` (default 6 s) in the client process tick; re-applies pet gear only when the hash changes
+* Timer interval now updates live when the rule value changes at runtime (via `#rules set` / `#rules reload`), no zone restart needed
+* No-op fast path: when the hash is unchanged and pet ID matches, the refresh returns immediately with no equipment work
+* Performance: hash computation is O(G + P·I) arithmetic over ~10 general slots; steady-state overhead is well under 0.1 ms per client per interval
+
 ### Pet Gear Bag Visible Equipment MVP (THJ-FND-011)
 
 * Add Pet Gear Bag refresh support that scans player inventory bags and reapplies eligible bag contents to the current pet through actual pet loot/equipment state

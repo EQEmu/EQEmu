@@ -6569,6 +6569,11 @@ void Client::ResetPetGearBagTracking()
 	m_pet_gear_bag_hash = 0;
 }
 
+// Performance: O(G + P*I*(1+A)) where G=~10 general slots, P=pet gear bags
+// (typically 0-2), I=items per bag (up to bag capacity), A=6 augment sockets.
+// Non-bag slots cost one IsPetGearBagContainer check (pointer + IsClassBag).
+// Hash arithmetic is pure FNV-1a (XOR + multiply), no heap allocations.
+// Expected wall time: well under 0.1 ms per call even with multiple full bags.
 uint64 Client::GetPetGearBagHash() const
 {
 	uint64 hash = 1469598103934665603ull;
@@ -6612,6 +6617,13 @@ uint64 Client::GetPetGearBagHash() const
 	return hash;
 }
 
+// Performance: always computes the hash (~0.1 ms) to detect changes.
+// When the hash is unchanged and the pet ID matches, returns immediately
+// with no further work (no-op fast path). When the hash differs, delegates
+// to NPC::ApplyPetGearBags() for a full equipment rebuild; that path is
+// proportional to the number of loot/equipment items but only runs when
+// bag contents actually change. Called at most once per refresh interval
+// (default 6 s) per client, so steady-state server overhead is negligible.
 bool Client::RefreshPetGearBag(bool force, bool notify)
 {
 	if (!RuleB(Monomyth, PetGearBagEnabled)) {

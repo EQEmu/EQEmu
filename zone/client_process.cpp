@@ -151,6 +151,11 @@ bool Client::Process() {
 			task_state->TaskPeriodicChecks(this);
 
 		if (RuleB(Monomyth, PetGearBagEnabled)) {
+			const auto interval_ms = static_cast<uint32>(std::max(1, RuleI(Monomyth, PetGearBagHashRefreshIntervalSeconds))) * 1000;
+			if (pet_gear_bag_refresh_timer.GetDuration() != interval_ms) {
+				pet_gear_bag_refresh_timer.Start(interval_ms);
+			}
+
 			auto *pet = GetPet();
 			if (!pet || !pet->IsNPC()) {
 				ResetPetGearBagTracking();
