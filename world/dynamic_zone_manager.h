@@ -42,6 +42,7 @@ public:
 	void LoadTemplates();
 	void Process();
 	void PurgeExpiredDynamicZones();
+	bool ResumeSuspendedDynamicZone(uint16_t instance_id, uint32_t character_id);
 	const auto& GetTemplates() const { return m_dz_templates; }
 
 	std::unordered_map<uint32_t, std::unique_ptr<DynamicZone>> dynamic_zone_cache;

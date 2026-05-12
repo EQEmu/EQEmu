@@ -55,6 +55,31 @@ void DynamicZoneManager::PurgeExpiredDynamicZones()
 	}
 }
 
+bool DynamicZoneManager::ResumeSuspendedDynamicZone(uint16_t instance_id, uint32_t character_id)
+{
+	if (instance_id == 0)
+	{
+		return false;
+	}
+
+	for (const auto& [dz_id, dz] : dynamic_zone_cache)
+	{
+		if (!dz->IsInstanceID(instance_id))
+		{
+			continue;
+		}
+
+		if (!dz->IsSuspended())
+		{
+			return true;
+		}
+
+		return dz->Resume(character_id);
+	}
+
+	return true;
+}
+
 DynamicZone* DynamicZoneManager::TryCreate(DynamicZone& dz_request, const std::vector<DynamicZoneMember>& members)
 {
 	// this creates a new dz instance and saves it to both db and cache

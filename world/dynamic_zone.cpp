@@ -19,6 +19,7 @@
 
 #include "common/eqemu_logsys.h"
 #include "common/repositories/instance_list_repository.h"
+#include "common/repositories/respawn_times_repository.h"
 #include "world/cliententry.h"
 #include "world/clientlist.h"
 #include "world/dynamic_zone_manager.h"
@@ -99,6 +100,30 @@ void DynamicZone::CheckLeader()
 
 DynamicZoneStatus DynamicZone::Process()
 {
+	auto dz_zoneserver = ZSList::Instance()->FindByInstanceID(GetInstanceID());
+	const bool has_active_occupants = dz_zoneserver && dz_zoneserver->NumPlayers() > 0;
+
+	if (IsSuspended())
+	{
+		if (HasExceededSuspendMaxDuration())
+		{
+			LogDynamicZones(
+				"[{}] suspended dynamic zone exceeded max suspend duration [{}]s and will be cleaned up",
+				GetID(),
+				RuleI(DynamicZone, SuspendMaxDurationSeconds)
+			);
+			return DynamicZoneStatus::ExpiredEmpty;
+		}
+
+		return DynamicZoneStatus::Suspended;
+	}
+
+	if (CanSuspendStatefully() && HasMembers() && !dz_zoneserver && !has_active_occupants)
+	{
+		Suspend();
+		return DynamicZoneStatus::Suspended;
+	}
+
 	DynamicZoneStatus status = DynamicZoneStatus::Normal;
 
 	// force expire if no members
@@ -106,7 +131,6 @@ DynamicZoneStatus DynamicZone::Process()
 	{
 		status = DynamicZoneStatus::Expired;
 
-		auto dz_zoneserver = ZSList::Instance()->FindByInstanceID(GetInstanceID());
 		if (!dz_zoneserver || dz_zoneserver->NumPlayers() == 0) // no clients inside dz
 		{
 			status = DynamicZoneStatus::ExpiredEmpty;
@@ -126,6 +150,87 @@ DynamicZoneStatus DynamicZone::Process()
 	}
 
 	return status;
+}
+
+bool DynamicZone::CanSuspendStatefully() const
+{
+	return RuleB(DynamicZone, StatefulSuspendEnabled) && (IsExpedition() || IsXPDZ() || IsRaidDZ());
+}
+
+bool DynamicZone::HasExceededSuspendMaxDuration() const
+{
+	if (!IsSuspended())
+	{
+		return false;
+	}
+
+	return (GetSuspendedAt() + RuleI(DynamicZone, SuspendMaxDurationSeconds)) <= static_cast<uint64_t>(std::time(nullptr));
+}
+
+void DynamicZone::Suspend()
+{
+	if (IsSuspended() || !CanSuspendStatefully())
+	{
+		return;
+	}
+
+	const auto suspended_at = static_cast<uint32_t>(std::time(nullptr));
+	SetSuspendedAt(suspended_at);
+	DynamicZonesRepository::SetSuspendedAt(database, GetID(), suspended_at);
+
+	LogDynamicZones(
+		"[{}] entering suspended state for zone [{}] instance [{}]",
+		GetID(),
+		GetZoneID(),
+		GetInstanceID()
+	);
+}
+
+bool DynamicZone::Resume(uint32_t character_id)
+{
+	if (!IsSuspended())
+	{
+		return true;
+	}
+
+	if (!HasMember(character_id))
+	{
+		LogDynamicZones(
+			"[{}] denied suspended resume for character [{}], not a member of instance [{}]",
+			GetID(),
+			character_id,
+			GetInstanceID()
+		);
+		return false;
+	}
+
+	const auto suspended_at = static_cast<uint32_t>(GetSuspendedAt());
+	const auto now = static_cast<uint32_t>(std::time(nullptr));
+	const auto offline_seconds = now > suspended_at ? (now - suspended_at) : 0;
+
+	if (offline_seconds > 0)
+	{
+		const auto shifted_respawns = RespawnTimesRepository::ShiftInstanceTimers(database, GetInstanceID(), suspended_at, offline_seconds);
+		InstanceListRepository::ShiftSuspendWindow(database, GetInstanceID(), suspended_at, offline_seconds);
+		m_start_time += std::chrono::seconds(offline_seconds);
+		m_expire_time += std::chrono::seconds(offline_seconds);
+
+		LogDynamicZones(
+			"[{}] resuming suspended dynamic zone instance [{}] after [{}]s offline, shifted [{}] respawn timer(s)",
+			GetID(),
+			GetInstanceID(),
+			offline_seconds,
+			shifted_respawns
+		);
+	}
+	else
+	{
+		LogDynamicZones("[{}] resuming suspended dynamic zone instance [{}] with no timer shift required", GetID(), GetInstanceID());
+	}
+
+	SetSuspendedAt(0);
+	DynamicZonesRepository::ClearSuspendedAt(database, GetID());
+	return true;
 }
 
 void DynamicZone::SendZonesDynamicZoneDeleted()
