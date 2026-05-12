@@ -17,6 +17,7 @@
 */
 #include "client.h"
 
+#include "common/classes.h"
 #include "common/data_bucket.h"
 #include "common/data_verification.h"
 #include "common/eqemu_logsys.h"
@@ -131,6 +132,16 @@ void PetGearBagHashCombine(uint64 &hash, uint64 value)
 {
 	hash ^= value;
 	hash *= 1099511628211ull;
+}
+
+bool IsPetGearBagCharmClassEligible(const Client *owner)
+{
+	if (!owner) {
+		return false;
+	}
+
+	const auto class_mask = static_cast<uint32>(RuleI(Monomyth, PetGearBagCharmClassMask));
+	return class_mask != 0 && (class_mask & GetPlayerClassBit(owner->GetClass())) != 0;
 }
 }
 
@@ -6645,16 +6656,34 @@ bool Client::RefreshPetGearBag(bool force, bool notify)
 
 	const auto pet_id = pet->GetID();
 	const auto hash = GetPetGearBagHash();
-	if (!force && m_pet_gear_bag_pet_id == pet_id && m_pet_gear_bag_hash == hash) {
+	auto tracked_hash = hash;
+	const bool is_charmed_pet = pet->GetPetType() == PetType::Charmed;
+	if (is_charmed_pet) {
+		PetGearBagHashCombine(tracked_hash, static_cast<uint64>(RuleI(Monomyth, PetGearBagCharmClassMask)));
+		PetGearBagHashCombine(tracked_hash, static_cast<uint64>(GetClass()));
+	}
+
+	if (!force && m_pet_gear_bag_pet_id == pet_id && m_pet_gear_bag_hash == tracked_hash) {
 		if (notify) {
 			Message(Chat::White, "Your pet gear is already up to date.");
 		}
 		return false;
 	}
 
+	if (is_charmed_pet && !IsPetGearBagCharmClassEligible(this)) {
+		pet->CastToNPC()->ClearPetGearBagEquipment();
+		m_pet_gear_bag_pet_id = pet_id;
+		m_pet_gear_bag_hash = tracked_hash;
+
+		if (notify) {
+			Message(Chat::White, "Your class is not currently eligible to apply Pet Gear Bags to charmed pets.");
+		}
+		return false;
+	}
+
 	const bool applied = pet->CastToNPC()->ApplyPetGearBags(this);
 	m_pet_gear_bag_pet_id = pet_id;
-	m_pet_gear_bag_hash = hash;
+	m_pet_gear_bag_hash = tracked_hash;
 
 	if (notify) {
 		Message(Chat::White, applied ? "Pet gear refreshed." : "No eligible Pet Gear Bag items were found, but your pet equipment was rebuilt.");

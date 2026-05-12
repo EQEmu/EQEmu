@@ -90,6 +90,16 @@ bool IsPetGearBagLootItem(const LootItem *loot_item)
 	return loot_item && loot_item->custom_data.find(kPetGearBagMarkerKey) != std::string::npos;
 }
 
+bool IsPetGearBagCharmClassEligible(const Client *owner)
+{
+	if (!owner) {
+		return false;
+	}
+
+	const auto class_mask = static_cast<uint32>(RuleI(Monomyth, PetGearBagCharmClassMask));
+	return class_mask != 0 && (class_mask & GetPlayerClassBit(owner->GetClass())) != 0;
+}
+
 bool CanItemEquipSlot(const EQ::ItemData *item, int16 slot_id)
 {
 	if (!item || slot_id < EQ::invslot::EQUIPMENT_BEGIN || slot_id > EQ::invslot::EQUIPMENT_END) {
@@ -998,14 +1008,8 @@ void NPC::UpdateEquipmentLight()
 	m_Light.Level[EQ::lightsource::LightEquipment] = EQ::lightsource::TypeToLevel(m_Light.Type[EQ::lightsource::LightEquipment]);
 }
 
-bool NPC::ApplyPetGearBags(Client *owner)
+void NPC::ClearPetGearBagEquipment()
 {
-	if (!owner || owner->GetPet() != this || !RuleB(Monomyth, PetGearBagEnabled)) {
-		return false;
-	}
-
-	bool found_pet_gear_item = false;
-
 	for (auto iter = m_loot_items.begin(); iter != m_loot_items.end();) {
 		auto *loot_item = *iter;
 		if (!IsPetGearBagLootItem(loot_item)) {
@@ -1021,24 +1025,11 @@ bool NPC::ApplyPetGearBags(Client *owner)
 		safe_delete(loot_item);
 	}
 
-	for (int16 slot_id = EQ::invslot::GENERAL_BEGIN; slot_id <= EQ::invslot::GENERAL_END; ++slot_id) {
-		auto *bag_inst = owner->GetInv().GetItem(slot_id);
-		if (!IsPetGearBagContainer(bag_inst)) {
-			continue;
-		}
+	RebuildPetGearBagEquipment();
+}
 
-		for (uint8 bag_idx = EQ::invbag::SLOT_BEGIN; bag_idx <= EQ::invbag::SLOT_END; ++bag_idx) {
-			auto *item_inst = owner->GetInv().GetItem(slot_id, bag_idx);
-			if (!item_inst || !IsEligiblePetGearBagItem(item_inst->GetItem())) {
-				continue;
-			}
-
-			auto *loot_item = new LootItem{};
-			FillLootItemFromItemInstance(loot_item, item_inst);
-			m_loot_items.push_back(loot_item);
-			found_pet_gear_item = true;
-		}
-	}
+void NPC::RebuildPetGearBagEquipment()
+{
 
 	std::array<LootItem *, EQ::invslot::EQUIPMENT_COUNT> equipped = {};
 	for (auto *loot_item: m_loot_items) {
@@ -1186,6 +1177,43 @@ bool NPC::ApplyPetGearBags(Client *owner)
 	for (uint8 material_slot = 0; material_slot <= EQ::textures::materialCount; ++material_slot) {
 		SendWearChange(material_slot);
 	}
+}
+
+bool NPC::ApplyPetGearBags(Client *owner)
+{
+	if (!owner || owner->GetPet() != this || !RuleB(Monomyth, PetGearBagEnabled)) {
+		return false;
+	}
+
+	if (GetPetType() == PetType::Charmed && !IsPetGearBagCharmClassEligible(owner)) {
+		ClearPetGearBagEquipment();
+		return false;
+	}
+
+	bool found_pet_gear_item = false;
+
+	ClearPetGearBagEquipment();
+
+	for (int16 slot_id = EQ::invslot::GENERAL_BEGIN; slot_id <= EQ::invslot::GENERAL_END; ++slot_id) {
+		auto *bag_inst = owner->GetInv().GetItem(slot_id);
+		if (!IsPetGearBagContainer(bag_inst)) {
+			continue;
+		}
+
+		for (uint8 bag_idx = EQ::invbag::SLOT_BEGIN; bag_idx <= EQ::invbag::SLOT_END; ++bag_idx) {
+			auto *item_inst = owner->GetInv().GetItem(slot_id, bag_idx);
+			if (!item_inst || !IsEligiblePetGearBagItem(item_inst->GetItem())) {
+				continue;
+			}
+
+			auto *loot_item = new LootItem{};
+			FillLootItemFromItemInstance(loot_item, item_inst);
+			m_loot_items.push_back(loot_item);
+			found_pet_gear_item = true;
+		}
+	}
+
+	RebuildPetGearBagEquipment();
 
 	return found_pet_gear_item;
 }

@@ -983,6 +983,9 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 				} else if (IsNPC()) {
 					CastToNPC()->SetPetSpellID(0);    //not a pet spell.
 					CastToNPC()->ModifyStatsOnCharm(false, caster);
+					if (caster->IsClient()) {
+						caster->CastToClient()->RefreshPetGearBag(true, false);
+					}
 				}
 
 				bool bBreak = false;
@@ -4560,13 +4563,14 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 
 			case SpellEffect::Charm:
 			{
+				Mob* owner = GetOwner();
 				if (IsNPC()) {
 					CastToNPC()->RestoreGuardSpotCharm();
-					CastToNPC()->ModifyStatsOnCharm(true, GetOwner());
+					CastToNPC()->ModifyStatsOnCharm(true, owner);
+					CastToNPC()->ClearPetGearBagEquipment();
 				}
 
 				SendAppearancePacket(AppearanceType::Pet, 0, true, true);
-				Mob* owner = GetOwner();
 				SetOwnerID(0);
 				SetPetType(PetType::None);
 				SetHeld(false);
@@ -4578,6 +4582,9 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 				if(owner)
 				{
 					owner->SetPet(0);
+					if (owner->IsClient()) {
+						owner->CastToClient()->ResetPetGearBagTracking();
+					}
 				}
 
 				// Any client that has a previous charmed pet targetted shouldo
