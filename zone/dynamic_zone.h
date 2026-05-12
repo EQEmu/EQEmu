@@ -55,7 +55,8 @@ public:
 	static DynamicZone* FindDynamicZoneByID(uint32_t dz_id, DynamicZoneType type = DynamicZoneType::None);
 	static DynamicZone* FindExpeditionByCharacter(uint32_t char_id);
  	static DynamicZone* FindExpeditionByZone(uint32_t zone_id, uint32_t instance_id);
-	static DynamicZone* FindXPDZByCharacter(uint32_t char_id);
+ 	static DynamicZone* FindXPDZByCharacter(uint32_t char_id);
+	static DynamicZone* FindRaidDZByCharacter(uint32_t char_id);
 	static void HandleWorldMessage(ServerPacket* pack);
 
 	static void AddClientsLockout(const DzLockout& lockout);

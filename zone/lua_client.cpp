@@ -1970,6 +1970,11 @@ Lua_Expedition Lua_Client::CreateXPDZ(std::string zone_name, uint32 version, std
 	return self->CreateXPDZ(ZoneID(zone_name), version, dz_name, min_players, max_players);
 }
 
+Lua_Expedition Lua_Client::CreateRaidDZ(std::string zone_name, uint32 version, std::string dz_name, uint32 min_players, uint32 max_players) {
+	Lua_Safe_Call_Class(Lua_Expedition);
+	return self->CreateRaidDZ(ZoneID(zone_name), version, dz_name, min_players, max_players);
+}
+
 Lua_Expedition Lua_Client::GetExpedition() {
 	Lua_Safe_Call_Class(Lua_Expedition);
 	return self->GetExpedition();
@@ -3737,6 +3742,7 @@ luabind::scope lua_register_client() {
 	.def("CreateExpeditionFromTemplate", &Lua_Client::CreateExpeditionFromTemplate)
 	.def("CreateTaskDynamicZone", &Lua_Client::CreateTaskDynamicZone)
 	.def("CreateXPDZ", &Lua_Client::CreateXPDZ)
+	.def("CreateRaidDZ", &Lua_Client::CreateRaidDZ)
 	.def("DecreaseByID", (bool(Lua_Client::*)(uint32,int))&Lua_Client::DecreaseByID)
 	.def("DescribeSpecialAbilities", (void(Lua_Client::*)(Lua_NPC))&Lua_Client::DescribeSpecialAbilities)
 	.def("DeleteAccountBucket", (void(Lua_Client::*)(std::string))&Lua_Client::DeleteAccountBucket)

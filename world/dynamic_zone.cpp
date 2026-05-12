@@ -119,7 +119,7 @@ DynamicZoneStatus DynamicZone::Process()
 		}
 	}
 
-	if ((GetType() == DynamicZoneType::Expedition || GetType() == DynamicZoneType::XPDZ) && status != DynamicZoneStatus::ExpiredEmpty)
+	if ((GetType() == DynamicZoneType::Expedition || GetType() == DynamicZoneType::XPDZ || GetType() == DynamicZoneType::RaidDZ) && status != DynamicZoneStatus::ExpiredEmpty)
 	{
 		CheckExpireWarning();
 		CheckLeader();
@@ -186,7 +186,7 @@ void DynamicZone::ProcessMemberAddRemove(const DynamicZoneMember& member, bool r
 {
 	DynamicZoneBase::ProcessMemberAddRemove(member, removed);
 
-	if ((GetType() == DynamicZoneType::Expedition || GetType() == DynamicZoneType::XPDZ) && removed && member.id == GetLeaderID())
+	if ((GetType() == DynamicZoneType::Expedition || GetType() == DynamicZoneType::XPDZ || GetType() == DynamicZoneType::RaidDZ) && removed && member.id == GetLeaderID())
 	{
 		ChooseNewLeader();
 	}
@@ -195,7 +195,7 @@ void DynamicZone::ProcessMemberAddRemove(const DynamicZoneMember& member, bool r
 bool DynamicZone::ProcessMemberStatusChange(uint32_t character_id, DynamicZoneMemberStatus status)
 {
 	bool changed = DynamicZoneBase::SetInternalMemberStatus(character_id, status);
-	if (changed && (GetType() == DynamicZoneType::Expedition || GetType() == DynamicZoneType::XPDZ))
+	if (changed && (GetType() == DynamicZoneType::Expedition || GetType() == DynamicZoneType::XPDZ || GetType() == DynamicZoneType::RaidDZ))
 	{
 		// any member status update will trigger a leader fix if leader was offline
 		if (GetLeader().status == DynamicZoneMemberStatus::Offline && GetMemberCount() > 1)

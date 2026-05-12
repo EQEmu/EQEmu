@@ -38,6 +38,7 @@ local function suppress_raid_targets_in_xp_dz()
 
     local dz_type = dz:GetType()
     -- DynamicZoneType.XPDZ = 6
+    -- Only suppress raid targets in XP DZ, not Raid DZ (type 7)
     if dz_type ~= 6 then
         return
     end
