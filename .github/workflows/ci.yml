@@ -34,6 +34,8 @@ jobs:
         run: |
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            autoconf \
+            automake \
             build-essential \
             ca-certificates \
             cmake \
@@ -43,14 +45,21 @@ jobs:
             libdbd-mysql-perl \
             libdbi-perl \
             libjson-perl \
+            libtool \
             lua5.4 \
+            make \
+            nasm \
             ninja-build \
             perl \
             pkg-config \
             python3 \
             shellcheck \
+            tar \
+            unzip \
+            uuid-dev \
             yamllint \
-            zip
+            zip \
+            zstd
 
       - name: Checkout source
         uses: actions/checkout@v5
