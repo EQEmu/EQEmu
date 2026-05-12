@@ -1,0 +1,16 @@
+# Build context exclusions for containers/eqemu-server/Dockerfile.
+# Goal: ship engine source + submodule contents, skip local build outputs
+# and metadata that would balloon context size or pollute the image.
+
+.git
+build/
+**/build/
+.vscode/
+.devcontainer/
+
+# Docs-only files — not needed for compilation
+CHANGELOG.md
+changelog.txt
+SECURITY.md
+CODE_OF_CONDUCT.md
+pull_request_template.md
