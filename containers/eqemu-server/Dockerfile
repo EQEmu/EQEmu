@@ -2,11 +2,14 @@
 
 # Base on the upstream akk-stack image, which already provides the full
 # EQEmu build environment (clang, cmake, ninja, ccache, custom eqemu-perl
-# 5.32.1, lua5.1, libsodium/ssl/mysqlclient, mariadb-client, cron, ssh).
-# We add the compile step + place binaries at /opt/eqemu/bin, and wrap the
-# upstream entrypoint with a binary-sync step that copies them into
-# /home/eqemu/server/bin/ (which is bind-mounted from the host in the
-# stack's docker-compose).
+# 5.32.1, lua5.1, libsodium/ssl/mysqlclient, mariadb-client, cron, ssh)
+# plus the eqemu user, sudoers, logrotate, and the upstream entrypoint.pl.
+#
+# What we add: compile the engine and place artifacts under
+# /home/eqemu/code/ at the paths upstream's create-symlinks.pl already
+# expects (build/bin and utils/patches). The host-mounted /home/eqemu/server
+# in akk-stack's docker-compose ends up with symlinks pointing into the
+# image, so `docker compose pull && up -d` is a full engine upgrade.
 FROM eqemulator/eqemu-server:v16
 
 LABEL org.opencontainers.image.source="https://github.com/nightwreath/theo-and-co-engine"
@@ -36,20 +39,20 @@ RUN --mount=type=cache,target=/root/.ccache \
         -DEQEMU_BUILD_PERL=ON \
         -DEQEMU_BUILD_CLIENT_FILES=ON \
  && cmake --build build --parallel \
- && mkdir -p /opt/eqemu/bin \
- && cp -af build/bin/. /opt/eqemu/bin/ \
- && printf '%s\n' "${GIT_SHA}" > /opt/eqemu/build-sha \
- && chown -R eqemu:eqemu /opt/eqemu
-
-COPY --chown=eqemu:eqemu containers/eqemu-server/sync-binaries.sh /bin/sync-binaries.sh
-RUN chmod +x /bin/sync-binaries.sh
-
-# Slim the image — the source and build tree are no longer needed.
-RUN rm -rf /build
+ && mkdir -p /home/eqemu/code/build/bin /home/eqemu/code/utils \
+ && cp -af build/bin/. /home/eqemu/code/build/bin/ \
+ && cp -af utils/patches /home/eqemu/code/utils/patches \
+ && printf '%s\n' "${GIT_SHA}" > /home/eqemu/code/build-sha \
+ && chown -R eqemu:eqemu /home/eqemu/code \
+ && rm -rf /build
 
 USER eqemu
 WORKDIR /home/eqemu
 
-# Wrap the upstream entrypoint with our sync step so the host-mounted
-# /home/eqemu/server/bin gets updated to whatever this image was built with.
-ENTRYPOINT ["/bin/bash", "-c", "/bin/sync-binaries.sh && entrypoint.pl; /bin/bash"]
+# ENTRYPOINT inherited from base image:
+#   ["/bin/bash", "-c", "entrypoint.pl; /bin/bash"]
+# entrypoint.pl invokes ~/assets/scripts/create-symlinks.pl when
+# /home/eqemu/server/eqemu_config.json exists; that script symlinks
+# /home/eqemu/code/build/bin/<binary> into /home/eqemu/server/bin/<binary>
+# and /home/eqemu/code/utils/patches/{*patch*,*opcodes*} into the
+# server patches/opcodes dirs — both paths are baked above.
