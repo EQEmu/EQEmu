@@ -659,6 +659,8 @@ std::string DynamicZoneBase::GetDynamicZoneTypeName(DynamicZoneType dz_type)
 			return "Quest";
 		case DynamicZoneType::XPDZ:
 			return "XP DZ";
+		case DynamicZoneType::RaidDZ:
+			return "Raid DZ";
 		default:
 			return "Unknown";
 	}

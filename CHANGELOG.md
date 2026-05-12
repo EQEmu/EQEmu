@@ -1,5 +1,18 @@
 ## [Unreleased]
 
+### Dynamic Zone Raid Instance MVP (THJ-FND-009)
+
+* Add `RaidDZ` dynamic zone type (type 7) distinct from XP DZ (type 6)
+* Add `CreateRaidDZ()` to C++, Lua (`client:CreateRaidDZ`), and Perl (`client:CreateRaidDZ`) APIs
+* Raid DZ instances have a 24-hour lifetime (`Monomyth.RaidDZLifetimeSeconds`) and 24-hour lockout (`Monomyth.RaidDZLockoutSeconds`)
+* Characters may hold one XP DZ and one Raid DZ assignment simultaneously, but not two of the same type
+* Raid lockouts are separate from XP lockouts ("Raid DZ Lockout" vs "XP DZ Lockout")
+* Killed mobs do not respawn in Raid DZ instances (zone controller calls `eq.disable_respawn_timers()`)
+* Raid targets are guaranteed present at zone startup (standard spawn2 behavior, not suppressed)
+* XP DZ raid suppression script updated to only depop targets in XP DZ instances, not Raid DZ
+* Add `monomyth_raid_dz_zones` and `monomyth_raid_dz_targets` database configuration tables
+* Add default Raid DZ entrance NPC script and zone controller script
+
 ### Dynamic Zone Player Commands (THJ-FND-008)
 
 * Add `#dzadd <player_name>` — invite a player to your expedition or dynamic zone (leader only)

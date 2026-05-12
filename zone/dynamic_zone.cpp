@@ -69,14 +69,15 @@ DynamicZone* DynamicZone::TryCreate(Client& client, DynamicZone& dzinfo, bool si
 	}
 
 	bool is_xp_dz = dzinfo.IsXPDZ();
-	if (!is_xp_dz && !dzinfo.IsExpedition())
+	bool is_raid_dz = dzinfo.IsRaidDZ();
+	if (!is_xp_dz && !is_raid_dz && !dzinfo.IsExpedition())
 	{
 		return nullptr;
 	}
 
-	if (is_xp_dz && !RuleB(Monomyth, DynamicZonesEnabled))
+	if ((is_xp_dz || is_raid_dz) && !RuleB(Monomyth, DynamicZonesEnabled))
 	{
-		client.Message(Chat::Red, "XP Dynamic Zones are not currently enabled.");
+		client.Message(Chat::Red, "Dynamic Zones are not currently enabled.");
 		return nullptr;
 	}
 
@@ -97,6 +98,23 @@ DynamicZone* DynamicZone::TryCreate(Client& client, DynamicZone& dzinfo, bool si
 		}
 	}
 
+	if (is_raid_dz)
+	{
+		auto existing_dz = FindRaidDZByCharacter(client.CharacterID());
+		if (existing_dz)
+		{
+			client.Message(Chat::Red, "You already have an active Raid Dynamic Zone assignment.");
+			return nullptr;
+		}
+
+		uint32_t lockout_seconds = RuleI(Monomyth, RaidDZLockoutSeconds);
+		if (lockout_seconds > 0 && client.HasDzLockout(dzinfo.GetName(), "Raid DZ Lockout"))
+		{
+			client.Message(Chat::Red, "You have an active lockout for this Raid Dynamic Zone.");
+			return nullptr;
+		}
+	}
+
 	ExpeditionRequest request(dzinfo, client, silent);
 	if (!request.Validate())
 	{
@@ -109,6 +127,11 @@ DynamicZone* DynamicZone::TryCreate(Client& client, DynamicZone& dzinfo, bool si
 	if (is_xp_dz)
 	{
 		dzinfo.SetDuration(RuleI(Monomyth, XPDZLifetimeSeconds));
+	}
+
+	if (is_raid_dz)
+	{
+		dzinfo.SetDuration(RuleI(Monomyth, RaidDZLifetimeSeconds));
 	}
 
 	uint32_t dz_id = dzinfo.Create();
@@ -131,6 +154,15 @@ DynamicZone* DynamicZone::TryCreate(Client& client, DynamicZone& dzinfo, bool si
 		if (lockout_seconds > 0)
 		{
 			dz->AddLockout("XP DZ Lockout", lockout_seconds);
+		}
+	}
+
+	if (is_raid_dz)
+	{
+		uint32_t lockout_seconds = RuleI(Monomyth, RaidDZLockoutSeconds);
+		if (lockout_seconds > 0)
+		{
+			dz->AddLockout("Raid DZ Lockout", lockout_seconds);
 		}
 	}
 
@@ -254,14 +286,14 @@ DynamicZone* DynamicZone::FindDynamicZoneByID(uint32_t dz_id, DynamicZoneType ty
 DynamicZone* DynamicZone::FindExpeditionByCharacter(uint32_t char_id)
 {
 	return FindDynamicZone([&](const DynamicZone& dz) {
-		return (dz.IsExpedition() || dz.IsXPDZ()) && dz.HasMember(char_id);
+		return (dz.IsExpedition() || dz.IsXPDZ() || dz.IsRaidDZ()) && dz.HasMember(char_id);
 	});
 }
 
 DynamicZone* DynamicZone::FindExpeditionByZone(uint32_t zone_id, uint32_t instance_id)
 {
 	return FindDynamicZone([&](const DynamicZone& dz) {
-		return (dz.IsExpedition() || dz.IsXPDZ()) && dz.IsSameDz(zone_id, instance_id);
+		return (dz.IsExpedition() || dz.IsXPDZ() || dz.IsRaidDZ()) && dz.IsSameDz(zone_id, instance_id);
 	});
 }
 
@@ -269,6 +301,13 @@ DynamicZone* DynamicZone::FindXPDZByCharacter(uint32_t char_id)
 {
 	return FindDynamicZone([&](const DynamicZone& dz) {
 		return dz.IsXPDZ() && dz.HasMember(char_id);
+	});
+}
+
+DynamicZone* DynamicZone::FindRaidDZByCharacter(uint32_t char_id)
+{
+	return FindDynamicZone([&](const DynamicZone& dz) {
+		return dz.IsRaidDZ() && dz.HasMember(char_id);
 	});
 }
 
@@ -1263,7 +1302,7 @@ void DynamicZone::SendUpdatesToZoneMembers(bool removing_all, bool silent)
 	// only expeditions use the dz window. on live the window is filled by non
 	// expeditions when first created but never kept updated. that behavior could
 	// be replicated in the future by flagging this as a creation update
-	if (m_type == DynamicZoneType::Expedition || m_type == DynamicZoneType::XPDZ)
+	if (m_type == DynamicZoneType::Expedition || m_type == DynamicZoneType::XPDZ || m_type == DynamicZoneType::RaidDZ)
 	{
 		// clearing info also clears member list, no need to send both when removing
 		outapp_info = CreateInfoPacket(removing_all);
@@ -1293,7 +1332,7 @@ void DynamicZone::SendUpdatesToZoneMembers(bool removing_all, bool silent)
 				client->QueuePacket(outapp_members.get());
 			}
 
-			if ((m_type == DynamicZoneType::Expedition || m_type == DynamicZoneType::XPDZ) && removing_all && !silent)
+			if ((m_type == DynamicZoneType::Expedition || m_type == DynamicZoneType::XPDZ || m_type == DynamicZoneType::RaidDZ) && removing_all && !silent)
 			{
 				client->MessageString(Chat::Yellow, DZ_REMOVED, client->GetCleanName(), GetName().c_str());
 			}
@@ -1318,7 +1357,7 @@ void DynamicZone::ProcessMemberAddRemove(const DynamicZoneMember& member, bool r
 
 		client->SendDzCompassUpdate();
 
-		if (m_type == DynamicZoneType::Expedition || m_type == DynamicZoneType::XPDZ)
+		if (m_type == DynamicZoneType::Expedition || m_type == DynamicZoneType::XPDZ || m_type == DynamicZoneType::RaidDZ)
 		{
 			// sending clear info also clears member list for removed members
 			client->QueuePacket(CreateInfoPacket(removed).get());
@@ -1326,7 +1365,7 @@ void DynamicZone::ProcessMemberAddRemove(const DynamicZoneMember& member, bool r
 		}
 	}
 
-	if (m_type == DynamicZoneType::Expedition || m_type == DynamicZoneType::XPDZ)
+	if (m_type == DynamicZoneType::Expedition || m_type == DynamicZoneType::XPDZ || m_type == DynamicZoneType::RaidDZ)
 	{
 		// send full list when adding (MemberListName adds with "unknown" status)
 		if (!removed) {
@@ -1366,7 +1405,7 @@ bool DynamicZone::ProcessMemberStatusChange(uint32_t character_id, DynamicZoneMe
 {
 	bool changed = DynamicZoneBase::ProcessMemberStatusChange(character_id, status);
 
-	if (changed && (m_type == DynamicZoneType::Expedition || m_type == DynamicZoneType::XPDZ))
+	if (changed && (m_type == DynamicZoneType::Expedition || m_type == DynamicZoneType::XPDZ || m_type == DynamicZoneType::RaidDZ))
 	{
 		auto member = GetMemberData(character_id);
 		if (member.IsValid())
@@ -1390,7 +1429,7 @@ void DynamicZone::ProcessLeaderChanged(uint32_t new_leader_id)
 	LogDynamicZones("Replaced [{}] leader [{}] with [{}]", m_id, GetLeaderName(), new_leader.name);
 
 	SetLeader(new_leader);
-	if (GetType() == DynamicZoneType::Expedition || GetType() == DynamicZoneType::XPDZ)
+	if (GetType() == DynamicZoneType::Expedition || GetType() == DynamicZoneType::XPDZ || GetType() == DynamicZoneType::RaidDZ)
 	{
 		SendLeaderNameToZoneMembers();
 	}

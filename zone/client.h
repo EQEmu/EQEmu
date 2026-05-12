@@ -1627,6 +1627,7 @@ public:
 	DynamicZone* CreateExpedition(uint32 zone_id, uint32 version, uint32 duration, const std::string& name, uint32 min_players, uint32 max_players, bool silent = false);
 	DynamicZone* CreateExpeditionFromTemplate(uint32_t dz_template_id);
 	DynamicZone* CreateXPDZ(uint32 zone_id, uint32 version, const std::string& name, uint32 min_players = 1, uint32 max_players = 6);
+	DynamicZone* CreateRaidDZ(uint32 zone_id, uint32 version, const std::string& name, uint32 min_players = 1, uint32 max_players = 6);
 	DynamicZone* GetExpedition() const;
 	uint32 GetExpeditionID() const;
 	const DzLockout* GetDzLockout(const std::string& expedition, const std::string& event) const;
