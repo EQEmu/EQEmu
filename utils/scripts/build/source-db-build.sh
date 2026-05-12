@@ -82,12 +82,17 @@ mysql -u${DB_USER} -p${DB_PASS} -h${DB_HOST} -e "DROP DATABASE IF EXISTS ${DB_NA
 
 # Parallelize the import process
 echo "Importing tables in parallel..."
-ls /tmp/db/peq-dump/create_tables_*.sql | xargs -P 4 -I {} sh -c "mysql -u${DB_USER} -p${DB_PASS} -h${DB_HOST} ${DB_NAME} < {}"
+shopt -s nullglob
+create_table_files=("${SQL_DIR}"/create_tables_*.sql)
+
+if [ ${#create_table_files[@]} -gt 0 ]; then
+	printf '%s\0' "${create_table_files[@]}" |
+		xargs -0 -P 4 -I {} sh -c 'mysql -u"$1" -p"$2" -h"$3" "$4" < "$5"' _ "${DB_USER}" "${DB_PASS}" "${DB_HOST}" "${DB_NAME}" "{}"
+fi
 
 # Clean up temporary files
 echo "Cleaning up temporary files..."
 rm -rf /tmp/db/
-rm -rf ${COMBINED_DIR}
 
 echo "Database import complete!"
 
