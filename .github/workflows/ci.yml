@@ -35,6 +35,7 @@ jobs:
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             ca-certificates \
+            cmake \
             curl \
             git \
             golang-go \
@@ -42,14 +43,16 @@ jobs:
             libdbi-perl \
             libjson-perl \
             lua5.4 \
+            ninja-build \
             perl \
             python3 \
-            shellcheck
+            shellcheck \
+            yamllint
 
       - name: Checkout source
         uses: actions/checkout@v5
         with:
-          submodules: false
+          submodules: recursive
           set-safe-directory: true
 
       - name: Trust workspace for Git
@@ -57,6 +60,19 @@ jobs:
 
       - name: Check GitHub Actions workflows
         run: go run github.com/rhysd/actionlint/cmd/actionlint@latest
+
+      - name: Check YAML files
+        run: |
+          git ls-files -z '*.yaml' '*.yml' |
+          xargs -0 --no-run-if-empty \
+            yamllint -d '{extends: default, rules: {document-start: disable, line-length: disable}}'
+
+      - name: Check JSON files
+        run: |
+          git ls-files -z '*.json' |
+          while IFS= read -r -d '' file; do
+            python3 -m json.tool "$file" >/dev/null
+          done
 
       - name: Check whitespace
         run: |
@@ -86,7 +102,7 @@ jobs:
       - name: Check shell scripts
         run: |
           git ls-files -z '*.sh' |
-          xargs -0 --no-run-if-empty shellcheck --severity=error
+          xargs -0 --no-run-if-empty shellcheck --severity=warning
 
       - name: Check Python scripts
         env:
@@ -107,6 +123,118 @@ jobs:
         run: |
           git ls-files -z '*.lua' |
           xargs -0 --no-run-if-empty luac -p
+
+      - name: Prepare configure cache
+        run: mkdir -p .cache/vcpkg/archives submodules/vcpkg/downloads
+
+      - name: Verify unit-test configuration
+        env:
+          VCPKG_FEATURE_FLAGS: binarycaching
+          VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/.cache/vcpkg/archives,readwrite
+        run: |
+          cmake -S . -B build/lint-configure -G Ninja \
+            -DEQEMU_BUILD_SERVER=OFF \
+            -DEQEMU_BUILD_LOGIN=OFF \
+            -DEQEMU_BUILD_CLIENT_FILES=OFF \
+            -DEQEMU_BUILD_TESTS=ON \
+            -DEQEMU_BUILD_LUA=OFF \
+            -DEQEMU_BUILD_PERL=OFF
+
+  production-build:
+    name: Production Build Smoke Test
+    runs-on:
+      - self-hosted
+      - linux
+    container:
+      image: ubuntu:24.04
+      options: --cpus 4
+    timeout-minutes: 90
+
+    steps:
+      - name: Install build tools
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            autoconf \
+            automake \
+            build-essential \
+            ca-certificates \
+            ccache \
+            cmake \
+            curl \
+            git \
+            libtool \
+            make \
+            nasm \
+            ninja-build \
+            perl \
+            pkg-config \
+            python3 \
+            tar \
+            unzip \
+            uuid-dev \
+            zip \
+            zstd
+
+      - name: Checkout source
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          set-safe-directory: true
+
+      - name: Trust workspace for Git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Prepare caches
+        run: |
+          mkdir -p .cache/ccache .cache/vcpkg/archives submodules/vcpkg/downloads
+          ccache --set-config=cache_dir="${GITHUB_WORKSPACE}/.cache/ccache"
+          ccache --set-config=max_size=1G
+
+      - name: Restore ccache
+        uses: actions/cache@v5
+        with:
+          path: .cache/ccache
+          key: ${{ runner.os }}-production-build-ccache-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-production-build-ccache-
+            ${{ runner.os }}-unit-tests-ccache-
+
+      - name: Restore vcpkg cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            .cache/vcpkg/archives
+            submodules/vcpkg/downloads
+            build/production-smoke/vcpkg_installed
+          key: ${{ runner.os }}-production-build-vcpkg-${{ hashFiles('vcpkg.json', '.gitmodules') }}
+          restore-keys: |
+            ${{ runner.os }}-production-build-vcpkg-
+            ${{ runner.os }}-unit-tests-vcpkg-
+            ${{ runner.os }}-vcpkg-
+
+      - name: Configure production build
+        env:
+          VCPKG_FEATURE_FLAGS: binarycaching
+          VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/.cache/vcpkg/archives,readwrite
+        run: |
+          cmake -S . -B build/production-smoke -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DEQEMU_BUILD_SERVER=ON \
+            -DEQEMU_BUILD_LOGIN=ON \
+            -DEQEMU_BUILD_CLIENT_FILES=ON \
+            -DEQEMU_BUILD_TESTS=OFF \
+            -DEQEMU_BUILD_LUA=OFF \
+            -DEQEMU_BUILD_PERL=OFF
+
+      - name: Build production targets
+        run: cmake --build build/production-smoke --parallel 4
+
+      - name: Show ccache stats
+        if: always()
+        run: ccache --show-stats
 
   unit-tests:
     name: C++ Unit Tests
