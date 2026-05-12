@@ -184,8 +184,8 @@ public:
 	void	GoToBind(uint8 bind_number = 0)	{ GMMove(m_SpawnPoint.x, m_SpawnPoint.y, m_SpawnPoint.z, m_SpawnPoint.w); }
 	void	Gate(uint8 bind_number = 0);
 
-	void	GetPetState(SpellBuff_Struct *buffs, uint32 *items, char *name);
-	void	SetPetState(SpellBuff_Struct *buffs, uint32 *items);
+	void	GetPetState(SpellBuff_Struct *buffs, PetItemInfo *items, char *name);
+	void	SetPetState(SpellBuff_Struct *buffs, const PetItemInfo *items, const uint32 *legacy_items);
 	virtual void SpellProcess();
 	virtual void FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho);
 

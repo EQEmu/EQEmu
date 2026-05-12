@@ -1573,10 +1573,11 @@ bool Bot::LoadPet()
 	database.botdb.LoadPetBuffs(GetBotID(), pet_buffs);
 
 	uint32 pet_items[EQ::invslot::EQUIPMENT_COUNT];
+	PetItemInfo pet_item_infos[EQ::invslot::EQUIPMENT_COUNT] = {};
 	memset(pet_items, 0, (sizeof(uint32) * EQ::invslot::EQUIPMENT_COUNT));
 	database.botdb.LoadPetItems(GetBotID(), pet_items);
 
-	pet_inst->SetPetState(pet_buffs, pet_items);
+	pet_inst->SetPetState(pet_buffs, pet_item_infos, pet_items);
 	pet_inst->CalcBonuses();
 	pet_inst->SetHP(pet_hp);
 	pet_inst->SetMana(pet_mana);
@@ -1603,12 +1604,16 @@ bool Bot::SavePet()
 	auto pet_name = new char[64];
 	SpellBuff_Struct pet_buffs[PET_BUFF_COUNT];
 	uint32 pet_items[EQ::invslot::EQUIPMENT_COUNT];
+	PetItemInfo pet_item_infos[EQ::invslot::EQUIPMENT_COUNT] = {};
 
 	memset(pet_name, 0, 64);
 	memset(pet_buffs, 0, (sizeof(SpellBuff_Struct) * PET_BUFF_COUNT));
 	memset(pet_items, 0, (sizeof(uint32) * EQ::invslot::EQUIPMENT_COUNT));
 
-	pet_inst->GetPetState(pet_buffs, pet_items, pet_name);
+	pet_inst->GetPetState(pet_buffs, pet_item_infos, pet_name);
+	for (int slot_id = EQ::invslot::EQUIPMENT_BEGIN; slot_id <= EQ::invslot::EQUIPMENT_END; ++slot_id) {
+		pet_items[slot_id] = pet_item_infos[slot_id].item_id;
+	}
 
 	std::string pet_name_str = pet_name;
 	safe_delete_array(pet_name)

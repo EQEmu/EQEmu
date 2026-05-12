@@ -1738,7 +1738,7 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 						   m_petinfo.Name, m_petinfo.size);
 			if (GetPet() && GetPet()->IsNPC()) {
 				NPC *pet = GetPet()->CastToNPC();
-				pet->SetPetState(m_petinfo.Buffs, m_petinfo.Items);
+				pet->SetPetState(m_petinfo.Buffs, m_petinfo_items.data(), m_petinfo.Items);
 				pet->CalcBonuses();
 				pet->SetHP(m_petinfo.HP);
 				pet->SetMana(m_petinfo.Mana);

@@ -3101,6 +3101,7 @@ void ZoneDatabase::SavePetInfo(Client *client)
 
 	for (int pet_info_type = PetInfoType::Current; pet_info_type <= PetInfoType::Suspended; pet_info_type++) {
 		p = client->GetPetInfo(pet_info_type);
+		auto *pet_items = client->GetPetItemInfo(pet_info_type);
 		if (!p) {
 			continue;
 		}
@@ -3159,7 +3160,7 @@ void ZoneDatabase::SavePetInfo(Client *client)
 			slot_id <= EQ::invslot::EQUIPMENT_END;
 			slot_id++
 		) {
-			if (!p->Items[slot_id]) {
+			if (!(*pet_items)[slot_id].item_id && !p->Items[slot_id]) {
 				continue;
 			}
 
@@ -3173,14 +3174,30 @@ void ZoneDatabase::SavePetInfo(Client *client)
 			slot_id <= EQ::invslot::EQUIPMENT_END;
 			slot_id++
 		) {
-			if (!p->Items[slot_id]) {
+			const auto &pet_item = (*pet_items)[slot_id];
+			const uint32 item_id = pet_item.item_id ? pet_item.item_id : p->Items[slot_id];
+			if (!item_id) {
 				continue;
 			}
 
-			item.char_id = client->CharacterID();
-			item.pet     = pet_info_type;
-			item.slot    = slot_id;
-			item.item_id = p->Items[slot_id];
+			item.char_id             = client->CharacterID();
+			item.pet                 = pet_info_type;
+			item.slot                = slot_id;
+			item.item_id             = item_id;
+			item.charges             = pet_item.item_id ? pet_item.charges : 0;
+			item.color               = pet_item.color;
+			item.augment_one         = pet_item.augment_ids[0];
+			item.augment_two         = pet_item.augment_ids[1];
+			item.augment_three       = pet_item.augment_ids[2];
+			item.augment_four        = pet_item.augment_ids[3];
+			item.augment_five        = pet_item.augment_ids[4];
+			item.augment_six         = pet_item.augment_ids[5];
+			item.instnodrop          = pet_item.attuned ? 1 : 0;
+			item.custom_data         = pet_item.custom_data;
+			item.ornament_icon       = pet_item.ornament_icon;
+			item.ornament_idfile     = pet_item.ornament_idfile;
+			item.ornament_hero_model = pet_item.ornament_hero_model;
+			item.guid                = pet_item.guid;
 
 			inventory.push_back(item);
 		}
@@ -3263,6 +3280,8 @@ void ZoneDatabase::LoadPetInfo(Client *client)
 
 	memset(pet_info, 0, sizeof(PetInfo));
 	memset(suspended_pet_info, 0, sizeof(PetInfo));
+	*client->GetPetItemInfo(PetInfoType::Current) = {};
+	*client->GetPetItemInfo(PetInfoType::Suspended) = {};
 
 	const auto& info = CharacterPetInfoRepository::GetWhere(
 		database,
@@ -3356,6 +3375,22 @@ void ZoneDatabase::LoadPetInfo(Client *client)
 			}
 
 			p->Items[e.slot] = e.item_id;
+			auto &pet_item = (*client->GetPetItemInfo(e.pet))[e.slot];
+			pet_item.item_id             = e.item_id;
+			pet_item.charges             = e.charges;
+			pet_item.color               = e.color;
+			pet_item.augment_ids[0]      = e.augment_one;
+			pet_item.augment_ids[1]      = e.augment_two;
+			pet_item.augment_ids[2]      = e.augment_three;
+			pet_item.augment_ids[3]      = e.augment_four;
+			pet_item.augment_ids[4]      = e.augment_five;
+			pet_item.augment_ids[5]      = e.augment_six;
+			pet_item.attuned             = e.instnodrop != 0;
+			pet_item.custom_data         = e.custom_data;
+			pet_item.ornament_icon       = e.ornament_icon;
+			pet_item.ornament_idfile     = e.ornament_idfile;
+			pet_item.ornament_hero_model = e.ornament_hero_model;
+			pet_item.guid                = e.guid;
 		}
 	}
 }

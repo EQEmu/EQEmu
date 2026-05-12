@@ -62,8 +62,6 @@ extern EntityList entity_list;
 
 namespace {
 constexpr char kPetGearBagMarkerKey[] = "thj_pet_gear_bag";
-constexpr char kPetGearBagLootTag[] = "thj_pet_gear_bag^1^";
-
 bool IsEnabledPetGearBagMarker(const std::string &value)
 {
 	if (value.empty()) {
@@ -87,7 +85,7 @@ bool IsPetGearBagContainer(EQ::ItemInstance *inst)
 
 bool IsPetGearBagLootItem(const LootItem *loot_item)
 {
-	return loot_item && loot_item->custom_data.find(kPetGearBagMarkerKey) != std::string::npos;
+	return loot_item && loot_item->from_pet_gear_bag;
 }
 
 bool IsPetGearBagCharmClassEligible(const Client *owner)
@@ -216,11 +214,14 @@ void FillLootItemFromItemInstance(LootItem *loot_item, const EQ::ItemInstance *i
 	loot_item->aug_4 = inst->GetAugmentItemID(3);
 	loot_item->aug_5 = inst->GetAugmentItemID(4);
 	loot_item->aug_6 = inst->GetAugmentItemID(5);
+	loot_item->color = inst->GetColor();
 	loot_item->attuned = inst->IsAttuned();
-	loot_item->custom_data = kPetGearBagLootTag;
+	loot_item->from_pet_gear_bag = true;
+	loot_item->custom_data = inst->GetCustomDataString();
 	loot_item->ornamenticon = inst->GetOrnamentationIcon();
 	loot_item->ornamentidfile = inst->GetOrnamentationIDFile();
 	loot_item->ornament_hero_model = inst->GetOrnamentHeroModel();
+	loot_item->guid = inst->GetSerialNumber();
 	loot_item->equip_slot = EQ::invslot::SLOT_INVALID;
 }
 }
@@ -1048,6 +1049,16 @@ void NPC::RebuildPetGearBagEquipment()
 			return;
 		}
 
+		if (
+			loot_item->equip_slot >= EQ::invslot::EQUIPMENT_BEGIN &&
+			loot_item->equip_slot <= EQ::invslot::EQUIPMENT_END &&
+			CanItemEquipSlot(item, loot_item->equip_slot) &&
+			!equipped[loot_item->equip_slot]
+		) {
+			equipped[loot_item->equip_slot] = loot_item;
+			return;
+		}
+
 		const auto preferred_slots = GetPreferredSlots(item);
 		int16 chosen_slot = EQ::invslot::SLOT_INVALID;
 		int16 replace_slot = EQ::invslot::SLOT_INVALID;
@@ -1129,8 +1140,38 @@ void NPC::RebuildPetGearBagEquipment()
 			continue;
 		}
 
+		if (loot_item->charges == INT16_MAX) {
+			inst->SetCharges(-1);
+		} else if (loot_item->charges == 0 && inst->IsStackable()) {
+			inst->SetCharges(1);
+		}
+
+		if (loot_item->attuned && inst->GetItem()->Attuneable) {
+			inst->SetAttuned(true);
+		}
+
+		if (loot_item->color) {
+			inst->SetColor(loot_item->color);
+		}
+
 		if (!loot_item->custom_data.empty()) {
 			inst->SetCustomDataString(loot_item->custom_data);
+		}
+
+		if (loot_item->ornamenticon) {
+			inst->SetOrnamentIcon(loot_item->ornamenticon);
+		}
+
+		if (loot_item->ornamentidfile) {
+			inst->SetOrnamentationIDFile(loot_item->ornamentidfile);
+		}
+
+		if (loot_item->ornament_hero_model) {
+			inst->SetOrnamentHeroModel(loot_item->ornament_hero_model);
+		}
+
+		if (loot_item->guid) {
+			inst->SetSerialNumber(loot_item->guid);
 		}
 
 		GetInv().PutItem(slot_id, *inst);

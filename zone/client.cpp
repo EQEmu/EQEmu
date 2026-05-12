@@ -1120,12 +1120,16 @@ bool Client::Save(uint8 iCommitNow) {
 		m_petinfo.SpellID = pet->CastToNPC()->GetPetSpellID();
 		m_petinfo.HP = pet->GetHP();
 		m_petinfo.Mana = pet->GetMana();
-		pet->GetPetState(m_petinfo.Buffs, m_petinfo.Items, m_petinfo.Name);
+		pet->GetPetState(m_petinfo.Buffs, m_petinfo_items.data(), m_petinfo.Name);
+		for (int slot_id = EQ::invslot::EQUIPMENT_BEGIN; slot_id <= EQ::invslot::EQUIPMENT_END; ++slot_id) {
+			m_petinfo.Items[slot_id] = m_petinfo_items[slot_id].item_id;
+		}
 		m_petinfo.petpower = pet->GetPetPower();
 		m_petinfo.size = pet->GetSize();
 		m_petinfo.taunting = pet->CastToNPC()->IsTaunting();
 	} else {
 		memset(&m_petinfo, 0, sizeof(struct PetInfo));
+		m_petinfo_items = {};
 	}
 	database.SavePetInfo(this);
 
@@ -6486,7 +6490,7 @@ void Client::SuspendMinion(int value)
 
 			if(value >= 1)
 			{
-				CurrentPet->SetPetState(m_suspendedminion.Buffs, m_suspendedminion.Items);
+				CurrentPet->SetPetState(m_suspendedminion.Buffs, m_suspendedminion_items.data(), m_suspendedminion.Items);
 
 				CurrentPet->SendPetBuffsToClient();
 			}
@@ -6501,6 +6505,7 @@ void Client::SuspendMinion(int value)
 			MessageString(Chat::Magenta, SUSPEND_MINION_UNSUSPEND, CurrentPet->GetCleanName());
 
 			memset(&m_suspendedminion, 0, sizeof(struct PetInfo));
+			m_suspendedminion_items = {};
 			// TODO: These pet command states need to be synced ...
 			// Will just fix them for now
 			if (m_ClientVersionBit & EQ::versions::maskUFAndLater) {
@@ -6553,10 +6558,17 @@ void Client::SuspendMinion(int value)
 				m_suspendedminion.petpower = CurrentPet->GetPetPower();
 				m_suspendedminion.size = CurrentPet->GetSize();
 
-				if(value >= 1)
-					CurrentPet->GetPetState(m_suspendedminion.Buffs, m_suspendedminion.Items, m_suspendedminion.Name);
-				else
+				if(value >= 1) {
+					CurrentPet->GetPetState(m_suspendedminion.Buffs, m_suspendedminion_items.data(), m_suspendedminion.Name);
+					for (int slot_id = EQ::invslot::EQUIPMENT_BEGIN; slot_id <= EQ::invslot::EQUIPMENT_END; ++slot_id) {
+						m_suspendedminion.Items[slot_id] = m_suspendedminion_items[slot_id].item_id;
+					}
+				}
+				else {
 					strn0cpy(m_suspendedminion.Name, CurrentPet->GetName(), 64); // Name stays even at rank 1
+					m_suspendedminion_items = {};
+					memset(m_suspendedminion.Items, 0, sizeof(m_suspendedminion.Items));
+				}
 
 				MessageString(Chat::Magenta, SUSPEND_MINION_SUSPEND, CurrentPet->GetCleanName());
 
