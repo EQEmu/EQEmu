@@ -15,6 +15,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CCACHE_DIR: /mnt/eqemu-cache/ccache
+  VCPKG_ARCHIVES_DIR: /mnt/eqemu-cache/vcpkg/archives
+  VCPKG_DOWNLOADS_DIR: /mnt/eqemu-cache/vcpkg/downloads
+
 defaults:
   run:
     shell: bash
@@ -27,6 +32,8 @@ jobs:
       - linux
     container:
       image: ubuntu:24.04
+      volumes:
+        - eqemu-monomyth-build-cache:/mnt/eqemu-cache
     timeout-minutes: 20
 
     steps:
@@ -137,12 +144,13 @@ jobs:
           xargs -0 --no-run-if-empty luac -p
 
       - name: Prepare configure cache
-        run: mkdir -p .cache/vcpkg/archives submodules/vcpkg/downloads
+        run: mkdir -p "${VCPKG_ARCHIVES_DIR}" "${VCPKG_DOWNLOADS_DIR}"
 
       - name: Verify unit-test configuration
         env:
           VCPKG_FEATURE_FLAGS: binarycaching
-          VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/.cache/vcpkg/archives,readwrite
+          VCPKG_BINARY_SOURCES: clear;files,${{ env.VCPKG_ARCHIVES_DIR }},readwrite
+          VCPKG_DOWNLOADS: ${{ env.VCPKG_DOWNLOADS_DIR }}
         run: |
           cmake -S . -B build/lint-configure -G Ninja \
             -DEQEMU_BUILD_SERVER=OFF \
@@ -160,6 +168,8 @@ jobs:
     container:
       image: ubuntu:24.04
       options: --cpus 4
+      volumes:
+        - eqemu-monomyth-build-cache:/mnt/eqemu-cache
     timeout-minutes: 90
 
     steps:
@@ -199,36 +209,17 @@ jobs:
 
       - name: Prepare caches
         run: |
-          mkdir -p .cache/ccache .cache/vcpkg/archives submodules/vcpkg/downloads
-          ccache --set-config=cache_dir="${GITHUB_WORKSPACE}/.cache/ccache"
+          mkdir -p "${CCACHE_DIR}" "${VCPKG_ARCHIVES_DIR}" "${VCPKG_DOWNLOADS_DIR}"
+          ccache --set-config=cache_dir="${CCACHE_DIR}"
+          ccache --set-config=base_dir="${GITHUB_WORKSPACE}"
+          ccache --set-config=hash_dir=false
           ccache --set-config=max_size=1G
-
-      - name: Restore ccache
-        uses: actions/cache@v5
-        with:
-          path: .cache/ccache
-          key: ${{ runner.os }}-production-build-ccache-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-production-build-ccache-
-            ${{ runner.os }}-unit-tests-ccache-
-
-      - name: Restore vcpkg cache
-        uses: actions/cache@v5
-        with:
-          path: |
-            .cache/vcpkg/archives
-            submodules/vcpkg/downloads
-            build/production-smoke/vcpkg_installed
-          key: ${{ runner.os }}-production-build-vcpkg-${{ hashFiles('vcpkg.json', '.gitmodules') }}
-          restore-keys: |
-            ${{ runner.os }}-production-build-vcpkg-
-            ${{ runner.os }}-unit-tests-vcpkg-
-            ${{ runner.os }}-vcpkg-
 
       - name: Configure production build
         env:
           VCPKG_FEATURE_FLAGS: binarycaching
-          VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/.cache/vcpkg/archives,readwrite
+          VCPKG_BINARY_SOURCES: clear;files,${{ env.VCPKG_ARCHIVES_DIR }},readwrite
+          VCPKG_DOWNLOADS: ${{ env.VCPKG_DOWNLOADS_DIR }}
         run: |
           cmake -S . -B build/production-smoke -G Ninja \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -256,6 +247,8 @@ jobs:
     container:
       image: ubuntu:24.04
       options: --cpus 4
+      volumes:
+        - eqemu-monomyth-build-cache:/mnt/eqemu-cache
     timeout-minutes: 60
 
     steps:
@@ -295,34 +288,17 @@ jobs:
 
       - name: Prepare caches
         run: |
-          mkdir -p .cache/ccache .cache/vcpkg/archives submodules/vcpkg/downloads
-          ccache --set-config=cache_dir="${GITHUB_WORKSPACE}/.cache/ccache"
+          mkdir -p "${CCACHE_DIR}" "${VCPKG_ARCHIVES_DIR}" "${VCPKG_DOWNLOADS_DIR}"
+          ccache --set-config=cache_dir="${CCACHE_DIR}"
+          ccache --set-config=base_dir="${GITHUB_WORKSPACE}"
+          ccache --set-config=hash_dir=false
           ccache --set-config=max_size=1G
-
-      - name: Restore ccache
-        uses: actions/cache@v5
-        with:
-          path: .cache/ccache
-          key: ${{ runner.os }}-unit-tests-ccache-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-unit-tests-ccache-
-
-      - name: Restore vcpkg cache
-        uses: actions/cache@v5
-        with:
-          path: |
-            .cache/vcpkg/archives
-            submodules/vcpkg/downloads
-            build/unit-tests/vcpkg_installed
-          key: ${{ runner.os }}-unit-tests-vcpkg-${{ hashFiles('vcpkg.json', '.gitmodules') }}
-          restore-keys: |
-            ${{ runner.os }}-unit-tests-vcpkg-
-            ${{ runner.os }}-vcpkg-
 
       - name: Configure tests
         env:
           VCPKG_FEATURE_FLAGS: binarycaching
-          VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}/.cache/vcpkg/archives,readwrite
+          VCPKG_BINARY_SOURCES: clear;files,${{ env.VCPKG_ARCHIVES_DIR }},readwrite
+          VCPKG_DOWNLOADS: ${{ env.VCPKG_DOWNLOADS_DIR }}
         run: |
           cmake -S . -B build/unit-tests -G Ninja \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
