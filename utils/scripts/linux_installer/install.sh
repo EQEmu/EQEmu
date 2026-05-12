@@ -56,7 +56,8 @@ export apt_options="-y -qq" # Set autoconfirm and silent install
 
 if [ ! -f ./install_variables.txt ]; then
 
-	read -n1 -r -p "Press any key to continue..." key
+	IFS= read -r -n1 -p "Press any key to continue..."
+	echo ""
 
 	#::: Setting up user environment (eqemu)
 	echo "First, we need to set your passwords..."
@@ -68,7 +69,7 @@ if [ ! -f ./install_variables.txt ]; then
 	passwd eqemu
 
 	#::: Go to server directory
-	cd $eqemu_server_directory
+	cd "$eqemu_server_directory" || exit
 
 	#::: Setup MySQL root user PW
 	read -p "Enter MySQL root (Database) password: " eqemu_db_root_password
@@ -252,7 +253,7 @@ mkdir $eqemu_server_directory/server/maps
 # cd $eqemu_server_directory/source/Server/build
 
 #::: Back to server directory
-cd $eqemu_server_directory/server
+cd "$eqemu_server_directory/server" || exit
 wget https://raw.githubusercontent.com/EQEmu/Server/master/utils/scripts/eqemu_server.pl
 
 #::: Map lowercase to uppercase to avoid issues

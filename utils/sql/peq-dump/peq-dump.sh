@@ -58,8 +58,6 @@ bash -c "cd ${dump_path} && ls * | grep drop | sed 's/.*/source &;/' > drop_all_
 #############################################
 # zip
 #############################################
-human_date=$(date +"%B-%d-%Y" | tr '[:upper:]' '[:lower:]')
-
 echo "Compressing..."
 bash -c "cd /tmp/ && rm -rf peq-latest.zip && zip peq-latest.zip peq-dump/* && mv ${dump_path}peq-latest.zip /tmp/peq-latest.zip"
 
