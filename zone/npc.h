@@ -329,6 +329,7 @@ public:
 		uint32 augment_five = 0,
 		uint32 augment_six = 0
 	);
+	bool ApplyPetGearBags(Client *owner);
 
 	bool MeetsLootDropLevelRequirements(LootdropEntriesRepository::LootdropEntries loot_drop, bool verbose=false);
 

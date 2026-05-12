@@ -76,6 +76,64 @@ extern volatile bool RunLoops;
 
 void UpdateWindowTitle(char* iNewTitle);
 
+namespace {
+constexpr char kPetGearBagMarkerKey[] = "thj_pet_gear_bag";
+
+bool IsEnabledPetGearBagMarker(const std::string &value)
+{
+	if (value.empty()) {
+		return false;
+	}
+
+	const auto normalized = Strings::ToLower(value);
+	return normalized == "1" || normalized == "true" || normalized == "yes" || normalized == "on";
+}
+
+bool IsPetGearBagContainer(EQ::ItemInstance *inst)
+{
+	if (!inst || !inst->IsClassBag()) {
+		return false;
+	}
+
+	return IsEnabledPetGearBagMarker(inst->GetCustomData(kPetGearBagMarkerKey)) ||
+		IsEnabledPetGearBagMarker(inst->GetCustomData("pet_gear_bag")) ||
+		IsEnabledPetGearBagMarker(inst->GetCustomData("petgear"));
+}
+
+bool IsEligiblePetGearBagItem(const EQ::ItemData *item)
+{
+	if (!item || !item->IsClassCommon() || item->NoPet) {
+		return false;
+	}
+
+	if (item->CharmFileID != 0 && !RuleB(Monomyth, PetGearBagCharmEligible)) {
+		return false;
+	}
+
+	for (int16 slot_id = EQ::invslot::EQUIPMENT_BEGIN; slot_id <= EQ::invslot::EQUIPMENT_END; ++slot_id) {
+		if (slot_id == EQ::invslot::slotAmmo) {
+			continue;
+		}
+
+		if (slot_id == EQ::invslot::slotCharm && !RuleB(Monomyth, PetGearBagCharmEligible)) {
+			continue;
+		}
+
+		if (item->Slots & (1u << slot_id)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void PetGearBagHashCombine(uint64 &hash, uint64 value)
+{
+	hash ^= value;
+	hash *= 1099511628211ull;
+}
+}
+
 // client constructor purely for testing / mocking
 Client::Client() : Mob(
 	"No name", // in_name
@@ -176,7 +234,8 @@ Client::Client() : Mob(
 				   tmSitting(0),
 				   parcel_timer(RuleI(Parcel, ParcelDeliveryDelay)),
 				   lazy_load_bank_check_timer(1000),
-				   bandolier_throttle_timer(0)
+				   bandolier_throttle_timer(0),
+				   pet_gear_bag_refresh_timer(std::max(1, RuleI(Monomyth, PetGearBagHashRefreshIntervalSeconds)) * 1000)
 {
 	eqs = nullptr;
 	for (auto client_filter = FilterNone; client_filter < _FilterCount; client_filter = eqFilterType(client_filter + 1)) {
@@ -485,7 +544,8 @@ Client::Client(EQStreamInterface *ieqs) : Mob(
 	tmSitting(0),
 	parcel_timer(RuleI(Parcel, ParcelDeliveryDelay)),
 	lazy_load_bank_check_timer(1000),
-	bandolier_throttle_timer(0)
+	bandolier_throttle_timer(0),
+	pet_gear_bag_refresh_timer(std::max(1, RuleI(Monomyth, PetGearBagHashRefreshIntervalSeconds)) * 1000)
 {
 	for (auto client_filter = FilterNone; client_filter < _FilterCount; client_filter = eqFilterType(client_filter + 1)) {
 		SetFilter(client_filter, FilterShow);
@@ -6501,6 +6561,94 @@ void Client::SuspendMinion(int value)
 			return;
 		}
 	}
+}
+
+void Client::ResetPetGearBagTracking()
+{
+	m_pet_gear_bag_pet_id = 0;
+	m_pet_gear_bag_hash = 0;
+}
+
+uint64 Client::GetPetGearBagHash() const
+{
+	uint64 hash = 1469598103934665603ull;
+
+	for (int16 slot_id = EQ::invslot::GENERAL_BEGIN; slot_id <= EQ::invslot::GENERAL_END; ++slot_id) {
+		auto *bag_inst = m_inv.GetItem(slot_id);
+		if (!IsPetGearBagContainer(bag_inst)) {
+			continue;
+		}
+
+		const auto *bag_item = bag_inst->GetItem();
+		if (!bag_item) {
+			continue;
+		}
+
+		PetGearBagHashCombine(hash, static_cast<uint64>(slot_id));
+		PetGearBagHashCombine(hash, static_cast<uint64>(bag_item->ID));
+
+		for (uint8 bag_idx = EQ::invbag::SLOT_BEGIN; bag_idx <= EQ::invbag::SLOT_END; ++bag_idx) {
+			auto *item_inst = m_inv.GetItem(slot_id, bag_idx);
+			if (!item_inst || !item_inst->GetItem()) {
+				continue;
+			}
+
+			const auto *item = item_inst->GetItem();
+			if (!IsEligiblePetGearBagItem(item)) {
+				continue;
+			}
+
+			PetGearBagHashCombine(hash, static_cast<uint64>(bag_idx));
+			PetGearBagHashCombine(hash, static_cast<uint64>(item->ID));
+			PetGearBagHashCombine(hash, static_cast<uint64>(item_inst->GetCharges()));
+
+			for (uint8 aug_idx = EQ::invaug::SOCKET_BEGIN; aug_idx <= EQ::invaug::SOCKET_END; ++aug_idx) {
+				const auto *augment = item_inst->GetAugment(aug_idx);
+				PetGearBagHashCombine(hash, static_cast<uint64>(augment && augment->GetItem() ? augment->GetItem()->ID : 0));
+			}
+		}
+	}
+
+	return hash;
+}
+
+bool Client::RefreshPetGearBag(bool force, bool notify)
+{
+	if (!RuleB(Monomyth, PetGearBagEnabled)) {
+		ResetPetGearBagTracking();
+		if (notify) {
+			Message(Chat::White, "Pet Gear Bags are currently disabled.");
+		}
+		return false;
+	}
+
+	auto *pet = GetPet();
+	if (!pet || !pet->IsNPC()) {
+		ResetPetGearBagTracking();
+		if (notify) {
+			Message(Chat::White, "You must have an active pet to refresh pet gear.");
+		}
+		return false;
+	}
+
+	const auto pet_id = pet->GetID();
+	const auto hash = GetPetGearBagHash();
+	if (!force && m_pet_gear_bag_pet_id == pet_id && m_pet_gear_bag_hash == hash) {
+		if (notify) {
+			Message(Chat::White, "Your pet gear is already up to date.");
+		}
+		return false;
+	}
+
+	const bool applied = pet->CastToNPC()->ApplyPetGearBags(this);
+	m_pet_gear_bag_pet_id = pet_id;
+	m_pet_gear_bag_hash = hash;
+
+	if (notify) {
+		Message(Chat::White, applied ? "Pet gear refreshed." : "No eligible Pet Gear Bag items were found, but your pet equipment was rebuilt.");
+	}
+
+	return applied;
 }
 
 void Client::AddPVPPoints(uint32 Points)

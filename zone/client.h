@@ -512,6 +512,7 @@ public:
 	void ReloadExpansionProfileSetting();
 
 	void SetPetCommandState(uint8 button, uint8 state);
+	bool RefreshPetGearBag(bool force = false, bool notify = false);
 
 	bool AutoAttackEnabled() const { return auto_attack; }
 	bool AutoFireEnabled() const { return auto_fire; }
@@ -2150,9 +2151,13 @@ private:
 	Object* m_tradeskill_object;
 	PetInfo m_petinfo; // current pet data, used while loading from and saving to DB
 	PetInfo m_suspendedminion; // pet data for our suspended minion.
+	uint16 m_pet_gear_bag_pet_id = 0;
+	uint64 m_pet_gear_bag_hash = 0;
 	MercInfo m_mercinfo[MAXMERCS]; // current mercenary
 	InspectMessage_Struct m_inspect_message;
 	bool temp_pvp;
+	void ResetPetGearBagTracking();
+	uint64 GetPetGearBagHash() const;
 
 	void NPCSpawn(const Seperator* sep);
 
@@ -2215,6 +2220,7 @@ private:
 	Timer parcel_timer;	//Used to limit the number of parcels to one every 30 seconds (default).  Changable via rule.
 	Timer lazy_load_bank_check_timer;
 	Timer bandolier_throttle_timer;
+	Timer pet_gear_bag_refresh_timer;
 
 	bool m_lazy_load_bank            = false;
 	int  m_lazy_load_sent_bank_slots = 0;

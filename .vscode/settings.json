@@ -5,9 +5,8 @@
 	"editor.autoIndent": "full",
 	"editor.trimAutoWhitespace": true,
 	"files.trimTrailingWhitespace": true,
-	//"editor.formatOnSave": true,
 	"search.exclude": {
-		"dependencies": false,
+		"dependencies": false
 	},
 	"C_Cpp.default.includePath": [
 		"/usr/include/x86_64-linux-gnu",

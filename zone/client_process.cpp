@@ -150,6 +150,17 @@ bool Client::Process() {
 		if (TaskPeriodic_Timer.Check() && task_state)
 			task_state->TaskPeriodicChecks(this);
 
+		if (RuleB(Monomyth, PetGearBagEnabled)) {
+			auto *pet = GetPet();
+			if (!pet || !pet->IsNPC()) {
+				ResetPetGearBagTracking();
+			} else if (pet->GetID() != m_pet_gear_bag_pet_id || pet_gear_bag_refresh_timer.Check()) {
+				RefreshPetGearBag(pet->GetID() != m_pet_gear_bag_pet_id, false);
+			}
+		} else {
+			ResetPetGearBagTracking();
+		}
+
 		if (dynamiczone_removal_timer.Check() && zone && zone->GetInstanceID() != 0)
 		{
 			dynamiczone_removal_timer.Disable();

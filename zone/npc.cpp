@@ -48,13 +48,172 @@
 #include "zone/zone.h"
 
 #include <cstdio>
+#include <algorithm>
+#include <array>
+#include <limits>
 #include <string>
 #include <utility>
+#include <vector>
 
 extern Zone* zone;
 extern QueryServ* QServ;
 extern volatile bool is_zone_loaded;
 extern EntityList entity_list;
+
+namespace {
+constexpr char kPetGearBagMarkerKey[] = "thj_pet_gear_bag";
+constexpr char kPetGearBagLootTag[] = "thj_pet_gear_bag^1^";
+
+bool IsEnabledPetGearBagMarker(const std::string &value)
+{
+	if (value.empty()) {
+		return false;
+	}
+
+	const auto normalized = Strings::ToLower(value);
+	return normalized == "1" || normalized == "true" || normalized == "yes" || normalized == "on";
+}
+
+bool IsPetGearBagContainer(EQ::ItemInstance *inst)
+{
+	if (!inst || !inst->IsClassBag()) {
+		return false;
+	}
+
+	return IsEnabledPetGearBagMarker(inst->GetCustomData(kPetGearBagMarkerKey)) ||
+		IsEnabledPetGearBagMarker(inst->GetCustomData("pet_gear_bag")) ||
+		IsEnabledPetGearBagMarker(inst->GetCustomData("petgear"));
+}
+
+bool IsPetGearBagLootItem(const LootItem *loot_item)
+{
+	return loot_item && loot_item->custom_data.find(kPetGearBagMarkerKey) != std::string::npos;
+}
+
+bool CanItemEquipSlot(const EQ::ItemData *item, int16 slot_id)
+{
+	if (!item || slot_id < EQ::invslot::EQUIPMENT_BEGIN || slot_id > EQ::invslot::EQUIPMENT_END) {
+		return false;
+	}
+
+	if (slot_id == EQ::invslot::slotAmmo) {
+		return false;
+	}
+
+	if (slot_id == EQ::invslot::slotCharm && !RuleB(Monomyth, PetGearBagCharmEligible)) {
+		return false;
+	}
+
+	return (item->Slots & (1u << slot_id)) != 0;
+}
+
+bool IsEligiblePetGearBagItem(const EQ::ItemData *item)
+{
+	if (!item || !item->IsClassCommon() || item->NoPet) {
+		return false;
+	}
+
+	if (item->CharmFileID != 0 && !RuleB(Monomyth, PetGearBagCharmEligible)) {
+		return false;
+	}
+
+	for (int16 slot_id = EQ::invslot::EQUIPMENT_BEGIN; slot_id <= EQ::invslot::EQUIPMENT_END; ++slot_id) {
+		if (CanItemEquipSlot(item, slot_id)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool IsWeaponSlot(int16 slot_id)
+{
+	return slot_id == EQ::invslot::slotPrimary || slot_id == EQ::invslot::slotSecondary;
+}
+
+bool IsWeaponLikeItem(const EQ::ItemData *item)
+{
+	if (!item) {
+		return false;
+	}
+
+	return item->Damage > 0 || item->IsType1HWeapon() || item->IsType2HWeapon();
+}
+
+int64 GetEquipScore(const EQ::ItemData *item, int16 slot_id)
+{
+	if (!item) {
+		return std::numeric_limits<int64>::min();
+	}
+
+	const int64 heroic_sum = item->HeroicStr + item->HeroicSta + item->HeroicDex + item->HeroicAgi + item->HeroicInt + item->HeroicWis;
+	const int64 stat_sum = item->AStr + item->ASta + item->ADex + item->AAgi + item->AInt + item->AWis + item->ACha;
+
+	if (IsWeaponSlot(slot_id) && IsWeaponLikeItem(item)) {
+		return (static_cast<int64>(item->Damage) * 1000000) +
+			(static_cast<int64>(item->AC) * 10000) +
+			(static_cast<int64>(item->HP) * 100) +
+			item->Attack + heroic_sum + stat_sum;
+	}
+
+	return (static_cast<int64>(item->AC) * 1000000) +
+		(static_cast<int64>(item->HP) * 10000) +
+		(static_cast<int64>(item->Mana) * 100) +
+		(static_cast<int64>(item->Attack) * 10) + heroic_sum + stat_sum;
+}
+
+std::vector<int16> GetPreferredSlots(const EQ::ItemData *item)
+{
+	std::vector<int16> slots;
+	if (!item) {
+		return slots;
+	}
+
+	auto add_slot = [&](int16 slot_id) {
+		if (CanItemEquipSlot(item, slot_id) && std::find(slots.begin(), slots.end(), slot_id) == slots.end()) {
+			slots.push_back(slot_id);
+		}
+	};
+
+	if (IsWeaponLikeItem(item)) {
+		add_slot(EQ::invslot::slotPrimary);
+		add_slot(EQ::invslot::slotSecondary);
+	}
+
+	if (item->ItemType == EQ::item::ItemTypeShield || item->ItemType == EQ::item::ItemTypeLight) {
+		add_slot(EQ::invslot::slotSecondary);
+		add_slot(EQ::invslot::slotPrimary);
+	}
+
+	for (int16 slot_id = EQ::invslot::EQUIPMENT_BEGIN; slot_id <= EQ::invslot::EQUIPMENT_END; ++slot_id) {
+		add_slot(slot_id);
+	}
+
+	return slots;
+}
+
+void FillLootItemFromItemInstance(LootItem *loot_item, const EQ::ItemInstance *inst)
+{
+	if (!loot_item || !inst || !inst->GetItem()) {
+		return;
+	}
+
+	loot_item->item_id = inst->GetItem()->ID;
+	loot_item->charges = inst->GetCharges();
+		loot_item->aug_1 = inst->GetAugmentItemID(0);
+	loot_item->aug_2 = inst->GetAugmentItemID(1);
+	loot_item->aug_3 = inst->GetAugmentItemID(2);
+	loot_item->aug_4 = inst->GetAugmentItemID(3);
+	loot_item->aug_5 = inst->GetAugmentItemID(4);
+	loot_item->aug_6 = inst->GetAugmentItemID(5);
+	loot_item->attuned = inst->IsAttuned();
+	loot_item->custom_data = kPetGearBagLootTag;
+	loot_item->ornamenticon = inst->GetOrnamentationIcon();
+	loot_item->ornamentidfile = inst->GetOrnamentationIDFile();
+	loot_item->ornament_hero_model = inst->GetOrnamentHeroModel();
+	loot_item->equip_slot = EQ::invslot::SLOT_INVALID;
+}
+}
 
 NPC::NPC(const NPCType *npc_type_data, Spawn2 *in_respawn, const glm::vec4 &position, GravityBehavior iflymode, bool IsCorpse)
 	: Mob(
@@ -837,6 +996,198 @@ void NPC::UpdateEquipmentLight()
 		m_Light.Type[EQ::lightsource::LightEquipment] = general_light_type;
 
 	m_Light.Level[EQ::lightsource::LightEquipment] = EQ::lightsource::TypeToLevel(m_Light.Type[EQ::lightsource::LightEquipment]);
+}
+
+bool NPC::ApplyPetGearBags(Client *owner)
+{
+	if (!owner || owner->GetPet() != this || !RuleB(Monomyth, PetGearBagEnabled)) {
+		return false;
+	}
+
+	bool found_pet_gear_item = false;
+
+	for (auto iter = m_loot_items.begin(); iter != m_loot_items.end();) {
+		auto *loot_item = *iter;
+		if (!IsPetGearBagLootItem(loot_item)) {
+			++iter;
+			continue;
+		}
+
+		if (loot_item->equip_slot >= EQ::invslot::EQUIPMENT_BEGIN && loot_item->equip_slot <= EQ::invslot::EQUIPMENT_END) {
+			GetInv().DeleteItem(loot_item->equip_slot);
+		}
+
+		iter = m_loot_items.erase(iter);
+		safe_delete(loot_item);
+	}
+
+	for (int16 slot_id = EQ::invslot::GENERAL_BEGIN; slot_id <= EQ::invslot::GENERAL_END; ++slot_id) {
+		auto *bag_inst = owner->GetInv().GetItem(slot_id);
+		if (!IsPetGearBagContainer(bag_inst)) {
+			continue;
+		}
+
+		for (uint8 bag_idx = EQ::invbag::SLOT_BEGIN; bag_idx <= EQ::invbag::SLOT_END; ++bag_idx) {
+			auto *item_inst = owner->GetInv().GetItem(slot_id, bag_idx);
+			if (!item_inst || !IsEligiblePetGearBagItem(item_inst->GetItem())) {
+				continue;
+			}
+
+			auto *loot_item = new LootItem{};
+			FillLootItemFromItemInstance(loot_item, item_inst);
+			m_loot_items.push_back(loot_item);
+			found_pet_gear_item = true;
+		}
+	}
+
+	std::array<LootItem *, EQ::invslot::EQUIPMENT_COUNT> equipped = {};
+	for (auto *loot_item: m_loot_items) {
+		if (loot_item) {
+			loot_item->equip_slot = EQ::invslot::SLOT_INVALID;
+		}
+	}
+
+	auto try_equip = [&](LootItem *loot_item) {
+		if (!loot_item) {
+			return;
+		}
+
+		const auto *item = database.GetItem(loot_item->item_id);
+		if (!item || !item->IsClassCommon()) {
+			return;
+		}
+
+		const auto preferred_slots = GetPreferredSlots(item);
+		int16 chosen_slot = EQ::invslot::SLOT_INVALID;
+		int16 replace_slot = EQ::invslot::SLOT_INVALID;
+
+		for (const auto slot_id: preferred_slots) {
+			if (slot_id < EQ::invslot::EQUIPMENT_BEGIN || slot_id > EQ::invslot::EQUIPMENT_END) {
+				continue;
+			}
+
+			if (!equipped[slot_id]) {
+				chosen_slot = slot_id;
+				break;
+			}
+
+			const auto *existing_item = database.GetItem(equipped[slot_id]->item_id);
+			if (GetEquipScore(item, slot_id) > GetEquipScore(existing_item, slot_id)) {
+				replace_slot = slot_id;
+			}
+		}
+
+		if (chosen_slot == EQ::invslot::SLOT_INVALID) {
+			chosen_slot = replace_slot;
+		}
+
+		if (chosen_slot == EQ::invslot::SLOT_INVALID) {
+			return;
+		}
+
+		if (equipped[chosen_slot]) {
+			equipped[chosen_slot]->equip_slot = EQ::invslot::SLOT_INVALID;
+		}
+
+		equipped[chosen_slot] = loot_item;
+		loot_item->equip_slot = chosen_slot;
+	};
+
+	for (auto *loot_item: m_loot_items) {
+		if (!IsPetGearBagLootItem(loot_item)) {
+			try_equip(loot_item);
+		}
+	}
+
+	for (auto *loot_item: m_loot_items) {
+		if (IsPetGearBagLootItem(loot_item)) {
+			try_equip(loot_item);
+		}
+	}
+
+	memset(equipment, 0, sizeof(equipment));
+	SetBowEquipped(false);
+	SetArrowEquipped(false);
+	SetShieldEquipped(false);
+	SetTwoHanderEquipped(false);
+	SetDualWeaponsEquipped(false);
+	SetFacestab(false);
+	SendRemovePlayerState(PlayerState::PrimaryWeaponEquipped);
+	SendRemovePlayerState(PlayerState::SecondaryWeaponEquipped);
+
+	for (int16 slot_id = EQ::invslot::EQUIPMENT_BEGIN; slot_id <= EQ::invslot::EQUIPMENT_END; ++slot_id) {
+		GetInv().DeleteItem(slot_id);
+		auto *loot_item = equipped[slot_id];
+		if (!loot_item) {
+			continue;
+		}
+
+		auto *inst = database.CreateItem(
+			loot_item->item_id,
+			loot_item->charges,
+			loot_item->aug_1,
+			loot_item->aug_2,
+			loot_item->aug_3,
+			loot_item->aug_4,
+			loot_item->aug_5,
+			loot_item->aug_6
+		);
+		if (!inst || !inst->GetItem()) {
+			safe_delete(inst);
+			loot_item->equip_slot = EQ::invslot::SLOT_INVALID;
+			continue;
+		}
+
+		if (!loot_item->custom_data.empty()) {
+			inst->SetCustomDataString(loot_item->custom_data);
+		}
+
+		GetInv().PutItem(slot_id, *inst);
+		equipment[slot_id] = loot_item->item_id;
+
+		const auto *item = inst->GetItem();
+		if (item->ItemType == EQ::item::ItemTypeBow) {
+			SetBowEquipped(true);
+		}
+
+		if (item->ItemType == EQ::item::ItemTypeArrow) {
+			SetArrowEquipped(true);
+		}
+
+		if (slot_id == EQ::invslot::slotPrimary && item->Damage > 0) {
+			SendAddPlayerState(PlayerState::PrimaryWeaponEquipped);
+			if (!RuleB(Combat, ClassicNPCBackstab)) {
+				SetFacestab(true);
+			}
+			if (item->IsType2HWeapon()) {
+				SetTwoHanderEquipped(true);
+			}
+		}
+
+		if (slot_id == EQ::invslot::slotSecondary) {
+			if (item->Damage > 0) {
+				SendAddPlayerState(PlayerState::SecondaryWeaponEquipped);
+				SetDualWeaponsEquipped(true);
+			}
+			if (item->ItemType == EQ::item::ItemTypeShield) {
+				SetShieldEquipped(true);
+			}
+		}
+
+		safe_delete(inst);
+	}
+
+	CalcBonuses();
+	UpdateEquipmentLight();
+	if (UpdateActiveLight()) {
+		SendAppearancePacket(AppearanceType::Light, GetActiveLightType());
+	}
+
+	for (uint8 material_slot = 0; material_slot <= EQ::textures::materialCount; ++material_slot) {
+		SendWearChange(material_slot);
+	}
+
+	return found_pet_gear_item;
 }
 
 void NPC::Depop(bool start_spawn_timer) {

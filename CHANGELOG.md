@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+### Pet Gear Bag Visible Equipment MVP (THJ-FND-011)
+
+* Add Pet Gear Bag refresh support that scans player inventory bags and reapplies eligible bag contents to the current pet through actual pet loot/equipment state
+* Pet weapons now visibly equip on the pet model by rebuilding `NPC::equipment[]`, repopulating pet inventory slots, recalculating bonuses, and resending wear/material updates
+* Pet armor and other eligible items now flow through the normal pet item bonus path instead of a stat-only overlay
+* Add player commands `#refreshpet` and `#petgearrefresh` to force a manual pet gear reapply
+* Add interval-based refresh checks gated by `Monomyth.PetGearBagEnabled` and `Monomyth.PetGearBagHashRefreshIntervalSeconds`
+* Respect `Monomyth.PetGearBagCharmEligible` when considering charm-slot eligible bag items and do not scan bank inventory yet
+
 ### Dynamic Zone Raid Instance MVP (THJ-FND-009)
 
 * Add `RaidDZ` dynamic zone type (type 7) distinct from XP DZ (type 6)
