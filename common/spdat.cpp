@@ -1877,6 +1877,25 @@ bool IsPersistDeathSpell(uint16 spell_id)
 	return false;
 }
 
+bool IsPersistDeathBeneficialBuffSpell(uint16 spell_id)
+{
+	if (
+		!RuleB(Monomyth, BeneficialBuffsPersistThroughDeath) ||
+		!IsPersistDeathSpell(spell_id) ||
+		!IsBuffSpell(spell_id) ||
+		!IsBeneficialSpell(spell_id)
+	) {
+		return false;
+	}
+
+	// Never let death persistence preserve charm state.
+	if (IsCharmSpell(spell_id)) {
+		return false;
+	}
+
+	return true;
+}
+
 bool IsSuspendableSpell(uint16 spell_id)
 {
 	if (

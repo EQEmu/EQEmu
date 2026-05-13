@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+### Beneficial Buff Death Persistence (BUFF-003)
+
+* Add `Monomyth.BeneficialBuffsPersistThroughDeath` (default `false`) to gate whether beneficial buffs flagged with spell-data `persist_death` survive normal death and resurrection cleanup
+* Death buff cleanup now preserves only configured beneficial `persist_death` buffs; non-persistent combat buffs still fade normally and charm states are always stripped safely
+* Resurrection handling continues to reuse the same death-fade path, so surviving buffs remain consistent across corpse rez, divine rez, and resurrection sickness flows without a separate migration
+
 ### NPC Beneficial Dispel Suppression (BUFF-002)
 
 * NPC-originated dispels against players now suppress eligible beneficial buffs instead of permanently destroying them, matching the intended THJ-style combat-pressure behavior
