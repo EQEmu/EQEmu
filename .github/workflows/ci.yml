@@ -231,7 +231,10 @@ jobs:
 
   production-build:
     name: Production Build Smoke Test
-    needs: changes
+    needs:
+      - changes
+      - lint
+      - unit-tests
     if: needs.changes.outputs.run_full_ci == 'true'
     runs-on:
       group: EQEmu
