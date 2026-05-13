@@ -19,6 +19,7 @@
 
 #include "event_loop.h"
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 
