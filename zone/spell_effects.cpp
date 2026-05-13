@@ -4109,7 +4109,7 @@ bool Mob::ShouldPauseBuffTimer(int slot) const
 		return false;
 	}
 
-	auto* recipient = CastToClient();
+	auto* recipient = const_cast<Client*>(CastToClient());
 	if (!recipient) {
 		return false;
 	}

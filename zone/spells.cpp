@@ -4810,7 +4810,7 @@ bool Mob::IsGroupRaidBuffTimerPausable(Mob *caster, uint16 spell_id) const
 		return false;
 	}
 
-	auto* recipient_client = CastToClient();
+	auto* recipient_client = const_cast<Client*>(CastToClient());
 	auto* caster_client = caster->CastToClient();
 
 	if (!recipient_client || !caster_client) {

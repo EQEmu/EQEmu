@@ -76,3 +76,4 @@ skill-caps.diff
 
 .hermes/
 vcpkg_installed/
+.vscode/settings.json
