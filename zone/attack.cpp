@@ -2243,12 +2243,23 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte, bool IsStrikethrough, bool
 		OffHandAtk(true);
 	}
 
-	//figure out what weapon they are using, if any
+	// Pets can hold full ItemInstances (including augments) in NPC inventory.
+	// Keep equipment[] as a fallback for NPCs that only expose base item ids.
+	const EQ::ItemInstance *weapon_inst = nullptr;
 	const EQ::ItemData *weapon = nullptr;
-	if (Hand == EQ::invslot::slotPrimary && equipment[EQ::invslot::slotPrimary] > 0) {
-		weapon = database.GetItem(equipment[EQ::invslot::slotPrimary]);
-	} else if (equipment[EQ::invslot::slotSecondary]) {
-		weapon = database.GetItem(equipment[EQ::invslot::slotSecondary]);
+	if (Hand == EQ::invslot::slotPrimary || Hand == EQ::invslot::slotSecondary) {
+		weapon_inst = GetInv().GetItem(Hand);
+		if (weapon_inst) {
+			weapon = weapon_inst->GetItem();
+		}
+	}
+
+	if (!weapon) {
+		if (Hand == EQ::invslot::slotPrimary && equipment[EQ::invslot::slotPrimary] > 0) {
+			weapon = database.GetItem(equipment[EQ::invslot::slotPrimary]);
+		} else if (Hand == EQ::invslot::slotSecondary && equipment[EQ::invslot::slotSecondary]) {
+			weapon = database.GetItem(equipment[EQ::invslot::slotSecondary]);
+		}
 	}
 
 	//We dont factor much from the weapon into the attack.
@@ -2315,11 +2326,14 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte, bool IsStrikethrough, bool
 	}
 
 	int64 weapon_damage = GetWeaponDamage(other, weapon);
+	if (weapon_inst) {
+		weapon_damage = GetWeaponDamage(other, weapon_inst);
+	}
 
 	//do attack animation regardless of whether or not we can hit below
 	int16 charges = 0;
-	EQ::ItemInstance weapon_inst(weapon, charges);
-	my_hit.skill = AttackAnimation(Hand, &weapon_inst, my_hit.skill);
+	EQ::ItemInstance fallback_weapon_inst(weapon, charges);
+	my_hit.skill = AttackAnimation(Hand, weapon_inst ? weapon_inst : &fallback_weapon_inst, my_hit.skill);
 
 	//basically "if not immune" then do the attack
 	if (weapon_damage > 0) {
@@ -2412,10 +2426,10 @@ bool NPC::Attack(Mob* other, int Hand, bool bRiposte, bool IsStrikethrough, bool
 
 	bool has_hit = my_hit.damage_done > 0;
 	if (has_hit && !bRiposte && !other->HasDied()) {
-		TryWeaponProc(nullptr, weapon, other, Hand);
+		TryWeaponProc(weapon_inst, weapon, other, Hand);
 
 		if (!other->HasDied()) {
-			TrySpellProc(nullptr, weapon, other, Hand);
+			TrySpellProc(weapon_inst, weapon, other, Hand);
 		}
 
 		if (HasSkillProcSuccess() && !other->HasDied()) {
