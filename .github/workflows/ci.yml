@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -25,8 +26,53 @@ defaults:
     shell: bash
 
 jobs:
+  changes:
+    name: Detect CI-Relevant Changes
+    runs-on:
+      - self-hosted
+      - linux
+    outputs:
+      run_full_ci: ${{ steps.filter.outputs.run_full_ci }}
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          submodules: false
+          set-safe-directory: true
+
+      - name: Trust workspace for Git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Detect docs-only and safe config-only changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          predicate-quantifier: every
+          filters: |
+            run_full_ci:
+              - '!**/*.md'
+              - '!docs/**'
+              - '!.github/**/*.md'
+              - '!.editorconfig'
+              - '!.gitignore'
+              - '!.gitmodules'
+              - '!.markdownlint.json'
+              - '!.markdownlint.yaml'
+              - '!.prettierrc'
+              - '!.prettierrc.json'
+              - '!.prettierrc.yaml'
+              - '!.yamllint*'
+              - '!.clang-format'
+              - '!.clang-tidy'
+              - '!.vscode/**'
+              - '!.github/ISSUE_TEMPLATE/**'
+              - '!.github/pull_request_template.md'
+
   lint:
     name: Lint and Static Checks
+    needs: changes
     runs-on:
       - self-hosted
       - linux
@@ -162,6 +208,8 @@ jobs:
 
   production-build:
     name: Production Build Smoke Test
+    needs: changes
+    if: needs.changes.outputs.run_full_ci == 'true'
     runs-on:
       - self-hosted
       - linux
@@ -241,6 +289,8 @@ jobs:
 
   unit-tests:
     name: C++ Unit Tests
+    needs: changes
+    if: needs.changes.outputs.run_full_ci == 'true'
     runs-on:
       - self-hosted
       - linux
