@@ -1011,7 +1011,7 @@ void NPC::UpdateEquipmentLight()
 
 bool NPC::UsesPetEquippedInventory() const
 {
-	return IsPetOwnerOfClientBot() || IsCharmedPet();
+	return IsPetOwnerOfClientBot() || (GetOwnerID() != 0 && !IsMerc() && IsCharmed());
 }
 
 const EQ::ItemInstance *NPC::GetEquippedItemInstance(int16 slot_id) const
@@ -1020,7 +1020,7 @@ const EQ::ItemInstance *NPC::GetEquippedItemInstance(int16 slot_id) const
 		return nullptr;
 	}
 
-	return m_inv.GetItem(slot_id);
+	return const_cast<NPC *>(this)->GetInv().GetItem(slot_id);
 }
 
 const EQ::ItemData *NPC::GetEquippedItemData(int16 slot_id) const
