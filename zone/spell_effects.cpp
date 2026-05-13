@@ -103,9 +103,20 @@ void SendClientToBazaarSafeLocation(Client* client)
 } // namespace
 
 
+namespace {
+int64 ScalePetBuffProcValue(int64 value, int scale)
+{
+	if (scale == 100 || value == 0) {
+		return value;
+	}
+
+	return value * scale / 100;
+}
+}
+
 // the spell can still fail here, if the buff can't stack
 // in this case false will be returned, true otherwise
-bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_override, int reflect_effectiveness, int32 duration_override, bool disable_buff_overwrite)
+bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_override, int reflect_effectiveness, int32 duration_override, bool disable_buff_overwrite, int pet_buff_proc_scale)
 {
 	int caster_level, buffslot, effect, effect_value, i;
 	EQ::ItemInstance *SummonedItem=nullptr;
@@ -281,6 +292,7 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 
 	// if buff slot, use instrument mod there, otherwise calc it
 	uint32 instrument_mod = buffslot > -1 ? buffs[buffslot].instrument_mod : caster ? caster->GetInstrumentMod(spell_id) : 10;
+	const bool scale_pet_buff_proc_value = pet_buff_proc_scale != 100;
 
 	// iterate through the effects in the spell
 	for (i = 0; i < EFFECT_COUNT; i++)
@@ -346,6 +358,11 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 						else {
 							dmg = caster->GetActSpellDamage(spell_id, dmg, this);
 						}
+						if (scale_pet_buff_proc_value) {
+							const auto scaled_dmg = ScalePetBuffProcValue(dmg, pet_buff_proc_scale);
+							LogSpellsDetail("Spell [{}] pet buff proc value scaled from [{}] to [{}]", spell_id, dmg, scaled_dmg);
+							dmg = scaled_dmg;
+						}
 						caster->ResourceTap(-dmg, spell_id);
 					}
 
@@ -363,6 +380,11 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 
 					if(caster)
 						dmg = caster->GetActSpellHealing(spell_id, dmg, this);
+					if (scale_pet_buff_proc_value) {
+						const auto scaled_dmg = ScalePetBuffProcValue(dmg, pet_buff_proc_scale);
+						LogSpellsDetail("Spell [{}] pet buff proc value scaled from [{}] to [{}]", spell_id, dmg, scaled_dmg);
+						dmg = scaled_dmg;
+					}
 
 					HealDamage(dmg, caster);
 				}
@@ -435,6 +457,11 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 							else {
 								dmg = caster->GetActSpellDamage(spell_id, dmg, this);
 							}
+							if (scale_pet_buff_proc_value) {
+								const auto scaled_dmg = ScalePetBuffProcValue(dmg, pet_buff_proc_scale);
+								LogSpellsDetail("Spell [{}] pet buff proc value scaled from [{}] to [{}]", spell_id, dmg, scaled_dmg);
+								dmg = scaled_dmg;
+							}
 							caster->ResourceTap(-dmg, spell_id);
 						}
 
@@ -450,6 +477,11 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 						//do not apply focus/critical to buff spells
 						if (caster && !IsEffectInSpell(spell_id, SpellEffect::TotalHP)) {
 							dmg = caster->GetActSpellHealing(spell_id, dmg, this);
+						}
+						if (scale_pet_buff_proc_value) {
+							const auto scaled_dmg = ScalePetBuffProcValue(dmg, pet_buff_proc_scale);
+							LogSpellsDetail("Spell [{}] pet buff proc value scaled from [{}] to [{}]", spell_id, dmg, scaled_dmg);
+							dmg = scaled_dmg;
 						}
 						HealDamage(dmg, caster);
 					}
@@ -483,6 +515,11 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 					if(caster)
 						val = caster->GetActSpellHealing(spell_id, val, this);
 				}
+				if (scale_pet_buff_proc_value) {
+					const auto scaled_val = ScalePetBuffProcValue(val, pet_buff_proc_scale);
+					LogSpellsDetail("Spell [{}] pet buff proc value scaled from [{}] to [{}]", spell_id, val, scaled_val);
+					val = scaled_val;
+				}
 
 				if (val < 0)
 					Damage(caster, -val, spell_id, spell.skill, false, buffslot, false);
@@ -500,6 +537,11 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 				int64 val = 7500 * effect_value;
 				if (caster) {
 					val = caster->GetActSpellHealing(spell_id, val, this);
+				}
+				if (scale_pet_buff_proc_value) {
+					const auto scaled_val = ScalePetBuffProcValue(val, pet_buff_proc_scale);
+					LogSpellsDetail("Spell [{}] pet buff proc value scaled from [{}] to [{}]", spell_id, val, scaled_val);
+					val = scaled_val;
 				}
 				if (val > 0) {
 					HealDamage(val, caster);

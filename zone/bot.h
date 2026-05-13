@@ -497,7 +497,7 @@ public:
 	void SpellProcess() override;
 	int32 GetActSpellDuration(uint16 spell_id, int32 duration) override;
 	float GetAOERange(uint16 spell_id) override;
-	virtual bool SpellEffect(Mob* caster, uint16 spell_id, float partial = 100);
+	virtual bool SpellEffect(Mob* caster, uint16 spell_id, float partial = 100, int level_override = -1, int reflect_effectiveness = 0, int32 duration_override = 0, bool disable_buff_overwrite = false, int pet_buff_proc_scale = 100);
 	void DoBuffTic(const Buffs_Struct &buff, int slot, Mob* caster = nullptr) override;
 	virtual bool CastSpell(uint16 spell_id, uint16 target_id, EQ::spells::CastingSlot slot = EQ::spells::CastingSlot::Item, int32 casttime = -1, int32 mana_cost = -1, uint32* oSpellWillFinish = 0,
 						uint32 item_slot = 0xFFFFFFFF, int16 *resist_adjust = nullptr, uint32 aa_id = 0);
@@ -510,7 +510,8 @@ public:
 			bool isproc = false,
 			int level_override = -1,
 			int duration_override = 0,
-			bool disable_buff_overwrite = false
+			bool disable_buff_overwrite = false,
+			int pet_buff_proc_scale = 100
 	) final;
 	bool IsImmuneToSpell(uint16 spell_id, Mob *caster) override;
 	virtual bool DetermineSpellTargets(uint16 spell_id, Mob *&spell_target, Mob *&ae_center, CastAction_type &CastAction, EQ::spells::CastingSlot slot);

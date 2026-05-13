@@ -5204,9 +5204,21 @@ void Mob::TrySpellProc(const EQ::ItemInstance *inst, const EQ::ItemData *weapon,
 				if (passed_skill_limit_check && !IsProcLimitTimerActive(SpellProcs[i].base_spellID, SpellProcs[i].proc_reuse_time, ProcType::MELEE_PROC)) {
 					float chance = ProcChance * (static_cast<float>(SpellProcs[i].chance) / 100.0f);
 					if (zone->random.Roll(chance)) {
-						LogCombat("Spell proc [{}] procing spell [{}] ([{}] percent chance)", i, SpellProcs[i].spellID, chance);
+						const bool is_pet_buff_proc = IsPet();
+						const int pet_buff_proc_scale = RuleI(Spells, PetBuffProcValueScale);
+						if (is_pet_buff_proc && pet_buff_proc_scale != 100) {
+							LogCombat(
+								"Spell proc [{}] procing spell [{}] ([{}] percent chance, pet buff proc value scaled to [{}] percent)",
+								i,
+								SpellProcs[i].spellID,
+								chance,
+								pet_buff_proc_scale
+							);
+						} else {
+							LogCombat("Spell proc [{}] procing spell [{}] ([{}] percent chance)", i, SpellProcs[i].spellID, chance);
+						}
 						SendBeginCast(SpellProcs[i].spellID, 0);
-						ExecWeaponProc(nullptr, SpellProcs[i].spellID, on, SpellProcs[i].level_override);
+						ExecWeaponProc(nullptr, SpellProcs[i].spellID, on, SpellProcs[i].level_override, false, is_pet_buff_proc);
 						SetProcLimitTimer(SpellProcs[i].base_spellID, SpellProcs[i].proc_reuse_time, ProcType::MELEE_PROC);
 						CheckNumHitsRemaining(NumHit::OffensiveSpellProcs, 0, SpellProcs[i].base_spellID);
 					}
@@ -5289,9 +5301,21 @@ void Mob::TrySpellProc(const EQ::ItemInstance *inst, const EQ::ItemData *weapon,
 		uint16 spell_id = SpellProcs[poison_slot].spellID;
 
 		if (zone->random.Roll(chance)) {
-			LogCombat("Poison proc [{}] procing spell [{}] ([{}] percent chance)", poison_slot, spell_id, chance);
+			const bool is_pet_buff_proc = IsPet();
+			const int pet_buff_proc_scale = RuleI(Spells, PetBuffProcValueScale);
+			if (is_pet_buff_proc && pet_buff_proc_scale != 100) {
+				LogCombat(
+					"Poison proc [{}] procing spell [{}] ([{}] percent chance, pet buff proc value scaled to [{}] percent)",
+					poison_slot,
+					spell_id,
+					chance,
+					pet_buff_proc_scale
+				);
+			} else {
+				LogCombat("Poison proc [{}] procing spell [{}] ([{}] percent chance)", poison_slot, spell_id, chance);
+			}
 			SendBeginCast(spell_id, 0);
-			ExecWeaponProc(nullptr, spell_id, on, SpellProcs[poison_slot].level_override);
+			ExecWeaponProc(nullptr, spell_id, on, SpellProcs[poison_slot].level_override, false, is_pet_buff_proc);
 			if (one_shot) {
 				RemoveProcFromWeapon(spell_id);
 			}

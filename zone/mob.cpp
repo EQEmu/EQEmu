@@ -5275,7 +5275,7 @@ int32 Mob::GetActSpellCasttime(uint16 spell_id, int32 casttime)
 
 }
 
-void Mob::ExecWeaponProc(const EQ::ItemInstance* inst, uint16 spell_id, Mob* on, int level_override, bool is_innate_proc)
+void Mob::ExecWeaponProc(const EQ::ItemInstance* inst, uint16 spell_id, Mob* on, int level_override, bool is_innate_proc, bool is_pet_buff_proc)
 {
 	// Changed proc targets to look up based on the spells goodEffect flag.
 	// This should work for the majority of weapons.
@@ -5371,7 +5371,8 @@ void Mob::ExecWeaponProc(const EQ::ItemInstance* inst, uint16 spell_id, Mob* on,
 			0,
 			false,
 			0,
-			is_innate_proc
+			is_innate_proc,
+			is_pet_buff_proc
 		);
 
 		if (twin_proc) {
@@ -5388,7 +5389,8 @@ void Mob::ExecWeaponProc(const EQ::ItemInstance* inst, uint16 spell_id, Mob* on,
 				0,
 				false,
 				0,
-				is_innate_proc
+				is_innate_proc,
+				is_pet_buff_proc
 			);
 		}
 	} else if (!(on->IsClient() && on->CastToClient()->dead)) { //dont proc on dead clients
@@ -5405,7 +5407,8 @@ void Mob::ExecWeaponProc(const EQ::ItemInstance* inst, uint16 spell_id, Mob* on,
 			0,
 			false,
 			0,
-			is_innate_proc
+			is_innate_proc,
+			is_pet_buff_proc
 		);
 
 		if (twin_proc && (!(on->IsClient() && on->CastToClient()->dead))) {
@@ -5422,7 +5425,8 @@ void Mob::ExecWeaponProc(const EQ::ItemInstance* inst, uint16 spell_id, Mob* on,
 				0,
 				false,
 				0,
-				is_innate_proc
+				is_innate_proc,
+				is_pet_buff_proc
 			);
 		}
 	}
