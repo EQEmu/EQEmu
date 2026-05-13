@@ -498,6 +498,7 @@ RULE_BOOL(Spells, EnableResistSoftCap, false, "Enabled resist softcap and can be
 RULE_INT(Spells, SpellResistSoftCap, 255, "Softcap for spell resists.")
 RULE_BOOL(Spells, AllowItemTGB, false, "Target group buff (/tgb) doesn't work with items on live, custom servers want it though")
 RULE_BOOL(Spells, NPCInnateProcOverride, true, "NPC innate procs override the target type to single target")
+RULE_BOOL(Spells, PetsCanProcSelfOnlyBuffs, false, "If enabled, pets may receive beneficial self-only spells when those spells are triggered as procs. If disabled, those pet self-proc buffs are blocked.")
 RULE_BOOL(Spells, OldRainTargets, false, "Use old incorrectly implemented maximum targets for rains")
 RULE_REAL(Spells, CallOfTheHeroAggroClearDist, 250.0, "Distance at which CoTH will wipe aggro. To disable and always enable aggro wipe on any distance of CoTH, set to 0.")
 RULE_BOOL(Spells, NPCSpellPush, false, "Enable spell push on NPCs")
