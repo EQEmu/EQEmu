@@ -1,6 +1,6 @@
 name: CI
 
-on:
+"on":
   push:
     branches:
       - master
@@ -49,6 +49,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: false
+          clean: false
           set-safe-directory: true
 
       - name: Trust workspace for Git
@@ -56,7 +57,7 @@ jobs:
 
       - name: Detect docs-only and safe config-only changes
         id: filter
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         with:
           predicate-quantifier: every
           filters: |
