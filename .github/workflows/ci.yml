@@ -31,10 +31,17 @@ jobs:
     runs-on:
       - self-hosted
       - linux
+    container:
+      image: ubuntu:24.04
     outputs:
       run_full_ci: ${{ steps.filter.outputs.run_full_ci }}
 
     steps:
+      - name: Install Git
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends git
+
       - name: Checkout source
         uses: actions/checkout@v5
         with:
