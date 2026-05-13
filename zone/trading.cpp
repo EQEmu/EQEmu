@@ -562,7 +562,7 @@ void Client::FinishTrade(Mob* tradingWith, bool finalizer, void* event_entry, st
 								auto lde = LootdropEntriesRepository::NewNpcEntity();
 								lde.equip_item   = 1;
 								lde.item_charges = static_cast<int8>(baginst->GetCharges());
-								with->AddLootDrop(baginst->GetItem(), lde, true);
+								with->AddLootDrop(baginst, lde, true);
 								inst->DeleteItem(bslot);
 								item_count++;
 							}
@@ -576,7 +576,7 @@ void Client::FinishTrade(Mob* tradingWith, bool finalizer, void* event_entry, st
 							auto lde = LootdropEntriesRepository::NewNpcEntity();
 							lde.equip_item   = 1;
 							lde.item_charges = static_cast<int8>(inst->GetCharges());
-							with->AddLootDrop(item, lde, true);
+							with->AddLootDrop(inst, lde, true);
 							inst = nullptr;
 						}
 					}
@@ -585,7 +585,7 @@ void Client::FinishTrade(Mob* tradingWith, bool finalizer, void* event_entry, st
 						auto lde = LootdropEntriesRepository::NewNpcEntity();
 						lde.equip_item   = 1;
 						lde.item_charges = static_cast<int8>(inst->GetCharges());
-						with->AddLootDrop(item, lde, true);
+						with->AddLootDrop(inst, lde, true);
 						inst = nullptr;
 					}
 				}
