@@ -2931,6 +2931,7 @@ void ZoneDatabase::SaveBuffs(Client *client)
 		e.slot_id        = slot_id;
 		e.spell_id       = buffs[slot_id].spellid;
 		e.caster_level   = buffs[slot_id].casterlevel;
+		e.caster_char_id = buffs[slot_id].caster_char_id;
 		e.caster_name    = buffs[slot_id].caster_name;
 		e.ticsremaining  = buffs[slot_id].ticsremaining;
 		e.counters       = buffs[slot_id].counters;
@@ -2983,22 +2984,33 @@ void ZoneDatabase::LoadBuffs(Client *client)
 			continue;
 		}
 
-		Client* c = entity_list.GetClientByName(e.caster_name.c_str());
+		Client* c = nullptr;
+		if (e.caster_char_id) {
+			c = entity_list.GetClientByCharID(e.caster_char_id);
+		}
+
+		if (!c && !e.caster_name.empty()) {
+			c = entity_list.GetClientByName(e.caster_name.c_str());
+		}
 
 		buffs[e.slot_id].spellid = e.spell_id;
 		buffs[e.slot_id].casterlevel = e.caster_level;
+		buffs[e.slot_id].caster_char_id = e.caster_char_id;
 
 		if (c) {
 			buffs[e.slot_id].casterid = c->GetID();
+			buffs[e.slot_id].caster_char_id = c->CharacterID();
 			buffs[e.slot_id].client   = true;
 
-			strncpy(buffs[e.slot_id].caster_name, c->GetName(), 64);
+			strncpy(buffs[e.slot_id].caster_name, c->GetCleanName(), 64);
 		} else {
 			buffs[e.slot_id].casterid = 0;
-			buffs[e.slot_id].client   = false;
+			buffs[e.slot_id].client   = e.caster_char_id != 0;
 
-			strncpy(buffs[e.slot_id].caster_name, "", 64);
+			strncpy(buffs[e.slot_id].caster_name, e.caster_name.c_str(), 64);
 		}
+
+		buffs[e.slot_id].caster_name[63] = '\0';
 
 		buffs[e.slot_id].ticsremaining     = e.ticsremaining;
 		buffs[e.slot_id].counters          = e.counters;
