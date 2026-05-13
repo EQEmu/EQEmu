@@ -1,5 +1,12 @@
 ## [Unreleased]
 
+### Group/Raid Buff Timer Pause (BUFF-004)
+
+* Add `Monomyth.PauseGroupRaidBuffTimers` (default `false`) to pause eligible beneficial buff duration countdowns while the recipient remains grouped or raided with the original live in-zone player caster
+* Eligible buffs now include non-self beneficial player-cast group buffs and single-target beneficial buffs that originally landed while the caster and recipient were grouped or raided together; periodic effects still tick normally because only the duration decrement is skipped
+* Songs, disciplines, clickies, detrimental effects, anonymous server-style buffs, and player-dispel/PvP behavior remain excluded from this timer-pause path, and missing or offline original casters safely fall back to normal ticking
+* Add optional migration `utils/sql/git/optional/2026_05_13_monomyth_character_buffs_group_raid_timer_pausable.sql` to persist cast-time pause eligibility across zoning and relog
+
 ### Beneficial Buff Death Persistence (BUFF-003)
 
 * Add `Monomyth.BeneficialBuffsPersistThroughDeath` (default `false`) to gate whether beneficial buffs flagged with spell-data `persist_death` survive normal death and resurrection cleanup

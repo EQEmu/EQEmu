@@ -4046,7 +4046,11 @@ void Mob::BuffProcess()
 			if (spells[buffs[buffs_i].spellid].buff_duration_formula != DF_Permanent &&
 			    spells[buffs[buffs_i].spellid].buff_duration_formula != DF_Aura &&
 				buffs[buffs_i].ticsremaining != PERMANENT_BUFF_DURATION) {
-				if(!zone->BuffTimersSuspended() || !IsSuspendableSpell(buffs[buffs_i].spellid))
+				const bool should_decrement =
+					(!zone->BuffTimersSuspended() || !IsSuspendableSpell(buffs[buffs_i].spellid)) &&
+					!ShouldPauseBuffTimer(buffs_i);
+
+				if (should_decrement)
 				{
 					--buffs[buffs_i].ticsremaining;
 
@@ -4078,6 +4082,67 @@ void Mob::BuffProcess()
 			}
 		}
 	}
+}
+
+bool Mob::ShouldPauseBuffTimer(int slot) const
+{
+	if (
+		!RuleB(Monomyth, PauseGroupRaidBuffTimers) ||
+		!IsClient() ||
+		slot < 0 ||
+		slot >= GetMaxTotalSlots()
+	) {
+		return false;
+	}
+
+	const auto& buff = buffs[slot];
+	if (
+		!IsValidSpell(buff.spellid) ||
+		!buff.group_raid_timer_pausable ||
+		!buff.client ||
+		buff.caster_char_id == 0 ||
+		IsDetrimentalSpell(buff.spellid) ||
+		IsBardSong(buff.spellid) ||
+		IsDiscipline(buff.spellid) ||
+		IsDisciplineBuff(buff.spellid)
+	) {
+		return false;
+	}
+
+	auto* recipient = CastToClient();
+	if (!recipient) {
+		return false;
+	}
+
+	Client* original_caster = nullptr;
+	if (buff.casterid > 0) {
+		auto* mob_caster = entity_list.GetMob(buff.casterid);
+		if (mob_caster && mob_caster->IsClient()) {
+			original_caster = mob_caster->CastToClient();
+		}
+	}
+
+	if (!original_caster && buff.caster_char_id > 0) {
+		original_caster = entity_list.GetClientByCharID(buff.caster_char_id);
+	}
+
+	if (!original_caster && buff.caster_name[0] != '\0') {
+		original_caster = entity_list.GetClientByName(buff.caster_name);
+	}
+
+	if (!original_caster || original_caster == recipient || original_caster->IsDead()) {
+		return false;
+	}
+
+	if (auto* recipient_group = recipient->GetGroup()) {
+		if (recipient_group == original_caster->GetGroup()) {
+			return true;
+		}
+	}
+
+	auto* recipient_raid = recipient->GetRaid();
+	auto* caster_raid = original_caster->GetRaid();
+	return recipient_raid && recipient_raid == caster_raid;
 }
 
 void Mob::DoBuffTic(const Buffs_Struct &buff, int slot, Mob *caster)

@@ -443,6 +443,7 @@ public:
 	//Buff
 	void BuffProcess();
 	virtual void DoBuffTic(const Buffs_Struct &buff, int slot, Mob* caster = nullptr);
+	bool ShouldPauseBuffTimer(int slot) const;
 	void BuffFadeBySpellID(uint16 spell_id);
 	void BuffFadeBySpellIDAndCaster(uint16 spell_id, uint16 caster_id);
 	void BuffFadeByEffect(int effect_id, int slot_to_skip = -1);
@@ -458,6 +459,7 @@ public:
 	bool IsAffectedByBuffByGlobalGroup(GlobalGroup group);
 	void BuffModifyDurationBySpellID(uint16 spell_id, int32 newDuration);
 	int AddBuff(Mob *caster, const uint16 spell_id, int duration = 0, int32 level_override = -1, bool disable_buff_overwrite = false);
+	bool IsGroupRaidBuffTimerPausable(Mob *caster, uint16 spell_id) const;
 	int CanBuffStack(uint16 spellid, uint8 caster_level, bool iFailIfOverwrite = false);
 	int CalcBuffDuration(Mob *caster, Mob *target, uint16 spell_id, int32 caster_level_override = -1);
 	void SendPetBuffsToClient();

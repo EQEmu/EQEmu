@@ -3759,6 +3759,7 @@ int Mob::AddBuff(Mob *caster, uint16 spell_id, int duration, int32 level_overrid
 	buffs[emptyslot].RootBreakChance = 0;
 	buffs[emptyslot].virus_spread_time = 0;
 	buffs[emptyslot].instrument_mod = caster ? caster->GetInstrumentMod(spell_id) : 10;
+	buffs[emptyslot].group_raid_timer_pausable = IsGroupRaidBuffTimerPausable(caster, spell_id);
 
 	if (level_override > 0 || buffs[emptyslot].hit_number > 0) {
 		buffs[emptyslot].UpdateClient = true;
@@ -4789,6 +4790,42 @@ uint16 Mob::FindBuffBySlot(int slot) {
 	}
 
 	return 0;
+}
+
+bool Mob::IsGroupRaidBuffTimerPausable(Mob *caster, uint16 spell_id) const
+{
+	if (
+		!RuleB(Monomyth, PauseGroupRaidBuffTimers) ||
+		!caster ||
+		!IsClient() ||
+		!caster->IsClient() ||
+		caster == this ||
+		!IsBeneficialSpell(spell_id) ||
+		IsDetrimentalSpell(spell_id) ||
+		IsBardSong(spell_id) ||
+		IsDiscipline(spell_id) ||
+		IsDisciplineBuff(spell_id) ||
+		caster->GetCastedSpellInvSlot() != 0xFFFFFFFF
+	) {
+		return false;
+	}
+
+	auto* recipient_client = CastToClient();
+	auto* caster_client = caster->CastToClient();
+
+	if (!recipient_client || !caster_client) {
+		return false;
+	}
+
+	if (auto* recipient_group = recipient_client->GetGroup()) {
+		if (recipient_group == caster_client->GetGroup()) {
+			return true;
+		}
+	}
+
+	auto* recipient_raid = recipient_client->GetRaid();
+	auto* caster_raid = caster_client->GetRaid();
+	return recipient_raid && recipient_raid == caster_raid;
 }
 
 uint32 Mob::BuffCount(bool is_beneficial, bool is_detrimental) {
