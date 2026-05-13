@@ -27,6 +27,7 @@
 #include "common/spdat.h"
 #include "common/strings.h"
 #include "zone/bot.h"
+#include "zone/client.h"
 #include "zone/lua_parser.h"
 #include "zone/quest_parser_collection.h"
 #include "zone/string_ids.h"
@@ -1348,7 +1349,9 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 						spells[buffs[slot].spellid].dispel_flag == 0)
 					{
 						if (zone->random.Int(1, 1000) <= chance) {
-							BuffFadeBySlot(slot);
+							if (!(IsClient() && CastToClient()->TrySuppressBuffFromNPCDispel(caster, spell_id, slot))) {
+								BuffFadeBySlot(slot);
+							}
 							slot = buff_count;
 						}
 					}
@@ -4445,8 +4448,10 @@ void Mob::BuffFadeBySlot(int slot, bool iRecalcBonuses)
 	if(!IsValidSpell(buffs[slot].spellid))
 		return;
 
-	if (IsClient() && !CastToClient()->IsDead())
-		CastToClient()->MakeBuffFadePacket(buffs[slot].spellid, slot);
+	if (IsClient() && !CastToClient()->IsDead()) {
+		const bool suppress_fade_message = CastToClient()->ConsumeSuppressedBuffFadeMessage(buffs[slot].spellid);
+		CastToClient()->MakeBuffFadePacket(buffs[slot].spellid, slot, !suppress_fade_message);
+	}
 
 	LogSpells("Fading buff [{}] from slot [{}]", buffs[slot].spellid, slot);
 
@@ -7648,7 +7653,9 @@ void Mob::DispelMagic(Mob* caster, uint16 spell_id, int effect_value)
 			!IsDiscipline(buffs[slot].spellid)
 		) {
 			if (caster && TryDispel(caster->GetCasterLevel(spell_id), buffs[slot].casterlevel, effect_value)) {
-				BuffFadeBySlot(slot);
+				if (!(IsClient() && CastToClient()->TrySuppressBuffFromNPCDispel(caster, spell_id, slot))) {
+					BuffFadeBySlot(slot);
+				}
 				break;
 			}
 		}
