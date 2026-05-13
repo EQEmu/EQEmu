@@ -1871,6 +1871,7 @@ bool IsResistDebuffSpell(uint16 spell_id);
 bool IsSelfConversionSpell(uint16 spell_id);
 bool IsBuffSpell(uint16 spell_id);
 bool IsPersistDeathSpell(uint16 spell_id);
+bool IsPersistDeathBeneficialBuffSpell(uint16 spell_id);
 bool IsSuspendableSpell(uint16 spell_id);
 bool IsCastOnFadeDurationSpell(uint16 spell_id);
 bool IsDistanceModifierSpell(uint16 spell_id);

@@ -1208,6 +1208,7 @@ RULE_INT(Monomyth, MaxActiveRaidDZAssignments, 1, "Maximum active Monomyth raid 
 RULE_BOOL(Monomyth, PetGearBagEnabled, false, "Enable the Monomyth Pet Gear Bag system.")
 RULE_INT(Monomyth, PetGearBagHashRefreshIntervalSeconds, 6, "Interval in seconds between Pet Gear Bag hash refreshes.")
 RULE_BOOL(Monomyth, PetGearBagBankScanningEnabled, false, "Enable Pet Gear Bag scanning of bank inventory.")
+RULE_BOOL(Monomyth, BeneficialBuffsPersistThroughDeath, false, "Honor spell-data persist_death for beneficial buffs during death and resurrection cleanup.")
 RULE_BOOL(Monomyth, PetGearBagCharmEligible, false, "Allow charm-slot items to be considered by the Pet Gear Bag system.")
 RULE_INT(Monomyth, PetGearBagCharmClassMask, 9344, "Player class bitmask allowed to apply Pet Gear Bags to charmed pets. Default enables Bard, Necromancer, and Enchanter charm.")
 RULE_CATEGORY_END()

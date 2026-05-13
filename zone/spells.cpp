@@ -4849,7 +4849,7 @@ void Mob::BuffFadeNonPersistDeath()
 		auto current_spell_id = buffs[buff_slot].spellid;
 		if (
 			IsValidSpell(current_spell_id) &&
-			!IsPersistDeathSpell(current_spell_id) &&
+			!IsPersistDeathBeneficialBuffSpell(current_spell_id) &&
 			!HasPersistDeathIllusion(current_spell_id)
 		) {
 			BuffFadeBySlot(buff_slot, false);
