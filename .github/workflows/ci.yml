@@ -40,7 +40,9 @@ jobs:
       - name: Install Git
         run: |
           apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends git
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates \
+            git
 
       - name: Checkout source
         uses: actions/checkout@v5
