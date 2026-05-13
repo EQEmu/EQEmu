@@ -225,7 +225,8 @@ namespace Journal {
 struct Buffs_Struct {
 	uint16	spellid;
 	uint8	casterlevel;
-	uint16	casterid;		// Maybe change this to a pointer sometime, but gotta make sure it's 0'd when it no longer points to anything
+	uint16	casterid;		// Ephemeral entity id rebuilt from the live zone when possible
+	uint32	caster_char_id;	// Durable character id for player casters across zoning and relog
 	char	caster_name[64];
 	int32	ticsremaining;
 	uint32	counters;
@@ -258,6 +259,7 @@ struct Buffs_Struct {
 			CEREAL_NVP(spellid),
 			CEREAL_NVP(casterlevel),
 			CEREAL_NVP(casterid),
+			CEREAL_NVP(caster_char_id),
 			CEREAL_NVP(caster_name_str),
 			CEREAL_NVP(ticsremaining),
 			CEREAL_NVP(counters),

@@ -3745,6 +3745,7 @@ int Mob::AddBuff(Mob *caster, uint16 spell_id, int duration, int32 level_overrid
 	else
 		memset(buffs[emptyslot].caster_name, 0, 64);
 	buffs[emptyslot].casterid = caster ? caster->GetID() : 0;
+	buffs[emptyslot].caster_char_id = (caster && caster->IsClient()) ? caster->CastToClient()->CharacterID() : 0;
 	buffs[emptyslot].ticsremaining = duration;
 	buffs[emptyslot].counters = CalculateCounters(spell_id);
 	buffs[emptyslot].hit_number = spells[spell_id].hit_number;
