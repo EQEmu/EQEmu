@@ -1908,6 +1908,19 @@ bool Mob::DetermineSpellTargets(uint16 spell_id, Mob *&spell_target, Mob *&ae_ce
 // single target spells
 		case ST_Self:
 		{
+			if (
+				isproc &&
+				IsPet() &&
+				!RuleB(Spells, PetsCanProcSelfOnlyBuffs) &&
+				IsBeneficialSpell(spell_id)
+			) {
+				LogSpells(
+					"Spell [{}] canceled: pet self-only proc buffs disabled by rule Spells:PetsCanProcSelfOnlyBuffs",
+					spell_id
+				);
+				return false;
+			}
+
 			bool bot_can_summon_corpse = IsBot() &&
 				IsEffectInSpell(spell_id, SpellEffect::SummonCorpse) &&
 				RuleB(Bots, AllowCommandedSummonCorpse);
