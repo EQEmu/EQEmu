@@ -200,7 +200,7 @@ std::vector<int16> GetPreferredSlots(const EQ::ItemData *item)
 	return slots;
 }
 
-void FillLootItemFromItemInstance(LootItem *loot_item, const EQ::ItemInstance *inst)
+void FillLootItemFromItemInstance(LootItem *loot_item, const EQ::ItemInstance *inst, bool from_pet_gear_bag = false)
 {
 	if (!loot_item || !inst || !inst->GetItem()) {
 		return;
@@ -208,7 +208,7 @@ void FillLootItemFromItemInstance(LootItem *loot_item, const EQ::ItemInstance *i
 
 	loot_item->item_id = inst->GetItem()->ID;
 	loot_item->charges = inst->GetCharges();
-		loot_item->aug_1 = inst->GetAugmentItemID(0);
+	loot_item->aug_1 = inst->GetAugmentItemID(0);
 	loot_item->aug_2 = inst->GetAugmentItemID(1);
 	loot_item->aug_3 = inst->GetAugmentItemID(2);
 	loot_item->aug_4 = inst->GetAugmentItemID(3);
@@ -216,7 +216,7 @@ void FillLootItemFromItemInstance(LootItem *loot_item, const EQ::ItemInstance *i
 	loot_item->aug_6 = inst->GetAugmentItemID(5);
 	loot_item->color = inst->GetColor();
 	loot_item->attuned = inst->IsAttuned();
-	loot_item->from_pet_gear_bag = true;
+	loot_item->from_pet_gear_bag = from_pet_gear_bag;
 	loot_item->custom_data = inst->GetCustomDataString();
 	loot_item->ornamenticon = inst->GetOrnamentationIcon();
 	loot_item->ornamentidfile = inst->GetOrnamentationIDFile();
@@ -224,6 +224,39 @@ void FillLootItemFromItemInstance(LootItem *loot_item, const EQ::ItemInstance *i
 	loot_item->guid = inst->GetSerialNumber();
 	loot_item->equip_slot = EQ::invslot::SLOT_INVALID;
 }
+}
+
+void NPC::AddLootDrop(const EQ::ItemInstance *inst, LootdropEntriesRepository::LootdropEntries loot_drop, bool wear_change)
+{
+	if (!inst || !inst->GetItem()) {
+		return;
+	}
+
+	if (!UsesPetEquippedInventory()) {
+		AddLootDrop(
+			inst->GetItem(),
+			loot_drop,
+			wear_change,
+			inst->GetAugmentItemID(0),
+			inst->GetAugmentItemID(1),
+			inst->GetAugmentItemID(2),
+			inst->GetAugmentItemID(3),
+			inst->GetAugmentItemID(4),
+			inst->GetAugmentItemID(5)
+		);
+		return;
+	}
+
+	auto *loot_item = new LootItem{};
+	FillLootItemFromItemInstance(loot_item, inst);
+	loot_item->trivial_min_level = loot_drop.trivial_min_level;
+	loot_item->trivial_max_level = loot_drop.trivial_max_level;
+	loot_item->npc_min_level = loot_drop.npc_min_level;
+	loot_item->npc_max_level = loot_drop.npc_max_level;
+	loot_item->lootdrop_id = loot_drop.lootdrop_id;
+	m_loot_items.push_back(loot_item);
+
+	RebuildPetGearBagEquipment();
 }
 
 NPC::NPC(const NPCType *npc_type_data, Spawn2 *in_respawn, const glm::vec4 &position, GravityBehavior iflymode, bool IsCorpse)
@@ -1305,7 +1338,7 @@ bool NPC::ApplyPetGearBags(Client *owner)
 			}
 
 			auto *loot_item = new LootItem{};
-			FillLootItemFromItemInstance(loot_item, item_inst);
+			FillLootItemFromItemInstance(loot_item, item_inst, true);
 			m_loot_items.push_back(loot_item);
 			found_pet_gear_item = true;
 		}

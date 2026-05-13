@@ -329,6 +329,11 @@ public:
 		uint32 augment_five = 0,
 		uint32 augment_six = 0
 	);
+	void AddLootDrop(
+		const EQ::ItemInstance *inst,
+		LootdropEntriesRepository::LootdropEntries loot_drop,
+		bool wear_change = false
+	);
 	bool ApplyPetGearBags(Client *owner);
 	void ClearPetGearBagEquipment();
 	void RebuildPetGearBagEquipment();
