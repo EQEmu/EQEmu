@@ -346,6 +346,7 @@ void NPC::AddLootDrop(
 		return;
 	}
 
+	const bool use_pet_equipped_inventory = UsesPetEquippedInventory();
 	auto item = new LootItem;
 
 	if (EQEmuLogSys::Instance()->log_settings[Logs::Loot].is_category_enabled == 1) {
@@ -417,7 +418,7 @@ void NPC::AddLootDrop(
 		return;
 	}
 
-	if (loot_drop.equip_item > 0) {
+	if (loot_drop.equip_item > 0 && !use_pet_equipped_inventory) {
 		uint8              equipment_slot = UINT8_MAX;
 		const EQ::ItemData *compitem      = nullptr;
 
@@ -434,8 +435,8 @@ void NPC::AddLootDrop(
 			for (int i = EQ::invslot::EQUIPMENT_BEGIN; !found && i <= EQ::invslot::EQUIPMENT_END; i++) {
 				const uint32 slots = (1 << i);
 				if (item2->Slots & slots) {
-					if (equipment[i]) {
-						compitem = database.GetItem(equipment[i]);
+					if (GetEquippedItemID(i)) {
+						compitem = GetEquippedItemData(i);
 						if (!compitem) {
 							continue;
 						}
@@ -456,16 +457,12 @@ void NPC::AddLootDrop(
 
 								old_item->equip_slot = EQ::invslot::SLOT_INVALID;
 
-								equipment[i] = item2->ID;
-
 								found_slot = i;
 								found      = true;
 							}
 						}
 					}
 					else {
-						equipment[i] = item2->ID;
-
 						found_slot = i;
 						found      = true;
 					}
@@ -475,8 +472,6 @@ void NPC::AddLootDrop(
 
 		// Possible slot was found but not selected. Pick it now.
 		if (!found && found_slot >= 0) {
-			equipment[found_slot] = item2->ID;
-
 			found = true;
 		}
 
@@ -564,7 +559,7 @@ void NPC::AddLootDrop(
 		}
 	}
 
-	if (found_slot != INVALID_INDEX) {
+	if (!use_pet_equipped_inventory && found_slot != INVALID_INDEX) {
 		GetInv().PutItem(found_slot, *inst);
 	}
 
@@ -595,7 +590,11 @@ void NPC::AddLootDrop(
 
 	m_loot_items.push_back(item);
 
-	if (found) {
+	if (use_pet_equipped_inventory) {
+		RebuildPetGearBagEquipment();
+		found = item->equip_slot != EQ::invslot::SLOT_INVALID;
+	} else if (found) {
+		SyncEquipmentArrayFromInventory();
 		CalcBonuses();
 	}
 
@@ -603,10 +602,11 @@ void NPC::AddLootDrop(
 		m_rolled_items.emplace_back(item->item_id);
 	}
 
-	if (wear_change && outapp) {
+	if (wear_change && outapp && !use_pet_equipped_inventory) {
 		entity_list.QueueClients(this, outapp);
-		safe_delete(outapp);
 	}
+
+	safe_delete(outapp);
 
 	UpdateEquipmentLight();
 
@@ -778,24 +778,78 @@ void NPC::RemoveItem(uint32 item_id, uint16 quantity, uint16 slot)
 	end = m_loot_items.end();
 	for (; cur != end; ++cur) {
 		LootItem *item = *cur;
+		if (!item) {
+			continue;
+		}
+
+		const bool is_equipped_slot = item->equip_slot >= EQ::invslot::EQUIPMENT_BEGIN && item->equip_slot <= EQ::invslot::EQUIPMENT_END;
+		const bool use_pet_equipped_inventory = UsesPetEquippedInventory();
 		if (item->item_id == item_id && slot <= 0 && quantity <= 0) {
+			const auto removed_slot = item->equip_slot;
 			m_loot_items.erase(cur);
 			safe_delete(item);
+			if (use_pet_equipped_inventory) {
+				RebuildPetGearBagEquipment();
+			} else if (is_equipped_slot) {
+				GetInv().DeleteItem(removed_slot);
+				SyncEquipmentArrayFromInventory();
+				CalcBonuses();
+			}
 			UpdateEquipmentLight();
 			if (UpdateActiveLight()) { SendAppearancePacket(AppearanceType::Light, GetActiveLightType()); }
 			return;
 		}
+		else if (item->item_id == item_id && item->equip_slot == slot && quantity == 0) {
+			const auto removed_slot = item->equip_slot;
+			m_loot_items.erase(cur);
+			safe_delete(item);
+			if (use_pet_equipped_inventory) {
+				RebuildPetGearBagEquipment();
+			} else if (is_equipped_slot) {
+				GetInv().DeleteItem(removed_slot);
+				SyncEquipmentArrayFromInventory();
+				CalcBonuses();
+			}
+			UpdateEquipmentLight();
+			if (UpdateActiveLight()) {
+				SendAppearancePacket(AppearanceType::Light, GetActiveLightType());
+			}
+			return;
+		}
 		else if (item->item_id == item_id && item->equip_slot == slot && quantity >= 1) {
 			if (item->charges <= quantity) {
+				const auto removed_slot = item->equip_slot;
 				m_loot_items.erase(cur);
-				UpdateEquipmentLight();
-				if (UpdateActiveLight()) {
-					SendAppearancePacket(AppearanceType::Light, GetActiveLightType());
-				}
 				safe_delete(item);
+				if (use_pet_equipped_inventory) {
+					RebuildPetGearBagEquipment();
+				} else if (is_equipped_slot) {
+					GetInv().DeleteItem(removed_slot);
+					SyncEquipmentArrayFromInventory();
+					CalcBonuses();
+				}
 			}
 			else {
 				item->charges -= quantity;
+				if (use_pet_equipped_inventory) {
+					RebuildPetGearBagEquipment();
+				} else if (is_equipped_slot) {
+					auto *inst = GetInv().GetItem(item->equip_slot);
+					if (inst) {
+						if (item->charges == INT16_MAX) {
+							inst->SetCharges(-1);
+						} else if (item->charges == 0 && inst->IsStackable()) {
+							inst->SetCharges(1);
+						} else {
+							inst->SetCharges(item->charges);
+						}
+					}
+				}
+			}
+
+			UpdateEquipmentLight();
+			if (UpdateActiveLight()) {
+				SendAppearancePacket(AppearanceType::Light, GetActiveLightType());
 			}
 			return;
 		}

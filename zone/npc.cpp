@@ -982,7 +982,7 @@ void NPC::UpdateEquipmentLight()
 	for (int index = EQ::invslot::EQUIPMENT_BEGIN; index <= EQ::invslot::EQUIPMENT_END; ++index) {
 		if (index == EQ::invslot::slotAmmo) { continue; }
 
-		auto item = database.GetItem(equipment[index]);
+		const auto *item = GetEquippedItemData(index);
 		if (item == nullptr) { continue; }
 
 		if (EQ::lightsource::IsLevelGreater(item->Light, m_Light.Type[EQ::lightsource::LightEquipment])) {
@@ -1007,6 +1007,64 @@ void NPC::UpdateEquipmentLight()
 		m_Light.Type[EQ::lightsource::LightEquipment] = general_light_type;
 
 	m_Light.Level[EQ::lightsource::LightEquipment] = EQ::lightsource::TypeToLevel(m_Light.Type[EQ::lightsource::LightEquipment]);
+}
+
+bool NPC::UsesPetEquippedInventory() const
+{
+	return IsPetOwnerOfClientBot() || IsCharmedPet();
+}
+
+const EQ::ItemInstance *NPC::GetEquippedItemInstance(int16 slot_id) const
+{
+	if (slot_id < EQ::invslot::EQUIPMENT_BEGIN || slot_id > EQ::invslot::EQUIPMENT_END) {
+		return nullptr;
+	}
+
+	return m_inv.GetItem(slot_id);
+}
+
+const EQ::ItemData *NPC::GetEquippedItemData(int16 slot_id) const
+{
+	if (slot_id < EQ::invslot::EQUIPMENT_BEGIN || slot_id > EQ::invslot::EQUIPMENT_END) {
+		return nullptr;
+	}
+
+	const auto *inst = GetEquippedItemInstance(slot_id);
+	if (inst && inst->GetItem()) {
+		return inst->GetItem();
+	}
+
+	if (equipment[slot_id] == 0) {
+		return nullptr;
+	}
+
+	return database.GetItem(equipment[slot_id]);
+}
+
+uint32 NPC::GetEquippedItemID(int16 slot_id) const
+{
+	if (slot_id < EQ::invslot::EQUIPMENT_BEGIN || slot_id > EQ::invslot::EQUIPMENT_END) {
+		return 0;
+	}
+
+	const auto *inst = GetEquippedItemInstance(slot_id);
+	if (inst && inst->GetItem()) {
+		return inst->GetItem()->ID;
+	}
+
+	return equipment[slot_id];
+}
+
+void NPC::SyncEquipmentArrayFromInventory()
+{
+	memset(equipment, 0, sizeof(equipment));
+
+	for (int16 slot_id = EQ::invslot::EQUIPMENT_BEGIN; slot_id <= EQ::invslot::EQUIPMENT_END; ++slot_id) {
+		const auto *inst = GetEquippedItemInstance(slot_id);
+		if (inst && inst->GetItem()) {
+			equipment[slot_id] = inst->GetItem()->ID;
+		}
+	}
 }
 
 void NPC::ClearPetGearBagEquipment()
@@ -1107,7 +1165,6 @@ void NPC::RebuildPetGearBagEquipment()
 		}
 	}
 
-	memset(equipment, 0, sizeof(equipment));
 	SetBowEquipped(false);
 	SetArrowEquipped(false);
 	SetShieldEquipped(false);
@@ -1175,7 +1232,6 @@ void NPC::RebuildPetGearBagEquipment()
 		}
 
 		GetInv().PutItem(slot_id, *inst);
-		equipment[slot_id] = loot_item->item_id;
 
 		const auto *item = inst->GetItem();
 		if (item->ItemType == EQ::item::ItemTypeBow) {
@@ -1209,6 +1265,7 @@ void NPC::RebuildPetGearBagEquipment()
 		safe_delete(inst);
 	}
 
+	SyncEquipmentArrayFromInventory();
 	CalcBonuses();
 	UpdateEquipmentLight();
 	if (UpdateActiveLight()) {
@@ -2038,7 +2095,9 @@ uint32 NPC::GetEquipmentMaterial(uint8 material_slot) const
 		return 0;
 	}
 
-	if (equipment[invslot] == 0) {
+	const auto *inst = GetEquippedItemInstance(invslot);
+	const auto *item = inst && inst->GetItem() ? inst->GetItem() : GetEquippedItemData(invslot);
+	if (!item) {
 		switch (material_slot) {
 			case EQ::textures::armorHead:
 				return helmtexture;
@@ -2064,8 +2123,52 @@ uint32 NPC::GetEquipmentMaterial(uint8 material_slot) const
 		}
 	}
 
-	//they have some loot item in this slot, pass it up to the default handler
-	return Mob::GetEquipmentMaterial(material_slot);
+	uint32 equipment_material = 0;
+	const auto is_equipped_weapon = EQ::ValueWithin(material_slot, EQ::textures::weaponPrimary, EQ::textures::weaponSecondary);
+
+	if (is_equipped_weapon) {
+		const auto *augment = inst ? inst->GetOrnamentationAugment() : nullptr;
+		if (augment && augment->GetItem()) {
+			item = augment->GetItem();
+			if (strlen(item->IDFile) > 2 && Strings::IsNumber(&item->IDFile[2])) {
+				equipment_material = Strings::ToUnsignedInt(&item->IDFile[2]);
+			}
+		} else if (inst && inst->GetOrnamentationIDFile()) {
+			equipment_material = inst->GetOrnamentationIDFile();
+		}
+
+		if (!equipment_material && strlen(item->IDFile) > 2 && Strings::IsNumber(&item->IDFile[2])) {
+			equipment_material = Strings::ToUnsignedInt(&item->IDFile[2]);
+		}
+	} else {
+		equipment_material = item->Material;
+	}
+
+	return equipment_material;
+}
+
+uint32 NPC::GetEquipmentColor(uint8 material_slot) const
+{
+	if (armor_tint.Slot[material_slot].Color) {
+		return armor_tint.Slot[material_slot].Color;
+	}
+
+	if (material_slot >= EQ::textures::materialCount) {
+		return 0;
+	}
+
+	const int16 invslot = EQ::InventoryProfile::CalcSlotFromMaterial(material_slot);
+	if (invslot == INVALID_INDEX) {
+		return 0;
+	}
+
+	const auto *inst = GetEquippedItemInstance(invslot);
+	if (inst && inst->GetColor()) {
+		return inst->GetColor();
+	}
+
+	const auto *item = GetEquippedItemData(invslot);
+	return item ? item->Color : 0;
 }
 
 uint32 NPC::GetMaxDamage(uint8 tlevel)
@@ -2216,13 +2319,13 @@ void NPC::Disarm(Client* client, int chance) {
 	// disarm primary if available, otherwise disarm secondary
 	const EQ::ItemData* weapon = NULL;
 	uint8 eslot = 0xFF;
-	if (equipment[EQ::invslot::slotPrimary] != 0)
+	if (GetEquippedItemData(EQ::invslot::slotPrimary) != nullptr)
 		eslot = EQ::invslot::slotPrimary;
-	else if (equipment[EQ::invslot::slotSecondary] != 0)
+	else if (GetEquippedItemData(EQ::invslot::slotSecondary) != nullptr)
 		eslot = EQ::invslot::slotSecondary;
 	if (eslot != 0xFF) {
 		if (zone->random.Int(0, 1000) <= chance) {
-			weapon = database.GetItem(equipment[eslot]);
+			weapon = GetEquippedItemData(eslot);
 			if (weapon) {
 				if (!weapon->Magic && weapon->NoDrop != 0) {
 					int16               charges = -1;
@@ -2240,7 +2343,7 @@ void NPC::Disarm(Client* client, int chance) {
 					EQ::ItemInstance *inst = NULL;
 					inst = database.CreateItem(weapon->ID, charges);
 					// Remove item from loot table
-					RemoveItem(weapon->ID);
+					RemoveItem(weapon->ID, 0, eslot);
 					CalcBonuses();
 					if (inst) {
 						// create a ground item
@@ -2252,7 +2355,6 @@ void NPC::Disarm(Client* client, int chance) {
 				}
 			}
 			// Update Appearance
-			equipment[eslot] = 0;
 			int matslot = eslot == EQ::invslot::slotPrimary ? EQ::textures::weaponPrimary : EQ::textures::weaponSecondary;
 			if (matslot != -1)
 				SendWearChange(matslot);

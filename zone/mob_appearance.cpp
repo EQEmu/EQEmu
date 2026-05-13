@@ -336,7 +336,7 @@ uint32 NPC::GetEquippedItemFromTextureSlot(uint8 material_slot) const
 		return 0;
 	}
 
-	return equipment[inventory_slot];
+	return GetEquippedItemID(inventory_slot);
 }
 
 void Mob::SendArmorAppearance(Client *one_client)

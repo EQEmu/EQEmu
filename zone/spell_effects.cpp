@@ -7062,7 +7062,7 @@ int64 NPC::GetFocusEffect(focusType type, uint16 spell_id, Mob* caster, bool fro
 
 		//item focus
 		for (int i = EQ::invslot::EQUIPMENT_BEGIN; i <= EQ::invslot::EQUIPMENT_END; i++){
-			const EQ::ItemData *cur = database.GetItem(equipment[i]);
+			const EQ::ItemData *cur = GetEquippedItemData(i);
 
 			if(!cur)
 				continue;

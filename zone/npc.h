@@ -332,6 +332,11 @@ public:
 	bool ApplyPetGearBags(Client *owner);
 	void ClearPetGearBagEquipment();
 	void RebuildPetGearBagEquipment();
+	bool UsesPetEquippedInventory() const;
+	const EQ::ItemInstance *GetEquippedItemInstance(int16 slot_id) const;
+	const EQ::ItemData *GetEquippedItemData(int16 slot_id) const;
+	uint32 GetEquippedItemID(int16 slot_id) const;
+	void SyncEquipmentArrayFromInventory();
 
 	bool MeetsLootDropLevelRequirements(LootdropEntriesRepository::LootdropEntries loot_drop, bool verbose=false);
 
@@ -362,6 +367,7 @@ public:
 
 	uint32				GetEquippedItemFromTextureSlot(uint8 material_slot) const;	// returns item id
 	uint32				GetEquipmentMaterial(uint8 material_slot) const;
+	uint32				GetEquipmentColor(uint8 material_slot) const override;
 
 	void				NextGuardPosition();
 	void				SaveGuardSpot(bool ClearGuardSpot = false);
