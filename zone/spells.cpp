@@ -2410,9 +2410,10 @@ bool Mob::DetermineSpellTargets(uint16 spell_id, Mob *&spell_target, Mob *&ae_ce
 // if you need to abort the casting, return false
 bool Mob::SpellFinished(uint16 spell_id, Mob *spell_target, CastingSlot slot, int32 mana_used,
 						uint32 inventory_slot, int16 resist_adjust, bool isproc, int level_override,
-						uint32 timer, uint32 timer_duration, bool from_casted_spell, uint32 aa_id, bool is_innate_proc)
+						uint32 timer, uint32 timer_duration, bool from_casted_spell, uint32 aa_id, bool is_innate_proc, bool is_pet_buff_proc)
 {
 	Mob *ae_center = nullptr;
+	const int pet_buff_proc_scale = is_pet_buff_proc ? RuleI(Spells, PetBuffProcValueScale) : 100;
 
 	if(!IsValidSpell(spell_id))
 		return false;
@@ -2593,14 +2594,14 @@ bool Mob::SpellFinished(uint16 spell_id, Mob *spell_target, CastingSlot slot, in
 				return(false);
 			}
 			if (isproc) {
-				SpellOnTarget(spell_id, spell_target, 0, true, resist_adjust, true, level_override);
+				SpellOnTarget(spell_id, spell_target, 0, true, resist_adjust, true, level_override, 0, false, pet_buff_proc_scale);
 			} else {
 				if (spells[spell_id].target_type == ST_TargetOptional){
 					if (!TrySpellProjectile(spell_target, spell_id))
 						return false;
 				}
 
-				else if(!SpellOnTarget(spell_id, spell_target, 0, true, resist_adjust, false, level_override)) {
+				else if(!SpellOnTarget(spell_id, spell_target, 0, true, resist_adjust, false, level_override, 0, false, pet_buff_proc_scale)) {
 					if(IsBuffSpell(spell_id) && IsBeneficialSpell(spell_id)) {
 						return false;
 					}
@@ -3906,7 +3907,8 @@ bool Mob::SpellOnTarget(
 	bool isproc,
 	int level_override,
 	int duration_override,
-	bool disable_buff_overwrite
+	bool disable_buff_overwrite,
+	int pet_buff_proc_scale
 ) {
 	auto spellOwner = GetOwnerOrSelf();
 
@@ -4613,7 +4615,8 @@ bool Mob::SpellOnTarget(
 			level_override,
 			reflect_effectiveness,
 			duration_override,
-			disable_buff_overwrite
+			disable_buff_overwrite,
+			pet_buff_proc_scale
 		)
 	) {
 		// if SpellEffect returned false there's a problem applying the

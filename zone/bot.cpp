@@ -5854,9 +5854,9 @@ float Bot::GetAOERange(uint16 spell_id) {
 	return range;
 }
 
-bool Bot::SpellEffect(Mob* caster, uint16 spell_id, float partial) {
+bool Bot::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_override, int reflect_effectiveness, int32 duration_override, bool disable_buff_overwrite, int pet_buff_proc_scale) {
 	bool Result = false;
-	Result = Mob::SpellEffect(caster, spell_id, partial);
+	Result = Mob::SpellEffect(caster, spell_id, partial, level_override, reflect_effectiveness, duration_override, disable_buff_overwrite, pet_buff_proc_scale);
 	if (IsGrouped()) {
 		Group *g = GetGroup();
 		if (g) {
@@ -5964,7 +5964,8 @@ bool Bot::SpellOnTarget(
 		bool isproc,
 		int level_override,
 		int duration_override,
-		bool disable_buff_overwrite
+		bool disable_buff_overwrite,
+		int pet_buff_proc_scale
 ) {
 	if (!IsValidSpell(spell_id)) {
 		return false;
@@ -5987,7 +5988,7 @@ bool Bot::SpellOnTarget(
 			}
 		}
 
-		return Mob::SpellOnTarget(spell_id, spelltar);
+		return Mob::SpellOnTarget(spell_id, spelltar, reflect_effectiveness, use_resist_adjust, resist_adjust, isproc, level_override, duration_override, disable_buff_overwrite, pet_buff_proc_scale);
 	}
 
 	return false;
