@@ -84,6 +84,7 @@ jobs:
               - '!.clang-format'
               - '!.clang-tidy'
               - '!.vscode/**'
+              - '!.github/workflows/**'
               - '!.github/ISSUE_TEMPLATE/**'
               - '!.github/pull_request_template.md'
 
