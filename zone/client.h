@@ -1595,6 +1595,10 @@ public:
 	uint32 GetAggroCount();
 	void IncrementAggroCount(bool raid_target = false);
 	void DecrementAggroCount();
+	void QueueSuppressedBuffFadeMessage(uint16 spell_id);
+	bool ConsumeSuppressedBuffFadeMessage(uint16 spell_id);
+	bool TrySuppressBuffFromNPCDispel(Mob* caster, uint16 dispel_spell_id, int slot);
+	void RestoreSuppressedBuffs();
 	void SendPVPStats();
 	void SendDisciplineTimers();
 	void SendRespawnBinds();
@@ -2226,6 +2230,12 @@ private:
 	Timer bandolier_throttle_timer;
 	Timer pet_gear_bag_refresh_timer;
 
+	struct SuppressedBuffSnapshot {
+		Buffs_Struct buff = {};
+		int original_slot = -1;
+		uint32 sequence = 0;
+	};
+
 	bool m_lazy_load_bank            = false;
 	int  m_lazy_load_sent_bank_slots = 0;
 
@@ -2266,6 +2276,10 @@ private:
 	int8 last_reported_endurance_percent;
 
 	uint32 AggroCount; // How many mobs are aggro on us.
+	std::vector<SuppressedBuffSnapshot> m_suppressed_buffs;
+	std::deque<uint16> m_suppressed_fade_message_spell_ids;
+	uint32 m_next_suppressed_buff_sequence = 0;
+	bool m_is_restoring_suppressed_buffs = false;
 
 	bool ooc_regen;
 	float AreaHPRegen;

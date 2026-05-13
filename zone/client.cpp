@@ -5510,6 +5510,155 @@ uint32 Client::GetAggroCount() {
 	return AggroCount;
 }
 
+void Client::QueueSuppressedBuffFadeMessage(uint16 spell_id)
+{
+	m_suppressed_fade_message_spell_ids.push_back(spell_id);
+}
+
+bool Client::ConsumeSuppressedBuffFadeMessage(uint16 spell_id)
+{
+	for (auto it = m_suppressed_fade_message_spell_ids.begin(); it != m_suppressed_fade_message_spell_ids.end(); ++it) {
+		if (*it == spell_id) {
+			m_suppressed_fade_message_spell_ids.erase(it);
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool Client::TrySuppressBuffFromNPCDispel(Mob* caster, uint16 dispel_spell_id, int slot)
+{
+	if (
+		!caster ||
+		!caster->IsNPC() ||
+		slot < 0 ||
+		slot >= GetMaxTotalSlots() ||
+		!IsValidSpell(buffs[slot].spellid)
+	) {
+		return false;
+	}
+
+	const auto& buff = buffs[slot];
+	if (
+		!IsBeneficialSpell(buff.spellid) ||
+		IsCharmSpell(buff.spellid) ||
+		// Treat anonymous/no-caster buffs as non-suppressible server/global effects for MVP.
+		(
+			buff.casterid == 0 &&
+			buff.caster_char_id == 0 &&
+			buff.caster_name[0] == '\0' &&
+			!buff.client
+		) ||
+		IsDiscipline(buff.spellid)
+	) {
+		return false;
+	}
+
+	SuppressedBuffSnapshot snapshot;
+	snapshot.buff = buff;
+	snapshot.original_slot = slot;
+	snapshot.sequence = m_next_suppressed_buff_sequence++;
+	m_suppressed_buffs.push_back(snapshot);
+
+	Message(
+		Chat::Spells,
+		fmt::format(
+			"Your {} has been suppressed by {}.",
+			spells[buff.spellid].name,
+			caster->GetCleanName()
+		).c_str()
+	);
+
+	LogMonomyth(
+		"Suppressed buff [{}] in slot [{}] on client [{}] due to NPC dispel spell [{}] from [{}]",
+		buff.spellid,
+		slot,
+		GetCleanName(),
+		dispel_spell_id,
+		caster->GetCleanName()
+	);
+
+	QueueSuppressedBuffFadeMessage(buff.spellid);
+	BuffFadeBySlot(slot);
+
+	if (slot < GetMaxTotalSlots() && buffs[slot].spellid == buff.spellid) {
+		m_suppressed_buffs.pop_back();
+		return false;
+	}
+
+	return true;
+}
+
+void Client::RestoreSuppressedBuffs()
+{
+	if (m_is_restoring_suppressed_buffs || m_suppressed_buffs.empty()) {
+		return;
+	}
+
+	m_is_restoring_suppressed_buffs = true;
+
+	std::stable_sort(
+		m_suppressed_buffs.begin(),
+		m_suppressed_buffs.end(),
+		[](const SuppressedBuffSnapshot& lhs, const SuppressedBuffSnapshot& rhs) {
+			if (lhs.original_slot != rhs.original_slot) {
+				return lhs.original_slot < rhs.original_slot;
+			}
+
+			return lhs.sequence < rhs.sequence;
+		}
+	);
+
+	auto pending_restores = std::move(m_suppressed_buffs);
+	m_suppressed_buffs.clear();
+
+	for (const auto& snapshot : pending_restores) {
+		const auto& suppressed_buff = snapshot.buff;
+		if (!IsValidSpell(suppressed_buff.spellid)) {
+			continue;
+		}
+
+		int restored_slot = AddBuff(
+			nullptr,
+			suppressed_buff.spellid,
+			suppressed_buff.ticsremaining,
+			suppressed_buff.casterlevel
+		);
+
+		if (restored_slot < 0) {
+			LogMonomyth(
+				"Suppressed buff [{}] on client [{}] did not restore because AddBuff returned [{}]",
+				suppressed_buff.spellid,
+				GetCleanName(),
+				restored_slot
+			);
+			continue;
+		}
+
+		buffs[restored_slot] = suppressed_buff;
+		buffs[restored_slot].UpdateClient = true;
+
+		Message(
+			Chat::Spells,
+			fmt::format(
+				"Your {} returns as you recover from combat.",
+				spells[suppressed_buff.spellid].name
+			).c_str()
+		);
+
+		LogMonomyth(
+			"Restored suppressed buff [{}] to slot [{}] on client [{}]",
+			suppressed_buff.spellid,
+			restored_slot,
+			GetCleanName()
+		);
+	}
+
+	CalcBonuses();
+	m_is_restoring_suppressed_buffs = false;
+}
+
 // we pass in for book keeping if RestRegen is enabled
 void Client::IncrementAggroCount(bool raid_target)
 {

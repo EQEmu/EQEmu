@@ -2084,6 +2084,7 @@ void Client::CalcRestState()
 	}
 
 	ooc_regen = true;
+	RestoreSuppressedBuffs();
 }
 
 void Client::DoTracking()
