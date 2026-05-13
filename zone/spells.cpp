@@ -3760,6 +3760,7 @@ int Mob::AddBuff(Mob *caster, uint16 spell_id, int duration, int32 level_overrid
 	buffs[emptyslot].virus_spread_time = 0;
 	buffs[emptyslot].instrument_mod = caster ? caster->GetInstrumentMod(spell_id) : 10;
 	buffs[emptyslot].group_raid_timer_pausable = IsGroupRaidBuffTimerPausable(caster, spell_id);
+	buffs[emptyslot].is_clicky_buff = (caster && caster->GetCastedSpellInvSlot() != 0xFFFFFFFF);
 
 	if (level_override > 0 || buffs[emptyslot].hit_number > 0) {
 		buffs[emptyslot].UpdateClient = true;

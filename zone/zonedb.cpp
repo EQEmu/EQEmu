@@ -2946,6 +2946,7 @@ void ZoneDatabase::SaveBuffs(Client *client)
 		e.ExtraDIChance  = buffs[slot_id].ExtraDIChance;
 		e.instrument_mod = buffs[slot_id].instrument_mod;
 		e.group_raid_timer_pausable = buffs[slot_id].group_raid_timer_pausable ? 1 : 0;
+		e.is_clicky_buff = buffs[slot_id].is_clicky_buff ? 1 : 0;
 
 		v.emplace_back(e);
 	}
@@ -3027,6 +3028,7 @@ void ZoneDatabase::LoadBuffs(Client *client)
 		buffs[e.slot_id].RootBreakChance   = 0;
 		buffs[e.slot_id].virus_spread_time = 0;
 		buffs[e.slot_id].group_raid_timer_pausable = e.group_raid_timer_pausable ? true : false;
+		buffs[e.slot_id].is_clicky_buff = e.is_clicky_buff ? true : false;
 		buffs[e.slot_id].UpdateClient      = false;
 		buffs[e.slot_id].instrument_mod    = e.instrument_mod;
 	}

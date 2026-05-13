@@ -242,6 +242,7 @@ struct Buffs_Struct {
 	uint32	instrument_mod;
 	int32	virus_spread_time; //time till next attempted viral spread
 	bool	group_raid_timer_pausable;
+	bool	is_clicky_buff;
 	bool	persistant_buff;
 	bool	client; //True if the caster is a client
 	bool	UpdateClient;
@@ -276,6 +277,7 @@ struct Buffs_Struct {
 			CEREAL_NVP(instrument_mod),
 			CEREAL_NVP(virus_spread_time),
 			CEREAL_NVP(group_raid_timer_pausable),
+			CEREAL_NVP(is_clicky_buff),
 			CEREAL_NVP(persistant_buff),
 			CEREAL_NVP(client),
 			CEREAL_NVP(UpdateClient)

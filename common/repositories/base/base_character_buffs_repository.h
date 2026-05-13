@@ -55,6 +55,7 @@ public:
 		int32_t     ExtraDIChance;
 		int32_t     instrument_mod;
 		uint8_t     group_raid_timer_pausable;
+		uint8_t     is_clicky_buff;
 	};
 
 	static std::string PrimaryKey()
@@ -84,6 +85,7 @@ public:
 			"ExtraDIChance",
 			"instrument_mod",
 			"group_raid_timer_pausable",
+			"is_clicky_buff",
 		};
 	}
 
@@ -109,6 +111,7 @@ public:
 			"ExtraDIChance",
 			"instrument_mod",
 			"group_raid_timer_pausable",
+			"is_clicky_buff",
 		};
 	}
 
@@ -168,6 +171,7 @@ public:
 		e.ExtraDIChance  = 0;
 		e.instrument_mod = 10;
 		e.group_raid_timer_pausable = 0;
+		e.is_clicky_buff = 0;
 
 		return e;
 	}
@@ -223,6 +227,7 @@ public:
 			e.ExtraDIChance  = row[16] ? static_cast<int32_t>(atoi(row[16])) : 0;
 			e.instrument_mod = row[17] ? static_cast<int32_t>(atoi(row[17])) : 10;
 			e.group_raid_timer_pausable = row[18] ? static_cast<uint8_t>(strtoul(row[18], nullptr, 10)) : 0;
+			e.is_clicky_buff = row[19] ? static_cast<uint8_t>(strtoul(row[19], nullptr, 10)) : 0;
 
 			return e;
 		}
@@ -275,6 +280,7 @@ public:
 		v.push_back(columns[16] + " = " + std::to_string(e.ExtraDIChance));
 		v.push_back(columns[17] + " = " + std::to_string(e.instrument_mod));
 		v.push_back(columns[18] + " = " + std::to_string(e.group_raid_timer_pausable));
+		v.push_back(columns[19] + " = " + std::to_string(e.is_clicky_buff));
 
 		auto results = db.QueryDatabase(
 			fmt::format(
@@ -315,6 +321,7 @@ public:
 		v.push_back(std::to_string(e.ExtraDIChance));
 		v.push_back(std::to_string(e.instrument_mod));
 		v.push_back(std::to_string(e.group_raid_timer_pausable));
+		v.push_back(std::to_string(e.is_clicky_buff));
 
 		auto results = db.QueryDatabase(
 			fmt::format(
@@ -363,6 +370,7 @@ public:
 			v.push_back(std::to_string(e.ExtraDIChance));
 			v.push_back(std::to_string(e.instrument_mod));
 			v.push_back(std::to_string(e.group_raid_timer_pausable));
+			v.push_back(std::to_string(e.is_clicky_buff));
 
 			insert_chunks.push_back("(" + Strings::Implode(",", v) + ")");
 		}
@@ -415,6 +423,7 @@ public:
 			e.ExtraDIChance  = row[16] ? static_cast<int32_t>(atoi(row[16])) : 0;
 			e.instrument_mod = row[17] ? static_cast<int32_t>(atoi(row[17])) : 10;
 			e.group_raid_timer_pausable = row[18] ? static_cast<uint8_t>(strtoul(row[18], nullptr, 10)) : 0;
+			e.is_clicky_buff = row[19] ? static_cast<uint8_t>(strtoul(row[19], nullptr, 10)) : 0;
 
 			all_entries.push_back(e);
 		}
@@ -458,6 +467,7 @@ public:
 			e.ExtraDIChance  = row[16] ? static_cast<int32_t>(atoi(row[16])) : 0;
 			e.instrument_mod = row[17] ? static_cast<int32_t>(atoi(row[17])) : 10;
 			e.group_raid_timer_pausable = row[18] ? static_cast<uint8_t>(strtoul(row[18], nullptr, 10)) : 0;
+			e.is_clicky_buff = row[19] ? static_cast<uint8_t>(strtoul(row[19], nullptr, 10)) : 0;
 
 			all_entries.push_back(e);
 		}
@@ -551,6 +561,7 @@ public:
 		v.push_back(std::to_string(e.ExtraDIChance));
 		v.push_back(std::to_string(e.instrument_mod));
 		v.push_back(std::to_string(e.group_raid_timer_pausable));
+		v.push_back(std::to_string(e.is_clicky_buff));
 
 		auto results = db.QueryDatabase(
 			fmt::format(
@@ -592,6 +603,7 @@ public:
 			v.push_back(std::to_string(e.ExtraDIChance));
 			v.push_back(std::to_string(e.instrument_mod));
 			v.push_back(std::to_string(e.group_raid_timer_pausable));
+			v.push_back(std::to_string(e.is_clicky_buff));
 
 			insert_chunks.push_back("(" + Strings::Implode(",", v) + ")");
 		}

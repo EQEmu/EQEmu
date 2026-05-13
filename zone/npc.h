@@ -638,6 +638,7 @@ public:
 			buffs[i].instrument_mod    = b.instrument_mod;
 			buffs[i].virus_spread_time = b.virus_spread_time;
 			buffs[i].group_raid_timer_pausable = b.group_raid_timer_pausable;
+			buffs[i].is_clicky_buff = b.is_clicky_buff;
 			buffs[i].persistant_buff   = b.persistant_buff;
 			buffs[i].client            = b.client;
 			buffs[i].UpdateClient      = b.UpdateClient;

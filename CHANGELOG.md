@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+### Permanent Self-Buff and Clicky Buff Rules (BUFF-005)
+
+* Add `Monomyth.PermanentSelfBuffs` (default `false`) to stop duration decrement on self-cast beneficial buffs so they last indefinitely while the rule is active
+* Add `Monomyth.PermanentClickyBuffs` (default `false`) to stop duration decrement on item-cast (clicky) beneficial buffs so they last indefinitely while the rule is active
+* Songs, disciplines, and temporary combat effects are explicitly excluded from both permanent-buff paths and continue to tick normally regardless of rule state
+* Self-buff eligibility is determined by matching the durable caster character ID against the recipient so the check survives zoning and relog
+* Clicky detection is recorded at buff application time via the caster inventory slot and persisted in `character_buffs.is_clicky_buff` across zoning and relog
+* Add optional migration `utils/sql/git/optional/2026_05_13_monomyth_character_buffs_is_clicky_buff.sql` to persist clicky eligibility across zoning and relog
+
 ### Group/Raid Buff Timer Pause (BUFF-004)
 
 * Add `Monomyth.PauseGroupRaidBuffTimers` (default `false`) to pause eligible beneficial buff duration countdowns while the recipient remains grouped or raided with the original live in-zone player caster

@@ -4048,7 +4048,8 @@ void Mob::BuffProcess()
 				buffs[buffs_i].ticsremaining != PERMANENT_BUFF_DURATION) {
 				const bool should_decrement =
 					(!zone->BuffTimersSuspended() || !IsSuspendableSpell(buffs[buffs_i].spellid)) &&
-					!ShouldPauseBuffTimer(buffs_i);
+					!ShouldPauseBuffTimer(buffs_i) &&
+					!ShouldSkipBuffDecrement(buffs_i);
 
 				if (should_decrement)
 				{
@@ -4143,6 +4144,46 @@ bool Mob::ShouldPauseBuffTimer(int slot) const
 	auto* recipient_raid = recipient->GetRaid();
 	auto* caster_raid = original_caster->GetRaid();
 	return recipient_raid && recipient_raid == caster_raid;
+}
+
+bool Mob::ShouldSkipBuffDecrement(int slot) const
+{
+	if (
+		!IsClient() ||
+		slot < 0 ||
+		slot >= GetMaxTotalSlots()
+	) {
+		return false;
+	}
+
+	const auto& buff = buffs[slot];
+	if (!IsValidSpell(buff.spellid)) {
+		return false;
+	}
+
+	if (IsDetrimentalSpell(buff.spellid) ||
+		IsBardSong(buff.spellid) ||
+		IsDiscipline(buff.spellid) ||
+		IsDisciplineBuff(buff.spellid)) {
+		return false;
+	}
+
+	if (!IsBeneficialSpell(buff.spellid)) {
+		return false;
+	}
+
+	const bool is_self_buff = buff.caster_char_id != 0 &&
+		buff.caster_char_id == CastToClient()->CharacterID();
+
+	if (RuleB(Monomyth, PermanentSelfBuffs) && is_self_buff) {
+		return true;
+	}
+
+	if (RuleB(Monomyth, PermanentClickyBuffs) && buff.is_clicky_buff) {
+		return true;
+	}
+
+	return false;
 }
 
 void Mob::DoBuffTic(const Buffs_Struct &buff, int slot, Mob *caster)

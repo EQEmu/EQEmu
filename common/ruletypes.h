@@ -1210,6 +1210,8 @@ RULE_INT(Monomyth, PetGearBagHashRefreshIntervalSeconds, 6, "Interval in seconds
 RULE_BOOL(Monomyth, PetGearBagBankScanningEnabled, false, "Enable Pet Gear Bag scanning of bank inventory.")
 RULE_BOOL(Monomyth, BeneficialBuffsPersistThroughDeath, false, "Honor spell-data persist_death for beneficial buffs during death and resurrection cleanup.")
 RULE_BOOL(Monomyth, PauseGroupRaidBuffTimers, false, "Pause eligible beneficial buff duration countdowns while the recipient remains grouped or raided with the original live in-zone player caster.")
+RULE_BOOL(Monomyth, PermanentSelfBuffs, false, "Self-cast beneficial buffs no longer decrement; songs, disciplines, and temporary combat effects remain excluded.")
+RULE_BOOL(Monomyth, PermanentClickyBuffs, false, "Item-cast (clicky) beneficial buffs no longer decrement; songs, disciplines, and temporary combat effects remain excluded.")
 RULE_BOOL(Monomyth, PetGearBagCharmEligible, false, "Allow charm-slot items to be considered by the Pet Gear Bag system.")
 RULE_INT(Monomyth, PetGearBagCharmClassMask, 9344, "Player class bitmask allowed to apply Pet Gear Bags to charmed pets. Default enables Bard, Necromancer, and Enchanter charm.")
 RULE_CATEGORY_END()

@@ -444,6 +444,7 @@ public:
 	void BuffProcess();
 	virtual void DoBuffTic(const Buffs_Struct &buff, int slot, Mob* caster = nullptr);
 	bool ShouldPauseBuffTimer(int slot) const;
+	bool ShouldSkipBuffDecrement(int slot) const;
 	void BuffFadeBySpellID(uint16 spell_id);
 	void BuffFadeBySpellIDAndCaster(uint16 spell_id, uint16 caster_id);
 	void BuffFadeByEffect(int effect_id, int slot_to_skip = -1);
