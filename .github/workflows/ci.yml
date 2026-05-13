@@ -22,7 +22,7 @@ env:
   CCACHE_COMPILERCHECK: content
   CCACHE_COMPRESS: "true"
   CCACHE_COMPRESSLEVEL: "5"
-  CCACHE_MAXSIZE: 30G
+  CCACHE_MAXSIZE: 10G
   CCACHE_NAMESPACE: eqemu-monomyth-ci
   VCPKG_ARCHIVES_DIR: /mnt/eqemu-cache/vcpkg/archives
   VCPKG_DOWNLOADS_DIR: /mnt/eqemu-cache/vcpkg/downloads
@@ -37,7 +37,6 @@ jobs:
     runs-on:
       - self-hosted
       - linux
-      - eqemu
     container:
       image: ubuntu:24.04
     outputs:
@@ -94,7 +93,6 @@ jobs:
     runs-on:
       - self-hosted
       - linux
-      - eqemu
     container:
       image: ubuntu:24.04
       volumes:
@@ -232,10 +230,9 @@ jobs:
     runs-on:
       - self-hosted
       - linux
-      - eqemu
     container:
       image: ubuntu:24.04
-      options: --cpus 8
+      options: --cpus 4
       volumes:
         - eqemu-monomyth-build-cache:/mnt/eqemu-cache
     timeout-minutes: 90
@@ -318,10 +315,9 @@ jobs:
     runs-on:
       - self-hosted
       - linux
-      - eqemu
     container:
       image: ubuntu:24.04
-      options: --cpus 8
+      options: --cpus 4
       volumes:
         - eqemu-monomyth-build-cache:/mnt/eqemu-cache
     timeout-minutes: 60
