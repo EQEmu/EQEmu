@@ -1867,7 +1867,7 @@ void NPC::DoClassAttacks(Mob *target) {
 	bool ca_time = classattack_timer.Check(false);
 	bool ka_time = knightattack_timer.Check(false);
 
-	const EQ::ItemData* boots = database.GetItem(equipment[EQ::invslot::slotFeet]);
+	const EQ::ItemData* boots = GetEquippedItemData(EQ::invslot::slotFeet);
 
 	//only check attack allowed if we are going to do something
 	if((taunt_time || ca_time || ka_time) && !IsAttackAllowed(target))
