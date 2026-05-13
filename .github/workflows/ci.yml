@@ -22,7 +22,7 @@ env:
   CCACHE_COMPILERCHECK: content
   CCACHE_COMPRESS: "true"
   CCACHE_COMPRESSLEVEL: "5"
-  CCACHE_MAXSIZE: 10G
+  CCACHE_MAXSIZE: 40G
   CCACHE_NAMESPACE: eqemu-monomyth-ci
   VCPKG_ARCHIVES_DIR: /mnt/eqemu-cache/vcpkg/archives
   VCPKG_DOWNLOADS_DIR: /mnt/eqemu-cache/vcpkg/downloads
@@ -35,10 +35,13 @@ jobs:
   changes:
     name: Detect CI-Relevant Changes
     runs-on:
-      - self-hosted
-      - linux
+      group: EQEmu
+      labels:
+        - self-hosted
+        - linux
     container:
       image: ubuntu:24.04
+      options: --cpus 8
     outputs:
       run_full_ci: ${{ steps.filter.outputs.run_full_ci }}
 
@@ -91,10 +94,13 @@ jobs:
     name: Lint and Static Checks
     needs: changes
     runs-on:
-      - self-hosted
-      - linux
+      group: EQEmu
+      labels:
+        - self-hosted
+        - linux
     container:
       image: ubuntu:24.04
+      options: --cpus 8
       volumes:
         - eqemu-monomyth-build-cache:/mnt/eqemu-cache
     timeout-minutes: 20
@@ -228,11 +234,13 @@ jobs:
     needs: changes
     if: needs.changes.outputs.run_full_ci == 'true'
     runs-on:
-      - self-hosted
-      - linux
+      group: EQEmu
+      labels:
+        - self-hosted
+        - linux
     container:
       image: ubuntu:24.04
-      options: --cpus 4
+      options: --cpus 8
       volumes:
         - eqemu-monomyth-build-cache:/mnt/eqemu-cache
     timeout-minutes: 90
@@ -302,7 +310,7 @@ jobs:
             -DEQEMU_BUILD_PERL=OFF
 
       - name: Build production targets
-        run: cmake --build build/production-smoke --parallel 4
+        run: cmake --build build/production-smoke --parallel 8
 
       - name: Show ccache stats
         if: always()
@@ -313,11 +321,13 @@ jobs:
     needs: changes
     if: needs.changes.outputs.run_full_ci == 'true'
     runs-on:
-      - self-hosted
-      - linux
+      group: EQEmu
+      labels:
+        - self-hosted
+        - linux
     container:
       image: ubuntu:24.04
-      options: --cpus 4
+      options: --cpus 8
       volumes:
         - eqemu-monomyth-build-cache:/mnt/eqemu-cache
     timeout-minutes: 60
@@ -387,7 +397,7 @@ jobs:
             -DEQEMU_BUILD_PERL=OFF
 
       - name: Build tests
-        run: cmake --build build/unit-tests --target tests --parallel 4
+        run: cmake --build build/unit-tests --target tests --parallel 8
 
       - name: Run tests
         working-directory: build/unit-tests
