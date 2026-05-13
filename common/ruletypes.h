@@ -604,6 +604,7 @@ RULE_REAL(Combat, MeleePushForceClientPercent, 0.00, "Percent to add or remove f
 RULE_REAL(Combat, MeleePushForcePetPercent, 0.00, "Percent to add or remove from push for pets")
 RULE_BOOL(Combat, NPCtoNPCPush, false, "Disabled prevents NPC to NPC pushing per the 2013+ patch.")
 RULE_BOOL(Combat, UseLiveCombatRounds, true, "Turn this false if you don't want to worry about fixing up combat rounds for NPCs")
+RULE_BOOL(Combat, PetsUsePrimaryHandProcsOnly, true, "If enabled, pets only evaluate melee combat procs from primary-hand swings. This applies to weapon, augment, permanent, buff, poison, and AA melee proc sources.")
 RULE_INT(Combat, NPCAssistCap, 5, "Maximum number of NPC that will assist another NPC at once")
 RULE_INT(Combat, NPCAssistCapTimer, 6000, "Time a NPC will take to clear assist aggro cap space (milliseconds)")
 RULE_BOOL(Combat, UseRevampHandToHand, false, "Use h2h revamped dmg/delays I believe this was implemented during SoF")

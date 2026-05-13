@@ -5047,6 +5047,10 @@ void Mob::TryWeaponProc(const EQ::ItemInstance *inst, const EQ::ItemData *weapon
 	}
 	if (!weapon)
 		return;
+	if (IsPet() && hand == EQ::invslot::slotSecondary && RuleB(Combat, PetsUsePrimaryHandProcsOnly)) {
+		LogCombat("Pet offhand swing skipped for item proc evaluation due to Combat:PetsUsePrimaryHandProcsOnly");
+		return;
+	}
 	uint16 skillinuse = 28;
 	int ourlevel = GetLevel();
 	float ProcBonus = static_cast<float>(aabonuses.ProcChanceSPA +
@@ -5162,12 +5166,14 @@ void Mob::TrySpellProc(const EQ::ItemInstance *inst, const EQ::ItemData *weapon,
 		rangedattk = true;
 	}
 
+	if (IsPet() && hand == EQ::invslot::slotSecondary && RuleB(Combat, PetsUsePrimaryHandProcsOnly)) {
+		LogCombat("Pet offhand swing skipped for spell proc evaluation due to Combat:PetsUsePrimaryHandProcsOnly");
+		return;
+	}
+
 	int16 poison_slot=-1;
 
 	for (uint32 i = 0; i < m_max_procs; i++) {
-		if (IsPet() && hand != EQ::invslot::slotPrimary) //Pets can only proc spell procs from their primay hand (ie; beastlord pets)
-			continue; // If pets ever can proc from off hand, this will need to change
-
 		if (SpellProcs[i].base_spellID == POISON_PROC &&
 			(!weapon || weapon->ItemType != EQ::item::ItemType1HPiercing)) {
 			continue; // Old school poison will only proc with 1HP equipped.
@@ -5179,7 +5185,7 @@ void Mob::TrySpellProc(const EQ::ItemInstance *inst, const EQ::ItemData *weapon,
 			if (IsValidSpell(PermaProcs[i].spellID)) {
 				if (zone->random.Roll(PermaProcs[i].chance)) { // TODO: Do these get spell bonus?
 					LogCombat("Permanent proc [{}] procing spell [{}] ([{}] percent chance)", i, PermaProcs[i].spellID, PermaProcs[i].chance);
-					ExecWeaponProc(nullptr, PermaProcs[i].spellID, on);
+					ExecWeaponProc(nullptr, PermaProcs[i].spellID, on, -1, IsNPC() && CastToNPC()->GetInnateProcSpellID() == PermaProcs[i].spellID);
 				}
 				else {
 					LogCombat("Permanent proc [{}] failed to proc [{}] ([{}] percent chance)", i, PermaProcs[i].spellID, PermaProcs[i].chance);

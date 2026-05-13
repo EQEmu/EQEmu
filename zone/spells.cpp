@@ -1851,7 +1851,7 @@ void Mob::CastedSpellFinished(uint16 spell_id, uint32 target_id, CastingSlot slo
 
 }
 
-bool Mob::DetermineSpellTargets(uint16 spell_id, Mob *&spell_target, Mob *&ae_center, CastAction_type &CastAction, CastingSlot slot, bool isproc)
+bool Mob::DetermineSpellTargets(uint16 spell_id, Mob *&spell_target, Mob *&ae_center, CastAction_type &CastAction, CastingSlot slot, bool isproc, bool is_innate_proc)
 {
 /*
 	The basic types of spells:
@@ -1898,9 +1898,9 @@ bool Mob::DetermineSpellTargets(uint16 spell_id, Mob *&spell_target, Mob *&ae_ce
 			targetType = ST_GroupClientAndPet;
 	}
 
-	// NPC innate procs override the target type to single target.
-	// Yes. This code will cause issues if they have the proc as innate AND on a weapon. Oh well.
-	if (isproc && IsNPC() && CastToNPC()->GetInnateProcSpellID() == spell_id)
+	// NPC innate procs override the target type to single target, but only when the
+	// current proc was explicitly executed as an innate source.
+	if (isproc && is_innate_proc)
 		targetType = ST_Target;
 
 	switch (targetType)
@@ -2397,7 +2397,7 @@ bool Mob::DetermineSpellTargets(uint16 spell_id, Mob *&spell_target, Mob *&ae_ce
 // if you need to abort the casting, return false
 bool Mob::SpellFinished(uint16 spell_id, Mob *spell_target, CastingSlot slot, int32 mana_used,
 						uint32 inventory_slot, int16 resist_adjust, bool isproc, int level_override,
-						uint32 timer, uint32 timer_duration, bool from_casted_spell, uint32 aa_id)
+						uint32 timer, uint32 timer_duration, bool from_casted_spell, uint32 aa_id, bool is_innate_proc)
 {
 	Mob *ae_center = nullptr;
 
@@ -2444,7 +2444,7 @@ bool Mob::SpellFinished(uint16 spell_id, Mob *spell_target, CastingSlot slot, in
 
 	//determine the type of spell target we have
 	CastAction_type CastAction;
-	if (!DetermineSpellTargets(spell_id, spell_target, ae_center, CastAction, slot, isproc)) {
+	if (!DetermineSpellTargets(spell_id, spell_target, ae_center, CastAction, slot, isproc, is_innate_proc)) {
 		LogSpells("Spell [{}]: Determine spell targets failure.", spell_id);
 		return(false);
 	}
