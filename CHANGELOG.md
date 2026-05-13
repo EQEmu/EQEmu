@@ -1,5 +1,13 @@
 ## [Unreleased]
 
+### NPC Beneficial Dispel Suppression (BUFF-002)
+
+* NPC-originated dispels against players now suppress eligible beneficial buffs instead of permanently destroying them, matching the intended THJ-style combat-pressure behavior
+* Suppressed buffs restore automatically when the player reaches the normal out-of-combat fast-rest state, preserving remaining duration, counters, runes, hit counts, caster metadata, and illusion state while the buff is inactive
+* Restoration reuses normal buff stacking and overwrite logic, so returning long-term buffs can replace temporary bridge buffs after combat if they win the existing stack check
+* PvP and other player-originated dispels are unchanged, charm is not suppressible, and server/global-style anonymous buffs are excluded from suppression for this MVP
+* MVP limitation: suppression snapshots are memory-only and do not persist across zoning, camping, relog, or crashes
+
 ### Durable Buff Caster Identity
 
 * Persist `character_buffs.caster_char_id` so durable client-cast buffs retain caster identity across zoning and reloads instead of falling back to name-only lookups
