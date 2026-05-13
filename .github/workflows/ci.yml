@@ -18,6 +18,12 @@ concurrency:
 
 env:
   CCACHE_DIR: /mnt/eqemu-cache/ccache
+  CCACHE_BASEDIR: ${{ github.workspace }}
+  CCACHE_COMPILERCHECK: content
+  CCACHE_COMPRESS: "true"
+  CCACHE_COMPRESSLEVEL: "5"
+  CCACHE_MAXSIZE: 30G
+  CCACHE_NAMESPACE: eqemu-monomyth-ci
   VCPKG_ARCHIVES_DIR: /mnt/eqemu-cache/vcpkg/archives
   VCPKG_DOWNLOADS_DIR: /mnt/eqemu-cache/vcpkg/downloads
 
@@ -31,6 +37,7 @@ jobs:
     runs-on:
       - self-hosted
       - linux
+      - eqemu
     container:
       image: ubuntu:24.04
     outputs:
@@ -86,6 +93,7 @@ jobs:
     runs-on:
       - self-hosted
       - linux
+      - eqemu
     container:
       image: ubuntu:24.04
       volumes:
@@ -223,9 +231,10 @@ jobs:
     runs-on:
       - self-hosted
       - linux
+      - eqemu
     container:
       image: ubuntu:24.04
-      options: --cpus 4
+      options: --cpus 8
       volumes:
         - eqemu-monomyth-build-cache:/mnt/eqemu-cache
     timeout-minutes: 90
@@ -269,9 +278,13 @@ jobs:
         run: |
           mkdir -p "${CCACHE_DIR}" "${VCPKG_ARCHIVES_DIR}" "${VCPKG_DOWNLOADS_DIR}"
           ccache --set-config=cache_dir="${CCACHE_DIR}"
-          ccache --set-config=base_dir="${GITHUB_WORKSPACE}"
+          ccache --set-config=base_dir="${CCACHE_BASEDIR}"
+          ccache --set-config=compiler_check="${CCACHE_COMPILERCHECK}"
+          ccache --set-config=compression="${CCACHE_COMPRESS}"
+          ccache --set-config=compression_level="${CCACHE_COMPRESSLEVEL}"
           ccache --set-config=hash_dir=false
-          ccache --set-config=max_size=1G
+          ccache --set-config=max_size="${CCACHE_MAXSIZE}"
+          ccache --zero-stats
 
       - name: Configure production build
         env:
@@ -304,9 +317,10 @@ jobs:
     runs-on:
       - self-hosted
       - linux
+      - eqemu
     container:
       image: ubuntu:24.04
-      options: --cpus 4
+      options: --cpus 8
       volumes:
         - eqemu-monomyth-build-cache:/mnt/eqemu-cache
     timeout-minutes: 60
@@ -350,9 +364,13 @@ jobs:
         run: |
           mkdir -p "${CCACHE_DIR}" "${VCPKG_ARCHIVES_DIR}" "${VCPKG_DOWNLOADS_DIR}"
           ccache --set-config=cache_dir="${CCACHE_DIR}"
-          ccache --set-config=base_dir="${GITHUB_WORKSPACE}"
+          ccache --set-config=base_dir="${CCACHE_BASEDIR}"
+          ccache --set-config=compiler_check="${CCACHE_COMPILERCHECK}"
+          ccache --set-config=compression="${CCACHE_COMPRESS}"
+          ccache --set-config=compression_level="${CCACHE_COMPRESSLEVEL}"
           ccache --set-config=hash_dir=false
-          ccache --set-config=max_size=1G
+          ccache --set-config=max_size="${CCACHE_MAXSIZE}"
+          ccache --zero-stats
 
       - name: Configure tests
         env:
