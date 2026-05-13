@@ -1,5 +1,27 @@
 ## [Unreleased]
 
+### Durable Buff Caster Identity
+
+* Persist `character_buffs.caster_char_id` so durable client-cast buffs retain caster identity across zoning and reloads instead of falling back to name-only lookups
+* Buff restoration now prefers character ID, then caster name, which improves ownership-sensitive buff behavior when the original caster is online again
+* Add optional migration `utils/sql/git/optional/2026_05_12_monomyth_character_buffs_caster_char_id.sql`
+
+### Pet Equipment, Persistence, and Proc Policy
+
+* Persist full pet equipped item instances, including charges, augments, attunement, color, ornamentation, custom data, GUIDs, and explicit equip slots, so suspended pets and zoning pets restore the same gear they actually wore
+* Add required migration `utils/sql/svn/3999_required_pet_inventory_instance_persistence.sql` for expanded `character_pet_inventory` item-instance fields
+* Normalize pet equipped-item handling around NPC inventory `ItemInstance` state, which makes pet weapon damage, augments, focus effects, appearance, disarm, and equipment rebuilds read from the same authoritative source
+* Preserve handed-in pet item fidelity instead of flattening equipment to base item IDs, while blocking direct item hand-ins to pets; players must now use Monomyth pet gear bags or satchels for pet gearing
+* Add `Combat:PetsUsePrimaryHandProcsOnly` (default `true`) to explicitly keep pet melee proc evaluation on primary-hand swings only
+* Add `Spells:PetsCanProcSelfOnlyBuffs` (default `false`) to gate whether pets may receive beneficial self-only spells from proc sources
+* Add `Spells:PetBuffProcValueScale` (default `100`) to scale direct damage and healing from pet owner/self-buff melee procs and poison procs without affecting weapon or augment procs
+
+### Pet Gear Bag Charmed Pet Support (THJ-FND-014)
+
+* Extend Pet Gear Bags to charmed pets when `Monomyth.PetGearBagEnabled` is on and the owner's class is allowed by `Monomyth.PetGearBagCharmClassMask`
+* Default charm eligibility supports Bard, Necromancer, and Enchanter class bits; ineligible classes now have pet gear bag equipment cleared instead of leaving stale charm-pet gear applied
+* Pet gear bag refresh hashing now includes the charm class mask and owner class for charmed pets so runtime rule changes force a correct rebuild
+
 ### Stateful Offline Dynamic Zones (THJ-FND-015)
 
 * Add additive stateful DZ suspend/resume support behind `DynamicZone:StatefulSuspendEnabled` with `DynamicZone:SuspendMaxDurationSeconds`
@@ -36,6 +58,15 @@
 * Add `monomyth_raid_dz_zones` and `monomyth_raid_dz_targets` database configuration tables
 * Add default Raid DZ entrance NPC script and zone controller script
 
+### Dynamic Zone XP Instance MVP (THJ-FND-007)
+
+* Add `XPDZ` dynamic zone type (type 6) with Monomyth-specific lifecycle enforcement behind `Monomyth.DynamicZonesEnabled`
+* XP DZs use `Monomyth.XPDZLifetimeSeconds` for instance lifetime, `Monomyth.XPDZLockoutSeconds` for per-zone lockouts, and `Monomyth.MaxActiveXPDZAssignments` for concurrent assignment caps
+* Characters may hold one XP DZ and one Raid DZ assignment simultaneously, but not more than the configured limit of each type
+* Empty XP DZ instances self-destruct when membership reaches zero, and XP DZ zone startup suppresses configured raid targets so XP instances stay focused on experience content
+* Add C++, Lua (`client:CreateExpedition` / XP DZ support), and Perl support plus default entrance and raid-suppression scripts
+* Add optional migration `utils/sql/git/optional/2026_05_11_monomyth_xp_dz_tables.sql` for Monomyth DZ config tables and rules
+
 ### Dynamic Zone Player Commands (THJ-FND-008)
 
 * Add `#dzadd <player_name>` — invite a player to your expedition or dynamic zone (leader only)
@@ -43,6 +74,24 @@
 * Add `#dzquit` — leave your current expedition or dynamic zone
 * All three commands are registered at `AccountStatus::Player` level for ordinary player access
 * Commands delegate to existing `DynamicZone::DzAddPlayer`, `DzMakeLeader`, and `DzQuit` which already enforce leader authority, target eligibility, single-active-instance-per-type, auto-promotion on leader quit, and DZ destruction when membership reaches zero
+
+### Enchanted and Legendary Loot (THJ-FND-004/005)
+
+* Add rule-driven enchanted and legendary random-loot upgrades behind `Monomyth.EnchantedLegendaryEnabled`
+* Eligible stat-bearing drops now roll `Monomyth.EnchantedDropChance`, then `Monomyth.LegendaryUpgradeChance`, and persist their tier in item custom data as `thj_enchant_tier`
+* Enchanted and legendary tiers rebuild live item data so stat multipliers survive persistence, transfers, and pet equipment flows instead of acting like one-shot loot decorations
+* Add `Monomyth.EnchantedStatMultiplierPercent`, `Monomyth.LegendaryStatMultiplierPercent`, `Monomyth.LegendaryHeroicStatBase`, and `Monomyth.LegendaryHeroicStatPolicy` to tune item scaling and optional heroic stat bonuses
+
+### Bazaar-and-Back Travel (THJ-FND-002/003)
+
+* Add Bazaar-and-Back travel behind `Monomyth.BazaarAndBackEnabled`, storing a player's exact return point in a data bucket and toggling each cast between Bazaar travel and return
+* Destination zone and safe coordinates are configured by `Monomyth.BazaarAndBackZoneID`, `Monomyth.BazaarAndBackX`, `Monomyth.BazaarAndBackY`, `Monomyth.BazaarAndBackZ`, and `Monomyth.BazaarAndBackHeading`
+* Bazaar-and-Back now fails closed while dead, unconscious, zoning, casting, or in combat, and invalid or expired return states safely fall back to the configured Bazaar location instead of trying to send players into dead instances
+
+### Monomyth Rules and Logging Foundation (THJ-FND-001)
+
+* Add the `Monomyth` rule category as the configuration home for Bazaar-and-Back, enchanted/legendary loot, dynamic zone, and pet gear bag systems
+* Add `Logs::Monomyth` plus `LogMonomyth` / `LogMonomythDetail` so Monomyth systems can emit parser-friendly operational logs without overloading unrelated categories
 
 ### Multiclass
 
