@@ -522,9 +522,43 @@ void Client::FinishTrade(Mob* tradingWith, bool finalizer, void* event_entry, st
 
 		// copy to be filtered by task updates, null trade slots preserved for quest event arg
 		std::vector<EQ::ItemInstance*> items(insts, insts + std::size(insts));
+		auto return_pet_trade = [&](NPC *pet_npc) {
+			AddMoneyToPP(trade->cp, trade->sp, trade->gp, trade->pp, true);
+
+			for (auto &inst : insts) {
+				if (!inst || !inst->GetItem()) {
+					continue;
+				}
+
+				PushItemOnCursor(*inst, true);
+			}
+
+			if (pet_npc) {
+				Message(Chat::Red, "You cannot hand items directly to pets. Use a Monomyth pet gear bag or satchel instead.");
+				LogTrading(
+					"Blocked direct pet trade from [{}] to pet [{}]; returned items and money to player",
+					GetName(),
+					pet_npc->GetName()
+				);
+			}
+		};
+
+		auto *npc = tradingWith->CastToNPC();
+		const bool is_pet = npc && (npc->IsPetOwnerOfClientBot() || npc->IsCharmedPet());
+		if (is_pet) {
+			return_pet_trade(npc);
+
+			for (auto &inst : insts) {
+				if (inst) {
+					safe_delete(inst);
+				}
+			}
+
+			return;
+		}
 
 		if (RuleB(TaskSystem, EnableTaskSystem)) {
-			if (UpdateTasksOnDeliver(items, *trade, tradingWith->CastToNPC())) {
+			if (UpdateTasksOnDeliver(items, *trade, npc)) {
 				if (!tradingWith->IsMoving()) {
 					tradingWith->FaceTarget(this);
 				}
@@ -546,10 +580,10 @@ void Client::FinishTrade(Mob* tradingWith, bool finalizer, void* event_entry, st
 					}
 				}
 
-				auto               with   = tradingWith->CastToNPC();
+				auto               with   = npc;
 				const EQ::ItemData *item  = inst->GetItem();
-				const bool         is_pet = with->IsPetOwnerOfClientBot() || with->IsCharmedPet();
-				if (is_pet && with->CanPetTakeItem(inst)) {
+				const bool         can_pet_take_item = with->CanPetTakeItem(inst);
+				if (can_pet_take_item) {
 					// pets need to look inside bags and try to equip items found there
 					if (item->IsClassBag() && item->BagSlots > 0) {
 						// if an item inside the bag can't be given to the pet, keep the bag
