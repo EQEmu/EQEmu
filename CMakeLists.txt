@@ -18,8 +18,9 @@ if(NOT CMAKE_TOOLCHAIN_FILE)
 	endif()
 endif()
 
-set(CMAKE_BUILD_TYPE "Debug")
-set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
+# Uncomment to generate just the standard Debug and Release configurations
+#set(CMAKE_BUILD_TYPE "Debug")
+#set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)
