@@ -5463,9 +5463,11 @@ void Bot::DoClassAttacks(Mob *target, bool IsRiposte) {
 					GetBaseRace() == Race::Barbarian
 					);
 				bool has_bash_skill = GetSkill(EQ::skills::SkillBash) > 0;
-				bool has_shield_in_secondary =
-					m_inv.GetItem(EQ::invslot::slotSecondary) &&
-					m_inv.GetItem(EQ::invslot::slotSecondary)->GetItem()->ItemType == EQ::item::ItemTypeShield;
+				// Theo Group A: tank bots' shield is cosmetic (no real item);
+				// HasShieldEquipped() is forced true for tank role in
+				// CalcBonuses, so the bot AI elects Bash correctly. (Still
+				// true for any bot with a real shield via the same flag.)
+				bool has_shield_in_secondary = HasShieldEquipped();
 				bool has_two_hander_with_aa =
 					m_inv.GetItem(EQ::invslot::slotPrimary) &&
 					m_inv.GetItem(EQ::invslot::slotPrimary)->GetItem()->IsType2HWeapon() &&
@@ -6373,6 +6375,17 @@ void Bot::CalcBonuses() {
 			_cs.hp_bonus, _cs.mana_bonus, _cs.ac_bonus
 		);
 #endif
+	}
+	// Theo-and-Co Phase 3 Group A: tank-role bots are treated as
+	// shield-equipped. Their shield is COSMETIC (no real item), so set the
+	// cached has_shield_equipped flag here — every HasShieldEquipped() gate
+	// (Bash, ShieldBlock, weapon-stance, shield AC) then works for tanks.
+	// Role-keyed so stance work (B/C) can later modulate (defensive vs 2H).
+	// Non-tank bots unchanged. (Shield-block PROC still also needs a
+	// ShieldBlock bonus bots lack w/o AA — bounded by the deferred AA work,
+	// not this fix; Bash, the main active tank shield ability, works.)
+	if (GetBotRole(GetClass()) == BotRole::Tank) {
+		SetShieldEquipped(true);
 	}
 	// CalcItemBonuses / CalcHeroicBonuses intentionally NOT called (cosmetic)
 	// ======================================================================

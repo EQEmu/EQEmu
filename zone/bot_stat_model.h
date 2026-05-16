@@ -393,12 +393,12 @@ enum class BotWeaponArchetype : uint8_t { OneHand, Pierce, TwoHand, HandToHand, 
 
 inline BotWeaponArchetype GetBotWeaponArchetype(uint8_t class_) {
 	switch (class_) {
-		case 1: case 16: return BotWeaponArchetype::TwoHand;        // WAR BER
+		case 16:         return BotWeaponArchetype::TwoHand;        // BER (2H DPS)
 		case 9:          return BotWeaponArchetype::Pierce;         // ROG (dagger)
 		case 7: case 15: return BotWeaponArchetype::HandToHand;     // MNK BST
 		case 11: case 12: case 13: case 14:
 		                 return BotWeaponArchetype::CasterLowMelee; // NEC WIZ MAG ENC
-		default:         return BotWeaponArchetype::OneHand;        // PAL SK RNG DRU CLR SHM BRD
+		default:         return BotWeaponArchetype::OneHand;        // WAR PAL SK (tanks->1H) RNG DRU CLR SHM BRD
 	}
 }
 
