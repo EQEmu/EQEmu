@@ -439,4 +439,30 @@ inline int ComputeBotWeaponDelay(uint8_t class_, bool is_ranged) {
 	return GetWeaponArchetypeData(a).delay;
 }
 
+// =========================================================================
+// COSMETIC ARMOR APPEARANCE (step 5a, LOCKED Alex 2026-05-16) — bots show
+// class-appropriate armor via per-slot material, NO fake inventory items;
+// a real player-equipped item's own material overrides it naturally.
+// material: 1 leather, 2 chain, 3 plate(bronze); 0 = none (invisible).
+// Casters wear a distinct robe via a chest robe-texture (robe model covers
+// the body); Monk = leather so it is not naked.
+// =========================================================================
+inline int GetBotCosmeticArmorMaterial(uint8_t class_) {
+	switch (class_) {
+		case 1: case 2: case 3: case 5: case 8:  return 3; // WAR CLR PAL SK BRD -> plate(bronze)
+		case 4: case 9: case 10: case 16:        return 2; // RNG ROG SHM BER    -> chain
+		case 6: case 7: case 15:                 return 1; // DRU MNK BST        -> leather
+		default:                                 return 0; // casters: robe (separate)
+	}
+}
+inline int GetBotCosmeticRobeTexture(uint8_t class_) {
+	switch (class_) {
+		case 11: return 11; // Necromancer
+		case 12: return 12; // Wizard
+		case 13: return 13; // Magician
+		case 14: return 14; // Enchanter
+		default: return 0;
+	}
+}
+
 #endif // BOT_STAT_MODEL_H

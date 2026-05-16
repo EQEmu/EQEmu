@@ -1647,6 +1647,14 @@ bool Mob::Attack(Mob* other, int Hand, bool bRiposte, bool IsStrikethrough, bool
 		bool _is_ranged = (Hand == EQ::invslot::slotRange);
 		my_hit.base_damage = _melee_immune ? 0 :
 			ComputeBotMeleeDamage(GetClass(), GetLevel(), _is_ranged);
+		// Theo Group A §7: owner Drill-Master dmg_out inheritance (owner-based).
+		// Scaling base_damage by dmg_out_mult is equivalent to the per-zone
+		// player.lua event_damage_given post-hit correction (final = dmg*mult).
+		if (!_melee_immune && my_hit.base_damage > 0) {
+			float _dout = CastToBot()->GetOwnerDrillMult("dmg_out_mult");
+			if (_dout != 1.0f)
+				my_hit.base_damage = static_cast<int64>(static_cast<double>(my_hit.base_damage) * _dout + 0.5);
+		}
 #if defined(THEO_GROUPA_STATMODEL_DIAGNOSE) && THEO_GROUPA_STATMODEL_DIAGNOSE
 		LogInfo(
 			"[Theo GroupA weapon] bot [{}] class [{}] level [{}] hand [{}] => "

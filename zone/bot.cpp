@@ -3822,6 +3822,20 @@ void Bot::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho) {
 		const EQ::ItemData* item = nullptr;
 		const EQ::ItemInstance* inst = nullptr;
 		for (int i = EQ::textures::textureBegin; i < EQ::textures::weaponPrimary; i++) {
+			// Theo-and-Co Phase 3 Group A 5a: default cosmetic class-armor
+			// appearance for empty slots (NO fake inventory items). A real
+			// player-equipped item below overwrites this -> player gear wins.
+			{
+				int _rt = GetBotCosmeticRobeTexture(GetClass());
+				if (_rt != 0) {
+					if (i == EQ::textures::armorChest)
+						ns->spawn.equipment.Slot[i].Material = _rt;
+				} else {
+					int _cm = GetBotCosmeticArmorMaterial(GetClass());
+					if (_cm != 0)
+						ns->spawn.equipment.Slot[i].Material = _cm;
+				}
+			}
 			inst = GetBotItem(i);
 			if (inst) {
 				item = inst->GetItem();
@@ -4997,6 +5011,25 @@ void Bot::Damage(Mob *from, int64 damage, uint16 spell_id, EQ::skills::SkillType
 	}
 
 	CommonDamage(from, damage, spell_id, attack_skill, avoidable, buffslot, iBuffTic, special);
+	// Theo-and-Co Phase 3 Group A §7: owner Drill-Master dmg_in inheritance.
+	// Mirrors per-zone player.lua event_damage_taken: post-hit HP delta of
+	// floor(damage * (dmg_in_mult - 1)), clamped 0..MaxHP. Owner-based.
+	if (damage > 0) {
+		float _din = GetOwnerDrillMult("dmg_in_mult");
+		if (_din != 1.0f) {
+			int64 _delta = static_cast<int64>(std::floor(static_cast<double>(damage) * (_din - 1.0)));
+			if (_delta != 0) {
+				int64 _nh = GetHP() - _delta;
+				if (_nh < 0) _nh = 0;
+				if (_nh > GetMaxHP()) _nh = GetMaxHP();
+				SetHP(_nh);
+#if defined(THEO_GROUPA_STATMODEL_DIAGNOSE) && THEO_GROUPA_STATMODEL_DIAGNOSE
+				LogInfo("[Theo GroupA drill] bot [{}] dmg_in x[{}] dmg [{}] delta [{}] hp->[{}]",
+					GetCleanName(), _din, damage, _delta, _nh);
+#endif
+			}
+		}
+	}
 	if (GetHP() < 0) {
 		if (IsCasting())
 			InterruptSpell();
@@ -8245,6 +8278,25 @@ void Bot::OwnerMessage(const std::string& message)
 			message
 		).c_str()
 	);
+}
+
+float Bot::GetOwnerDrillMult(const std::string& bucket_key) {
+	// Theo-and-Co Phase 3 Group A §7 — owner-based Drill Master inheritance.
+	// A bot inherits its OWN owner's dmg_in_mult / dmg_out_mult so the
+	// owner's difficulty dial moves the bot exactly as it moves the owner.
+	// Mirrors the per-zone player.lua read (owner's character-scoped bucket).
+	Mob* o = GetBotOwner();
+	if (!o) {
+		return 1.0f;
+	}
+	DataBucketKey k = o->GetScopedBucketKeys();
+	k.key = bucket_key;
+	auto b = DataBucket::GetData(&database, k);
+	if (b.value.empty()) {
+		return 1.0f;
+	}
+	float v = static_cast<float>(atof(b.value.c_str()));
+	return (v > 0.0f) ? v : 1.0f;
 }
 
 bool Bot::CheckDataBucket(std::string bucket_name, const std::string& bucket_value, uint8 bucket_comparison)
