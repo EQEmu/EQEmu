@@ -1647,14 +1647,9 @@ bool Mob::Attack(Mob* other, int Hand, bool bRiposte, bool IsStrikethrough, bool
 		bool _is_ranged = (Hand == EQ::invslot::slotRange);
 		my_hit.base_damage = _melee_immune ? 0 :
 			ComputeBotMeleeDamage(GetClass(), GetLevel(), _is_ranged);
-		// Theo Group A §7: owner Drill-Master dmg_out inheritance (owner-based).
-		// Scaling base_damage by dmg_out_mult is equivalent to the per-zone
-		// player.lua event_damage_given post-hit correction (final = dmg*mult).
-		if (!_melee_immune && my_hit.base_damage > 0) {
-			float _dout = CastToBot()->GetOwnerDrillMult("dmg_out_mult");
-			if (_dout != 1.0f)
-				my_hit.base_damage = static_cast<int64>(static_cast<double>(my_hit.base_damage) * _dout + 0.5);
-		}
+		// Owner Drill-Master dmg_out is applied GENERICALLY in
+		// Mob::CommonDamage for ALL bot damage (melee + spell + DoT),
+		// mirroring player.lua event_damage_given — NOT scoped here.
 #if defined(THEO_GROUPA_STATMODEL_DIAGNOSE) && THEO_GROUPA_STATMODEL_DIAGNOSE
 		LogInfo(
 			"[Theo GroupA weapon] bot [{}] class [{}] level [{}] hand [{}] => "
@@ -4233,6 +4228,27 @@ void Mob::CommonDamage(Mob* attacker, int64 &damage, const uint16 spell_id, cons
 		}
 
 		//final damage has been determined.
+		// Theo-and-Co Phase 3 Group A §7: owner Drill-Master dmg_out — GENERIC.
+		// Bot outgoing damage (melee + spell + DoT — all flow through
+		// CommonDamage) is scaled by the bot OWNER's dmg_out_mult, exactly
+		// mirroring per-zone player.lua event_damage_given math:
+		//   final = dmg + floor(dmg * (mult - 1))
+		// Pre-event/pre-apply so the event payload, HP application, spell
+		// thresholds and death all see the scaled value. True parity with
+		// the player dial; replaces the earlier melee-only scoping.
+		if (attacker && attacker->IsBot() && damage > 0) {
+			float _dout = attacker->CastToBot()->GetOwnerDrillMult("dmg_out_mult");
+			if (_dout != 1.0f) {
+				int64 _extra = static_cast<int64>(std::floor(static_cast<double>(damage) * (_dout - 1.0)));
+				damage += _extra;
+				if (damage < 0)
+					damage = 0;
+#if defined(THEO_GROUPA_STATMODEL_DIAGNOSE) && THEO_GROUPA_STATMODEL_DIAGNOSE
+				LogInfo("[Theo GroupA drill] bot [{}] dmg_out x[{}] -> dmg [{}] (generic; spell_id [{}])",
+					attacker->GetCleanName(), _dout, damage, spell_id);
+#endif
+			}
+		}
 		int old_hp_ratio = (int)GetHPRatio();
 
 
