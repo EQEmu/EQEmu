@@ -24,6 +24,7 @@
 #include "common/spdat.h"
 #include "common/strings.h"
 #include "zone/bot.h"
+#include "zone/bot_stat_model.h" // Theo-and-Co Phase 3 Group A: cosmetic-weapon bot melee
 #include "zone/fastmath.h"
 #include "zone/lua_parser.h"
 #include "zone/mob.h"
@@ -1635,7 +1636,28 @@ bool Mob::Attack(Mob* other, int Hand, bool bRiposte, bool IsStrikethrough, bool
 	if (weapon)
 		hate = (weapon->GetItem()->Damage + weapon->GetItem()->ElemDmgAmt);
 
-	my_hit.base_damage = GetWeaponDamage(other, weapon, &hate);
+	if (IsBot()) {
+		// Theo-and-Co Phase 3 Group A: bot weapons are COSMETIC. Melee
+		// damage comes from the level x class x role formula, NOT the
+		// equipped weapon. Gate only on genuine target melee-immunity —
+		// NOT weapon equipability/req-level, so a cosmetic off-class
+		// weapon cannot disable the bot's attack.
+		bool _melee_immune = (!other) || other->GetInvul() ||
+			other->GetSpecialAbility(SpecialAbility::MeleeImmunity);
+		bool _is_ranged = (Hand == EQ::invslot::slotRange);
+		my_hit.base_damage = _melee_immune ? 0 :
+			ComputeBotMeleeDamage(GetClass(), GetLevel(), _is_ranged);
+#if defined(THEO_GROUPA_STATMODEL_DIAGNOSE) && THEO_GROUPA_STATMODEL_DIAGNOSE
+		LogInfo(
+			"[Theo GroupA weapon] bot [{}] class [{}] level [{}] hand [{}] => "
+			"base_damage [{}] (weapon cosmetic; melee_immune [{}])",
+			GetCleanName(), GetClass(), GetLevel(), Hand,
+			my_hit.base_damage, _melee_immune
+		);
+#endif
+	} else {
+		my_hit.base_damage = GetWeaponDamage(other, weapon, &hate);
+	}
 	if (hate == 0 && my_hit.base_damage > 1)
 		hate = my_hit.base_damage;
 

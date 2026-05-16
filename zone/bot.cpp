@@ -16,6 +16,7 @@
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "bot.h"
+#include "bot_stat_model.h" // Theo-and-Co Phase 3 Group A: gear-cosmetic bot stat model
 
 #include "common/data_verification.h"
 #include "common/repositories/bot_inventories_repository.h"
@@ -5786,10 +5787,12 @@ void Bot::SetAttackTimer() {
 		int hhe = (itembonuses.HundredHands + spellbonuses.HundredHands);
 		int speed = 0;
 		int delay = 36;
-		if (ItemToUse == nullptr) {
-			delay = GetHandToHandDelay();
-		} else {
-			delay = ItemToUse->Delay;
+		// Theo-and-Co Phase 3 Group A: bot weapons are COSMETIC. Attack
+		// delay comes from the class weapon-type formula, not the equipped
+		// item's Delay. (Dual-wield / 2H structural gating above unchanged.)
+		{
+			bool _is_ranged = (i == EQ::invslot::slotRange);
+			delay = ComputeBotWeaponDelay(GetClass(), _is_ranged);
 		}
 
 		speed = (RuleB(Spells, Jun182014HundredHandsRevamp) ? static_cast<int>(((delay / haste_mod) + ((hhe / 1000.0f) * (delay / haste_mod))) * 100) : static_cast<int>(((delay / haste_mod) + ((hhe / 100.0f) * delay)) * 100));
@@ -6295,8 +6298,33 @@ bool Bot::DoFinishedSpellGroupTarget(uint16 spell_id, Mob* spellTarget, EQ::spel
 void Bot::CalcBonuses() {
 	memset(&itembonuses, 0, sizeof(StatBonuses));
 	GenerateBaseStats();
-	CalcItemBonuses(&itembonuses);
-	CalcHeroicBonuses(&itembonuses);
+	// === Theo-and-Co Phase 3 Group A: equipped gear is COSMETIC ===========
+	// CalcItemBonuses + CalcHeroicBonuses (both gear-derived) are skipped so
+	// equipped gear contributes ZERO to combat math. Bot combat stats come
+	// from the level x class x role formula instead. Spell/AA buffs are kept
+	// (gameplay, not gear). itembonuses stays zeroed except HP/Mana/AC, fed
+	// the formula's gear-equivalent so CalcMaxHP/CalcMaxMana/Mob::ACSum pick
+	// it up with no change to those functions.
+	{
+		BotComputedStats _cs = ComputeBotStats(GetClass(), GetBaseRace(), GetLevel());
+		STR = _cs.str; STA = _cs.sta; AGI = _cs.agi; DEX = _cs.dex;
+		INT = _cs.intel; WIS = _cs.wis; CHA = _cs.cha;
+		itembonuses.HP   = _cs.hp_bonus;
+		itembonuses.Mana = _cs.mana_bonus;
+		itembonuses.AC   = _cs.ac_bonus;
+#if defined(THEO_GROUPA_STATMODEL_DIAGNOSE) && THEO_GROUPA_STATMODEL_DIAGNOSE
+		LogInfo(
+			"[Theo GroupA stat-model] bot [{}] class [{}] race [{}] level [{}] => "
+			"STR [{}] STA [{}] AGI [{}] DEX [{}] INT [{}] WIS [{}] CHA [{}] "
+			"hpBonus [{}] manaBonus [{}] acBonus [{}] (gear cosmetic: itembonuses zeroed)",
+			GetCleanName(), GetClass(), GetBaseRace(), GetLevel(),
+			_cs.str, _cs.sta, _cs.agi, _cs.dex, _cs.intel, _cs.wis, _cs.cha,
+			_cs.hp_bonus, _cs.mana_bonus, _cs.ac_bonus
+		);
+#endif
+	}
+	// CalcItemBonuses / CalcHeroicBonuses intentionally NOT called (cosmetic)
+	// ======================================================================
 	CalcSpellBonuses(&spellbonuses);
 	CalcAABonuses(&aabonuses);
 	SetAttackTimer();
