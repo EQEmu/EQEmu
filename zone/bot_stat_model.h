@@ -466,23 +466,43 @@ inline int GetBotCosmeticRobeTexture(uint8_t class_) {
 }
 
 // =========================================================================
-// COSMETIC WEAPON MODEL (step 5b, LOCKED Alex 2026-05-16) — bots show a
-// class-appropriate basic weapon model on an empty primary slot, NO fake
-// item (set via FillSpawnStruct Primary.Material, same trick as armor);
-// a real player-equipped weapon overrides it. Model numbers = the integer
-// in real basic weapons' IDFile ("IT<n>"). H2H -> 0 = bare fists (correct
-// classic look for Monk/Beastlord). Caster -> staff (the "robe and staff").
+// COSMETIC WEAPON + OFFHAND MODEL (step 5b — EXACT per-class spec, LOCKED
+// Alex 2026-05-16) — bots show a class weapon (and shield/book offhand)
+// on empty Primary/Secondary slots, NO fake items (set via FillSpawnStruct
+// Material, same trick as armor); a real player-equipped item overrides it.
+// Model #s = the integer in the real item's IDFile ("IT<n>"), DB-verified.
+// 0 = bare hands / no offhand. This is Alex's explicit table, NOT derived.
 // =========================================================================
 inline int GetBotCosmeticWeaponModel(uint8_t class_) {
-	switch (GetBotWeaponArchetype(class_)) {
-		case BotWeaponArchetype::OneHand:        return 10653; // Short Sword
-		case BotWeaponArchetype::Pierce:         return 10650; // Dagger
-		case BotWeaponArchetype::TwoHand:        return 10648; // Two-Handed Sword
-		case BotWeaponArchetype::HandToHand:     return 0;     // bare fists (Monk/BST)
-		case BotWeaponArchetype::Bow:            return 10614; // Short Bow (range slot; not primary)
-		case BotWeaponArchetype::CasterLowMelee: return 8;     // Staff
+	switch (class_) {
+		case 1:  return 10653; // Warrior      Short Sword
+		case 2:  return 7;     // Cleric       Mace
+		case 3:  return 10653; // Paladin      Short Sword
+		case 4:  return 10653; // Ranger       Short Sword
+		case 5:  return 10653; // Shadowknight Short Sword
+		case 6:  return 41;    // Druid        Scimitar
+		case 7:  return 0;     // Monk         bare
+		case 8:  return 10653; // Bard         Short Sword
+		case 9:  return 10650; // Rogue        Dagger
+		case 10: return 10100; // Shaman       Spear
+		case 11: return 39;    // Necromancer  Scythe
+		case 12: return 8;     // Wizard       Staff (Worn Great Staff, 2H)
+		case 13: return 8;     // Magician     Staff
+		case 14: return 8;     // Enchanter    Staff
+		case 15: return 0;     // Beastlord    bare
+		case 16: return 10648; // Berserker    Two-Handed Sword
+		default: return 0;
 	}
-	return 0;
+}
+inline int GetBotCosmeticOffhandModel(uint8_t class_) {
+	switch (class_) {
+		case 1:  return 201;   // Warrior      Wooden Shield
+		case 2:  return 10201; // Cleric       Book/Tome
+		case 3:  return 201;   // Paladin      Wooden Shield
+		case 5:  return 201;   // Shadowknight Wooden Shield
+		case 6:  return 10201; // Druid        Book/Tome
+		default: return 0;     // no cosmetic offhand
+	}
 }
 
 #endif // BOT_STAT_MODEL_H

@@ -3876,6 +3876,15 @@ void Bot::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho) {
 			}
 		}
 
+		// Theo-and-Co Phase 3 Group A 5b: default cosmetic offhand model
+		// (shield/book) for an empty secondary slot (NO fake item); a real
+		// player-equipped offhand below overwrites it -> player gear wins.
+		// 0 = no cosmetic offhand (most classes).
+		{
+			int _om = GetBotCosmeticOffhandModel(GetClass());
+			if (_om != 0)
+				ns->spawn.equipment.Secondary.Material = _om;
+		}
 		inst = GetBotItem(EQ::invslot::slotSecondary);
 		if (inst) {
 			item = inst->GetItem();
