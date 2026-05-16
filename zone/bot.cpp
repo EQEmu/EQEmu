@@ -3854,6 +3854,15 @@ void Bot::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho) {
 			}
 		}
 
+		// Theo-and-Co Phase 3 Group A 5b: default cosmetic weapon model for
+		// an empty primary slot (NO fake item); a real player-equipped
+		// weapon below overwrites it -> player gear wins. 0 = bare hands
+		// (correct for Monk/Beastlord H2H).
+		{
+			int _wm = GetBotCosmeticWeaponModel(GetClass());
+			if (_wm != 0)
+				ns->spawn.equipment.Primary.Material = _wm;
+		}
 		inst = GetBotItem(EQ::invslot::slotPrimary);
 		if (inst) {
 			item = inst->GetItem();

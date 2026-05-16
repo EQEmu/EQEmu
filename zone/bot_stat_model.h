@@ -465,4 +465,24 @@ inline int GetBotCosmeticRobeTexture(uint8_t class_) {
 	}
 }
 
+// =========================================================================
+// COSMETIC WEAPON MODEL (step 5b, LOCKED Alex 2026-05-16) — bots show a
+// class-appropriate basic weapon model on an empty primary slot, NO fake
+// item (set via FillSpawnStruct Primary.Material, same trick as armor);
+// a real player-equipped weapon overrides it. Model numbers = the integer
+// in real basic weapons' IDFile ("IT<n>"). H2H -> 0 = bare fists (correct
+// classic look for Monk/Beastlord). Caster -> staff (the "robe and staff").
+// =========================================================================
+inline int GetBotCosmeticWeaponModel(uint8_t class_) {
+	switch (GetBotWeaponArchetype(class_)) {
+		case BotWeaponArchetype::OneHand:        return 10653; // Short Sword
+		case BotWeaponArchetype::Pierce:         return 10650; // Dagger
+		case BotWeaponArchetype::TwoHand:        return 10648; // Two-Handed Sword
+		case BotWeaponArchetype::HandToHand:     return 0;     // bare fists (Monk/BST)
+		case BotWeaponArchetype::Bow:            return 10614; // Short Bow (range slot; not primary)
+		case BotWeaponArchetype::CasterLowMelee: return 8;     // Staff
+	}
+	return 0;
+}
+
 #endif // BOT_STAT_MODEL_H
