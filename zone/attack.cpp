@@ -24,6 +24,7 @@
 #include "common/spdat.h"
 #include "common/strings.h"
 #include "zone/bot.h"
+#include "zone/bot_stat_model.h" // Theo-and-Co Phase 3 Group A: cosmetic-weapon bot melee
 #include "zone/fastmath.h"
 #include "zone/lua_parser.h"
 #include "zone/mob.h"
@@ -1635,7 +1636,31 @@ bool Mob::Attack(Mob* other, int Hand, bool bRiposte, bool IsStrikethrough, bool
 	if (weapon)
 		hate = (weapon->GetItem()->Damage + weapon->GetItem()->ElemDmgAmt);
 
-	my_hit.base_damage = GetWeaponDamage(other, weapon, &hate);
+	if (IsBot()) {
+		// Theo-and-Co Phase 3 Group A: bot weapons are COSMETIC. Melee
+		// damage comes from the level x class x role formula, NOT the
+		// equipped weapon. Gate only on genuine target melee-immunity —
+		// NOT weapon equipability/req-level, so a cosmetic off-class
+		// weapon cannot disable the bot's attack.
+		bool _melee_immune = (!other) || other->GetInvul() ||
+			other->GetSpecialAbility(SpecialAbility::MeleeImmunity);
+		bool _is_ranged = (Hand == EQ::invslot::slotRange);
+		my_hit.base_damage = _melee_immune ? 0 :
+			ComputeBotMeleeDamage(GetClass(), GetLevel(), _is_ranged);
+		// Owner Drill-Master dmg_out is applied GENERICALLY in
+		// Mob::CommonDamage for ALL bot damage (melee + spell + DoT),
+		// mirroring player.lua event_damage_given — NOT scoped here.
+#if defined(THEO_GROUPA_STATMODEL_DIAGNOSE) && THEO_GROUPA_STATMODEL_DIAGNOSE
+		LogInfo(
+			"[Theo GroupA weapon] bot [{}] class [{}] level [{}] hand [{}] => "
+			"base_damage [{}] (weapon cosmetic; melee_immune [{}])",
+			GetCleanName(), GetClass(), GetLevel(), Hand,
+			my_hit.base_damage, _melee_immune
+		);
+#endif
+	} else {
+		my_hit.base_damage = GetWeaponDamage(other, weapon, &hate);
+	}
 	if (hate == 0 && my_hit.base_damage > 1)
 		hate = my_hit.base_damage;
 
@@ -4203,6 +4228,27 @@ void Mob::CommonDamage(Mob* attacker, int64 &damage, const uint16 spell_id, cons
 		}
 
 		//final damage has been determined.
+		// Theo-and-Co Phase 3 Group A §7: owner Drill-Master dmg_out — GENERIC.
+		// Bot outgoing damage (melee + spell + DoT — all flow through
+		// CommonDamage) is scaled by the bot OWNER's dmg_out_mult, exactly
+		// mirroring per-zone player.lua event_damage_given math:
+		//   final = dmg + floor(dmg * (mult - 1))
+		// Pre-event/pre-apply so the event payload, HP application, spell
+		// thresholds and death all see the scaled value. True parity with
+		// the player dial; replaces the earlier melee-only scoping.
+		if (attacker && attacker->IsBot() && damage > 0) {
+			float _dout = attacker->CastToBot()->GetOwnerDrillMult("dmg_out_mult");
+			if (_dout != 1.0f) {
+				int64 _extra = static_cast<int64>(std::floor(static_cast<double>(damage) * (_dout - 1.0)));
+				damage += _extra;
+				if (damage < 0)
+					damage = 0;
+#if defined(THEO_GROUPA_STATMODEL_DIAGNOSE) && THEO_GROUPA_STATMODEL_DIAGNOSE
+				LogInfo("[Theo GroupA drill] bot [{}] dmg_out x[{}] -> dmg [{}] (generic; spell_id [{}])",
+					attacker->GetCleanName(), _dout, damage, spell_id);
+#endif
+			}
+		}
 		int old_hp_ratio = (int)GetHPRatio();
 
 

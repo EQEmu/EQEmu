@@ -689,6 +689,7 @@ public:
 	[[nodiscard]] int GetMaxTotalSlots() const final { return EQ::spells::TOTAL_BUFFS; }
 
 	bool CheckDataBucket(std::string bucket_name, const std::string& bucket_value, uint8 bucket_comparison);
+	float GetOwnerDrillMult(const std::string& bucket_key); // Theo Group A §7: owner Drill-Master dmg mult inheritance
 
 	// Bot Equipment & Inventory Class Methods
 	void BotTradeAddItem(const EQ::ItemInstance* inst, uint16 slot_id, bool save_to_database = true);

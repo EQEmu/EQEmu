@@ -16,6 +16,7 @@
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "bot.h"
+#include "bot_stat_model.h" // Theo-and-Co Phase 3 Group A: gear-cosmetic bot stat model
 
 #include "common/data_verification.h"
 #include "common/repositories/bot_inventories_repository.h"
@@ -3821,6 +3822,20 @@ void Bot::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho) {
 		const EQ::ItemData* item = nullptr;
 		const EQ::ItemInstance* inst = nullptr;
 		for (int i = EQ::textures::textureBegin; i < EQ::textures::weaponPrimary; i++) {
+			// Theo-and-Co Phase 3 Group A 5a: default cosmetic class-armor
+			// appearance for empty slots (NO fake inventory items). A real
+			// player-equipped item below overwrites this -> player gear wins.
+			{
+				int _rt = GetBotCosmeticRobeTexture(GetClass());
+				if (_rt != 0) {
+					if (i == EQ::textures::armorChest)
+						ns->spawn.equipment.Slot[i].Material = _rt;
+				} else {
+					int _cm = GetBotCosmeticArmorMaterial(GetClass());
+					if (_cm != 0)
+						ns->spawn.equipment.Slot[i].Material = _cm;
+				}
+			}
 			inst = GetBotItem(i);
 			if (inst) {
 				item = inst->GetItem();
@@ -3839,6 +3854,15 @@ void Bot::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho) {
 			}
 		}
 
+		// Theo-and-Co Phase 3 Group A 5b: default cosmetic weapon model for
+		// an empty primary slot (NO fake item); a real player-equipped
+		// weapon below overwrites it -> player gear wins. 0 = bare hands
+		// (correct for Monk/Beastlord H2H).
+		{
+			int _wm = GetBotCosmeticWeaponModel(GetClass());
+			if (_wm != 0)
+				ns->spawn.equipment.Primary.Material = _wm;
+		}
 		inst = GetBotItem(EQ::invslot::slotPrimary);
 		if (inst) {
 			item = inst->GetItem();
@@ -3852,6 +3876,15 @@ void Bot::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho) {
 			}
 		}
 
+		// Theo-and-Co Phase 3 Group A 5b: default cosmetic offhand model
+		// (shield/book) for an empty secondary slot (NO fake item); a real
+		// player-equipped offhand below overwrites it -> player gear wins.
+		// 0 = no cosmetic offhand (most classes).
+		{
+			int _om = GetBotCosmeticOffhandModel(GetClass());
+			if (_om != 0)
+				ns->spawn.equipment.Secondary.Material = _om;
+		}
 		inst = GetBotItem(EQ::invslot::slotSecondary);
 		if (inst) {
 			item = inst->GetItem();
@@ -4996,6 +5029,25 @@ void Bot::Damage(Mob *from, int64 damage, uint16 spell_id, EQ::skills::SkillType
 	}
 
 	CommonDamage(from, damage, spell_id, attack_skill, avoidable, buffslot, iBuffTic, special);
+	// Theo-and-Co Phase 3 Group A §7: owner Drill-Master dmg_in inheritance.
+	// Mirrors per-zone player.lua event_damage_taken: post-hit HP delta of
+	// floor(damage * (dmg_in_mult - 1)), clamped 0..MaxHP. Owner-based.
+	if (damage > 0) {
+		float _din = GetOwnerDrillMult("dmg_in_mult");
+		if (_din != 1.0f) {
+			int64 _delta = static_cast<int64>(std::floor(static_cast<double>(damage) * (_din - 1.0)));
+			if (_delta != 0) {
+				int64 _nh = GetHP() - _delta;
+				if (_nh < 0) _nh = 0;
+				if (_nh > GetMaxHP()) _nh = GetMaxHP();
+				SetHP(_nh);
+#if defined(THEO_GROUPA_STATMODEL_DIAGNOSE) && THEO_GROUPA_STATMODEL_DIAGNOSE
+				LogInfo("[Theo GroupA drill] bot [{}] dmg_in x[{}] dmg [{}] delta [{}] hp->[{}]",
+					GetCleanName(), _din, damage, _delta, _nh);
+#endif
+			}
+		}
+	}
 	if (GetHP() < 0) {
 		if (IsCasting())
 			InterruptSpell();
@@ -5411,9 +5463,11 @@ void Bot::DoClassAttacks(Mob *target, bool IsRiposte) {
 					GetBaseRace() == Race::Barbarian
 					);
 				bool has_bash_skill = GetSkill(EQ::skills::SkillBash) > 0;
-				bool has_shield_in_secondary =
-					m_inv.GetItem(EQ::invslot::slotSecondary) &&
-					m_inv.GetItem(EQ::invslot::slotSecondary)->GetItem()->ItemType == EQ::item::ItemTypeShield;
+				// Theo Group A: tank bots' shield is cosmetic (no real item);
+				// HasShieldEquipped() is forced true for tank role in
+				// CalcBonuses, so the bot AI elects Bash correctly. (Still
+				// true for any bot with a real shield via the same flag.)
+				bool has_shield_in_secondary = HasShieldEquipped();
 				bool has_two_hander_with_aa =
 					m_inv.GetItem(EQ::invslot::slotPrimary) &&
 					m_inv.GetItem(EQ::invslot::slotPrimary)->GetItem()->IsType2HWeapon() &&
@@ -5786,10 +5840,12 @@ void Bot::SetAttackTimer() {
 		int hhe = (itembonuses.HundredHands + spellbonuses.HundredHands);
 		int speed = 0;
 		int delay = 36;
-		if (ItemToUse == nullptr) {
-			delay = GetHandToHandDelay();
-		} else {
-			delay = ItemToUse->Delay;
+		// Theo-and-Co Phase 3 Group A: bot weapons are COSMETIC. Attack
+		// delay comes from the class weapon-type formula, not the equipped
+		// item's Delay. (Dual-wield / 2H structural gating above unchanged.)
+		{
+			bool _is_ranged = (i == EQ::invslot::slotRange);
+			delay = ComputeBotWeaponDelay(GetClass(), _is_ranged);
 		}
 
 		speed = (RuleB(Spells, Jun182014HundredHandsRevamp) ? static_cast<int>(((delay / haste_mod) + ((hhe / 1000.0f) * (delay / haste_mod))) * 100) : static_cast<int>(((delay / haste_mod) + ((hhe / 100.0f) * delay)) * 100));
@@ -6295,8 +6351,44 @@ bool Bot::DoFinishedSpellGroupTarget(uint16 spell_id, Mob* spellTarget, EQ::spel
 void Bot::CalcBonuses() {
 	memset(&itembonuses, 0, sizeof(StatBonuses));
 	GenerateBaseStats();
-	CalcItemBonuses(&itembonuses);
-	CalcHeroicBonuses(&itembonuses);
+	// === Theo-and-Co Phase 3 Group A: equipped gear is COSMETIC ===========
+	// CalcItemBonuses + CalcHeroicBonuses (both gear-derived) are skipped so
+	// equipped gear contributes ZERO to combat math. Bot combat stats come
+	// from the level x class x role formula instead. Spell/AA buffs are kept
+	// (gameplay, not gear). itembonuses stays zeroed except HP/Mana/AC, fed
+	// the formula's gear-equivalent so CalcMaxHP/CalcMaxMana/Mob::ACSum pick
+	// it up with no change to those functions.
+	{
+		BotComputedStats _cs = ComputeBotStats(GetClass(), GetBaseRace(), GetLevel());
+		STR = _cs.str; STA = _cs.sta; AGI = _cs.agi; DEX = _cs.dex;
+		INT = _cs.intel; WIS = _cs.wis; CHA = _cs.cha;
+		itembonuses.HP   = _cs.hp_bonus;
+		itembonuses.Mana = _cs.mana_bonus;
+		itembonuses.AC   = _cs.ac_bonus;
+#if defined(THEO_GROUPA_STATMODEL_DIAGNOSE) && THEO_GROUPA_STATMODEL_DIAGNOSE
+		LogInfo(
+			"[Theo GroupA stat-model] bot [{}] class [{}] race [{}] level [{}] => "
+			"STR [{}] STA [{}] AGI [{}] DEX [{}] INT [{}] WIS [{}] CHA [{}] "
+			"hpBonus [{}] manaBonus [{}] acBonus [{}] (gear cosmetic: itembonuses zeroed)",
+			GetCleanName(), GetClass(), GetBaseRace(), GetLevel(),
+			_cs.str, _cs.sta, _cs.agi, _cs.dex, _cs.intel, _cs.wis, _cs.cha,
+			_cs.hp_bonus, _cs.mana_bonus, _cs.ac_bonus
+		);
+#endif
+	}
+	// Theo-and-Co Phase 3 Group A: tank-role bots are treated as
+	// shield-equipped. Their shield is COSMETIC (no real item), so set the
+	// cached has_shield_equipped flag here — every HasShieldEquipped() gate
+	// (Bash, ShieldBlock, weapon-stance, shield AC) then works for tanks.
+	// Role-keyed so stance work (B/C) can later modulate (defensive vs 2H).
+	// Non-tank bots unchanged. (Shield-block PROC still also needs a
+	// ShieldBlock bonus bots lack w/o AA — bounded by the deferred AA work,
+	// not this fix; Bash, the main active tank shield ability, works.)
+	if (GetBotRole(GetClass()) == BotRole::Tank) {
+		SetShieldEquipped(true);
+	}
+	// CalcItemBonuses / CalcHeroicBonuses intentionally NOT called (cosmetic)
+	// ======================================================================
 	CalcSpellBonuses(&spellbonuses);
 	CalcAABonuses(&aabonuses);
 	SetAttackTimer();
@@ -8217,6 +8309,25 @@ void Bot::OwnerMessage(const std::string& message)
 			message
 		).c_str()
 	);
+}
+
+float Bot::GetOwnerDrillMult(const std::string& bucket_key) {
+	// Theo-and-Co Phase 3 Group A §7 — owner-based Drill Master inheritance.
+	// A bot inherits its OWN owner's dmg_in_mult / dmg_out_mult so the
+	// owner's difficulty dial moves the bot exactly as it moves the owner.
+	// Mirrors the per-zone player.lua read (owner's character-scoped bucket).
+	Mob* o = GetBotOwner();
+	if (!o) {
+		return 1.0f;
+	}
+	DataBucketKey k = o->GetScopedBucketKeys();
+	k.key = bucket_key;
+	auto b = DataBucket::GetData(&database, k);
+	if (b.value.empty()) {
+		return 1.0f;
+	}
+	float v = static_cast<float>(atof(b.value.c_str()));
+	return (v > 0.0f) ? v : 1.0f;
 }
 
 bool Bot::CheckDataBucket(std::string bucket_name, const std::string& bucket_value, uint8 bucket_comparison)
