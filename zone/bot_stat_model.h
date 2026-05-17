@@ -444,69 +444,85 @@ inline int ComputeBotWeaponDelay(uint8_t class_, bool is_ranged) {
 }
 
 // =========================================================================
-// COSMETIC ARMOR APPEARANCE (step 5a, LOCKED Alex 2026-05-16) — bots show
-// class-appropriate armor via per-slot material, NO fake inventory items;
-// a real player-equipped item's own material overrides it naturally.
-// material: 1 leather, 2 chain, 3 plate(bronze); 0 = none (invisible).
-// Casters wear a distinct robe via a chest robe-texture (robe model covers
-// the body); Monk = leather so it is not naked.
+// COSMETIC STARTER GEAR (real items, LOCKED Alex 2026-05-17). Bots equip a
+// class set of REAL items, injected in-memory into empty slots only by
+// Bot::EquipBot (NOT persisted; player-given gear always wins). Phase A
+// CalcBonuses zeroes item stats, so this is 100% visual; the native
+// equip/WearChange path renders it correctly on Luclin models (the prior
+// per-slot spawn-struct Material poke fought that path and broke it).
+// All IDs DB-verified. Berserker omitted (disabled class — no Berserkers).
+//
+//   Armor groups (Luclin: appearance = the item's material value):
+//     Ornate plate  (mat21)  WAR PAL
+//     Bronze plate  (mat 3)  SK  BRD
+//     Sebilite Scale(mat 7)  CLR
+//     Brigandine    (mat 2 chain)  RNG ROG SHM
+//     Leather       (mat 1)  DRU MNK BST
+//     Robe (chest only)      NEC WIZ MAG ENC
 // =========================================================================
-inline int GetBotCosmeticArmorMaterial(uint8_t class_) {
-	switch (class_) {
-		case 1: case 2: case 3: case 5: case 8:  return 3; // WAR CLR PAL SK BRD -> plate(bronze)
-		case 4: case 9: case 10: case 16:        return 2; // RNG ROG SHM BER    -> chain
-		case 6: case 7: case 15:                 return 1; // DRU MNK BST        -> leather
-		default:                                 return 0; // casters: robe (separate)
-	}
-}
-inline int GetBotCosmeticRobeTexture(uint8_t class_) {
-	switch (class_) {
-		case 11: return 11; // Necromancer
-		case 12: return 12; // Wizard
-		case 13: return 13; // Magician
-		case 14: return 14; // Enchanter
-		default: return 0;
-	}
-}
+enum BotCosmeticSlot {
+	BCS_Head = 0, BCS_Chest, BCS_Arms, BCS_Wrist, BCS_Hands, BCS_Legs, BCS_Feet,
+	BCS_Primary, BCS_Secondary, BCS_Range
+};
 
-// =========================================================================
-// COSMETIC WEAPON + OFFHAND MODEL (step 5b — EXACT per-class spec, LOCKED
-// Alex 2026-05-16) — bots show a class weapon (and shield/book offhand)
-// on empty Primary/Secondary slots, NO fake items (set via FillSpawnStruct
-// Material, same trick as armor); a real player-equipped item overrides it.
-// Model #s = the integer in the real item's IDFile ("IT<n>"), DB-verified.
-// 0 = bare hands / no offhand. This is Alex's explicit table, NOT derived.
-// =========================================================================
-inline int GetBotCosmeticWeaponModel(uint8_t class_) {
-	switch (class_) {
-		case 1:  return 10653; // Warrior      Short Sword
-		case 2:  return 7;     // Cleric       Mace
-		case 3:  return 10653; // Paladin      Short Sword
-		case 4:  return 10653; // Ranger       Short Sword
-		case 5:  return 10653; // Shadowknight Short Sword
-		case 6:  return 41;    // Druid        Scimitar
-		case 7:  return 0;     // Monk         bare
-		case 8:  return 10653; // Bard         Short Sword
-		case 9:  return 10650; // Rogue        Dagger
-		case 10: return 10100; // Shaman       Spear
-		case 11: return 39;    // Necromancer  Scythe
-		case 12: return 8;     // Wizard       Staff (Worn Great Staff, 2H)
-		case 13: return 8;     // Magician     Staff
-		case 14: return 8;     // Enchanter    Staff
-		case 15: return 0;     // Beastlord    bare
-		case 16: return 10648; // Berserker    Two-Handed Sword
-		default: return 0;
+inline uint32_t GetBotCosmeticItemId(uint8_t class_, int bcs) {
+	if (bcs == BCS_Primary) {
+		switch (class_) {
+			case 1:  return 5008;  // WAR Broad Sword
+			case 2:  return 6019;  // CLR Bronze Mace
+			case 3:  return 5002;  // PAL Long Sword
+			case 4:  return 6902;  // RNG Bronze Wakizashi
+			case 5:  return 5004;  // SK  Bastard Sword
+			case 6:  return 5034;  // DRU Bronze Scimitar
+			case 8:  return 6906;  // BRD Bronze Tachi
+			case 9:  return 7012;  // ROG Bronze Dagger
+			case 10: return 7014;  // SHM Bronze Spear
+			case 11: return 5010;  // NEC Scythe
+			case 12: case 13: case 14: return 6012; // WIZ/MAG/ENC Worn Great Staff
+			default: return 0;     // MNK/BST bare-handed
+		}
 	}
-}
-inline int GetBotCosmeticOffhandModel(uint8_t class_) {
-	switch (class_) {
-		case 1:  return 201;   // Warrior      Wooden Shield
-		case 2:  return 10201; // Cleric       Book/Tome
-		case 3:  return 201;   // Paladin      Wooden Shield
-		case 5:  return 201;   // Shadowknight Wooden Shield
-		case 6:  return 10201; // Druid        Book/Tome
-		default: return 0;     // no cosmetic offhand
+	if (bcs == BCS_Secondary) {
+		switch (class_) {
+			case 1: case 3: case 5: return 9006;  // WAR/PAL/SK Wooden Shield
+			case 2: case 6:         return 13991; // CLR/DRU Testament of Vanear
+			default:                return 0;
+		}
 	}
+	if (bcs == BCS_Range) {
+		return (class_ == 4) ? 8009 : 0;          // RNG Short Bow
+	}
+	// caster robe: chest only, no other armor (robe model covers the body)
+	if (class_ == 11 || class_ == 12 || class_ == 13 || class_ == 14) {
+		if (bcs == BCS_Chest) {
+			switch (class_) {
+				case 11: return 1320; // NEC Flowing Black Robe (mat 11)
+				case 12: return 1214; // WIZ Cryosilk Robe      (mat 12)
+				case 13: return 1254; // MAG Miragul's Robe     (mat 13)
+				case 14: return 1255; // ENC Robe of the Mystic (mat 14)
+			}
+		}
+		return 0;
+	}
+	// armor set {head,chest,arms,wrist,hands,legs,feet}
+	static const uint32_t kOrnate[7]  = {9589,14955,25332,11072,12099,16615,19081}; // WAR PAL
+	static const uint32_t kBronze[7]  = {4201, 4204, 4208, 4209, 4210, 4211, 4212};  // SK  BRD
+	static const uint32_t kSeb[7]     = {3200, 3203, 3207, 3208, 3209, 3210, 3211};  // CLR
+	static const uint32_t kChain[7]   = {7409, 7412, 7416, 7417, 7418, 7419, 7420};  // RNG ROG SHM
+	static const uint32_t kLeather[7] = {2001, 2004, 2008, 2009, 2010, 2011, 2012};  // DRU MNK BST
+	const uint32_t* set;
+	switch (class_) {
+		case 1: case 3:          set = kOrnate;  break; // WAR PAL
+		case 5: case 8:          set = kBronze;  break; // SK  BRD
+		case 2:                  set = kSeb;     break; // CLR
+		case 4: case 9: case 10: set = kChain;   break; // RNG ROG SHM
+		case 6: case 7: case 15: set = kLeather; break; // DRU MNK BST
+		default:                 return 0;
+	}
+	if (bcs >= BCS_Head && bcs <= BCS_Feet) {
+		return set[bcs];
+	}
+	return 0;
 }
 
 #endif // BOT_STAT_MODEL_H
