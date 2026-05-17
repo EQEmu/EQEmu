@@ -1165,6 +1165,7 @@ void bot_command_inventory_give(Client *c, const Seperator *sep);
 void bot_command_inventory_list(Client *c, const Seperator *sep);
 void bot_command_inventory_remove(Client *c, const Seperator *sep);
 void bot_command_inventory_window(Client *c, const Seperator *sep);
+void bot_command_stats_window(Client *c, const Seperator *sep);
 void bot_command_pet_get_lost(Client *c, const Seperator *sep);
 void bot_command_pet_remove(Client *c, const Seperator *sep);
 void bot_command_pet_set_type(Client *c, const Seperator *sep);

@@ -156,6 +156,7 @@ int bot_command_init(void)
 		bot_command_add("inventorylist", "Lists all items in a bot's inventory", AccountStatus::Player, bot_command_inventory_list) ||
 		bot_command_add("inventoryremove", "Removes an item from a bot's inventory", AccountStatus::Player, bot_command_inventory_remove) ||
 		bot_command_add("inventorywindow", "Displays all items in a bot's inventory in a pop-up window", AccountStatus::Player, bot_command_inventory_window) ||
+		bot_command_add("statswindow", "Displays a targeted bot's Group A stat-model readout in a pop-up window", AccountStatus::Player, bot_command_stats_window) ||
 		bot_command_add("itemuse", "Elicits a report from spawned bots that can use the item on your cursor (option 'empty' yields only empty slots)", AccountStatus::Player, bot_command_item_use) ||
 		bot_command_add("maxmeleerange", "Toggles whether your bot is at max melee range or not. This will disable all special abilities, including taunt.", AccountStatus::Player, bot_command_max_melee_range) ||
 		bot_command_add("owneroption", "Sets options available to bot owners", AccountStatus::Player, bot_command_owner_option) ||
