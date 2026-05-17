@@ -1684,6 +1684,7 @@ bool Bot::Process()
 
 		BuffProcess();
 		CalcRestState();
+		RefreshOwnerDrillMults(); // Theo Group A §7: refresh cached owner mults here (6s), NOT per hit (was a per-hit synchronous DB query)
 
 		if (currently_fleeing || IsFeared()) {
 			ProcessFlee();
@@ -3647,6 +3648,7 @@ bool Bot::Spawn(Client* botCharacterOwner) {
 
 		ClearDataBucketCache();
 		LoadDataBucketsCache();
+		RefreshOwnerDrillMults(); // Theo Group A §7: prime cached owner mults at spawn (then refreshed on the 6s tic; never per-hit)
 		LoadBotSpellSettings();
 		if (!AI_AddBotSpells(GetBotSpellID())) {
 			GetBotOwner()->CastToClient()->Message(
@@ -8332,23 +8334,53 @@ void Bot::OwnerMessage(const std::string& message)
 	);
 }
 
+// Theo-and-Co Phase 3 Group A §7 — owner-based Drill Master inheritance.
+// CACHED read: returns the value last fetched by RefreshOwnerDrillMults().
+// CRITICAL: this is called from the per-hit damage path (Bot::Damage /
+// Mob::CommonDamage) so it MUST NOT touch the DB — the original
+// implementation did a synchronous DataBucket::GetData() per hit, which
+// blocked the single-threaded zone process on every melee/spell hit a bot
+// took or dealt (a severe perf regression that froze caster bots when
+// attacked). The actual DB read now happens at most once per 6s tic.
 float Bot::GetOwnerDrillMult(const std::string& bucket_key) {
-	// Theo-and-Co Phase 3 Group A §7 — owner-based Drill Master inheritance.
-	// A bot inherits its OWN owner's dmg_in_mult / dmg_out_mult so the
-	// owner's difficulty dial moves the bot exactly as it moves the owner.
-	// Mirrors the per-zone player.lua read (owner's character-scoped bucket).
+	if (bucket_key == "dmg_out_mult") {
+		return m_drill_dmg_out_mult;
+	}
+	return m_drill_dmg_in_mult; // "dmg_in_mult"
+}
+
+// Refreshes the cached owner Drill-Master mults. Called from the 6s tic
+// (NOT per hit). Drill Master changes are rare (player adjusts difficulty
+// via the Auren NPC), so up to ~6s propagation lag is fine and still
+// "moves the bot as it moves the owner".
+void Bot::RefreshOwnerDrillMults() {
+	m_drill_dmg_in_mult  = 1.0f;
+	m_drill_dmg_out_mult = 1.0f;
+
 	Mob* o = GetBotOwner();
 	if (!o) {
-		return 1.0f;
+		return;
 	}
+
 	DataBucketKey k = o->GetScopedBucketKeys();
-	k.key = bucket_key;
-	auto b = DataBucket::GetData(&database, k);
-	if (b.value.empty()) {
-		return 1.0f;
+
+	k.key = "dmg_in_mult";
+	auto b_in = DataBucket::GetData(&database, k);
+	if (!b_in.value.empty()) {
+		float v = static_cast<float>(atof(b_in.value.c_str()));
+		if (v > 0.0f) {
+			m_drill_dmg_in_mult = v;
+		}
 	}
-	float v = static_cast<float>(atof(b.value.c_str()));
-	return (v > 0.0f) ? v : 1.0f;
+
+	k.key = "dmg_out_mult";
+	auto b_out = DataBucket::GetData(&database, k);
+	if (!b_out.value.empty()) {
+		float v = static_cast<float>(atof(b_out.value.c_str()));
+		if (v > 0.0f) {
+			m_drill_dmg_out_mult = v;
+		}
+	}
 }
 
 bool Bot::CheckDataBucket(std::string bucket_name, const std::string& bucket_value, uint8 bucket_comparison)

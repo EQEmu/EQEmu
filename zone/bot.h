@@ -689,7 +689,8 @@ public:
 	[[nodiscard]] int GetMaxTotalSlots() const final { return EQ::spells::TOTAL_BUFFS; }
 
 	bool CheckDataBucket(std::string bucket_name, const std::string& bucket_value, uint8 bucket_comparison);
-	float GetOwnerDrillMult(const std::string& bucket_key); // Theo Group A §7: owner Drill-Master dmg mult inheritance
+	float GetOwnerDrillMult(const std::string& bucket_key); // Theo Group A §7: owner Drill-Master dmg mult (CACHED — zero DB in damage path)
+	void RefreshOwnerDrillMults(); // Theo Group A §7: refresh cached owner mults (called from the 6s tic, NOT per hit)
 
 	// Bot Equipment & Inventory Class Methods
 	void BotTradeAddItem(const EQ::ItemInstance* inst, uint16 slot_id, bool save_to_database = true);
@@ -1154,6 +1155,8 @@ private:
 	unsigned int RestRegenHP;
 	unsigned int RestRegenMana;
 	unsigned int RestRegenEndurance;
+	float m_drill_dmg_in_mult  = 1.0f; // Theo Group A §7: cached owner Drill-Master mults (refreshed on the 6s tic; read per-hit with ZERO DB)
+	float m_drill_dmg_out_mult = 1.0f;
 	Timer rest_timer;
 	Timer m_ping_timer;
 	int32	base_end;
