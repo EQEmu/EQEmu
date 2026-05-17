@@ -17,6 +17,7 @@
 */
 #include "zone/bot_command.h"
 #include "zone/bot_stat_model.h"
+#include "zone/dialogue_window.h"
 #include "common/classes.h"
 #include "common/races.h"
 
@@ -373,24 +374,30 @@ void bot_command_inventory_window(Client* c, const Seperator* sep)
 		my_bot->GetCleanName()
 	);
 
-	std::string window_text = "<table>";
-	for (uint16 slot_id     = EQ::invslot::EQUIPMENT_BEGIN; slot_id <= EQ::invslot::EQUIPMENT_END; ++slot_id) {
-		const EQ::ItemData    * item = nullptr;
-		const EQ::ItemInstance* inst = my_bot->CastToBot()->GetBotItem(slot_id);
-		if (inst) {
-			item = inst->GetItem();
-		}
+	// Theo-and-Co: DialogueWindow table (the codebase-standard roomy,
+	// scrollable container — same one the spelltype/taunt-help windows use)
+	// so the full equipment list shows without being clipped; and each
+	// occupied slot is a real item link (alt+click -> item details).
+	EQ::SayLinkEngine linker;
+	linker.SetLinkType(EQ::saylink::SayLinkItemInst);
 
-		window_text.append(
-			fmt::format(
-				"<tr><td>{}</td><td>{}{}</c></td></tr>",
-				EQ::invslot::GetInvPossessionsSlotName(slot_id),
-				item ? "<c \"#00FF00\">" : "<c \"#FFFF00\">",
-				item ? item->Name : "Empty"
-			)
+	std::string rows;
+	for (uint16 slot_id = EQ::invslot::EQUIPMENT_BEGIN; slot_id <= EQ::invslot::EQUIPMENT_END; ++slot_id) {
+		const EQ::ItemInstance* inst = my_bot->CastToBot()->GetBotItem(slot_id);
+		std::string value;
+		if (inst && inst->GetItem()) {
+			linker.SetItemInst(inst);
+			value = linker.GenerateLink();
+		} else {
+			value = DialogueWindow::ColorMessage("#FFFF00", "Empty");
+		}
+		rows += DialogueWindow::TableRow(
+			DialogueWindow::TableCell(DialogueWindow::ColorMessage("#CCCCCC", EQ::invslot::GetInvPossessionsSlotName(slot_id)))
+			+ DialogueWindow::TableCell(value)
 		);
 	}
-	window_text.append("</table>");
+
+	std::string window_text = DialogueWindow::Table(rows);
 
 	c->SendPopupToClient(
 		window_title.c_str(),

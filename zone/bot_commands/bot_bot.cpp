@@ -435,7 +435,24 @@ void bot_command_delete(Client *c, const Seperator *sep)
 	std::string deleted_check = "confirm";
 
 	if (!(delete_confirm.find(deleted_check) != std::string::npos)) {
-		c->Message(Chat::White, "You must type %s confirm to confirm the deletion of %s.", sep->arg[0], my_bot->GetCleanName());
+		// Theo-and-Co: modern click-to-confirm. Without 'confirm' we no longer
+		// just print a chat line — we pop a window with a clickable confirm
+		// saylink (runs '^botdelete confirm' on the still-targeted bot). The
+		// Socials "Delete Bot" button now sends '^botdelete' (no inline
+		// confirm), so a stray click can no longer delete a bot outright.
+		std::string confirm_link = Saylink::Silent(
+			"^botdelete confirm",
+			fmt::format("Yes - permanently delete {}", my_bot->GetCleanName())
+		);
+		std::string body = fmt::format(
+			"<c \"#FF4040\">PERMANENTLY delete the bot \"{}\"?</c><br><br>"
+			"This erases the bot and all its records. It cannot be undone.<br><br>"
+			"{}<br><br>"
+			"<c \"#AAAAAA\">(Keep the bot targeted. To cancel, just close this window.)</c>",
+			my_bot->GetCleanName(),
+			confirm_link
+		);
+		c->SendPopupToClient("Confirm Bot Deletion", body.c_str());
 		return;
 	}
 
