@@ -5705,10 +5705,12 @@ void Bot::EquipBot() {
 	GetBotItems(m_inv);
 
 	// Theo-and-Co Phase 3 Group A: cosmetic class starter gear. Fill ONLY
-	// empty equipment slots, IN-MEMORY (never persisted to bot_inventories),
-	// so the look self-heals every spawn and any player-given real item in a
-	// slot always wins. Phase A CalcBonuses zeroes item stats, so this is
-	// purely visual; the native equip/WearChange path below renders it.
+	// empty equipment slots via the NATIVE persisted path (AddBotItem ->
+	// bot_inventories), so the post-spawn armor WearChange (Bot::Spawn, which
+	// iterates the persisted GetBotItemSlots()) actually renders it — exactly
+	// like player-given gear. Player gear in a slot always wins; once granted
+	// it persists, so subsequent spawns skip it (only re-grants if a slot is
+	// emptied). Phase A CalcBonuses zeroes item stats, so this is 100% visual.
 	static const struct { int16 inv; int bcs; } kCosmeticSlots[] = {
 		{ EQ::invslot::slotHead,      BCS_Head },
 		{ EQ::invslot::slotChest,     BCS_Chest },
@@ -5730,11 +5732,7 @@ void Bot::EquipBot() {
 		if (!cosmetic_id) {
 			continue;
 		}
-		EQ::ItemInstance* cosmetic_inst = database.CreateItem(cosmetic_id);
-		if (cosmetic_inst) {
-			m_inv.PutItem(cs.inv, *cosmetic_inst);
-			safe_delete(cosmetic_inst);
-		}
+		AddBotItem(cs.inv, cosmetic_id);
 	}
 
 	const EQ::ItemInstance* inst = nullptr;
