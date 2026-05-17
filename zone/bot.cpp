@@ -1689,18 +1689,21 @@ bool Bot::Process()
 			ProcessFlee();
 		}
 
+		// Theo-and-Co: player floor semantics (max, NOT additive) so OOC
+		// regen == player's max(base, fast*Mult/100). Out of rest state
+		// RestRegen* == 0 -> max(CalcXRegen(), 0) == CalcXRegen() (unchanged).
 		if (GetHP() < GetMaxHP()) {
-			SetHP(GetHP() + CalcHPRegen() + RestRegenHP);
+			SetHP(GetHP() + std::max<int64>(CalcHPRegen(), RestRegenHP));
 		}
 
 		if (GetMana() < GetMaxMana()) {
-			SetMana(GetMana() + CalcManaRegen() + RestRegenMana);
+			SetMana(GetMana() + std::max<int64>(CalcManaRegen(), RestRegenMana));
 		}
 
 		CalcATK();
 
 		if (GetEndurance() < GetMaxEndurance()) {
-			SetEndurance(GetEndurance() + CalcEnduranceRegen() + RestRegenEndurance);
+			SetEndurance(GetEndurance() + std::max<int64>(CalcEnduranceRegen(), RestRegenEndurance));
 		}
 	}
 
@@ -6748,7 +6751,15 @@ void Bot::CalcRestState() {
 		return;
 
 	RestRegenHP = RestRegenMana = RestRegenEndurance = 0;
-	if (IsEngaged() || !IsSitting() || !rest_timer.Check(false))
+	// Theo-and-Co Phase 3 Group A: bot OOC-regen parity. Stock gated this on
+	// !IsSitting(), but bots never sit OOC, so HP/mana/endurance rest-regen
+	// never fired (mana only *looked* alive via the Bots:ManaRegen base
+	// multiplier). The player's sit-to-rest equivalent for a bot is simply
+	// being out of combat for RestRegenTimeToActivate. Rate + trigger are
+	// already player-identical (same 6*(max/zone.fast_regen_X) formula as
+	// client_mods.cpp, same Character:RestRegenTimeToActivate timer), so
+	// dropping only the sit requirement yields true HP+mana+end parity.
+	if (IsEngaged() || !rest_timer.Check(false))
 		return;
 
 	uint32 buff_count = GetMaxTotalSlots();
@@ -6760,9 +6771,19 @@ void Bot::CalcRestState() {
 		}
 	}
 
-	RestRegenHP = 6 * (GetMaxHP() / zone->newzone_data.fast_regen_hp);
-	RestRegenMana = 6 * (GetMaxMana() / zone->newzone_data.fast_regen_mana);
-	RestRegenEndurance = 6 * (GetMaxEndurance() / zone->newzone_data.fast_regen_endurance);
+	// Theo-and-Co: scale the fast-regen floor by the same Character:*Regen
+	// Multiplier the player path applies (client_mods.cpp returns
+	// regen * RuleI(Character,*RegenMultiplier)/100). Stock left this raw,
+	// so bots ignored that lever (the one used to tune regen speed). The
+	// regen tick uses max(CalcXRegen(), RestRegenX) (player floor semantics,
+	// NOT additive) so the effective value == the player's
+	// max(base, fast) * Mult/100, auto-tracking fast_regen_* AND the mult.
+	RestRegenHP = (6 * (GetMaxHP() / zone->newzone_data.fast_regen_hp))
+		* RuleI(Character, HPRegenMultiplier) / 100;
+	RestRegenMana = (6 * (GetMaxMana() / zone->newzone_data.fast_regen_mana))
+		* RuleI(Character, ManaRegenMultiplier) / 100;
+	RestRegenEndurance = (6 * (GetMaxEndurance() / zone->newzone_data.fast_regen_endurance))
+		* RuleI(Character, EnduranceRegenMultiplier) / 100;
 }
 
 int32 Bot::LevelRegen() {
