@@ -3822,20 +3822,6 @@ void Bot::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho) {
 		const EQ::ItemData* item = nullptr;
 		const EQ::ItemInstance* inst = nullptr;
 		for (int i = EQ::textures::textureBegin; i < EQ::textures::weaponPrimary; i++) {
-			// Theo-and-Co Phase 3 Group A 5a: default cosmetic class-armor
-			// appearance for empty slots (NO fake inventory items). A real
-			// player-equipped item below overwrites this -> player gear wins.
-			{
-				int _rt = GetBotCosmeticRobeTexture(GetClass());
-				if (_rt != 0) {
-					if (i == EQ::textures::armorChest)
-						ns->spawn.equipment.Slot[i].Material = _rt;
-				} else {
-					int _cm = GetBotCosmeticArmorMaterial(GetClass());
-					if (_cm != 0)
-						ns->spawn.equipment.Slot[i].Material = _cm;
-				}
-			}
 			inst = GetBotItem(i);
 			if (inst) {
 				item = inst->GetItem();
@@ -3854,15 +3840,6 @@ void Bot::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho) {
 			}
 		}
 
-		// Theo-and-Co Phase 3 Group A 5b: default cosmetic weapon model for
-		// an empty primary slot (NO fake item); a real player-equipped
-		// weapon below overwrites it -> player gear wins. 0 = bare hands
-		// (correct for Monk/Beastlord H2H).
-		{
-			int _wm = GetBotCosmeticWeaponModel(GetClass());
-			if (_wm != 0)
-				ns->spawn.equipment.Primary.Material = _wm;
-		}
 		inst = GetBotItem(EQ::invslot::slotPrimary);
 		if (inst) {
 			item = inst->GetItem();
@@ -3876,15 +3853,6 @@ void Bot::FillSpawnStruct(NewSpawn_Struct* ns, Mob* ForWho) {
 			}
 		}
 
-		// Theo-and-Co Phase 3 Group A 5b: default cosmetic offhand model
-		// (shield/book) for an empty secondary slot (NO fake item); a real
-		// player-equipped offhand below overwrites it -> player gear wins.
-		// 0 = no cosmetic offhand (most classes).
-		{
-			int _om = GetBotCosmeticOffhandModel(GetClass());
-			if (_om != 0)
-				ns->spawn.equipment.Secondary.Material = _om;
-		}
 		inst = GetBotItem(EQ::invslot::slotSecondary);
 		if (inst) {
 			item = inst->GetItem();
@@ -5735,6 +5703,40 @@ bool Bot::IsBotAttackAllowed(Mob* attacker, Mob* target, bool& hasRuleDefined) {
 
 void Bot::EquipBot() {
 	GetBotItems(m_inv);
+
+	// Theo-and-Co Phase 3 Group A: cosmetic class starter gear. Fill ONLY
+	// empty equipment slots, IN-MEMORY (never persisted to bot_inventories),
+	// so the look self-heals every spawn and any player-given real item in a
+	// slot always wins. Phase A CalcBonuses zeroes item stats, so this is
+	// purely visual; the native equip/WearChange path below renders it.
+	static const struct { int16 inv; int bcs; } kCosmeticSlots[] = {
+		{ EQ::invslot::slotHead,      BCS_Head },
+		{ EQ::invslot::slotChest,     BCS_Chest },
+		{ EQ::invslot::slotArms,      BCS_Arms },
+		{ EQ::invslot::slotWrist1,    BCS_Wrist },
+		{ EQ::invslot::slotWrist2,    BCS_Wrist },
+		{ EQ::invslot::slotHands,     BCS_Hands },
+		{ EQ::invslot::slotLegs,      BCS_Legs },
+		{ EQ::invslot::slotFeet,      BCS_Feet },
+		{ EQ::invslot::slotPrimary,   BCS_Primary },
+		{ EQ::invslot::slotSecondary, BCS_Secondary },
+		{ EQ::invslot::slotRange,     BCS_Range },
+	};
+	for (const auto& cs : kCosmeticSlots) {
+		if (GetBotItem(cs.inv)) {
+			continue; // real / player-given gear in this slot wins
+		}
+		uint32 cosmetic_id = GetBotCosmeticItemId(GetClass(), cs.bcs);
+		if (!cosmetic_id) {
+			continue;
+		}
+		EQ::ItemInstance* cosmetic_inst = database.CreateItem(cosmetic_id);
+		if (cosmetic_inst) {
+			m_inv.PutItem(cs.inv, *cosmetic_inst);
+			safe_delete(cosmetic_inst);
+		}
+	}
+
 	const EQ::ItemInstance* inst = nullptr;
 	const EQ::ItemData* item = nullptr;
 	for (int slot_id = EQ::invslot::EQUIPMENT_BEGIN; slot_id <= EQ::invslot::EQUIPMENT_END; ++slot_id) {
