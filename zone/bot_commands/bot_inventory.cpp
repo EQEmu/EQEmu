@@ -16,6 +16,9 @@
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "zone/bot_command.h"
+#include "zone/bot_stat_model.h"
+#include "common/classes.h"
+#include "common/races.h"
 
 void bot_command_inventory(Client *c, const Seperator *sep)
 {
@@ -393,4 +396,91 @@ void bot_command_inventory_window(Client* c, const Seperator* sep)
 		window_title.c_str(),
 		window_text.c_str()
 	);
+}
+
+// Theo-and-Co Phase 3 Group A: read-only stat readout for a targeted bot.
+// Surfaces the ComputeBotStats() formula output + live vitals + the owner
+// Drill-Master dial, so the class/role/level curve is verifiable in-game.
+void bot_command_stats_window(Client* c, const Seperator* sep)
+{
+	if (helper_command_alias_fail(c, "bot_command_stats_window", sep->arg[0], "statswindow")) {
+		return;
+	}
+
+	if (helper_is_help_or_usage(sep->arg[1])) {
+		c->Message(Chat::White, fmt::format("Usage: {} [actionable: target]", sep->arg[0]).c_str());
+		return;
+	}
+
+	int ab_mask = ActionableBots::ABM_Target;
+	std::vector<Bot*> sbl;
+	if (ActionableBots::PopulateSBL(c, sep->arg[1], sbl, ab_mask, sep->arg[2]) == ActionableBots::ABT_None) {
+		return;
+	}
+
+	auto my_bot = sbl.front();
+	if (!my_bot) {
+		c->Message(Chat::White, "ActionableBots returned 'nullptr'");
+		return;
+	}
+
+	const uint8  cls   = my_bot->GetClass();
+	const uint16 race  = my_bot->GetBaseRace();
+	const uint8  level = my_bot->GetLevel();
+
+	auto role_name = [](BotRole r) -> const char* {
+		switch (r) {
+			case BotRole::Tank:    return "Tank";
+			case BotRole::Healer:  return "Healer";
+			case BotRole::DPS:     return "DPS";
+			case BotRole::CC:      return "CC";
+			case BotRole::Support: return "Support";
+		}
+		return "?";
+	};
+	auto mat_name = [](BotMaterial m) -> const char* {
+		switch (m) {
+			case BotMaterial::Plate:      return "Plate";
+			case BotMaterial::Chain:      return "Chain";
+			case BotMaterial::Leather:    return "Leather";
+			case BotMaterial::Cloth:      return "Cloth";
+			case BotMaterial::MonkCustom: return "Monk(custom)";
+		}
+		return "?";
+	};
+	auto arch_name = [](BotWeaponArchetype a) -> const char* {
+		switch (a) {
+			case BotWeaponArchetype::OneHand:        return "1H";
+			case BotWeaponArchetype::Pierce:         return "Pierce";
+			case BotWeaponArchetype::TwoHand:        return "2H";
+			case BotWeaponArchetype::HandToHand:     return "H2H";
+			case BotWeaponArchetype::Bow:            return "Bow";
+			case BotWeaponArchetype::CasterLowMelee: return "CasterMelee";
+		}
+		return "?";
+	};
+
+	BotComputedStats s = ComputeBotStats(cls, race, level);
+
+	std::string title = fmt::format("{}'s Stats (Theo Group A)", my_bot->GetCleanName());
+	std::string t = "<table>";
+	auto row = [&](const std::string& a, const std::string& b) {
+		t.append(fmt::format("<tr><td>{}</td><td><c \"#FFFF00\">{}</c></td></tr>", a, b));
+	};
+	row("Class", fmt::format("{} ({})", GetClassIDName(cls, level), cls));
+	row("Race",  fmt::format("{} ({})", GetRaceIDName(race), race));
+	row("Level", fmt::format("{}", level));
+	row("Role / Material / Weapon", fmt::format("{} / {} / {}",
+		role_name(GetBotRole(cls)), mat_name(GetBotBaseMaterial(cls)), arch_name(GetBotWeaponArchetype(cls))));
+	row("STR / STA", fmt::format("{} / {}", s.str, s.sta));
+	row("AGI / DEX", fmt::format("{} / {}", s.agi, s.dex));
+	row("INT / WIS / CHA", fmt::format("{} / {} / {}", s.intel, s.wis, s.cha));
+	row("HP bonus (max HP)",   fmt::format("{}  ({})", s.hp_bonus,   my_bot->GetMaxHP()));
+	row("Mana bonus (max Mana)", fmt::format("{}  ({})", s.mana_bonus, my_bot->GetMaxMana()));
+	row("AC bonus (AC)",       fmt::format("{}  ({})", s.ac_bonus,   my_bot->GetAC()));
+	row("Drill dmg_out / dmg_in", fmt::format("x{:.2f} / x{:.2f}",
+		my_bot->GetOwnerDrillMult("dmg_out_mult"), my_bot->GetOwnerDrillMult("dmg_in_mult")));
+	t.append("</table>");
+
+	c->SendPopupToClient(title.c_str(), t.c_str());
 }
