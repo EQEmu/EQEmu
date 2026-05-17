@@ -1,9 +1,14 @@
 #ifndef BOT_STAT_MODEL_H
 #define BOT_STAT_MODEL_H
 
-// Phase A rollout: ON for first-spawn verification (runbook Part 1).
-// Flip to 0 in Part 6 after a clean smoke test.
-#define THEO_GROUPA_STATMODEL_DIAGNOSE 1
+// Phase A rollout: was ON for first-spawn verification (runbook Part 1).
+// Flipped to 0: CalcBonuses() is a stock-HOT path (buff/spell machinery —
+// spell_effects.cpp/spells.cpp call it on every buff add/fade/tick), so an
+// always-on synchronous LogInfo() per call floods the single-threaded zone
+// with file I/O during combat (worst for self-buffing casters) — the same
+// hot-path-sync-I/O bug class as the per-hit DataBucket DB query. NOT
+// "harmless log noise" as the runbook assumed. Keep at 0 in production.
+#define THEO_GROUPA_STATMODEL_DIAGNOSE 0
 
 // =========================================================================
 // Theo-and-Co Phase 3 Group A — Bot stat model
