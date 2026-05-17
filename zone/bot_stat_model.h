@@ -1,6 +1,10 @@
 #ifndef BOT_STAT_MODEL_H
 #define BOT_STAT_MODEL_H
 
+// Phase A rollout: ON for first-spawn verification (runbook Part 1).
+// Flip to 0 in Part 6 after a clean smoke test.
+#define THEO_GROUPA_STATMODEL_DIAGNOSE 1
+
 // =========================================================================
 // Theo-and-Co Phase 3 Group A — Bot stat model
 // =========================================================================
