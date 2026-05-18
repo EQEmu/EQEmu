@@ -6357,12 +6357,24 @@ void Bot::CalcBonuses() {
 	memset(&itembonuses, 0, sizeof(StatBonuses));
 	GenerateBaseStats();
 	// === Theo-and-Co Phase 3 Group A: equipped gear is COSMETIC ===========
-	// CalcItemBonuses + CalcHeroicBonuses (both gear-derived) are skipped so
-	// equipped gear contributes ZERO to combat math. Bot combat stats come
-	// from the level x class x role formula instead. Spell/AA buffs are kept
-	// (gameplay, not gear). itembonuses stays zeroed except HP/Mana/AC, fed
-	// the formula's gear-equivalent so CalcMaxHP/CalcMaxMana/Mob::ACSum pick
-	// it up with no change to those functions.
+	// Do NOT skip CalcItemBonuses/CalcHeroicBonuses outright: they carry
+	// load-bearing SIDE EFFECTS the engine assumes run every CalcBonuses
+	// (equip-state flags, internal SetAttackTimer, aug/tribute, and
+	// transitive cast/engage state). Skipping them broke caster bots — the
+	// melee path was formula-backfilled (Mob::Attack/SetAttackTimer) but the
+	// spell/cast path was not, so casters lost that pipeline with no
+	// replacement. Fix: run them into a THROWAWAY scratch StatBonuses so
+	// every side effect on the bot still happens exactly as stock, but the
+	// gear-derived STAT accumulation is discarded -> gear stays 100%
+	// cosmetic. Real combat stats come from the formula block just below.
+	{
+		StatBonuses _scratch_ib;
+		memset(&_scratch_ib, 0, sizeof(StatBonuses));
+		CalcItemBonuses(&_scratch_ib);
+		CalcHeroicBonuses(&_scratch_ib);
+		// _scratch_ib (cosmetic gear's stats) intentionally discarded;
+		// itembonuses stays zeroed except the formula HP/Mana/AC set below.
+	}
 	{
 		BotComputedStats _cs = ComputeBotStats(GetClass(), GetBaseRace(), GetLevel());
 		STR = _cs.str; STA = _cs.sta; AGI = _cs.agi; DEX = _cs.dex;
@@ -6392,7 +6404,8 @@ void Bot::CalcBonuses() {
 	if (GetBotRole(GetClass()) == BotRole::Tank) {
 		SetShieldEquipped(true);
 	}
-	// CalcItemBonuses / CalcHeroicBonuses intentionally NOT called (cosmetic)
+	// CalcItemBonuses/CalcHeroicBonuses ARE called above (into scratch) for
+	// their side effects; only the gear STAT contribution is discarded.
 	// ======================================================================
 	CalcSpellBonuses(&spellbonuses);
 	CalcAABonuses(&aabonuses);
