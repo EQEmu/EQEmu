@@ -128,6 +128,7 @@ int bot_command_init(void)
 		bot_command_add("findaliases", "Find available aliases for a bot command", AccountStatus::Player, bot_command_find_aliases) ||
 		bot_command_add("follow", "Orders bots to follow a designated target (option 'chain' auto-links eligible spawned bots)", AccountStatus::Player, bot_command_follow) ||
 		bot_command_add("formation", "Sets how your bots space themselves traveling and fighting (compact/normal/spread)", AccountStatus::Player, bot_command_formation) ||
+		bot_command_add("groupup", "Groups all your spawned bots in this zone with you (no spawning/summoning); lists any that don't fit", AccountStatus::Player, bot_command_group_up) ||
 		bot_command_add("guard", "Orders bots to guard their current positions", AccountStatus::Player, bot_command_guard) ||
 		bot_command_add("healrotation", "Lists the available bot heal rotation [subcommands]", AccountStatus::Player, bot_command_heal_rotation) ||
 		bot_command_add("healrotationadaptivetargeting", "Enables or disables adaptive targeting within the heal rotation instance", AccountStatus::Player, bot_command_heal_rotation_adaptive_targeting) ||
