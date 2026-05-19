@@ -568,6 +568,33 @@ LOCK TABLES `bot_stances` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `bot_roles`
+-- (Theo-and-Co Phase 3 Group B: persisted per-bot role override, #bot role.
+--  Mirrors bot_stances. role_id maps to BotRole enum: 0 Tank 1 Healer 2 DPS
+--  3 CC 4 Support. No row = class-derived default.)
+--
+
+DROP TABLE IF EXISTS `bot_roles`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `bot_roles` (
+  `bot_id` int(11) unsigned NOT NULL DEFAULT '0',
+  `role_id` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`bot_id`),
+  CONSTRAINT `FK_bot_roles_1` FOREIGN KEY (`bot_id`) REFERENCES `bot_data` (`bot_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `bot_roles`
+--
+
+LOCK TABLES `bot_roles` WRITE;
+/*!40000 ALTER TABLE `bot_roles` DISABLE KEYS */;
+/*!40000 ALTER TABLE `bot_roles` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `bot_timers`
 --
 

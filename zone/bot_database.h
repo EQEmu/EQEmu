@@ -67,6 +67,11 @@ public:
 	bool SaveStance(Bot* b);
 	bool DeleteStance(const uint32 bot_id);
 
+	// Theo-and-Co Phase 3 Group B: persisted #bot role override (bot_roles)
+	bool LoadBotRole(Bot* b);
+	bool SaveBotRole(Bot* b);
+	bool DeleteBotRole(const uint32 bot_id);
+
 	bool LoadTimers(Bot* b);
 	bool SaveTimers(Bot* b);
 	bool DeleteTimers(const uint32 bot_id);

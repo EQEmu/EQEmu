@@ -1646,7 +1646,8 @@ bool Mob::Attack(Mob* other, int Hand, bool bRiposte, bool IsStrikethrough, bool
 			other->GetSpecialAbility(SpecialAbility::MeleeImmunity);
 		bool _is_ranged = (Hand == EQ::invslot::slotRange);
 		my_hit.base_damage = _melee_immune ? 0 :
-			ComputeBotMeleeDamage(GetClass(), GetLevel(), _is_ranged);
+			ComputeBotMeleeDamage(GetClass(), GetLevel(), _is_ranged,
+				static_cast<BotRole>(CastToBot()->GetEffectiveBotRole())); // Theo S32: #bot role-aware
 		// Owner Drill-Master dmg_out is applied GENERICALLY in
 		// Mob::CommonDamage for ALL bot damage (melee + spell + DoT),
 		// mirroring player.lua event_damage_given — NOT scoped here.
@@ -4247,6 +4248,37 @@ void Mob::CommonDamage(Mob* attacker, int64 &damage, const uint16 spell_id, cons
 				LogInfo("[Theo GroupA drill] bot [{}] dmg_out x[{}] -> dmg [{}] (generic; spell_id [{}])",
 					attacker->GetCleanName(), _dout, damage, spell_id);
 #endif
+			}
+		}
+
+		// Theo-and-Co Session 32 — pet/charm Drill-Master scaling (SURGICAL:
+		// players keep their per-zone player.lua hooks, bots keep the block
+		// above — both are left byte-identical, zero regression to the
+		// S31-verified bot path). Owner-controlled NPCs (summoned pets,
+		// charmed mobs, swarm pets, familiars; NOT mercs, NOT bots) inherit
+		// their ULTIMATE owner's dial with the same floor(dmg*(mult-1)) math.
+		// dmg_out = the attacker's owner dial; dmg_in = the victim's owner
+		// dial. Both scale `damage` pre-event/pre-apply so the NPC Death()
+		// pipeline, event payload and HP all see the scaled value (true
+		// parity with the bot dmg_out block). NPC::GetOwnerDrillMult is a
+		// cached read (throttled DB refresh <=1/6s; no per-hit DB).
+		if (attacker && attacker->IsNPC() && !attacker->IsBot() &&
+		    !attacker->IsMerc() && damage > 0) {
+			float _pdo = attacker->CastToNPC()->GetOwnerDrillMult("dmg_out_mult");
+			if (_pdo != 1.0f) {
+				int64 _pextra = static_cast<int64>(std::floor(static_cast<double>(damage) * (_pdo - 1.0)));
+				damage += _pextra;
+				if (damage < 0)
+					damage = 0;
+			}
+		}
+		if (IsNPC() && !IsBot() && !IsMerc() && damage > 0) {
+			float _pdi = CastToNPC()->GetOwnerDrillMult("dmg_in_mult");
+			if (_pdi != 1.0f) {
+				int64 _pdelta = static_cast<int64>(std::floor(static_cast<double>(damage) * (_pdi - 1.0)));
+				damage += _pdelta;
+				if (damage < 0)
+					damage = 0;
 			}
 		}
 		int old_hp_ratio = (int)GetHPRatio();

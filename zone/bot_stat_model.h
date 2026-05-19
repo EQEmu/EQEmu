@@ -52,6 +52,8 @@
 // =========================================================================
 
 #include <cstdint>
+#include <cctype>
+#include <string>
 
 struct BotCreationBaseStats {
 	uint8_t  class_;
@@ -261,6 +263,45 @@ inline BotRole GetBotRole(uint8_t class_) {
 	}
 }
 
+// =========================================================================
+// Theo-and-Co Phase 3 Group B — role name / validation / parsing helpers.
+// `#bot role` lets a player OVERRIDE the class-derived GetBotRole default.
+// The EFFECTIVE role (override if set, else GetBotRole) is what
+// ComputeBotStats / ComputeBotMeleeDamage and the AI consult — see the
+// (..., BotRole role) overloads below and Bot::GetEffectiveBotRole().
+// =========================================================================
+static const uint8_t kNumBotRoles = 5; // Tank, Healer, DPS, CC, Support
+
+inline const char* GetBotRoleName(BotRole r) {
+	switch (r) {
+		case BotRole::Tank:    return "Tank";
+		case BotRole::Healer:  return "Healer";
+		case BotRole::DPS:     return "DPS";
+		case BotRole::CC:      return "CC";
+		case BotRole::Support: return "Support";
+	}
+	return "DPS";
+}
+
+inline bool IsValidBotRole(int role_id) {
+	return role_id >= 0 && role_id < static_cast<int>(kNumBotRoles);
+}
+
+// Parse a user-supplied role token (case-insensitive word or 0-4 number).
+// Returns the BotRole id (0-4) or -1 if unrecognised. Friendly aliases keep
+// the Social buttons / chat forgiving.
+inline int ParseBotRole(std::string s) {
+	for (auto &ch : s) {
+		ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+	}
+	if (s == "tank"    || s == "0")                 return static_cast<int>(BotRole::Tank);
+	if (s == "healer"  || s == "heal"   || s == "1") return static_cast<int>(BotRole::Healer);
+	if (s == "dps"     || s == "damage" || s == "2") return static_cast<int>(BotRole::DPS);
+	if (s == "cc"      || s == "crowd"  || s == "3") return static_cast<int>(BotRole::CC);
+	if (s == "support" || s == "sup"    || s == "4") return static_cast<int>(BotRole::Support);
+	return -1;
+}
+
 // Class -> base material : from PHASE3_BOTS.md §2; gaps RESOLVED by Alex
 // 2026-05-16 — Monk=Leather analog, Rogue=Chain, Berserker=Plate. The §2
 // "+X" modifiers are realized numerically below (GetClassPlusMod), scheme
@@ -342,7 +383,10 @@ inline DefiantChestAnchor AnchorAtLevel(int material, uint8_t level) {
 // Tank's natural STR is not nerfed). sta/agi/cha are not in the §5.3 role
 // table -> x1.0. Invalid class/race (never for a real bot) falls back to
 // the EQ-neutral 75, never 0, so combat math is never silently zeroed.
-inline BotComputedStats ComputeBotStats(uint8_t class_, uint16_t race, uint8_t level) {
+// Group B: explicit-role overload. The 3-arg form (class-derived role) below
+// delegates here so existing callers are unaffected; Group B call sites pass
+// the bot's EFFECTIVE role (Bot::GetEffectiveBotRole()).
+inline BotComputedStats ComputeBotStats(uint8_t class_, uint16_t race, uint8_t level, BotRole role) {
 	const BotCreationBaseStats* cb = GetBotCreationBaseStats(class_, race);
 	int bSTR=cb?cb->str:75, bSTA=cb?cb->sta:75, bAGI=cb?cb->agi:75,
 	    bDEX=cb?cb->dex:75, bINT=cb?cb->intel:75, bWIS=cb?cb->wis:75, bCHA=cb?cb->cha:75;
@@ -371,7 +415,7 @@ inline BotComputedStats ComputeBotStats(uint8_t class_, uint16_t race, uint8_t l
 		if (pm.add_mana) gMANA += pm.frac * d.mana  * F;
 	}
 
-	RoleMultipliers rm = GetRoleMultipliers(GetBotRole(class_));
+	RoleMultipliers rm = GetRoleMultipliers(role);
 	gSTR*=rm.melee; gDEX*=rm.melee;
 	gINT*=rm.caster; gWIS*=rm.caster; gMANA*=rm.caster;
 	gHP*=rm.hp; gAC*=rm.ac;
@@ -387,6 +431,11 @@ inline BotComputedStats ComputeBotStats(uint8_t class_, uint16_t race, uint8_t l
 	out.cha=bCHA+(int)(gCHA+0.5f);
 	out.hp_bonus=(int)(gHP+0.5f); out.mana_bonus=(int)(gMANA+0.5f); out.ac_bonus=(int)(gAC+0.5f);
 	return out;
+}
+
+// Back-compat: class-derived role (unchanged behaviour for non-Group-B callers).
+inline BotComputedStats ComputeBotStats(uint8_t class_, uint16_t race, uint8_t level) {
+	return ComputeBotStats(class_, race, level, GetBotRole(class_));
 }
 
 // =========================================================================
@@ -430,7 +479,7 @@ inline WeaponArchetypeData GetWeaponArchetypeData(BotWeaponArchetype a) {
 // (accurate-for-L1, continuous — unlike armor which is flat-0 <20, a L1
 // player does swing a real weapon). 20/40/60 = Defiant S/O/I; slope->65;
 // x role melee multiplier. Never < 1.
-inline int ComputeBotMeleeDamage(uint8_t class_, uint8_t level, bool is_ranged) {
+inline int ComputeBotMeleeDamage(uint8_t class_, uint8_t level, bool is_ranged, BotRole role) {
 	BotWeaponArchetype a = is_ranged ? BotWeaponArchetype::Bow : GetBotWeaponArchetype(class_);
 	WeaponArchetypeData w = GetWeaponArchetypeData(a);
 	float dmg;
@@ -438,9 +487,14 @@ inline int ComputeBotMeleeDamage(uint8_t class_, uint8_t level, bool is_ranged) 
 	else if (level <= 40) dmg = w.s_dmg + (float)(w.o_dmg - w.s_dmg) * (level - 20) / 20.0f;
 	else if (level <= 60) dmg = w.o_dmg + (float)(w.i_dmg - w.o_dmg) * (level - 40) / 20.0f;
 	else                  dmg = w.i_dmg + ((float)(w.i_dmg - w.o_dmg) / 20.0f) * (level - 60);
-	dmg *= GetRoleMultipliers(GetBotRole(class_)).melee;
+	dmg *= GetRoleMultipliers(role).melee;
 	if (dmg < 1.0f) dmg = 1.0f;
 	return (int)(dmg + 0.5f);
+}
+
+// Back-compat: class-derived role (unchanged behaviour for non-Group-B callers).
+inline int ComputeBotMeleeDamage(uint8_t class_, uint8_t level, bool is_ranged) {
+	return ComputeBotMeleeDamage(class_, level, is_ranged, GetBotRole(class_));
 }
 
 inline int ComputeBotWeaponDelay(uint8_t class_, bool is_ranged) {

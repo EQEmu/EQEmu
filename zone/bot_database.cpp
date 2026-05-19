@@ -32,6 +32,7 @@
 #include "common/repositories/bot_pet_buffs_repository.h"
 #include "common/repositories/bot_pet_inventories_repository.h"
 #include "common/repositories/bot_pets_repository.h"
+#include "common/repositories/bot_roles_repository.h" // Theo-and-Co Phase 3 Group B: persisted #bot role override
 #include "common/repositories/bot_settings_repository.h"
 #include "common/repositories/bot_spell_casting_chances_repository.h"
 #include "common/repositories/bot_spells_entries_repository.h"
@@ -830,6 +831,70 @@ bool BotDatabase::DeleteStance(const uint32 bot_id)
 	}
 
 	BotStancesRepository::DeleteOne(database, bot_id);
+
+	return true;
+}
+
+// =========================================================================
+// Theo-and-Co Phase 3 Group B — persisted #bot role override (bot_roles).
+// Mirrors the stance load/save/delete trio. Semantics: the ABSENCE of a row
+// means "no override -> use the class-derived default" (LoadBotRole leaves
+// _botRoleOverride = -1 in that case; SaveBotRole deletes the row when the
+// override is cleared, so a cleared role never persists stale data).
+// =========================================================================
+bool BotDatabase::LoadBotRole(Bot* b)
+{
+	if (!b) {
+		return false;
+	}
+
+	b->SetDefaultBotRole(); // -1 (class-derived) unless a row exists below
+
+	const auto& l = BotRolesRepository::GetWhere(
+		database,
+		fmt::format(
+			"`bot_id` = {} LIMIT 1",
+			b->GetBotID()
+		)
+	);
+
+	if (l.empty()) {
+		return true; // no override persisted -> class-derived (not an error)
+	}
+
+	b->SetBotRoleOverride(static_cast<int8>(l.front().role_id));
+
+	return true;
+}
+
+bool BotDatabase::SaveBotRole(Bot* b)
+{
+	if (!b) {
+		return false;
+	}
+
+	// No override pinned -> make sure no stale row lingers so the bot stays
+	// class-derived (kept consistent with LoadBotRole's "empty == default").
+	if (b->GetBotRoleOverride() < 0) {
+		return DeleteBotRole(b->GetBotID());
+	}
+
+	return BotRolesRepository::ReplaceOne(
+		database,
+		BotRolesRepository::BotRoles{
+			.bot_id  = b->GetBotID(),
+			.role_id = static_cast<uint8_t>(b->GetBotRoleOverride())
+		}
+	);
+}
+
+bool BotDatabase::DeleteBotRole(const uint32 bot_id)
+{
+	if (!bot_id) {
+		return false;
+	}
+
+	BotRolesRepository::DeleteOne(database, bot_id);
 
 	return true;
 }

@@ -325,6 +325,7 @@ set(gm_command_sources
     bot_commands/bot_distance_ranged.cpp
     bot_commands/bot_find_aliases.cpp
     bot_commands/bot_follow.cpp
+    bot_commands/bot_formation.cpp
     bot_commands/bot_guard.cpp
     bot_commands/bot_heal_rotation.cpp
     bot_commands/bot_help.cpp
@@ -341,6 +342,7 @@ set(gm_command_sources
     bot_commands/bot_precombat.cpp
     bot_commands/bot_pull.cpp
     bot_commands/bot_release.cpp
+    bot_commands/bot_role.cpp
     bot_commands/bot_set_assistee.cpp
     bot_commands/bot_sit_hp_percent.cpp
     bot_commands/bot_sit_in_combat.cpp
@@ -362,6 +364,7 @@ set(gm_command_sources
     bot_commands/bot_spell_resist_limits.cpp
     bot_commands/bot_spell_target_count.cpp
     bot_commands/bot_spelltypes.cpp
+    bot_commands/bot_summon_group.cpp
     bot_commands/bot_suspend.cpp
     bot_commands/bot_taunt.cpp
     bot_commands/bot_timer.cpp

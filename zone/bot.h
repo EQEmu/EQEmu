@@ -367,6 +367,7 @@ public:
 	bool GetNeedsHateRedux(Mob *tar);
 	bool HasOrMayGetAggro(bool SitAggro, uint32 spell_id = 0);
 	void SetDefaultBotStance();
+	void SetDefaultBotRole(); // Theo-and-Co Phase 3 Group B: clear the #bot role override (back to class-derived)
 	void SetSurname(std::string_view bot_surname);
 	void SetTitle(std::string_view bot_title);
 	void SetSuffix(std::string_view bot_suffix);
@@ -796,6 +797,28 @@ public:
 	bool GetRangerAutoWeaponSelect() { return _rangerAutoWeaponSelect; }
 	uint8 GetBotStance() { return _botStance; }
 	static bool IsValidBotStance(uint8 stance);
+	// Theo-and-Co Phase 3 Group B — per-bot role override. _botRoleOverride
+	// is -1 when unset (bot uses its class-derived GetBotRole default); 0-4
+	// is a BotRole the player pinned via #bot role. GetEffectiveBotRole()
+	// (defined in bot.cpp where bot_stat_model.h is in scope) returns the
+	// effective BotRole value (override if set, else class default) and is
+	// the group-queryable API future Group C reactive AI uses ("does my
+	// group have a Tank?"). Persisted in bot_roles exactly like stance.
+	int8 GetBotRoleOverride() { return _botRoleOverride; }
+	uint8 GetEffectiveBotRole();
+	// Theo-and-Co Phase 3 Group B — formation (§1). Group-level mode, set by
+	// #bot formation across the actionable set; runtime-only (not persisted —
+	// it is a transient travel/combat shape, not a per-bot attribute). 0 =
+	// Normal (default), 1 = Compact, 2 = Spread. Honored by BOTH the combat
+	// positioning path (PlotBotPositionAroundTarget) and the follow/travel
+	// path (TryNonCombatMovementChecks) so bots don't fan out moving then
+	// snap together in combat.
+	uint8 GetBotFormation() { return _botFormation; }
+	void  SetBotFormation(uint8 mode) { _botFormation = (mode <= 2) ? mode : 0; }
+	static bool IsValidBotFormation(uint8 mode) { return mode <= 2; }
+	int  GetFormationSlotIndex();                                  // stable 0..N-1 among the owner's grouped bots
+	void GetFormationPolar(float &out_angle_rad, float &out_dist_frac); // (slot,mode) -> fan angle + band fraction
+	void GetFormationRingOffset(int member_count, float &out_dx, float &out_dy); // follow-path slot ring offset
 	uint8 GetChanceToCastBySpellType(uint16 spell_type);
 	bool IsGroupHealer() const { return m_CastingRoles.GroupHealer; }
 	bool IsGroupSlower() const { return m_CastingRoles.GroupSlower; }
@@ -913,6 +936,7 @@ public:
 	void SetBotOwner(Mob* botOwner) { this->_botOwner = botOwner; }
 	void SetRangerAutoWeaponSelect(bool enable) { GetClass() == Class::Ranger ? _rangerAutoWeaponSelect = enable : _rangerAutoWeaponSelect = false; }
 	void SetBotStance(uint8 stance_id) { _botStance = Stance::IsValid(stance_id) ? stance_id : Stance::Passive; }
+	void SetBotRoleOverride(int8 role_id) { _botRoleOverride = (role_id >= 0 && role_id <= 4) ? role_id : -1; } // -1 => class-derived
 	uint32 GetSpellRecastTimer(uint16 spell_id = 0);
 	bool CheckSpellRecastTimer(uint16 spell_id = 0);
 	uint32 GetSpellRecastRemainingTime(uint16 spell_id = 0);
@@ -1152,6 +1176,8 @@ private:
 	uint32 _lastZoneId;
 	bool _rangerAutoWeaponSelect;
 	uint8 _botStance;
+	int8 _botRoleOverride = -1; // Theo S32: -1 = class-derived; 0-4 = pinned BotRole (#bot role); persisted in bot_roles
+	uint8 _botFormation = 0;    // Theo S32: 0 Normal / 1 Compact / 2 Spread (#bot formation); runtime-only
 	unsigned int RestRegenHP;
 	unsigned int RestRegenMana;
 	unsigned int RestRegenEndurance;
