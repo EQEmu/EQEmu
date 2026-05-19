@@ -692,7 +692,7 @@ public:
 	float GetOwnerDrillMult(const std::string& bucket_key); // Theo Group A §7: owner Drill-Master dmg mult (CACHED — zero DB in damage path)
 	void RefreshOwnerDrillMults(); // Theo Group A §7: refresh cached owner mults (called from the 6s tic, NOT per hit)
 	int  GetEarnedAALevel(); // Theo Phase 3 Group C (S1): effective AA level for LoadAAs — -1 (no AA) below 51 / unearned, else owner earned value clamped to <= real level (CACHED — zero DB in LoadAAs)
-	void RefreshOwnerEarnedAA(); // Theo Phase 3 Group C (S1): refresh the cached owner earned-AA value (called from the 6s tic + spawn, NOT per hit); recomputes the bot live on change
+	bool RefreshOwnerEarnedAA(); // Theo Phase 3 Group C (S1): refresh the cached owner earned-AA value (called from the 6s tic + spawn, NOT per hit). RETURNS true if the cached value changed so the caller can re-derive the bot live (CalcBotStats(false))
 
 	// Bot Equipment & Inventory Class Methods
 	void BotTradeAddItem(const EQ::ItemInstance* inst, uint16 slot_id, bool save_to_database = true);
