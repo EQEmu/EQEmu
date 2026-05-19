@@ -274,6 +274,16 @@ public:
 	void	TryDepopTargetLockedPets(Mob* current_target);
 	void	PetOnSpawn(NewSpawn_Struct* ns);
 
+	// Theo-and-Co S32: pet/charm Drill-Master scaling. The Drill dial that
+	// scales a player's/bot's own damage also scales damage by/against the
+	// entities under that owner's control (summoned pets, charmed mobs, swarm
+	// pets, familiars). Returned value is the ULTIMATE owner's char-scoped
+	// dmg_*_mult, resolved via GetUltimateOwner() and CACHED — the damage path
+	// never touches the DB (refresh throttled to <=1 / 6s; Group A per-hit-DB
+	// lesson / Group B handoff #2).
+	float	GetOwnerDrillMult(const std::string &bucket_key);
+	void	RefreshOwnerDrillMults();
+
 	void	SignalNPC(int _signal_id);
 	void	SendPayload(int payload_id, std::string payload_value = std::string());
 
@@ -800,4 +810,12 @@ private:
 	bool                p_depop;
 	bool                m_record_loot_stats;
 	std::vector<uint32> m_rolled_items = {};
+
+	// Theo-and-Co S32: cached ultimate-owner Drill-Master mults for this NPC
+	// when it is an owner-controlled pet/charm/swarm/familiar. Refreshed at
+	// most once per 6s per controlled NPC (the gate below); the damage path
+	// only ever reads the cached floats — zero per-hit DB.
+	float               m_drill_owner_dmg_in_mult  = 1.0f;
+	float               m_drill_owner_dmg_out_mult = 1.0f;
+	uint32              m_drill_owner_refresh_at    = 0; // Timer::GetCurrentTime() gate; 0 => prime on first use
 };

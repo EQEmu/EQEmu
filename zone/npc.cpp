@@ -19,6 +19,7 @@
 
 #include "common/bodytypes.h"
 #include "common/classes.h"
+#include "common/data_bucket.h" // Theo S32: pet/charm Drill-Master scaling (owner dial lookup)
 #include "common/data_verification.h"
 #include "common/emu_versions.h"
 #include "common/events/player_event_logs.h"
@@ -48,6 +49,7 @@
 #include "zone/zone.h"
 
 #include <cstdio>
+#include <cstdlib> // Theo S32: atof() in NPC::RefreshOwnerDrillMults (pet/charm Drill scaling)
 #include <string>
 #include <utility>
 
@@ -621,6 +623,12 @@ bool NPC::Process()
 		if (m_clear_wearchange_cache_timer.Check()) {
 			m_last_seen_wearchange.clear();
 		}
+
+		// Theo S32: keep this controlled pet/charm's cached owner Drill mults
+		// fresh even while it's idle / out of combat (combat reads refresh via
+		// the same throttled path). Non-controlled wild mobs early-out for
+		// near-zero cost; the DB read stays throttled to <=1 / 6s.
+		(void) GetOwnerDrillMult("dmg_in_mult");
 
 		if (parse->HasQuestSub(GetNPCTypeID(), EVENT_TICK)) {
 			parse->EventNPC(EVENT_TICK, this, nullptr, "", 0);
@@ -2683,6 +2691,93 @@ uint32 NPC::GetSwarmOwner()
 		return GetSwarmInfo()->owner_id;
 	}
 	return 0;
+}
+
+// =========================================================================
+// Theo-and-Co Session 32 — pet/charm Drill-Master scaling.
+// The Drill Master dial (Drill_Master_Auren.pl -> char-scoped buckets
+// dmg_in_mult / dmg_out_mult) already scales a player's own damage (per-zone
+// player.lua) and a bot's damage (Group A engine, owner-based). It did NOT
+// scale damage by/against the entities under an owner's control (summoned
+// pets, charmed mobs, swarm pets, familiars). These two functions close that
+// gap for BOTH player- and bot-owned controlled NPCs, with the SAME math the
+// player/bot paths use: dmg += floor(dmg * (mult - 1)).
+//
+// Resolution: GetUltimateOwner() walks the control chain (pet->client,
+// pet->bot->client, swarm->owner->client, charm->charmer->...). The ultimate
+// owner is the Client whose char-scoped dial applies. Mercs are excluded by
+// design (Alex S32; callers also gate on !IsMerc()).
+//
+// Performance (Group A's #1 lesson / Group B handoff #2): the damage path
+// must NEVER do a synchronous DB read per hit. The mult is cached on the NPC
+// and the DB read is throttled to at most once per 6s per controlled NPC
+// (m_drill_owner_refresh_at), and skipped entirely for the common case of a
+// non-controlled wild mob (the early-out below).
+// =========================================================================
+float NPC::GetOwnerDrillMult(const std::string &bucket_key)
+{
+	// Cheap early-out: only owner-controlled NPCs (a normal/charmed pet has
+	// an owner id; a swarm pet has a swarm owner) ever scale. Every wild mob
+	// in the zone passes through here on every combat round, so this must be
+	// near-free: two integer compares, no entity lookup, no DB.
+	if (GetOwnerID() == 0 && GetSwarmOwner() == 0) {
+		return 1.0f;
+	}
+
+	const uint32 now = Timer::GetCurrentTime();
+	if (now >= m_drill_owner_refresh_at) { // 0 on first use => primes immediately
+		RefreshOwnerDrillMults();
+		m_drill_owner_refresh_at = now + 6000; // <=1 DB read / 6s / controlled NPC
+	}
+
+	return (bucket_key == "dmg_out_mult") ? m_drill_owner_dmg_out_mult
+	                                      : m_drill_owner_dmg_in_mult;
+}
+
+void NPC::RefreshOwnerDrillMults()
+{
+	m_drill_owner_dmg_in_mult  = 1.0f;
+	m_drill_owner_dmg_out_mult = 1.0f;
+
+	if (IsMerc()) { // excluded by design (Alex S32); defensive
+		return;
+	}
+
+	Mob *uo = GetUltimateOwner(); // pet->client, pet->bot->client, swarm->..., charm->...
+	if (!uo || uo == this) {
+		return; // not actually controlled
+	}
+
+	if (uo->IsClient()) {
+		DataBucketKey k = uo->GetScopedBucketKeys(); // character-id scoped
+
+		k.key = "dmg_in_mult";
+		auto b_in = DataBucket::GetData(&database, k);
+		if (!b_in.value.empty()) {
+			float v = static_cast<float>(atof(b_in.value.c_str()));
+			if (v > 0.0f) {
+				m_drill_owner_dmg_in_mult = v;
+			}
+		}
+
+		k.key = "dmg_out_mult";
+		auto b_out = DataBucket::GetData(&database, k);
+		if (!b_out.value.empty()) {
+			float v = static_cast<float>(atof(b_out.value.c_str()));
+			if (v > 0.0f) {
+				m_drill_owner_dmg_out_mult = v;
+			}
+		}
+	} else if (uo->IsBot()) {
+		// GetUltimateOwner normally resolves a bot's pet all the way to the
+		// owning Client (Bot::HasOwner()/GetOwner() -> the Client), so this
+		// branch is defensive. If a bot is ever the ultimate owner, reuse its
+		// already-cached Group A dial (zero DB).
+		m_drill_owner_dmg_in_mult  = uo->CastToBot()->GetOwnerDrillMult("dmg_in_mult");
+		m_drill_owner_dmg_out_mult = uo->CastToBot()->GetOwnerDrillMult("dmg_out_mult");
+	}
+	// else: ultimate owner is a wild NPC (e.g. an NPC-charmed pet) -> no
+	// player/bot dial -> stays 1.0 (correct).
 }
 
 uint32 NPC::GetSwarmTarget()

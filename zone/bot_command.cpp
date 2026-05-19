@@ -108,6 +108,7 @@ int bot_command_init(void)
 		bot_command_add("botstopmeleelevel", "Sets the level a caster or spell-casting fighter bot will stop melee combat", AccountStatus::Player, bot_command_stop_melee_level) ||
 		bot_command_add("botsuffix", "Sets a bots suffix", AccountStatus::Player, bot_command_suffix) ||
 		bot_command_add("botsummon", "Summons bot(s) to your location", AccountStatus::Player, bot_command_summon) ||
+		bot_command_add("summongroup", "Spawns any of your bots that aren't up (you + 5), groups them with you, and summons them", AccountStatus::Player, bot_command_summon_group) ||
 		bot_command_add("botsurname", "Sets a bots surname (last name)", AccountStatus::Player, bot_command_surname) ||
 		bot_command_add("bottattoo", "Changes the Drakkin tattoo of a bot", AccountStatus::Player, bot_command_tattoo) ||
 		bot_command_add("bottogglehelm", "Toggles the helm visibility of a bot between shown and hidden", AccountStatus::Player, bot_command_toggle_helm) ||
@@ -126,6 +127,7 @@ int bot_command_init(void)
 		bot_command_add("enforcespellsettings", "Toggles your Bot to cast only spells in their spell settings list.", AccountStatus::Player, bot_command_enforce_spell_list) ||
 		bot_command_add("findaliases", "Find available aliases for a bot command", AccountStatus::Player, bot_command_find_aliases) ||
 		bot_command_add("follow", "Orders bots to follow a designated target (option 'chain' auto-links eligible spawned bots)", AccountStatus::Player, bot_command_follow) ||
+		bot_command_add("formation", "Sets how your bots space themselves traveling and fighting (compact/normal/spread)", AccountStatus::Player, bot_command_formation) ||
 		bot_command_add("guard", "Orders bots to guard their current positions", AccountStatus::Player, bot_command_guard) ||
 		bot_command_add("healrotation", "Lists the available bot heal rotation [subcommands]", AccountStatus::Player, bot_command_heal_rotation) ||
 		bot_command_add("healrotationadaptivetargeting", "Enables or disables adaptive targeting within the heal rotation instance", AccountStatus::Player, bot_command_heal_rotation_adaptive_targeting) ||
@@ -169,6 +171,7 @@ int bot_command_init(void)
 		bot_command_add("precombat", "Sets flag used to determine pre-combat behavior", AccountStatus::Player, bot_command_precombat) ||
 		bot_command_add("pull", "Orders a designated bot to 'pull' an enemy", AccountStatus::Player, bot_command_pull) ||
 		bot_command_add("release", "Releases a suspended bot's AI processing (with hate list wipe)", AccountStatus::Player, bot_command_release) ||
+		bot_command_add("role", "Sets a bot's role (Tank/Healer/DPS/CC/Support); drives its stat focus and combat behavior", AccountStatus::Player, bot_command_role) ||
 		bot_command_add("setassistee", "Sets your target to be the person your bots assist. Bots will always assist you before others", AccountStatus::Player, bot_command_set_assistee) ||
 		bot_command_add("sithppercent", "HP threshold for a bot to start sitting in combat if allowed", AccountStatus::Player, bot_command_sit_hp_percent) ||
 		bot_command_add("sitincombat", "Toggles whether or a not a bot will attempt to med or sit to heal in combat", AccountStatus::Player, bot_command_sit_in_combat) ||

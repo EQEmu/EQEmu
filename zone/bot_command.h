@@ -1059,6 +1059,7 @@ void bot_command_default_settings(Client* c, const Seperator* sep);
 void bot_command_depart(Client *c, const Seperator *sep);
 void bot_command_find_aliases(Client *c, const Seperator *sep);
 void bot_command_follow(Client *c, const Seperator *sep);
+void bot_command_formation(Client *c, const Seperator *sep); // Theo-and-Co Phase 3 Group B
 void bot_command_guard(Client *c, const Seperator *sep);
 void bot_command_heal_rotation(Client *c, const Seperator *sep);
 void bot_command_help(Client *c, const Seperator *sep);
@@ -1074,6 +1075,7 @@ void bot_command_pickpocket(Client* c, const Seperator* sep);
 void bot_command_precombat(Client* c, const Seperator* sep);
 void bot_command_pull(Client *c, const Seperator *sep);
 void bot_command_release(Client *c, const Seperator *sep);
+void bot_command_role(Client *c, const Seperator *sep); // Theo-and-Co Phase 3 Group B
 void bot_command_sit_hp_percent(Client* c, const Seperator* sep);
 void bot_command_sit_in_combat(Client* c, const Seperator* sep);
 void bot_command_sit_mana_percent(Client* c, const Seperator* sep);
@@ -1133,6 +1135,7 @@ void bot_command_stance(Client *c, const Seperator *sep);
 void bot_command_stop_melee_level(Client *c, const Seperator *sep);
 void bot_command_suffix(Client *c, const Seperator *sep);
 void bot_command_summon(Client *c, const Seperator *sep);
+void bot_command_summon_group(Client *c, const Seperator *sep); // Theo-and-Co Phase 3 Group B
 void bot_command_surname(Client *c, const Seperator *sep);
 void bot_command_tattoo(Client *c, const Seperator *sep);
 void bot_command_title(Client *c, const Seperator *sep);

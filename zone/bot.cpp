@@ -30,6 +30,8 @@
 #include "zone/quest_parser_collection.h"
 #include "zone/raids.h"
 
+#include <cmath> // Theo-and-Co Phase 3 Group B: formation slot trig (unit-safe world atan2/cos/sin)
+
 /*
 TODO bot rewrite:
 --command cleanup remaining commands (move to new help window, make more descriptive)
@@ -211,6 +213,19 @@ Bot::Bot(
 			Chat::White,
 			fmt::format(
 				"Could not locate stance for '{}'.",
+				GetCleanName()
+			).c_str()
+		);
+	}
+
+	// Theo-and-Co Phase 3 Group B: load the persisted #bot role override
+	// (bot_roles table). Absent row => stays the class-derived default
+	// (_botRoleOverride is -1 from its member initialiser). Mirrors stance.
+	if (!database.botdb.LoadBotRole(this) && bot_owner) {
+		bot_owner->Message(
+			Chat::White,
+			fmt::format(
+				"Failed to load role for '{}'.",
 				GetCleanName()
 			).c_str()
 		);
@@ -1420,6 +1435,7 @@ bool Bot::Save()
 	database.botdb.SaveBuffs(this);
 	database.botdb.SaveTimers(this);
 	database.botdb.SaveStance(this);
+	database.botdb.SaveBotRole(this); // Theo-and-Co Phase 3 Group B: persist #bot role override
 	database.botdb.SaveBotSettings(this);
 
 	if (RuleB(Bots, AllowBotBlockedBuffs)) {
@@ -2515,6 +2531,17 @@ bool Bot::TryNonCombatMovementChecks(Client* bot_owner, const Mob* follow_mob) {
 		}
 		else {
 			Goal = follow_mob->GetPosition();
+			// Theo-and-Co Phase 3 Group B §1 — formation on the FOLLOW path:
+			// offset each grouped bot onto a slot ring around the owner so
+			// they don't all path to the identical point. Compact keeps the
+			// ring tight (this is "suppress follow-mode spread during
+			// travel"); Spread widens it. Unit-safe world ring.
+			Group* f_g  = GetGroup();
+			int    f_cn = f_g ? std::max<int>(1, static_cast<int>(f_g->GroupCount()) - 1) : 1;
+			float  f_dx = 0.0f, f_dy = 0.0f;
+			GetFormationRingOffset(f_cn, f_dx, f_dy);
+			Goal.x += f_dx;
+			Goal.y += f_dy;
 		}
 
 		float destination_distance = DistanceSquared(GetPosition(), Goal);
@@ -3303,6 +3330,15 @@ bool Bot::ReturningFlagChecks(Client* bot_owner, Mob* leash_owner, float fm_dist
 			}
 
 			Goal = follow_mob->GetPosition();
+			// Theo-and-Co Phase 3 Group B §1 — formation on this follow path
+			// too (same slot ring as TryNonCombatMovementChecks) so bots
+			// don't stack while traveling; Compact stays tight.
+			Group* f_g  = GetGroup();
+			int    f_cn = f_g ? std::max<int>(1, static_cast<int>(f_g->GroupCount()) - 1) : 1;
+			float  f_dx = 0.0f, f_dy = 0.0f;
+			GetFormationRingOffset(f_cn, f_dx, f_dy);
+			Goal.x += f_dx;
+			Goal.y += f_dy;
 		}
 
 		RunTo(Goal.x, Goal.y, Goal.z);
@@ -6376,7 +6412,7 @@ void Bot::CalcBonuses() {
 		// itembonuses stays zeroed except the formula HP/Mana/AC set below.
 	}
 	{
-		BotComputedStats _cs = ComputeBotStats(GetClass(), GetBaseRace(), GetLevel());
+		BotComputedStats _cs = ComputeBotStats(GetClass(), GetBaseRace(), GetLevel(), static_cast<BotRole>(GetEffectiveBotRole()));
 		STR = _cs.str; STA = _cs.sta; AGI = _cs.agi; DEX = _cs.dex;
 		INT = _cs.intel; WIS = _cs.wis; CHA = _cs.cha;
 		itembonuses.HP   = _cs.hp_bonus;
@@ -6401,7 +6437,7 @@ void Bot::CalcBonuses() {
 	// Non-tank bots unchanged. (Shield-block PROC still also needs a
 	// ShieldBlock bonus bots lack w/o AA — bounded by the deferred AA work,
 	// not this fix; Bash, the main active tank shield ability, works.)
-	if (GetBotRole(GetClass()) == BotRole::Tank) {
+	if (static_cast<BotRole>(GetEffectiveBotRole()) == BotRole::Tank) {
 		SetShieldEquipped(true);
 	}
 	// CalcItemBonuses/CalcHeroicBonuses ARE called above (into scratch) for
@@ -8039,6 +8075,96 @@ bool Bot::HasOrMayGetAggro(bool sit_aggro, uint32 spell_id) {
 
 void Bot::SetDefaultBotStance() {
 	_botStance = GetClass() == Class::Warrior ? Stance::Aggressive : Stance::Balanced;
+}
+
+void Bot::SetDefaultBotRole() {
+	_botRoleOverride = -1; // -1 => class-derived (bot_stat_model.h GetBotRole)
+}
+
+// Theo-and-Co Phase 3 Group B — the bot's EFFECTIVE role: the player's
+// #bot role override if one is pinned, else the class-derived default
+// (bot_stat_model.h GetBotRole). Returned as the BotRole numeric so bot.h
+// stays decoupled from bot_stat_model.h (callers cast to BotRole). This is
+// the single group-queryable role accessor future Group C reactive AI
+// ("Mage uses a tank pet if the group has no Tank") builds on.
+uint8 Bot::GetEffectiveBotRole() {
+	if (_botRoleOverride >= 0 && _botRoleOverride <= 4) {
+		return static_cast<uint8>(_botRoleOverride);
+	}
+	return static_cast<uint8>(GetBotRole(GetClass()));
+}
+
+// =========================================================================
+// Theo-and-Co Phase 3 Group B — formation §1.
+// All math below is pure WORLD-frame (atan2/cos/sin on x/y) — deliberately
+// NO EQ-heading conversion (the codebase mixes /256 and /512 heading
+// conventions; re-deriving it is the feedback_axis_parity_full_math trap).
+// =========================================================================
+
+// Stable 0..N-1 slot for this bot among its owner's grouped bots (members[]
+// order is stable for the session). No group -> slot 0.
+int Bot::GetFormationSlotIndex() {
+	Group* g = GetGroup();
+	if (!g) {
+		return 0;
+	}
+	int idx = 0;
+	for (int i = 0; i < MAX_GROUP_MEMBERS; ++i) {
+		Mob* m = g->members[i];
+		if (!m || !m->IsBot()) {
+			continue;
+		}
+		if (m == this) {
+			return idx;
+		}
+		++idx;
+	}
+	return 0;
+}
+
+// COMBAT fan: out_angle_rad is added to a base axis the caller computes from
+// world coords; out_dist_frac is where within the caller's [min..max] band
+// to sit. Compact = tight & near, Normal = moderate, Spread = wide & far.
+void Bot::GetFormationPolar(float &out_angle_rad, float &out_dist_frac) {
+	int slot = GetFormationSlotIndex();
+	float arc_deg, step_deg, frac;
+	switch (GetBotFormation()) {
+		case 1: arc_deg = 12.0f; step_deg =  9.0f; frac = 0.05f; break; // Compact
+		case 2: arc_deg = 85.0f; step_deg = 34.0f; frac = 0.95f; break; // Spread (>=150 deg total @3+ slots)
+		default: arc_deg = 45.0f; step_deg = 20.0f; frac = 0.50f; break; // Normal
+	}
+	// slot 0 -> 0; 1 -> +step; 2 -> -step; 3 -> +2*step; ... clamped +/-arc.
+	float sign = (slot % 2 == 0) ? 1.0f : -1.0f;
+	int   ring = (slot + 1) / 2;
+	float deg  = sign * step_deg * static_cast<float>(ring);
+	if (deg >  arc_deg) deg =  arc_deg;
+	if (deg < -arc_deg) deg = -arc_deg;
+	out_angle_rad = deg * (3.14159265358979323846f / 180.0f);
+	out_dist_frac = frac;
+}
+
+// FOLLOW/travel: a world-space slot offset on a ring around the owner so
+// grouped bots don't all path to the identical point. Compact keeps the
+// ring tight (this is what "suppress follow-mode spread during travel"
+// means in §1); Spread widens it.
+void Bot::GetFormationRingOffset(int member_count, float &out_dx, float &out_dy) {
+	out_dx = 0.0f;
+	out_dy = 0.0f;
+	if (member_count < 1) {
+		member_count = 1;
+	}
+	float radius;
+	switch (GetBotFormation()) {
+		case 1: radius =  6.0f; break; // Compact — tight cluster (~5-8u)
+		case 2: radius = 26.0f; break; // Spread — wide ring (~25-30u)
+		default: radius = 12.0f; break; // Normal — offset ring (~10-12u)
+	}
+	int slot = GetFormationSlotIndex();
+	// +0.5 so slot 0 isn't dead on the owner's exact position.
+	float ang = (2.0f * 3.14159265358979323846f) *
+	            (static_cast<float>(slot) + 0.5f) / static_cast<float>(member_count);
+	out_dx = radius * std::cos(ang);
+	out_dy = radius * std::sin(ang);
 }
 
 void Bot::RaidGroupSay(const char* msg, ...) {
@@ -12335,6 +12461,61 @@ bool Bot::PlotBotPositionAroundTarget(const FindPositionInput& input) {
 		const float offset                      = GetZOffset();
 		const uint16 max_iterations_allowed     = 50;
 		uint16 counter                          = 0;
+
+		// Theo-and-Co Phase 3 Group B §1 — try this bot's FORMATION SLOT
+		// first so grouped bots fan out by mode (compact/normal/spread)
+		// instead of random-stacking. It is validated against EXACTLY the
+		// same constraints as the loop below (Z-fix, band, front/behind,
+		// LoS); on any failure we fall straight through to the original
+		// random search, so this never regresses "can't find a spot".
+		// DoCombatPositioning still decides WHEN to move (cast cadence
+		// unchanged — handoff #2 caution). Base axis = target -> owner side
+		// (pure world atan2; no EQ-heading unit dependence).
+		{
+			float f_ang = 0.0f, f_frac = 0.5f;
+			GetFormationPolar(f_ang, f_frac);
+
+			Mob* f_owner = GetBotOwner();
+			float f_ox   = f_owner ? f_owner->GetX() : GetX();
+			float f_oy   = f_owner ? f_owner->GetY() : GetY();
+			float f_base = std::atan2(f_oy - tar_position.y, f_ox - tar_position.x);
+
+			float f_lo   = std::max(input.distance_min, input.distance_max * 0.75f);
+			float f_dist = input.distance_min + f_frac * (input.distance_max - input.distance_min);
+			if (f_dist < f_lo)                 f_dist = f_lo;
+			if (f_dist > input.distance_max)   f_dist = input.distance_max;
+
+			glm::vec3 f_goal(
+				tar_position.x + f_dist * std::cos(f_base + f_ang),
+				tar_position.y + f_dist * std::sin(f_base + f_ang),
+				input.tar->GetZ()
+			);
+
+			float f_z = GetFixedZ(f_goal);
+			if (f_z != BEST_Z_INVALID) {
+				f_goal.z = f_z;
+
+				float f_d = Distance(input.tar->GetPosition(), f_goal);
+				bool  f_ok = (f_d <= input.distance_max && f_d >= f_lo);
+
+				if (f_ok && input.front_only && !InFrontMob(input.tar, f_goal.x, f_goal.y)) {
+					f_ok = false;
+				}
+				else if (f_ok && input.behind_only && !BehindMob(input.tar, f_goal.x, f_goal.y)) {
+					f_ok = false;
+				}
+
+				if (f_ok && !input.bypass_los && CastToBot()->RequiresLoSForPositioning() &&
+				    !CheckPositioningLosFN(input.tar, f_goal.x, f_goal.y, f_goal.z)) {
+					f_ok = false;
+				}
+
+				if (f_ok) {
+					RunToGoalWithJitter(f_goal);
+					return true;
+				}
+			}
+		}
 
 		while (counter < max_iterations_allowed) {
 			temp_goal.x     = tar_position.x + zone->random.Real(-input.distance_max, input.distance_max);
