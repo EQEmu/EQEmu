@@ -1060,6 +1060,7 @@ void bot_command_depart(Client *c, const Seperator *sep);
 void bot_command_find_aliases(Client *c, const Seperator *sep);
 void bot_command_follow(Client *c, const Seperator *sep);
 void bot_command_formation(Client *c, const Seperator *sep); // Theo-and-Co Phase 3 Group B
+void bot_command_group_up(Client *c, const Seperator *sep); // Theo-and-Co Phase 3 Group B
 void bot_command_guard(Client *c, const Seperator *sep);
 void bot_command_heal_rotation(Client *c, const Seperator *sep);
 void bot_command_help(Client *c, const Seperator *sep);
