@@ -15,6 +15,7 @@
 	You should have received a copy of the GNU General Public License
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
+#include "zone/bot.h" // Theo S32: list.cpp uses the full Bot type (GetName/GetBotID/GetPosition) but never included bot.h — it only compiled by luck via a UNITY_BUILD batch-mate. Make it self-sufficient so unity re-batching can't break it.
 #include "zone/client.h"
 #include "zone/command.h"
 #include "zone/corpse.h"
