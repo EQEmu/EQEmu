@@ -80,7 +80,7 @@ void bot_command_formation(Client *c, const Seperator *sep)
 	}
 
 	// arg[1] is the verb; the actionable selector starts at arg[2]
-	// (mirrors bot_hold.cpp / bot_role.cpp arg layout).
+	// (mirrors bot_hold.cpp arg layout).
 	const int ab_mask  = (ActionableBots::ABM_Target | ActionableBots::ABM_Type2);
 	const int ab_arg   = 2;
 	const int name_arg = 3;
