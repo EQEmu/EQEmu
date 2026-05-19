@@ -218,19 +218,6 @@ Bot::Bot(
 		);
 	}
 
-	// Theo-and-Co Phase 3 Group B: load the persisted #bot role override
-	// (bot_roles table). Absent row => stays the class-derived default
-	// (_botRoleOverride is -1 from its member initialiser). Mirrors stance.
-	if (!database.botdb.LoadBotRole(this) && bot_owner) {
-		bot_owner->Message(
-			Chat::White,
-			fmt::format(
-				"Failed to load role for '{}'.",
-				GetCleanName()
-			).c_str()
-		);
-	}
-
 	SetTaunting((GetClass() == Class::Warrior || GetClass() == Class::Paladin || GetClass() == Class::ShadowKnight) && (GetBotStance() == Stance::Aggressive));
 	SetPauseAI(false);
 
@@ -1323,6 +1310,19 @@ int32 Bot::GenerateBaseHitPoints() {
 void Bot::LoadAAs() {
 	aa_ranks.clear();
 
+	// Theo-and-Co Phase 3 Group C (S1) — bots no longer auto-receive every
+	// level-eligible AA for free. The gate level is the EARNED AA level
+	// (Bot::GetEarnedAALevel): -1 (=> NO AA at all) below level 51 or before
+	// any earned progress; otherwise the owner's earned value, hard-capped at
+	// the bot's REAL level (same-level-player parity, never beyond). Stock
+	// behaviour gated by GetLevel() directly, which auto-granted ~62 AA ranks
+	// to a level-20 bot (a real level-20 player has 0 — players cannot earn
+	// AA below 51, engine hard-gate exp.cpp:851) — the verified root cause of
+	// the low-level full-bot-group steamroll. See project_bot_ai_baseline.md
+	// §9 / project_bot_aa_progression.md. The expansion/class/race gate
+	// (CanUseAlternateAdvancementRank) is deliberately unchanged.
+	const int eff_aa_level = GetEarnedAALevel();
+
 	int id = 0;
 	int points = 0;
 	auto iter = zone->aa_abilities.begin();
@@ -1340,13 +1340,13 @@ void Bot::LoadAAs() {
 
 		AA::Rank *current = ability->first;
 
-		if (current->level_req > GetLevel()) {
+		if (current->level_req > eff_aa_level) {
 			++iter;
 			continue;
 		}
 
 		while(current) {
-			if (current->level_req > GetLevel() || !CanUseAlternateAdvancementRank(current)) {
+			if (current->level_req > eff_aa_level || !CanUseAlternateAdvancementRank(current)) {
 				current = nullptr;
 			} else {
 				current = current->next;
@@ -1435,7 +1435,6 @@ bool Bot::Save()
 	database.botdb.SaveBuffs(this);
 	database.botdb.SaveTimers(this);
 	database.botdb.SaveStance(this);
-	database.botdb.SaveBotRole(this); // Theo-and-Co Phase 3 Group B: persist #bot role override
 	database.botdb.SaveBotSettings(this);
 
 	if (RuleB(Bots, AllowBotBlockedBuffs)) {
@@ -1701,6 +1700,13 @@ bool Bot::Process()
 		BuffProcess();
 		CalcRestState();
 		RefreshOwnerDrillMults(); // Theo Group A §7: refresh cached owner mults here (6s), NOT per hit (was a per-hit synchronous DB query)
+		// Theo Phase 3 Group C (S1): refresh the cached owner earned-AA value
+		// on the same 6s tic (NOT per hit). On change, re-derive the bot LIVE
+		// — CalcBotStats(false) re-runs LoadAAs (now earned-gated) + bonuses,
+		// no respawn (the proven ^role precedent).
+		if (RefreshOwnerEarnedAA()) {
+			CalcBotStats(false);
+		}
 
 		if (currently_fleeing || IsFeared()) {
 			ProcessFlee();
@@ -3685,6 +3691,14 @@ bool Bot::Spawn(Client* botCharacterOwner) {
 		ClearDataBucketCache();
 		LoadDataBucketsCache();
 		RefreshOwnerDrillMults(); // Theo Group A §7: prime cached owner mults at spawn (then refreshed on the 6s tic; never per-hit)
+		// Theo Phase 3 Group C (S1): prime the cached owner earned-AA value at
+		// spawn. The ctor LoadAAs() (bot.cpp:297) ran with the -1 member
+		// initializer (zero AA — the safe default). If the owner has earned
+		// progress, this flips the cache and re-derives the bot now so its AA
+		// is correct at spawn, not only after the first 6s tic.
+		if (RefreshOwnerEarnedAA()) {
+			CalcBotStats(false);
+		}
 		LoadBotSpellSettings();
 		if (!AI_AddBotSpells(GetBotSpellID())) {
 			GetBotOwner()->CastToClient()->Message(
@@ -8077,20 +8091,13 @@ void Bot::SetDefaultBotStance() {
 	_botStance = GetClass() == Class::Warrior ? Stance::Aggressive : Stance::Balanced;
 }
 
-void Bot::SetDefaultBotRole() {
-	_botRoleOverride = -1; // -1 => class-derived (bot_stat_model.h GetBotRole)
-}
-
-// Theo-and-Co Phase 3 Group B — the bot's EFFECTIVE role: the player's
-// #bot role override if one is pinned, else the class-derived default
-// (bot_stat_model.h GetBotRole). Returned as the BotRole numeric so bot.h
-// stays decoupled from bot_stat_model.h (callers cast to BotRole). This is
-// the single group-queryable role accessor future Group C reactive AI
-// ("Mage uses a tank pet if the group has no Tank") builds on.
+// Theo-and-Co Phase 3 Group C (S1) — the bot's role. The player-facing role
+// OVERRIDE (#bot role / _botRoleOverride / bot_roles) was REMOVED; role is
+// now purely class-derived (bot_stat_model.h GetBotRole). Kept as a thin
+// wrapper because the Group A stat model and the group-queryable role surface
+// consume it — it simply never returns an override now. Returned as the
+// BotRole numeric so bot.h stays decoupled from bot_stat_model.h.
 uint8 Bot::GetEffectiveBotRole() {
-	if (_botRoleOverride >= 0 && _botRoleOverride <= 4) {
-		return static_cast<uint8>(_botRoleOverride);
-	}
 	return static_cast<uint8>(GetBotRole(GetClass()));
 }
 
@@ -8520,6 +8527,70 @@ void Bot::RefreshOwnerDrillMults() {
 			m_drill_dmg_out_mult = v;
 		}
 	}
+}
+
+// Theo-and-Co Phase 3 Group C (S1) — earned-AA gate level.
+// Players cannot earn AA below level 51 (engine hard-gate exp.cpp:851,
+// literal comment "turn off aa exp if they drop below 51"). Bots mirror
+// that EXACTLY: zero AA below 51 — true parity, and the fix for the
+// low-level full-bot-group steamroll (a stock level-20 bot was auto-granted
+// ~62 AA ranks a real level-20 player cannot have — project_bot_ai_baseline
+// §9). 51+: AA is EARNED (owner-scoped, via the Kalgrim trainer turn-ins +
+// quests; see RefreshOwnerEarnedAA), HARD-capped at the bot's real level so
+// a maxed bot has at most what a same-level player is eligible for, never
+// beyond. The real-level clamp is the locked safety guarantee: a modest
+// pre-51 bank cannot dump the full endgame AA set at 51 — the cap holds it
+// to the level-51-eligible pool until the bot actually levels past 51.
+int Bot::GetEarnedAALevel() {
+	if (GetLevel() < 51) {
+		// Every aa_ranks.level_req >= 0; (level_req > -1) is true for ALL
+		// ranks (including level_req 0), so LoadAAs grants none.
+		return -1;
+	}
+	int e = m_earned_aa_level; // cached owner value — ZERO DB in this path
+	if (e < 0) {
+		return -1; // no earned progress yet
+	}
+	if (e > GetLevel()) {
+		e = GetLevel(); // same-level-player parity ceiling, never exceeded
+	}
+	return e;
+}
+
+// Theo-and-Co Phase 3 Group C (S1) — owner-scoped earned-AA persistence,
+// mirroring the Group A §7 Drill-Master owner-bucket pattern EXACTLY. The DB
+// read here happens at most once per 6s tic + once at spawn — NEVER per hit
+// or per AI tick (LoadAAs / GetEarnedAALevel read ONLY the cached
+// m_earned_aa_level; reaching back to the DB there is the Group A #1 perf
+// regression that froze the zone). Owner-scoped: every one of the player's
+// bots reads the same owner char bucket, so earned progress is automatically
+// owner-wide and applies with zero per-bot fiddling. The owner's char
+// data_bucket "bot_aa_level" is written by the Kalgrim trainer scripts
+// (content repo) — the pacing/curve + the pre-51 bank cap live there
+// (Alex-tunable, no engine rebuild). Returns true if the cached value
+// changed, so the caller can re-derive the bot LIVE (CalcBotStats(false),
+// the proven ^role no-respawn precedent).
+bool Bot::RefreshOwnerEarnedAA() {
+	int new_val = -1;
+
+	Mob* o = GetBotOwner();
+	if (o) {
+		DataBucketKey k = o->GetScopedBucketKeys();
+		k.key = "bot_aa_level";
+		auto b = DataBucket::GetData(&database, k);
+		if (!b.value.empty()) {
+			int v = atoi(b.value.c_str());
+			if (v > 0) {
+				new_val = v;
+			}
+		}
+	}
+
+	if (new_val != m_earned_aa_level) {
+		m_earned_aa_level = new_val;
+		return true;
+	}
+	return false;
 }
 
 bool Bot::CheckDataBucket(std::string bucket_name, const std::string& bucket_value, uint8 bucket_comparison)

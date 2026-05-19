@@ -1076,7 +1076,6 @@ void bot_command_pickpocket(Client* c, const Seperator* sep);
 void bot_command_precombat(Client* c, const Seperator* sep);
 void bot_command_pull(Client *c, const Seperator *sep);
 void bot_command_release(Client *c, const Seperator *sep);
-void bot_command_role(Client *c, const Seperator *sep); // Theo-and-Co Phase 3 Group B
 void bot_command_sit_hp_percent(Client* c, const Seperator* sep);
 void bot_command_sit_in_combat(Client* c, const Seperator* sep);
 void bot_command_sit_mana_percent(Client* c, const Seperator* sep);

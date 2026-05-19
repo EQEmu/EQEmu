@@ -263,44 +263,12 @@ inline BotRole GetBotRole(uint8_t class_) {
 	}
 }
 
-// =========================================================================
-// Theo-and-Co Phase 3 Group B — role name / validation / parsing helpers.
-// `#bot role` lets a player OVERRIDE the class-derived GetBotRole default.
-// The EFFECTIVE role (override if set, else GetBotRole) is what
-// ComputeBotStats / ComputeBotMeleeDamage and the AI consult — see the
-// (..., BotRole role) overloads below and Bot::GetEffectiveBotRole().
-// =========================================================================
-static const uint8_t kNumBotRoles = 5; // Tank, Healer, DPS, CC, Support
-
-inline const char* GetBotRoleName(BotRole r) {
-	switch (r) {
-		case BotRole::Tank:    return "Tank";
-		case BotRole::Healer:  return "Healer";
-		case BotRole::DPS:     return "DPS";
-		case BotRole::CC:      return "CC";
-		case BotRole::Support: return "Support";
-	}
-	return "DPS";
-}
-
-inline bool IsValidBotRole(int role_id) {
-	return role_id >= 0 && role_id < static_cast<int>(kNumBotRoles);
-}
-
-// Parse a user-supplied role token (case-insensitive word or 0-4 number).
-// Returns the BotRole id (0-4) or -1 if unrecognised. Friendly aliases keep
-// the Social buttons / chat forgiving.
-inline int ParseBotRole(std::string s) {
-	for (auto &ch : s) {
-		ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
-	}
-	if (s == "tank"    || s == "0")                 return static_cast<int>(BotRole::Tank);
-	if (s == "healer"  || s == "heal"   || s == "1") return static_cast<int>(BotRole::Healer);
-	if (s == "dps"     || s == "damage" || s == "2") return static_cast<int>(BotRole::DPS);
-	if (s == "cc"      || s == "crowd"  || s == "3") return static_cast<int>(BotRole::CC);
-	if (s == "support" || s == "sup"    || s == "4") return static_cast<int>(BotRole::Support);
-	return -1;
-}
+// Theo-and-Co Phase 3 Group C (S1): the role name / validation / parsing
+// helpers (kNumBotRoles / GetBotRoleName / IsValidBotRole / ParseBotRole)
+// were REMOVED with the player-facing `#bot role` command. Role is now
+// class-derived only — GetBotRole() above + Bot::GetEffectiveBotRole().
+// GetBotRole / GetRoleMultipliers / the BotRole enum stay (Group A stat
+// model consumes them).
 
 // Class -> base material : from PHASE3_BOTS.md §2; gaps RESOLVED by Alex
 // 2026-05-16 — Monk=Leather analog, Rogue=Chain, Berserker=Plate. The §2
@@ -343,13 +311,14 @@ inline ClassPlusMod GetClassPlusMod(uint8_t class_) {
 	}
 }
 
-// AA-compensation uplift (§5.2a) — scaffold. Magnitude = Group E play-test;
-// returns extra-fraction (currently 0). Hooked from v1 so wiring + the
-// diagnostic exist now (feedback_diagnostics_from_v1); only the number is
-// pending. AA-start level TBD vs Character: rules (classic gate 51). NOT guessed.
-inline float GetAACompFactor(uint8_t /*class_*/, uint8_t /*level*/) {
-	return 0.0f; // PLACEHOLDER magnitude — Group E
-}
+// NOTE: the §5.2a "AA-compensation uplift" was REMOVED in Phase 3 Group C
+// (S1). It was a scaffold built on the premise "bots get no AAs" — which is
+// FALSE: stock Bot::LoadAAs auto-granted every level-eligible AA, applied to
+// combat (project_bot_ai_baseline.md §9). It would have been a double-buff.
+// Group C instead makes AA EARNED + capped at same-level-player parity (see
+// Bot::GetEarnedAALevel / LoadAAs). Do NOT re-introduce an uplift term here.
+// (Its magnitude had never been set — it returned 0.0 — so this removal is
+// behaviour-neutral on its own.)
 
 struct BotComputedStats {
 	int str, sta, agi, dex, intel, wis, cha; // final attributes
@@ -420,10 +389,8 @@ inline BotComputedStats ComputeBotStats(uint8_t class_, uint16_t race, uint8_t l
 	gINT*=rm.caster; gWIS*=rm.caster; gMANA*=rm.caster;
 	gHP*=rm.hp; gAC*=rm.ac;
 	// sta/agi/cha: not in §5.3 role table -> x1.0
-
-	float aac = 1.0f + GetAACompFactor(class_, level);
-	gSTR*=aac; gSTA*=aac; gAGI*=aac; gDEX*=aac; gINT*=aac; gWIS*=aac; gCHA*=aac;
-	gHP*=aac; gMANA*=aac; gAC*=aac;
+	// §5.2a AA-compensation uplift REMOVED here (Group C / S1) — see the note
+	// just above `struct BotComputedStats` (the false "bots get no AA" premise).
 
 	out.str=bSTR+(int)(gSTR+0.5f); out.sta=bSTA+(int)(gSTA+0.5f);
 	out.agi=bAGI+(int)(gAGI+0.5f); out.dex=bDEX+(int)(gDEX+0.5f);

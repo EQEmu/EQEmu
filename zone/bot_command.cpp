@@ -172,7 +172,6 @@ int bot_command_init(void)
 		bot_command_add("precombat", "Sets flag used to determine pre-combat behavior", AccountStatus::Player, bot_command_precombat) ||
 		bot_command_add("pull", "Orders a designated bot to 'pull' an enemy", AccountStatus::Player, bot_command_pull) ||
 		bot_command_add("release", "Releases a suspended bot's AI processing (with hate list wipe)", AccountStatus::Player, bot_command_release) ||
-		bot_command_add("role", "Sets a bot's role (Tank/Healer/DPS/CC/Support); drives its stat focus and combat behavior", AccountStatus::Player, bot_command_role) ||
 		bot_command_add("setassistee", "Sets your target to be the person your bots assist. Bots will always assist you before others", AccountStatus::Player, bot_command_set_assistee) ||
 		bot_command_add("sithppercent", "HP threshold for a bot to start sitting in combat if allowed", AccountStatus::Player, bot_command_sit_hp_percent) ||
 		bot_command_add("sitincombat", "Toggles whether or a not a bot will attempt to med or sit to heal in combat", AccountStatus::Player, bot_command_sit_in_combat) ||

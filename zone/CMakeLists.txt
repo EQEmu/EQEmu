@@ -343,7 +343,6 @@ set(gm_command_sources
     bot_commands/bot_precombat.cpp
     bot_commands/bot_pull.cpp
     bot_commands/bot_release.cpp
-    bot_commands/bot_role.cpp
     bot_commands/bot_set_assistee.cpp
     bot_commands/bot_sit_hp_percent.cpp
     bot_commands/bot_sit_in_combat.cpp
