@@ -512,29 +512,6 @@ void Client::OPCombatAbility(const CombatAbility_Struct *ca_atk)
 
 	bool found_skill = false;
 
-	if (
-		ca_atk->m_atk == 100 &&
-		ca_atk->m_skill == EQ::skills::SkillKick &&
-		can_use_kick
-	) {
-		if (GetTarget() != this) {
-			CheckIncreaseSkill(EQ::skills::SkillKick, GetTarget(), 10);
-			DoAnim(animKick, 0, false);
-
-			int hate_override = 0;
-			if (GetWeaponDamage(GetTarget(), GetInv().GetItem(EQ::invslot::slotFeet)) <= 0) {
-				damage = -5;
-			} else {
-				hate_override = damage = GetBaseSkillDamage(EQ::skills::SkillKick, GetTarget());
-			}
-
-			reuse_time = KickReuseTime - 1 - skill_reduction;
-			DoSpecialAttackDamage(GetTarget(), EQ::skills::SkillKick, damage, 0, hate_override, reuse_time);
-
-			found_skill = true;
-		}
-	}
-
 	if (class_id == Class::Monk) {
 		reuse_time = MonkSpecialAttack(GetTarget(), ca_atk->m_skill) - 1 - skill_reduction;
 
@@ -595,6 +572,30 @@ void Client::OPCombatAbility(const CombatAbility_Struct *ca_atk)
 		}
 
 		found_skill = true;
+	}
+	else {
+		if (
+			ca_atk->m_atk == 100 &&
+			ca_atk->m_skill == EQ::skills::SkillKick &&
+			can_use_kick
+		) {
+			if (GetTarget() != this) {
+				CheckIncreaseSkill(EQ::skills::SkillKick, GetTarget(), 10);
+				DoAnim(animKick, 0, false);
+
+				int hate_override = 0;
+				if (GetWeaponDamage(GetTarget(), GetInv().GetItem(EQ::invslot::slotFeet)) <= 0) {
+					damage = -5;
+				} else {
+					hate_override = damage = GetBaseSkillDamage(EQ::skills::SkillKick, GetTarget());
+				}
+
+				reuse_time = KickReuseTime - 1 - skill_reduction;
+				DoSpecialAttackDamage(GetTarget(), EQ::skills::SkillKick, damage, 0, hate_override, reuse_time);
+
+				found_skill = true;
+			}
+		}
 	}
 
 	if (
