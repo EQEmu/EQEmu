@@ -2790,6 +2790,16 @@ bool Bot::TryAutoDefend(Client* bot_owner, float leash_distance) {
 									GetPet()->SetTarget(hater);
 								}
 
+								// S39 fix #2: snap-aggro via Taunt when defending a member.
+								// AddToHateList(hater, 1) adds only 1 hate vs the attacker's
+								// existing hate on the member - bot would have to melee for
+								// many seconds to overtake. Taunt forces top-hate immediately
+								// for taunting tank classes (gated by IsTaunting widening in #1).
+								if (IsTaunting() && hater->IsNPC() && taunt_timer.Check()) {
+									Taunt(hater->CastToNPC(), false);
+									taunt_timer.Start(TauntReuseTime * 1000);
+								}
+
 								m_auto_defend_timer.Disable();
 
 								return true;
