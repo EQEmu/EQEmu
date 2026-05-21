@@ -22,6 +22,7 @@
 */
 
 #include "client.h"
+#include "theo_regen.h" // Theo-and-Co S38: OOC fast-regen meditate curve
 
 #include "common/data_verification.h"
 #include "common/eqemu_logsys.h"
@@ -515,6 +516,13 @@ bool Client::Process() {
 		// this is independent of the tick timer
 		if (consume_food_timer.Check())
 			DoStaminaHungerUpdate();
+
+		// Theo-and-Co S38: 1-second OOC fast-regen sub-tick. Independent of
+		// the 6s tic_timer (which still drives buffs/DoT/HoT/food). No-op
+		// unless sitting + OOC + rested; see Client::DoSmoothFastRegen.
+		if (m_smooth_regen_timer.Check() && !dead) {
+			DoSmoothFastRegen();
+		}
 
 		if (tic_timer.Check() && !dead) {
 			CalcMaxHP();
@@ -1997,6 +2005,101 @@ void Client::DoEnduranceRegen()
 
 	if (regen < 0 || (regen > 0 && GetEndurance() < GetMaxEndurance()))
 		SetEndurance(GetEndurance() + regen);
+}
+
+// Theo-and-Co Phase 3 / S38 — 1-second OOC fast-regen sub-tick.
+//
+// Players see a smooth bar (moves every 1s) instead of the stock 6s
+// jumps. Math closes over 6 seconds to ~maxPool * dial / sec_to_full
+// per second, with a float accumulator carrying the fractional
+// remainder forward so 0.5/sec still applies 1 HP every 2 seconds
+// rather than truncating to zero.
+//
+// The 6s tic_timer continues firing buffs / DoT / HoT / food /
+// intoxication as well as the standard DoHPRegen / DoManaRegen /
+// DoEnduranceRegen (which now return only level_base + items +
+// spellbonuses; the fast_regen branch was lifted out and lives here).
+//
+// Curve + dial defined in zone/theo_regen.h. Bots run a parallel
+// path in Bot::DoSmoothFastRegen using the owner's class + meditate
+// + dial (see Bot::RefreshOwnerRegenMult).
+void Client::DoSmoothFastRegen() {
+	// Gate matches the lifted CalcXRegen branch (client_mods.cpp pre-S38):
+	// out of combat + sitting/med-horse + rested. CanFastRegen() == ooc_regen,
+	// set true in CalcRestState only when AggroCount=0, sitting, and the
+	// RestRegenTimeToActivate timer has elapsed (default 10s).
+	if (!CanFastRegen() || !(IsSitting() || CanMedOnHorse())) {
+		// State changed away from OOC -- discard fractional remainders so
+		// they don't carry into a future session.
+		m_smooth_hp_accum   = 0.0f;
+		m_smooth_mana_accum = 0.0f;
+		m_smooth_end_accum  = 0.0f;
+		return;
+	}
+
+	// Pull the Chromie dial from the player's own data_bucket cache
+	// (LoadDataBucketsCache populates at zone-in; per-second reads are
+	// hashmap lookups, not DB queries). Empty / unparseable -> default 1.0.
+	float dial = TheoRegen::kDefaultRegenDial;
+	{
+		std::string v = GetBucket("regen_mult");
+		if (!v.empty()) {
+			float parsed = static_cast<float>(std::atof(v.c_str()));
+			if (parsed > 0.0f) {
+				dial = parsed;
+			}
+		}
+	}
+	// Defensive clamp -- a misset bucket shouldn't crash the regen path.
+	if (dial < TheoRegen::kMinRegenDial) dial = TheoRegen::kMinRegenDial;
+	if (dial > TheoRegen::kMaxRegenDial) dial = TheoRegen::kMaxRegenDial;
+
+	float sec_to_full = TheoRegen::ComputeOOCSecondsToFull(
+		GetClass(),
+		GetSkill(EQ::skills::SkillMeditate)
+	);
+	if (sec_to_full <= 0.0f) {
+		// Belt-and-suspenders -- guard against div-by-zero. The helper
+		// returns 10.0 to 20.0 by construction so this should never fire.
+		return;
+	}
+
+	const float per_sec_frac = dial / sec_to_full;
+
+	if (GetHP() < GetMaxHP()) {
+		m_smooth_hp_accum += static_cast<float>(GetMaxHP()) * per_sec_frac;
+		int delta = static_cast<int>(m_smooth_hp_accum);
+		if (delta > 0) {
+			SetHP(GetHP() + delta);
+			m_smooth_hp_accum -= static_cast<float>(delta);
+			SendHPUpdate();
+		}
+	} else {
+		m_smooth_hp_accum = 0.0f;
+	}
+
+	if (GetMana() < max_mana) {
+		m_smooth_mana_accum += static_cast<float>(GetMaxMana()) * per_sec_frac;
+		int delta = static_cast<int>(m_smooth_mana_accum);
+		if (delta > 0) {
+			SetMana(GetMana() + delta);
+			m_smooth_mana_accum -= static_cast<float>(delta);
+			CheckManaEndUpdate();
+		}
+	} else {
+		m_smooth_mana_accum = 0.0f;
+	}
+
+	if (GetEndurance() < GetMaxEndurance()) {
+		m_smooth_end_accum += static_cast<float>(GetMaxEndurance()) * per_sec_frac;
+		int delta = static_cast<int>(m_smooth_end_accum);
+		if (delta > 0) {
+			SetEndurance(GetEndurance() + delta);
+			m_smooth_end_accum -= static_cast<float>(delta);
+		}
+	} else {
+		m_smooth_end_accum = 0.0f;
+	}
 }
 
 void Client::DoEnduranceUpkeep() {

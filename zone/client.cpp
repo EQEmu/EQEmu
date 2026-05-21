@@ -153,6 +153,11 @@ Client::Client() : Mob(
 				   TaskPeriodic_Timer(RuleI(TaskSystem, PeriodicCheckTimer) * 1000),
 				   charm_update_timer(6000),
 				   rest_timer(1),
+				   // Theo-and-Co S38: 1s OOC fast-regen sub-tick + accumulators.
+				   m_smooth_regen_timer(1000),
+				   m_smooth_hp_accum(0.0f),
+				   m_smooth_mana_accum(0.0f),
+				   m_smooth_end_accum(0.0f),
 				   pick_lock_timer(1000),
 				   charm_class_attacks_timer(3000),
 				   charm_cast_timer(3500),
@@ -461,6 +466,11 @@ Client::Client(EQStreamInterface *ieqs) : Mob(
 	TaskPeriodic_Timer(RuleI(TaskSystem, PeriodicCheckTimer) * 1000),
 	charm_update_timer(6000),
 	rest_timer(1),
+	// Theo-and-Co S38: 1s OOC fast-regen sub-tick + accumulators.
+	m_smooth_regen_timer(1000),
+	m_smooth_hp_accum(0.0f),
+	m_smooth_mana_accum(0.0f),
+	m_smooth_end_accum(0.0f),
 	pick_lock_timer(1000),
 	charm_class_attacks_timer(3000),
 	charm_cast_timer(3500),
