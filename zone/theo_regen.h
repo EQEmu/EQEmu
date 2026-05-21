@@ -86,4 +86,19 @@ constexpr float kDefaultRegenDial = 1.0f;
 constexpr float kMinRegenDial = 0.10f;
 constexpr float kMaxRegenDial = 2.00f;
 
+// Smooth OOC fast-regen sub-tick interval. Tunable knob for diagnosing
+// client-side mana bar interpolation conflicts: the stock RoF2 client
+// expects per-6s server tics and visually interpolates between them. At
+// 1s tick rate Alex S38 observed the mana bar jumping backward+forward
+// (client prediction overshoots the per-second delta, snaps back when
+// the next packet arrives). Trying 2s as a compromise that's still much
+// smoother than the stock 6s but slower than the client's interpolation
+// rate.
+//
+// Both values must be kept in sync: kSmoothTickIntervalMs is the Timer
+// period (milliseconds); kSmoothTickIntervalSec is the same in seconds
+// (used to scale the accumulator delta -- per_sec_frac * interval_sec).
+constexpr uint32_t kSmoothTickIntervalMs  = 2000;
+constexpr float    kSmoothTickIntervalSec = 2.0f;
+
 } // namespace TheoRegen

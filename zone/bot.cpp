@@ -40,7 +40,7 @@ TODO bot rewrite:
 */
 
 // This constructor is used during the bot create command
-Bot::Bot(NPCType *npcTypeData, Client* botOwner) : NPC(npcTypeData, nullptr, glm::vec4(), Ground, false), rest_timer(1), m_smooth_regen_timer(1000), m_ping_timer(1) {
+Bot::Bot(NPCType *npcTypeData, Client* botOwner) : NPC(npcTypeData, nullptr, glm::vec4(), Ground, false), rest_timer(1), m_smooth_regen_timer(TheoRegen::kSmoothTickIntervalMs), m_ping_timer(1) {
 	GiveNPCTypeData(npcTypeData);
 
 	if (botOwner) {
@@ -148,7 +148,7 @@ Bot::Bot(
 	uint32 lastZoneId,
 	NPCType *npcTypeData
 )
-	: NPC(npcTypeData, nullptr, glm::vec4(), Ground, false), rest_timer(1), m_smooth_regen_timer(1000), m_ping_timer(1)
+	: NPC(npcTypeData, nullptr, glm::vec4(), Ground, false), rest_timer(1), m_smooth_regen_timer(TheoRegen::kSmoothTickIntervalMs), m_ping_timer(1)
 {
 	GiveNPCTypeData(npcTypeData);
 
@@ -8627,10 +8627,14 @@ void Bot::DoSmoothFastRegen() {
 		return; // belt-and-suspenders div-by-zero guard
 	}
 
-	const float per_sec_frac = m_owner_regen_mult / sec_to_full;
+	// Per-second pool fraction; scaled by the timer interval below so the
+	// total regen rate is preserved regardless of how often we tick (the
+	// interval is the diagnostic knob in zone/theo_regen.h).
+	const float per_sec_frac  = m_owner_regen_mult / sec_to_full;
+	const float per_tick_frac = per_sec_frac * TheoRegen::kSmoothTickIntervalSec;
 
 	if (GetHP() < GetMaxHP()) {
-		m_smooth_hp_accum += static_cast<float>(GetMaxHP()) * per_sec_frac;
+		m_smooth_hp_accum += static_cast<float>(GetMaxHP()) * per_tick_frac;
 		int delta = static_cast<int>(m_smooth_hp_accum);
 		if (delta > 0) {
 			SetHP(GetHP() + delta);
@@ -8641,7 +8645,7 @@ void Bot::DoSmoothFastRegen() {
 	}
 
 	if (GetMana() < GetMaxMana()) {
-		m_smooth_mana_accum += static_cast<float>(GetMaxMana()) * per_sec_frac;
+		m_smooth_mana_accum += static_cast<float>(GetMaxMana()) * per_tick_frac;
 		int delta = static_cast<int>(m_smooth_mana_accum);
 		if (delta > 0) {
 			SetMana(GetMana() + delta);
@@ -8652,7 +8656,7 @@ void Bot::DoSmoothFastRegen() {
 	}
 
 	if (GetEndurance() < GetMaxEndurance()) {
-		m_smooth_end_accum += static_cast<float>(GetMaxEndurance()) * per_sec_frac;
+		m_smooth_end_accum += static_cast<float>(GetMaxEndurance()) * per_tick_frac;
 		int delta = static_cast<int>(m_smooth_end_accum);
 		if (delta > 0) {
 			SetEndurance(GetEndurance() + delta);

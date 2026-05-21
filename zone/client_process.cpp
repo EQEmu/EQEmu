@@ -2064,10 +2064,13 @@ void Client::DoSmoothFastRegen() {
 		return;
 	}
 
-	const float per_sec_frac = dial / sec_to_full;
+	// Per-second pool fraction; scaled by the timer interval below so the
+	// total regen rate is preserved regardless of how often we tick.
+	const float per_sec_frac      = dial / sec_to_full;
+	const float per_tick_frac     = per_sec_frac * TheoRegen::kSmoothTickIntervalSec;
 
 	if (GetHP() < GetMaxHP()) {
-		m_smooth_hp_accum += static_cast<float>(GetMaxHP()) * per_sec_frac;
+		m_smooth_hp_accum += static_cast<float>(GetMaxHP()) * per_tick_frac;
 		int delta = static_cast<int>(m_smooth_hp_accum);
 		if (delta > 0) {
 			SetHP(GetHP() + delta);
@@ -2079,21 +2082,23 @@ void Client::DoSmoothFastRegen() {
 	}
 
 	if (GetMana() < max_mana) {
-		m_smooth_mana_accum += static_cast<float>(GetMaxMana()) * per_sec_frac;
+		m_smooth_mana_accum += static_cast<float>(GetMaxMana()) * per_tick_frac;
 		int delta = static_cast<int>(m_smooth_mana_accum);
 		if (delta > 0) {
+			// SetMana already calls CheckManaEndUpdate internally; do NOT
+			// double-call here (the dedup short-circuits but it's cleaner).
 			SetMana(GetMana() + delta);
 			m_smooth_mana_accum -= static_cast<float>(delta);
-			CheckManaEndUpdate();
 		}
 	} else {
 		m_smooth_mana_accum = 0.0f;
 	}
 
 	if (GetEndurance() < GetMaxEndurance()) {
-		m_smooth_end_accum += static_cast<float>(GetMaxEndurance()) * per_sec_frac;
+		m_smooth_end_accum += static_cast<float>(GetMaxEndurance()) * per_tick_frac;
 		int delta = static_cast<int>(m_smooth_end_accum);
 		if (delta > 0) {
+			// SetEndurance already calls CheckManaEndUpdate internally.
 			SetEndurance(GetEndurance() + delta);
 			m_smooth_end_accum -= static_cast<float>(delta);
 		}

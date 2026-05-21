@@ -2192,10 +2192,13 @@ private:
 	Timer TaskPeriodic_Timer;
 	Timer charm_update_timer;
 	Timer rest_timer;
-	// Theo-and-Co S38: 1-second OOC fast-regen sub-tick. Fires only when
-	// CanFastRegen() + sitting/med-horse, applying per-second smooth regen
-	// via the meditate-curve x Chromie dial path. The standard 6s tic_timer
-	// is UNCHANGED (it still does buffs/DoT/HoT/food/intoxication + the
+	// Theo-and-Co S38: OOC fast-regen sub-tick. Period set from
+	// TheoRegen::kSmoothTickIntervalMs (zone/theo_regen.h, currently 2s --
+	// 1s caused mana-bar back/forward jitter from client-side
+	// interpolation overshooting the per-tick delta). Fires only when
+	// CanFastRegen() + sitting/med-horse, applying smooth regen via the
+	// meditate-curve x Chromie dial path. The standard 6s tic_timer is
+	// UNCHANGED (it still does buffs/DoT/HoT/food/intoxication + the
 	// non-fast-regen base level + items + spellbonuses on DoHPRegen etc.).
 	Timer m_smooth_regen_timer;
 	Timer charm_class_attacks_timer;
