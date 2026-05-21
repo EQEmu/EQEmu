@@ -1094,6 +1094,8 @@ void bot_command_spell_min_thresholds(Client* c, const Seperator* sep);
 void bot_command_spell_pursue_priority(Client* c, const Seperator* sep);
 void bot_command_spell_resist_limits(Client* c, const Seperator* sep);
 void bot_command_spell_target_count(Client* c, const Seperator* sep);
+void bot_command_spell_disable(Client* c, const Seperator *sep);
+void bot_command_spell_enable(Client* c, const Seperator *sep);
 void bot_command_spell_list(Client* c, const Seperator *sep);
 void bot_command_spell_settings_add(Client* c, const Seperator *sep);
 void bot_command_spell_settings_delete(Client* c, const Seperator *sep);

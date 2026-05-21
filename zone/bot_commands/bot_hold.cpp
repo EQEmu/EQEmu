@@ -53,18 +53,41 @@ void bot_command_hold(Client *c, const Seperator *sep)
 	}
 
 	sbl.erase(std::remove(sbl.begin(), sbl.end(), nullptr), sbl.end());
+
+	// S39 fix #7: track how many bots actually transitioned state. The
+	// new Attack button (client-pack v1.4.15) issues `^hold clear spawned`
+	// before `^attack spawned` on every click -- without this gate, every
+	// Attack click would spam "N of your bots are no longer holding their
+	// attacks" even when no bots were held.
+	int changed_count = 0;
+	Bot* first_changed = nullptr;
 	for (auto bot_iter : sbl) {
 
 		if (clear) {
-			bot_iter->SetHoldFlag(false);
+			if (bot_iter->GetHoldFlag()) {
+				bot_iter->SetHoldFlag(false);
+				++changed_count;
+				if (!first_changed) {
+					first_changed = bot_iter;
+				}
+			}
 		}
 		else {
 			bot_iter->SetHoldMode();
+			++changed_count;
+			if (!first_changed) {
+				first_changed = bot_iter;
+			}
 		}
 	}
 
-	if (sbl.size() == 1) {
-		sbl.front()->RaidGroupSay(
+	if (changed_count == 0) {
+		// Silent no-op (typically: ^hold clear fired on already-unheld bots).
+		return;
+	}
+
+	if (changed_count == 1 && first_changed) {
+		first_changed->RaidGroupSay(
 			fmt::format(
 				"{}olding my attacks.",
 				clear ? "No longer h" : "H"
@@ -75,7 +98,7 @@ void bot_command_hold(Client *c, const Seperator *sep)
 			Chat::White,
 			fmt::format(
 				"{} of your bots are {}holding their attacks.",
-				sbl.size(),
+				changed_count,
 				clear ? "no longer " : ""
 			).c_str()
 		);

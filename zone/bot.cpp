@@ -85,7 +85,7 @@ Bot::Bot(NPCType *npcTypeData, Client* botOwner) : NPC(npcTypeData, nullptr, glm
 	SetSpawnStatus(false);
 	SetBotCharmer(false);
 	SetDefaultBotStance();
-	SetTaunting((GetClass() == Class::Warrior || GetClass() == Class::Paladin || GetClass() == Class::ShadowKnight) && (GetBotStance() == Stance::Aggressive));
+	SetTaunting((GetClass() == Class::Warrior || GetClass() == Class::Paladin || GetClass() == Class::ShadowKnight) && (GetBotStance() != Stance::Passive));
 
 	SetPauseAI(false);
 
@@ -219,7 +219,7 @@ Bot::Bot(
 		);
 	}
 
-	SetTaunting((GetClass() == Class::Warrior || GetClass() == Class::Paladin || GetClass() == Class::ShadowKnight) && (GetBotStance() == Stance::Aggressive));
+	SetTaunting((GetClass() == Class::Warrior || GetClass() == Class::Paladin || GetClass() == Class::ShadowKnight) && (GetBotStance() != Stance::Passive));
 	SetPauseAI(false);
 
 	m_combat_jitter_timer.Disable();
@@ -2788,6 +2788,16 @@ bool Bot::TryAutoDefend(Client* bot_owner, float leash_distance) {
 								if (HasControllablePet(BotAnimEmpathy::Attack)) {
 									GetPet()->AddToHateList(hater, 1);
 									GetPet()->SetTarget(hater);
+								}
+
+								// S39 fix #2: snap-aggro via Taunt when defending a member.
+								// AddToHateList(hater, 1) adds only 1 hate vs the attacker's
+								// existing hate on the member - bot would have to melee for
+								// many seconds to overtake. Taunt forces top-hate immediately
+								// for taunting tank classes (gated by IsTaunting widening in #1).
+								if (IsTaunting() && hater->IsNPC() && taunt_timer.Check()) {
+									Taunt(hater->CastToNPC(), false);
+									taunt_timer.Start(TauntReuseTime * 1000);
 								}
 
 								m_auto_defend_timer.Disable();
@@ -8795,10 +8805,13 @@ void Bot::ListBotSpells(uint8 min_level)
 	for (const auto& s : (GetBotEnforceSpellSetting()) ? AIBot_spells_enforced : AIBot_spells) {
 		auto b = bot_spell_settings.find(s.spellid);
 		if (b == bot_spell_settings.end() && s.minlevel >= min_level) {
+			// S39 fix #5: per-row [Disable] saylink so a casual player can
+			// one-click stop the bot from casting a specific spell without
+			// having to type the spell id into a chat command.
 			bot_owner->Message(
 				Chat::White,
 				fmt::format(
-					"Spell {} | Spell: {} (ID: {}) | Add Spell: {}",
+					"Spell {} | Spell: {} (ID: {}) | {} | {}",
 					spell_number,
 					Saylink::Silent(
 						fmt::format("^spellinfo {}", s.spellid),
@@ -8806,7 +8819,9 @@ void Bot::ListBotSpells(uint8 min_level)
 					),
 					s.spellid,
 					Saylink::Silent(
-						fmt::format("^spellsettingsadd {} {} {} {}", s.spellid, s.priority, s.min_hp, s.max_hp), "Add")
+						fmt::format("^spellsettingsadd {} {} {} {}", s.spellid, s.priority, s.min_hp, s.max_hp), "Add"),
+					Saylink::Silent(
+						fmt::format("^spelldisable {}", s.spellid), "Disable")
 				).c_str()
 			);
 
@@ -8848,17 +8863,21 @@ void Bot::ListBotSpellSettings()
 	auto setting_number = 1;
 
 	for (const auto& bs : bot_spell_settings) {
+		// S39 fix #5: split the previous single "Enabled/Disabled" saylink
+		// (whose text was the CURRENT state but click flipped it -- confusing
+		// for casual play) into an explicit state-label + opposite-action
+		// saylink. The new ^spellenable/^spelldisable wrappers make the
+		// command intent self-documenting in the chat log.
 		bot_owner->Message(
 			Chat::White,
 			fmt::format(
-				"Setting {} | Spell: {} | State: {} | {}",
+				"Setting {} | Spell: {} | State: {} | {} | {}",
 				setting_number,
 				Saylink::Silent(fmt::format("^spellinfo {}", bs.first), spells[bs.first].name),
-				Saylink::Silent(
-					fmt::format("^spellsettingstoggle {} {}",
-					bs.first, bs.second.is_enabled ? "False" : "True"),
-					bs.second.is_enabled ? "Enabled" : "Disabled"
-				),
+				bs.second.is_enabled ? "Enabled" : "Disabled",
+				bs.second.is_enabled
+					? Saylink::Silent(fmt::format("^spelldisable {}", bs.first), "Disable")
+					: Saylink::Silent(fmt::format("^spellenable {}", bs.first), "Enable"),
 				Saylink::Silent(fmt::format("^spellsettingsdelete {}", bs.first), "Remove")
 			).c_str()
 		);
@@ -12970,6 +12989,10 @@ bool Bot::IsValidSpellTypeSubType(uint16 spell_type, uint16 sub_type, uint16 spe
 
 	switch (sub_type) {
 		case CommandedSubTypes::SingleTarget:
+		case CommandedSubTypes::Each:
+			// S39 fix #6: Each uses the same per-spell filter as SingleTarget
+			// (engine selects a single-target variant); the iteration across
+			// group/raid members happens in bot_cast.cpp at the per-bot loop.
 			if (
 				!IsAnyAESpell(spell_id) &&
 				!IsGroupSpell(spell_id)

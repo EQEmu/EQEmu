@@ -192,6 +192,8 @@ int bot_command_init(void)
 		bot_command_add("spellpursuepriority", "Controls the order of casts by spell type when pursuing in combat", AccountStatus::Player, bot_command_spell_pursue_priority) ||
 		bot_command_add("spelltargetcount", "Sets the required target amount for group/AE spells by spell type", AccountStatus::Player, bot_command_spell_target_count) ||
 		bot_command_add("spellinfo", "Opens a dialogue window with spell info", AccountStatus::Player, bot_spell_info_dialogue_window) ||
+		bot_command_add("spelldisable", "Disables a specific spell from being cast by the targeted bot", AccountStatus::Player, bot_command_spell_disable) ||
+		bot_command_add("spellenable", "Re-enables a previously disabled spell on the targeted bot", AccountStatus::Player, bot_command_spell_enable) ||
 		bot_command_add("spells", "Lists all Spells learned by the Bot.", AccountStatus::Player, bot_command_spell_list) ||
 		bot_command_add("spellsettings", "Lists a bot's spell setting entries", AccountStatus::Player, bot_command_spell_settings_list) ||
 		bot_command_add("spellsettingsadd", "Add a bot spell setting entry", AccountStatus::Player, bot_command_spell_settings_add) ||
