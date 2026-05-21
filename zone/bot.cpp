@@ -8805,10 +8805,13 @@ void Bot::ListBotSpells(uint8 min_level)
 	for (const auto& s : (GetBotEnforceSpellSetting()) ? AIBot_spells_enforced : AIBot_spells) {
 		auto b = bot_spell_settings.find(s.spellid);
 		if (b == bot_spell_settings.end() && s.minlevel >= min_level) {
+			// S39 fix #5: per-row [Disable] saylink so a casual player can
+			// one-click stop the bot from casting a specific spell without
+			// having to type the spell id into a chat command.
 			bot_owner->Message(
 				Chat::White,
 				fmt::format(
-					"Spell {} | Spell: {} (ID: {}) | Add Spell: {}",
+					"Spell {} | Spell: {} (ID: {}) | {} | {}",
 					spell_number,
 					Saylink::Silent(
 						fmt::format("^spellinfo {}", s.spellid),
@@ -8816,7 +8819,9 @@ void Bot::ListBotSpells(uint8 min_level)
 					),
 					s.spellid,
 					Saylink::Silent(
-						fmt::format("^spellsettingsadd {} {} {} {}", s.spellid, s.priority, s.min_hp, s.max_hp), "Add")
+						fmt::format("^spellsettingsadd {} {} {} {}", s.spellid, s.priority, s.min_hp, s.max_hp), "Add"),
+					Saylink::Silent(
+						fmt::format("^spelldisable {}", s.spellid), "Disable")
 				).c_str()
 			);
 
@@ -8858,17 +8863,21 @@ void Bot::ListBotSpellSettings()
 	auto setting_number = 1;
 
 	for (const auto& bs : bot_spell_settings) {
+		// S39 fix #5: split the previous single "Enabled/Disabled" saylink
+		// (whose text was the CURRENT state but click flipped it -- confusing
+		// for casual play) into an explicit state-label + opposite-action
+		// saylink. The new ^spellenable/^spelldisable wrappers make the
+		// command intent self-documenting in the chat log.
 		bot_owner->Message(
 			Chat::White,
 			fmt::format(
-				"Setting {} | Spell: {} | State: {} | {}",
+				"Setting {} | Spell: {} | State: {} | {} | {}",
 				setting_number,
 				Saylink::Silent(fmt::format("^spellinfo {}", bs.first), spells[bs.first].name),
-				Saylink::Silent(
-					fmt::format("^spellsettingstoggle {} {}",
-					bs.first, bs.second.is_enabled ? "False" : "True"),
-					bs.second.is_enabled ? "Enabled" : "Disabled"
-				),
+				bs.second.is_enabled ? "Enabled" : "Disabled",
+				bs.second.is_enabled
+					? Saylink::Silent(fmt::format("^spelldisable {}", bs.first), "Disable")
+					: Saylink::Silent(fmt::format("^spellenable {}", bs.first), "Enable"),
 				Saylink::Silent(fmt::format("^spellsettingsdelete {}", bs.first), "Remove")
 			).c_str()
 		);
