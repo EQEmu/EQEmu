@@ -14646,6 +14646,20 @@ void Client::Handle_OP_ShopRequest(const EQApplicationPacket *app)
 		action = MerchantActions::Close;
 	}
 
+	// Theo-and-Co S37: per-NPC EVENT_MERCHANT_OPEN hook. Lets a merchant's
+	// quest script refuse the open with a polite Say (script returns non-zero).
+	// Fires only if all the prior close checks passed -- no point asking a
+	// script about an already-refused open. The script is expected to emit
+	// the player-facing refusal via quest::say; the engine sends Close so
+	// the client doesn't hang on the requested open.
+	if (action == MerchantActions::Open &&
+	    parse->HasQuestSub(tmp->GetNPCTypeID(), EVENT_MERCHANT_OPEN)) {
+		std::vector<std::any> args;
+		if (parse->EventNPC(EVENT_MERCHANT_OPEN, tmp->CastToNPC(), this, "", 0, &args) != 0) {
+			action = MerchantActions::Close;
+		}
+	}
+
 	auto outapp = new EQApplicationPacket(OP_ShopRequest, sizeof(MerchantClick_Struct));
 	auto mco    = (MerchantClick_Struct *) outapp->pBuffer;
 

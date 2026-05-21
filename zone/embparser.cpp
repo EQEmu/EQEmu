@@ -211,6 +211,7 @@ const char* QuestEventSubroutines[_LargestEventID] = {
 	"EVENT_PET_COMMAND",
 	"EVENT_CHARM_START",
 	"EVENT_CHARM_END",
+	"EVENT_MERCHANT_OPEN",
 
 	// Add new events before these or Lua crashes
 	"EVENT_SPELL_EFFECT_BOT",

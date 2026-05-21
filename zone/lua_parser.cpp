@@ -207,7 +207,8 @@ const char *LuaEvents[_LargestEventID] = {
 	"event_read_item",
 	"event_pet_command",
 	"event_charm_start",
-	"event_charm_end"
+	"event_charm_end",
+	"event_merchant_open"
 };
 
 extern Zone *zone;
@@ -252,6 +253,7 @@ LuaParser::LuaParser() {
 	NPCArgumentDispatch[EVENT_SLAY]                   = handle_npc_single_mob;
 	NPCArgumentDispatch[EVENT_ENTER]                  = handle_npc_single_client;
 	NPCArgumentDispatch[EVENT_EXIT]                   = handle_npc_single_client;
+	NPCArgumentDispatch[EVENT_MERCHANT_OPEN]          = handle_npc_single_client;
 	NPCArgumentDispatch[EVENT_TASK_ACCEPTED]          = handle_npc_task_accepted;
 	NPCArgumentDispatch[EVENT_POPUP_RESPONSE]         = handle_npc_popup;
 	NPCArgumentDispatch[EVENT_WAYPOINT_ARRIVE]        = handle_npc_waypoint;

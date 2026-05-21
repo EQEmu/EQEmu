@@ -164,6 +164,9 @@ enum QuestEventID {
 	EVENT_PET_COMMAND,
 	EVENT_CHARM_START,
 	EVENT_CHARM_END,
+	EVENT_MERCHANT_OPEN,    // Theo-and-Co S37: NPC event fired BEFORE the merchant
+	                         // window opens. Non-zero return refuses the open
+	                         // (engine sends MerchantActions::Close instead).
 
 	// Add new events before these or Lua crashes
 	EVENT_SPELL_EFFECT_BOT,
