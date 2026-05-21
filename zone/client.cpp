@@ -16,6 +16,7 @@
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "client.h"
+#include "theo_regen.h" // Theo-and-Co S38: kSmoothTickIntervalMs
 
 #include "common/data_bucket.h"
 #include "common/data_verification.h"
@@ -153,8 +154,9 @@ Client::Client() : Mob(
 				   TaskPeriodic_Timer(RuleI(TaskSystem, PeriodicCheckTimer) * 1000),
 				   charm_update_timer(6000),
 				   rest_timer(1),
-				   // Theo-and-Co S38: 1s OOC fast-regen sub-tick + accumulators.
-				   m_smooth_regen_timer(1000),
+				   // Theo-and-Co S38: OOC fast-regen sub-tick + accumulators.
+				   // Interval lives in zone/theo_regen.h (kSmoothTickIntervalMs).
+				   m_smooth_regen_timer(TheoRegen::kSmoothTickIntervalMs),
 				   m_smooth_hp_accum(0.0f),
 				   m_smooth_mana_accum(0.0f),
 				   m_smooth_end_accum(0.0f),
@@ -466,8 +468,9 @@ Client::Client(EQStreamInterface *ieqs) : Mob(
 	TaskPeriodic_Timer(RuleI(TaskSystem, PeriodicCheckTimer) * 1000),
 	charm_update_timer(6000),
 	rest_timer(1),
-	// Theo-and-Co S38: 1s OOC fast-regen sub-tick + accumulators.
-	m_smooth_regen_timer(1000),
+	// Theo-and-Co S38: OOC fast-regen sub-tick + accumulators.
+	// Interval lives in zone/theo_regen.h (kSmoothTickIntervalMs).
+	m_smooth_regen_timer(TheoRegen::kSmoothTickIntervalMs),
 	m_smooth_hp_accum(0.0f),
 	m_smooth_mana_accum(0.0f),
 	m_smooth_end_accum(0.0f),

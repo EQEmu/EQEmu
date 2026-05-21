@@ -1197,7 +1197,7 @@ private:
 	float m_smooth_mana_accum = 0.0f;
 	float m_smooth_end_accum  = 0.0f;
 	Timer rest_timer;
-	Timer m_smooth_regen_timer; // Theo S38: 1s OOC sub-tick (parallel to player's m_smooth_regen_timer)
+	Timer m_smooth_regen_timer; // Theo S38: OOC sub-tick, period = TheoRegen::kSmoothTickIntervalMs (parallel to player's m_smooth_regen_timer)
 	Timer m_ping_timer;
 	int32	base_end;
 	int32	cur_end;
