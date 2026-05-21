@@ -693,6 +693,8 @@ public:
 	void RefreshOwnerDrillMults(); // Theo Group A §7: refresh cached owner mults (called from the 6s tic, NOT per hit)
 	int  GetEarnedAALevel(); // Theo Phase 3 Group C (S1): effective AA level for LoadAAs — -1 (no AA) below 51 / unearned, else owner earned value clamped to <= real level (CACHED — zero DB in LoadAAs)
 	bool RefreshOwnerEarnedAA(); // Theo Phase 3 Group C (S1): refresh the cached owner earned-AA value (called from the 6s tic + spawn, NOT per hit). RETURNS true if the cached value changed so the caller can re-derive the bot live (CalcBotStats(false))
+	void RefreshOwnerRegenMult(); // Theo Phase 3 / S38: refresh cached owner OOC-regen state (dial bucket "regen_mult" + class + meditate skill). Same 6s tic + spawn cadence as the Drill-Master mults; NEVER call from a per-tick / per-hit path.
+	void DoSmoothFastRegen(); // Theo Phase 3 / S38: 1-second OOC fast-regen sub-tick handler (parallel to Client::DoSmoothFastRegen). Reads only cached owner values; no DB. No-op unless bot is OOC + rested.
 
 	// Bot Equipment & Inventory Class Methods
 	void BotTradeAddItem(const EQ::ItemInstance* inst, uint16 slot_id, bool save_to_database = true);
@@ -1180,7 +1182,22 @@ private:
 	float m_drill_dmg_in_mult  = 1.0f; // Theo Group A §7: cached owner Drill-Master mults (refreshed on the 6s tic; read per-hit with ZERO DB)
 	float m_drill_dmg_out_mult = 1.0f;
 	int   m_earned_aa_level = -1; // Theo Phase 3 Group C (S1): cached owner earned-AA level. -1 = none/unearned. MUST keep this member initializer: LoadAAs() runs in the ctor (bot.cpp:297) BEFORE the spawn refresh, and reading uninitialised memory here is the §9 _expansionBitmask ctor-order trap.
+	// Theo Phase 3 / S38: cached owner OOC-regen state. RefreshOwnerRegenMult
+	// updates these on the 6s tic (DataBucket::GetData for the dial; cheap
+	// method calls for class/meditate). The 1-second DoSmoothFastRegen path
+	// reads ONLY these cached values -- never the DB. Same perf pattern as
+	// the Group A Drill-Master mults. Defaults are safe (1.0x dial, class=0
+	// falls into the melee/Bard branch = flat 15s).
+	float  m_owner_regen_mult     = 1.0f;
+	uint16 m_owner_regen_meditate = 0;
+	uint8  m_owner_regen_class    = 0;
+	// Theo S38: per-second sub-tick accumulators (float remainders so
+	// 0.5/sec still applies 1 every 2 seconds rather than truncating).
+	float m_smooth_hp_accum   = 0.0f;
+	float m_smooth_mana_accum = 0.0f;
+	float m_smooth_end_accum  = 0.0f;
 	Timer rest_timer;
+	Timer m_smooth_regen_timer; // Theo S38: 1s OOC sub-tick (parallel to player's m_smooth_regen_timer)
 	Timer m_ping_timer;
 	int32	base_end;
 	int32	cur_end;

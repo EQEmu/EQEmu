@@ -2029,6 +2029,12 @@ private:
 	void DoManaRegen();
 	void DoStaminaHungerUpdate();
 	void CalcRestState();
+	// Theo-and-Co S38: 1-second OOC fast-regen sub-tick handler. Called
+	// from Client::Process on m_smooth_regen_timer.Check(). No-op unless
+	// CanFastRegen() + (IsSitting() || CanMedOnHorse()). Reads the player's
+	// "regen_mult" data_bucket (Chromie dial; defaults to 1.0) and the
+	// player's Meditate skill. See zone/theo_regen.h for the curve.
+	void DoSmoothFastRegen();
 	// if they have aggro (AggroCount != 0) their timer is saved in m_pp.RestTimer, else we need to get current timer
 	inline uint32 GetRestTimer() const { return AggroCount ? m_pp.RestTimer : rest_timer.GetRemainingTime() / 1000; }
 	void UpdateRestTimer(uint32 new_timer);
@@ -2186,6 +2192,12 @@ private:
 	Timer TaskPeriodic_Timer;
 	Timer charm_update_timer;
 	Timer rest_timer;
+	// Theo-and-Co S38: 1-second OOC fast-regen sub-tick. Fires only when
+	// CanFastRegen() + sitting/med-horse, applying per-second smooth regen
+	// via the meditate-curve x Chromie dial path. The standard 6s tic_timer
+	// is UNCHANGED (it still does buffs/DoT/HoT/food/intoxication + the
+	// non-fast-regen base level + items + spellbonuses on DoHPRegen etc.).
+	Timer m_smooth_regen_timer;
 	Timer charm_class_attacks_timer;
 	Timer charm_cast_timer;
 	Timer qglobal_purge_timer;
@@ -2249,6 +2261,14 @@ private:
 	float AreaHPRegen;
 	float AreaManaRegen;
 	float AreaEndRegen;
+	// Theo-and-Co S38: float accumulators for the 1-second OOC fast-regen
+	// sub-tick. The per-second amount is `maxPool * dial / sec_to_full` which
+	// is rarely a whole integer; carry the fractional remainder forward so
+	// the math closes over multiple ticks (e.g. a 0.5/sec regen still applies
+	// 1 HP every 2 seconds rather than truncating to zero).
+	float m_smooth_hp_accum;
+	float m_smooth_mana_accum;
+	float m_smooth_end_accum;
 
 	std::set<uint32> zone_flags;
 	std::set<uint32> peqzone_flags;

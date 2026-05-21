@@ -283,12 +283,14 @@ int64 Client::CalcHPRegen(bool bCombat)
 	base = base * 100.0f * AreaHPRegen * 0.01f + 0.5f;
 	// another check for IsClient && !(base + item_regen) && Cur_HP <= 0 do --base; do later
 
-	if (!bCombat && CanFastRegen() && (IsSitting() || CanMedOnHorse())) {
-		auto max_hp = GetMaxHP();
-		int64 fast_regen = 6 * (max_hp / (zone && zone->newzone_data.fast_regen_hp > 0 ? zone->newzone_data.fast_regen_hp : 180));
-		if (base < fast_regen) // weird, but what the client is doing
-			base = fast_regen;
-	}
+	// Theo-and-Co Phase 3 / S38: OOC fast-regen branch LIFTED OUT.
+	// Previously this block computed `fast_regen = 6 * (maxHP /
+	// zone.fast_regen_hp)` and took max(base, fast_regen) when sitting +
+	// OOC. The replacement is Client::DoSmoothFastRegen on a parallel
+	// 1-second timer, using the meditate-curve x Chromie dial formula
+	// (zone/theo_regen.h) rather than the per-zone fast_regen_hp column.
+	// CalcHPRegen now returns only the per-6s level_base + items +
+	// spellbonuses; the fast-regen contribution comes from the 1s path.
 
 	int64 regen = base + item_regen + spellbonuses.HPRegen; // TODO: client does this in buff tick
 	return (regen * RuleI(Character, HPRegenMultiplier) / 100);
@@ -700,12 +702,12 @@ int64 Client::CalcManaRegen(bool bCombat)
 
 	regen = regen * 100.0f * AreaManaRegen * 0.01f + 0.5f;
 
-	if (!bCombat && CanFastRegen() && (IsSitting() || CanMedOnHorse())) {
-		auto max_mana = GetMaxMana();
-		int fast_regen = 6 * (max_mana / zone->newzone_data.fast_regen_mana);
-		if (regen < fast_regen) // weird, but what the client is doing
-			regen = fast_regen;
-	}
+	// Theo-and-Co Phase 3 / S38: OOC fast-regen branch LIFTED OUT.
+	// See the matching note above CalcHPRegen's return statement -- the
+	// 1-second smooth path in Client::DoSmoothFastRegen replaces this
+	// block. CalcManaRegen now returns only the per-6s base + items +
+	// AA + spellbonuses meditate contribution; the fast-regen comes
+	// from the 1s path using the Chromie dial + meditate curve.
 
 	regen += spellbonuses.ManaRegen; // TODO: live does this in buff tick
 	return (regen * RuleI(Character, ManaRegenMultiplier) / 100);
@@ -1726,12 +1728,12 @@ int64 Client::CalcEnduranceRegen(bool bCombat)
 	auto aa_regen = aabonuses.EnduranceRegen;
 
 	int64 regen = base;
-	if (!bCombat && CanFastRegen() && (IsSitting() || CanMedOnHorse())) {
-		auto max_end = GetMaxEndurance();
-		int fast_regen = 6 * (max_end / zone->newzone_data.fast_regen_endurance);
-		if (aa_regen < fast_regen) // weird, but what the client is doing
-			aa_regen = fast_regen;
-	}
+	// Theo-and-Co Phase 3 / S38: OOC fast-regen branch LIFTED OUT.
+	// See the matching note above CalcHPRegen's return statement -- the
+	// 1-second smooth path in Client::DoSmoothFastRegen replaces this
+	// block. CalcEnduranceRegen now returns only the per-6s base + items +
+	// AA + spellbonuses contribution; the fast-regen comes from the
+	// 1s path using the Chromie dial + meditate curve.
 
 	regen += aa_regen;
 	regen += spellbonuses.EnduranceRegen; // TODO: client does this in buff tick
