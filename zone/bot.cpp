@@ -40,7 +40,7 @@ TODO bot rewrite:
 */
 
 // This constructor is used during the bot create command
-Bot::Bot(NPCType *npcTypeData, Client* botOwner) : NPC(npcTypeData, nullptr, glm::vec4(), Ground, false), rest_timer(1), m_smooth_regen_timer(TheoRegen::kSmoothTickIntervalMs), m_ping_timer(1) {
+Bot::Bot(NPCType *npcTypeData, Client* botOwner) : NPC(npcTypeData, nullptr, glm::vec4(), Ground, false), rest_timer(1), m_ping_timer(1) {
 	GiveNPCTypeData(npcTypeData);
 
 	if (botOwner) {
@@ -148,7 +148,7 @@ Bot::Bot(
 	uint32 lastZoneId,
 	NPCType *npcTypeData
 )
-	: NPC(npcTypeData, nullptr, glm::vec4(), Ground, false), rest_timer(1), m_smooth_regen_timer(TheoRegen::kSmoothTickIntervalMs), m_ping_timer(1)
+	: NPC(npcTypeData, nullptr, glm::vec4(), Ground, false), rest_timer(1), m_ping_timer(1)
 {
 	GiveNPCTypeData(npcTypeData);
 
@@ -1690,12 +1690,6 @@ bool Bot::Process()
 	}
 
 	SpellProcess();
-
-	// Theo-and-Co S38: 1-second OOC fast-regen sub-tick (player parity).
-	// Independent of the 6s tic_timer below; no-op unless OOC + rested.
-	if (m_smooth_regen_timer.Check()) {
-		DoSmoothFastRegen();
-	}
 
 	if (tic_timer.Check()) {
 
@@ -3699,7 +3693,7 @@ bool Bot::Spawn(Client* botCharacterOwner) {
 		ClearDataBucketCache();
 		LoadDataBucketsCache();
 		RefreshOwnerDrillMults(); // Theo Group A §7: prime cached owner mults at spawn (then refreshed on the 6s tic; never per-hit)
-		RefreshOwnerRegenMult();  // Theo Phase 3 / S38: prime cached owner regen state at spawn so the first DoSmoothFastRegen tic reads real values, not defaults
+		RefreshOwnerRegenMult();  // Theo Phase 3 / S38: prime cached owner regen state at spawn so the first CalcRestState reads real values, not defaults
 		// Theo Phase 3 Group C (S1): prime the cached owner earned-AA value at
 		// spawn. The ctor LoadAAs() (bot.cpp:297) ran with the -1 member
 		// initializer (zero AA — the safe default). If the owner has earned
@@ -6845,23 +6839,28 @@ void Bot::CalcRestState() {
 		}
 	}
 
-	// Theo-and-Co Phase 3 / S38: RestRegenHP / Mana / Endurance kept at 0.
-	// The old per-6s fast_regen via zone.fast_regen_X is LIFTED OUT and
-	// replaced by Bot::DoSmoothFastRegen on the parallel 1-second timer,
-	// using the OWNER's class + meditate + Chromie dial (cached on the bot
-	// via RefreshOwnerRegenMult on this same 6s cadence).
-	//
-	// The Bot::Process regen tick continues to compute
-	// std::max(CalcXRegen(), RestRegenX); with RestRegenX = 0 this degrades
-	// cleanly to max(CalcXRegen(), 0) = CalcXRegen() = level + items +
-	// spellbonuses + aa (the slow-path baseline). The fast-regen smooth
-	// contribution comes from the 1s path on top.
-	//
-	// Group A's pre-S38 block previously assigned these to
-	// 6 * (maxPool / zone.fast_regen_X) * Character:*RegenMultiplier / 100.
-	// That formula is now obsolete (zone.fast_regen_X is not consulted by
-	// the new path; the Chromie dial replaces *RegenMultiplier as the
-	// effective fast-regen scalar).
+	// Theo-and-Co Phase 3 / S38 v3: OOC fast-regen via the OWNER's
+	// meditate + Chromie dial (cached via RefreshOwnerRegenMult; this is
+	// the only DB read on the bot regen path and it runs at 6s cadence,
+	// not per-tick). The per-6s target equals the player-side formula:
+	// maxPool * 6 / sec_to_full * dial. No multiplier pre-divide here
+	// (unlike client_mods.cpp): the bot path uses
+	// std::max(CalcXRegen(), RestRegenX), where CalcXRegen already
+	// applies × HPRegenMultiplier/100 internally; RestRegenX is the
+	// already-applied target so the max() compares apples to apples.
+	float sec_to_full = TheoRegen::ComputeOOCSecondsToFull(
+		m_owner_regen_class,
+		m_owner_regen_meditate
+	);
+	if (sec_to_full > 0.0f) {
+		const float per_6s_frac = 6.0f * m_owner_regen_mult / sec_to_full;
+		RestRegenHP        = static_cast<unsigned int>(
+			static_cast<float>(GetMaxHP()) * per_6s_frac);
+		RestRegenMana      = static_cast<unsigned int>(
+			static_cast<float>(GetMaxMana()) * per_6s_frac);
+		RestRegenEndurance = static_cast<unsigned int>(
+			static_cast<float>(GetMaxEndurance()) * per_6s_frac);
+	}
 }
 
 int32 Bot::LevelRegen() {
@@ -8544,9 +8543,9 @@ void Bot::RefreshOwnerDrillMults() {
 
 // Theo-and-Co Phase 3 / S38 — refresh cached owner OOC-regen state.
 //
-// Called from the 6s Bot::Process tic + at spawn (NOT per hit, NOT from
-// the 1s DoSmoothFastRegen path). Touches the DB exactly once per call
-// for the dial; class + meditate are cheap method calls on the owner.
+// Called from the 6s Bot::Process tic + at spawn (NOT per hit). Touches
+// the DB exactly once per call for the dial; class + meditate are cheap
+// method calls on the owner.
 //
 // "Bots get whatever their owner gets" -- Alex S38. The bot's own class
 // and meditate skill do NOT enter the curve; the owner's do. A Warrior
@@ -8583,89 +8582,12 @@ void Bot::RefreshOwnerRegenMult() {
 	}
 }
 
-// Theo-and-Co Phase 3 / S38 — 1-second OOC fast-regen sub-tick (bot).
-//
-// Parallel to Client::DoSmoothFastRegen. Reads ONLY the cached owner
-// values (m_owner_regen_*); never the DB. Gate: not engaged + rest_timer
-// elapsed. Note: bots don't sit OOC (verified Group A
-// bot.cpp:6819-6826), so the sit-check from the player path is omitted
-// here -- "bots never sit, dropping the sit requirement yields true
-// HP+mana+end parity" per Alex S31.
-void Bot::DoSmoothFastRegen() {
-	// Gate matches Bot::CalcRestState's preconditions. IsEngaged or
-	// rest_timer not yet elapsed -> reset accumulators and bail. This is
-	// the bot equivalent of the player's CanFastRegen() ooc_regen bool.
-	if (IsEngaged() || !rest_timer.Check(false)) {
-		m_smooth_hp_accum   = 0.0f;
-		m_smooth_mana_accum = 0.0f;
-		m_smooth_end_accum  = 0.0f;
-		return;
-	}
-
-	// Also require detrimental-buff freedom (mirrors CalcRestState
-	// buff_count loop). A bot with a non-rest-allowed detrimental buff
-	// shouldn't be quietly fast-regen'ing.
-	uint32 buff_count = GetMaxTotalSlots();
-	for (unsigned int j = 0; j < buff_count; j++) {
-		if (IsValidSpell(buffs[j].spellid)) {
-			if (IsDetrimentalSpell(buffs[j].spellid) && (buffs[j].ticsremaining > 0)) {
-				if (!IsRestAllowedSpell(buffs[j].spellid)) {
-					m_smooth_hp_accum   = 0.0f;
-					m_smooth_mana_accum = 0.0f;
-					m_smooth_end_accum  = 0.0f;
-					return;
-				}
-			}
-		}
-	}
-
-	float sec_to_full = TheoRegen::ComputeOOCSecondsToFull(
-		m_owner_regen_class,
-		m_owner_regen_meditate
-	);
-	if (sec_to_full <= 0.0f) {
-		return; // belt-and-suspenders div-by-zero guard
-	}
-
-	// Per-second pool fraction; scaled by the timer interval below so the
-	// total regen rate is preserved regardless of how often we tick (the
-	// interval is the diagnostic knob in zone/theo_regen.h).
-	const float per_sec_frac  = m_owner_regen_mult / sec_to_full;
-	const float per_tick_frac = per_sec_frac * TheoRegen::kSmoothTickIntervalSec;
-
-	if (GetHP() < GetMaxHP()) {
-		m_smooth_hp_accum += static_cast<float>(GetMaxHP()) * per_tick_frac;
-		int delta = static_cast<int>(m_smooth_hp_accum);
-		if (delta > 0) {
-			SetHP(GetHP() + delta);
-			m_smooth_hp_accum -= static_cast<float>(delta);
-		}
-	} else {
-		m_smooth_hp_accum = 0.0f;
-	}
-
-	if (GetMana() < GetMaxMana()) {
-		m_smooth_mana_accum += static_cast<float>(GetMaxMana()) * per_tick_frac;
-		int delta = static_cast<int>(m_smooth_mana_accum);
-		if (delta > 0) {
-			SetMana(GetMana() + delta);
-			m_smooth_mana_accum -= static_cast<float>(delta);
-		}
-	} else {
-		m_smooth_mana_accum = 0.0f;
-	}
-
-	if (GetEndurance() < GetMaxEndurance()) {
-		m_smooth_end_accum += static_cast<float>(GetMaxEndurance()) * per_tick_frac;
-		int delta = static_cast<int>(m_smooth_end_accum);
-		if (delta > 0) {
-			SetEndurance(GetEndurance() + delta);
-			m_smooth_end_accum -= static_cast<float>(delta);
-		}
-	} else {
-		m_smooth_end_accum = 0.0f;
-	}
-}
+// Theo-and-Co S38 v3: Bot::DoSmoothFastRegen REMOVED.
+// The sub-tick fought the EQ client's regen prediction and caused
+// mana-bar back/forward jitter. Per-tick meditate + Chromie-dial scaling
+// lives in Bot::CalcRestState above (sets RestRegenHP/Mana/Endurance);
+// Bot::Process's std::max(CalcXRegen, RestRegenX) picks it up on the
+// standard 6s tic_timer cadence.
 
 // Theo-and-Co Phase 3 Group C (S1) — earned-AA gate level.
 // Players cannot earn AA below level 51 (engine hard-gate exp.cpp:851,

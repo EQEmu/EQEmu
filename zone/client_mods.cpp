@@ -16,6 +16,7 @@
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "client.h"
+#include "theo_regen.h" // Theo-and-Co S38: OOC fast-regen meditate curve + dial
 
 #include "common/eqemu_logsys.h"
 #include "common/rulesys.h"
@@ -283,14 +284,38 @@ int64 Client::CalcHPRegen(bool bCombat)
 	base = base * 100.0f * AreaHPRegen * 0.01f + 0.5f;
 	// another check for IsClient && !(base + item_regen) && Cur_HP <= 0 do --base; do later
 
-	// Theo-and-Co Phase 3 / S38: OOC fast-regen branch LIFTED OUT.
-	// Previously this block computed `fast_regen = 6 * (maxHP /
-	// zone.fast_regen_hp)` and took max(base, fast_regen) when sitting +
-	// OOC. The replacement is Client::DoSmoothFastRegen on a parallel
-	// 1-second timer, using the meditate-curve x Chromie dial formula
-	// (zone/theo_regen.h) rather than the per-zone fast_regen_hp column.
-	// CalcHPRegen now returns only the per-6s level_base + items +
-	// spellbonuses; the fast-regen contribution comes from the 1s path.
+	// Theo-and-Co Phase 3 / S38 v3: OOC fast-regen via meditate + Chromie
+	// dial. Replaces the stock `6 * (maxHP / zone.fast_regen_hp)` branch.
+	// Target after-multiplier per-6s amount = maxHP * 6 / sec_to_full *
+	// dial; we pre-divide by RuleI(Character,HPRegenMultiplier)/100 so the
+	// CalcXRegen's tail multiplication restores the target exactly. Final
+	// effect: 20s 0->100% at meditate-1, 10s at PoP-cap, 15s for melee +
+	// Bard, scaled by the player's "regen_mult" data_bucket (default 1.0;
+	// 0.10x..2.00x via the Chromie NPC).
+	if (!bCombat && CanFastRegen() && (IsSitting() || CanMedOnHorse())) {
+		float dial = TheoRegen::kDefaultRegenDial;
+		std::string v = GetBucket("regen_mult");
+		if (!v.empty()) {
+			float parsed = static_cast<float>(std::atof(v.c_str()));
+			if (parsed > 0.0f) dial = parsed;
+		}
+		if (dial < TheoRegen::kMinRegenDial) dial = TheoRegen::kMinRegenDial;
+		if (dial > TheoRegen::kMaxRegenDial) dial = TheoRegen::kMaxRegenDial;
+
+		float sec_to_full = TheoRegen::ComputeOOCSecondsToFull(
+			GetClass(),
+			GetSkill(EQ::skills::SkillMeditate)
+		);
+		if (sec_to_full > 0.0f) {
+			int mult = RuleI(Character, HPRegenMultiplier);
+			if (mult <= 0) mult = 100; // defensive
+			int64 fast_regen = static_cast<int64>(
+				static_cast<float>(GetMaxHP()) * 6.0f * dial / sec_to_full
+				* 100.0f / static_cast<float>(mult)
+			);
+			if (base < fast_regen) base = fast_regen;
+		}
+	}
 
 	int64 regen = base + item_regen + spellbonuses.HPRegen; // TODO: client does this in buff tick
 	return (regen * RuleI(Character, HPRegenMultiplier) / 100);
@@ -702,12 +727,33 @@ int64 Client::CalcManaRegen(bool bCombat)
 
 	regen = regen * 100.0f * AreaManaRegen * 0.01f + 0.5f;
 
-	// Theo-and-Co Phase 3 / S38: OOC fast-regen branch LIFTED OUT.
-	// See the matching note above CalcHPRegen's return statement -- the
-	// 1-second smooth path in Client::DoSmoothFastRegen replaces this
-	// block. CalcManaRegen now returns only the per-6s base + items +
-	// AA + spellbonuses meditate contribution; the fast-regen comes
-	// from the 1s path using the Chromie dial + meditate curve.
+	// Theo-and-Co Phase 3 / S38 v3: OOC fast-regen via meditate + Chromie
+	// dial -- see matching block in CalcHPRegen above. Pre-divides by the
+	// ManaRegenMultiplier so the tail × multiplier restores the target.
+	if (!bCombat && CanFastRegen() && (IsSitting() || CanMedOnHorse())) {
+		float dial = TheoRegen::kDefaultRegenDial;
+		std::string v = GetBucket("regen_mult");
+		if (!v.empty()) {
+			float parsed = static_cast<float>(std::atof(v.c_str()));
+			if (parsed > 0.0f) dial = parsed;
+		}
+		if (dial < TheoRegen::kMinRegenDial) dial = TheoRegen::kMinRegenDial;
+		if (dial > TheoRegen::kMaxRegenDial) dial = TheoRegen::kMaxRegenDial;
+
+		float sec_to_full = TheoRegen::ComputeOOCSecondsToFull(
+			GetClass(),
+			GetSkill(EQ::skills::SkillMeditate)
+		);
+		if (sec_to_full > 0.0f) {
+			int mult = RuleI(Character, ManaRegenMultiplier);
+			if (mult <= 0) mult = 100;
+			int64 fast_regen = static_cast<int64>(
+				static_cast<float>(GetMaxMana()) * 6.0f * dial / sec_to_full
+				* 100.0f / static_cast<float>(mult)
+			);
+			if (regen < fast_regen) regen = fast_regen;
+		}
+	}
 
 	regen += spellbonuses.ManaRegen; // TODO: live does this in buff tick
 	return (regen * RuleI(Character, ManaRegenMultiplier) / 100);
@@ -1728,12 +1774,35 @@ int64 Client::CalcEnduranceRegen(bool bCombat)
 	auto aa_regen = aabonuses.EnduranceRegen;
 
 	int64 regen = base;
-	// Theo-and-Co Phase 3 / S38: OOC fast-regen branch LIFTED OUT.
-	// See the matching note above CalcHPRegen's return statement -- the
-	// 1-second smooth path in Client::DoSmoothFastRegen replaces this
-	// block. CalcEnduranceRegen now returns only the per-6s base + items +
-	// AA + spellbonuses contribution; the fast-regen comes from the
-	// 1s path using the Chromie dial + meditate curve.
+	// Theo-and-Co Phase 3 / S38 v3: OOC fast-regen via meditate + Chromie
+	// dial -- see matching block in CalcHPRegen above. Endurance: scale
+	// `aa_regen` to match the original `aa_regen = max(aa_regen, fast)`
+	// semantic; pre-divide by EnduranceRegenMultiplier so the tail x
+	// multiplier restores the target.
+	if (!bCombat && CanFastRegen() && (IsSitting() || CanMedOnHorse())) {
+		float dial = TheoRegen::kDefaultRegenDial;
+		std::string v = GetBucket("regen_mult");
+		if (!v.empty()) {
+			float parsed = static_cast<float>(std::atof(v.c_str()));
+			if (parsed > 0.0f) dial = parsed;
+		}
+		if (dial < TheoRegen::kMinRegenDial) dial = TheoRegen::kMinRegenDial;
+		if (dial > TheoRegen::kMaxRegenDial) dial = TheoRegen::kMaxRegenDial;
+
+		float sec_to_full = TheoRegen::ComputeOOCSecondsToFull(
+			GetClass(),
+			GetSkill(EQ::skills::SkillMeditate)
+		);
+		if (sec_to_full > 0.0f) {
+			int mult = RuleI(Character, EnduranceRegenMultiplier);
+			if (mult <= 0) mult = 100;
+			int64 fast_regen = static_cast<int64>(
+				static_cast<float>(GetMaxEndurance()) * 6.0f * dial / sec_to_full
+				* 100.0f / static_cast<float>(mult)
+			);
+			if (aa_regen < fast_regen) aa_regen = fast_regen;
+		}
+	}
 
 	regen += aa_regen;
 	regen += spellbonuses.EnduranceRegen; // TODO: client does this in buff tick
