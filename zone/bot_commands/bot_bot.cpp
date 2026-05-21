@@ -1274,7 +1274,7 @@ void bot_command_stance(Client *c, const Seperator *sep)
 
 		if (
 			(bot_iter->GetClass() == Class::Warrior || bot_iter->GetClass() == Class::Paladin || bot_iter->GetClass() == Class::ShadowKnight) &&
-			(bot_iter->GetBotStance() == Stance::Aggressive)
+			(bot_iter->GetBotStance() != Stance::Passive)
 		) {
 			bot_iter->SetTaunting(true);
 
