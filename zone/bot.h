@@ -203,9 +203,14 @@ namespace CommandedSubTypes {
 	constexpr uint16 Shrink             = 8;
 	constexpr uint16 Grow               = 9;
 	constexpr uint16 Selo               = 10;
+	// S39 fix #6: Each mode -- target-side iterator across group/raid
+	// members. Bot picks its best single-target variant and casts on the
+	// first valid member; multi-click required for full coverage since
+	// bots can't queue casts.
+	constexpr uint16 Each               = 11;
 
 	constexpr uint16 START              = CommandedSubTypes::SingleTarget;
-	constexpr uint16 END                = CommandedSubTypes::Selo;
+	constexpr uint16 END                = CommandedSubTypes::Each;
 };
 
 static std::map<uint16, std::string> botSubType_names = {
@@ -218,7 +223,8 @@ static std::map<uint16, std::string> botSubType_names = {
 	{ CommandedSubTypes::InvisAnimals,              "InvisAnimals" },
 	{ CommandedSubTypes::Shrink,                    "Shrink" },
 	{ CommandedSubTypes::Grow,                      "Grow" },
-	{ CommandedSubTypes::Selo,                      "Selo" }
+	{ CommandedSubTypes::Selo,                      "Selo" },
+	{ CommandedSubTypes::Each,                      "Each" }
 };
 
 namespace BotAnimEmpathy {

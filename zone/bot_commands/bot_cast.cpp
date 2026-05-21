@@ -119,7 +119,7 @@ void bot_command_cast(Client* c, const Seperator* sep)
 
 	//Commanded type help prompts
 	if (!arg2.compare("help")) {
-		c->Message(Chat::Yellow, "You can also use [single], [group], [ae]. Ex: ^cast movementspeed group.", sep->arg[0]);
+		c->Message(Chat::Yellow, "You can also use [single], [group], [ae], [each]. Ex: ^cast movementspeed group. [each] iterates group members.", sep->arg[0]);
 	}
 
 	if (!arg1.compare("invisibility") && !arg2.compare("help")) {
@@ -346,6 +346,12 @@ void bot_command_cast(Client* c, const Seperator* sep)
 			sub_target_type = CommandedSubTypes::AETarget;
 			++ab_arg;
 		}
+		else if (!arg_string.compare("each")) {
+			// S39 fix #6: target-side iterator -- bot picks first valid
+			// group/raid member and casts the best single-target variant.
+			sub_target_type = CommandedSubTypes::Each;
+			++ab_arg;
+		}
 	}
 
 	Mob* tar = c->GetTarget();
@@ -495,6 +501,53 @@ void bot_command_cast(Client* c, const Seperator* sep)
 
 	for (auto bot_iter : sbl) {
 		if (!bot_iter->ValidStateCheck(c)) {
+			continue;
+		}
+
+		// S39 fix #6: `each` -- iterate the player's group/raid members and
+		// cast on the first valid one. Each bot can only cast one spell at
+		// a time, so multi-click is required to cover an entire group; per-
+		// click each bot picks the first member where AICastSpell returns
+		// true (engine handles the CanBuffStack / already-buffed filter via
+		// target validation, so already-fully-buffed members get skipped).
+		if (sub_target_type == CommandedSubTypes::Each && !aa_type && !by_spell_id) {
+			std::vector<Mob*> member_targets;
+			Group* group = c->GetGroup();
+			if (group) {
+				for (auto& m : group->members) {
+					if (m && !m->IsCorpse()) {
+						member_targets.push_back(m);
+					}
+				}
+			} else {
+				member_targets.push_back(c);
+			}
+
+			bot_iter->SetCommandedSpell(true);
+			for (auto m_target : member_targets) {
+				if (!m_target) continue;
+				if (
+					IsBotSpellTypeBeneficial(spell_type) &&
+					!RuleB(Bots, CrossRaidBuffingAndHealing) &&
+					!bot_iter->IsInGroupOrRaid(m_target, true)
+				) {
+					continue;
+				}
+				bot_iter->SetHasLoS(BotSpellTypeRequiresLoS(spell_type) ? bot_iter->DoLosChecks(m_target) : true);
+				// Pass SingleTarget so engine selects a single-target variant
+				// (the Each filter in IsValidSpellTypeSubType is identical to
+				// SingleTarget; this keeps spell selection unambiguous).
+				if (bot_iter->AICastSpell(m_target, 100, spell_type, CommandedSubTypes::SingleTarget, sub_type)) {
+					if (!first_found) {
+						first_found = bot_iter;
+					}
+					is_success = true;
+					++success_count;
+					break;  // bot is now mid-cast; can't queue another
+				}
+			}
+			bot_iter->SetCommandedSpell(false);
+
 			continue;
 		}
 

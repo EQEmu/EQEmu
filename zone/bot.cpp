@@ -12989,6 +12989,10 @@ bool Bot::IsValidSpellTypeSubType(uint16 spell_type, uint16 sub_type, uint16 spe
 
 	switch (sub_type) {
 		case CommandedSubTypes::SingleTarget:
+		case CommandedSubTypes::Each:
+			// S39 fix #6: Each uses the same per-spell filter as SingleTarget
+			// (engine selects a single-target variant); the iteration across
+			// group/raid members happens in bot_cast.cpp at the per-bot loop.
 			if (
 				!IsAnyAESpell(spell_id) &&
 				!IsGroupSpell(spell_id)
