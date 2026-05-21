@@ -331,28 +331,46 @@ void bot_command_spell_settings_toggle(Client *c, const Seperator *sep)
 			atobool(sep->arg[2])
 	);
 
+	// S39 fix #4: auto-create a neutral default row when none exists so
+	// `^spellsettingstoggle <id> 0` works on first use instead of silently
+	// no-opping. Defaults match `^spellsettingsadd <id> 0 0 100`.
 	auto obs = my_bot->GetBotSpellSetting(spell_id);
-	if (!obs) {
-		return;
-	}
-
 	BotSpellSetting bs;
 
-	bs.priority = obs->priority;
-	bs.min_hp = obs->min_hp;
-	bs.max_hp = obs->max_hp;
-	bs.is_enabled = toggle;
+	if (obs) {
+		bs.priority = obs->priority;
+		bs.min_hp = obs->min_hp;
+		bs.max_hp = obs->max_hp;
+		bs.is_enabled = toggle;
 
-	if (!my_bot->UpdateBotSpellSetting(spell_id, &bs)) {
-		c->Message(
-			Chat::White,
-			fmt::format(
-				"Failed to {}able spell for {}.",
-				toggle ? "en" : "dis",
-				my_bot->GetCleanName()
-			).c_str()
-		);
-		return;
+		if (!my_bot->UpdateBotSpellSetting(spell_id, &bs)) {
+			c->Message(
+				Chat::White,
+				fmt::format(
+					"Failed to {}able spell for {}.",
+					toggle ? "en" : "dis",
+					my_bot->GetCleanName()
+				).c_str()
+			);
+			return;
+		}
+	}
+	else {
+		bs.priority = 0;
+		bs.min_hp = 0;
+		bs.max_hp = 100;
+		bs.is_enabled = toggle;
+
+		if (!my_bot->AddBotSpellSetting(spell_id, &bs)) {
+			c->Message(
+				Chat::White,
+				fmt::format(
+					"Failed to create spell setting for {}.",
+					my_bot->GetCleanName()
+				).c_str()
+			);
+			return;
+		}
 	}
 
 	my_bot->AI_AddBotSpells(my_bot->GetBotSpellID());
@@ -584,4 +602,137 @@ void bot_command_enforce_spell_list(Client* c, const Seperator *sep)
 			my_bot->GetBotEnforceSpellSetting() ? "enforced" : "optional"
 		).c_str()
 	);
+}
+
+// S39 fix #4: shared helper for spelldisable/spellenable/spellsettingstoggle.
+// Auto-creates a neutral default row if none exists; otherwise updates the
+// existing row's is_enabled while preserving priority/hp thresholds.
+// Caller is responsible for spell_id validity and target-bot ownership.
+static void apply_spell_enable_toggle(Client *c, Bot *my_bot, uint16 spell_id, bool enable)
+{
+	auto obs = my_bot->GetBotSpellSetting(spell_id);
+	BotSpellSetting bs;
+
+	if (obs) {
+		bs.priority = obs->priority;
+		bs.min_hp = obs->min_hp;
+		bs.max_hp = obs->max_hp;
+		bs.is_enabled = enable;
+
+		if (!my_bot->UpdateBotSpellSetting(spell_id, &bs)) {
+			c->Message(
+				Chat::White,
+				fmt::format(
+					"Failed to {}able spell for {}.",
+					enable ? "en" : "dis",
+					my_bot->GetCleanName()
+				).c_str()
+			);
+			return;
+		}
+	}
+	else {
+		bs.priority = 0;
+		bs.min_hp = 0;
+		bs.max_hp = 100;
+		bs.is_enabled = enable;
+
+		if (!my_bot->AddBotSpellSetting(spell_id, &bs)) {
+			c->Message(
+				Chat::White,
+				fmt::format(
+					"Failed to create spell setting for {}.",
+					my_bot->GetCleanName()
+				).c_str()
+			);
+			return;
+		}
+	}
+
+	my_bot->AI_AddBotSpells(my_bot->GetBotSpellID());
+
+	c->Message(
+		Chat::White,
+		fmt::format(
+			"Spell {}abled | Spell: {} ({}) on {}.",
+			enable ? "En" : "Dis",
+			spells[spell_id].name,
+			spell_id,
+			my_bot->GetCleanName()
+		).c_str()
+	);
+}
+
+void bot_command_spell_disable(Client *c, const Seperator *sep)
+{
+	if (helper_command_alias_fail(c, "bot_command_spell_disable", sep->arg[0], "spelldisable")) {
+		return;
+	}
+
+	if (helper_is_help_or_usage(sep->arg[1])) {
+		c->Message(
+			Chat::White,
+			fmt::format("Usage: {} [Spell ID] -- disables a spell for the targeted bot.", sep->arg[0]).c_str()
+		);
+		return;
+	}
+
+	auto my_bot = ActionableBots::AsTarget_ByBot(c);
+	if (!my_bot) {
+		c->Message(Chat::White, "You must target a bot that you own to use this command.");
+		return;
+	}
+
+	if (!sep->IsNumber(1)) {
+		c->Message(Chat::White, fmt::format("Usage: {} [Spell ID]", sep->arg[0]).c_str());
+		return;
+	}
+
+	auto spell_id = static_cast<uint16>(Strings::ToUnsignedInt(sep->arg[1]));
+	if (!IsValidSpell(spell_id)) {
+		c->Message(
+			Chat::White,
+			fmt::format("Spell ID {} is invalid or could not be found.", spell_id).c_str()
+		);
+		return;
+	}
+
+	apply_spell_enable_toggle(c, my_bot, spell_id, false);
+}
+
+void bot_command_spell_enable(Client *c, const Seperator *sep)
+{
+	if (helper_command_alias_fail(c, "bot_command_spell_enable", sep->arg[0], "spellenable")) {
+		return;
+	}
+
+	if (helper_is_help_or_usage(sep->arg[1])) {
+		c->Message(
+			Chat::White,
+			fmt::format("Usage: {} [Spell ID] -- re-enables a previously disabled spell for the targeted bot.", sep->arg[0]).c_str()
+		);
+		return;
+	}
+
+	auto my_bot = ActionableBots::AsTarget_ByBot(c);
+	if (!my_bot) {
+		c->Message(Chat::White, "You must target a bot that you own to use this command.");
+		return;
+	}
+
+	if (!sep->IsNumber(1)) {
+		c->Message(Chat::White, fmt::format("Usage: {} [Spell ID]", sep->arg[0]).c_str());
+		return;
+	}
+
+	auto spell_id = static_cast<uint16>(Strings::ToUnsignedInt(sep->arg[1]));
+	if (!IsValidSpell(spell_id)) {
+		c->Message(
+			Chat::White,
+			fmt::format("Spell ID {} is invalid or could not be found.", spell_id).c_str()
+		);
+		return;
+	}
+
+	apply_spell_enable_toggle(c, my_bot, spell_id, true);
 }
