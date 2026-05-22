@@ -506,6 +506,50 @@ void bot_command_cast(Client* c, const Seperator* sep)
 
 	for (auto bot_iter : sbl) {
 		if (!bot_iter->ValidStateCheck(c)) {
+			// S39: ValidStateCheck failed silently. For by_spell_id (the
+			// [Cast] saylink path) tell the player which condition tripped,
+			// or we go fully silent because PR #22 suppressed the outer
+			// generic. Conditions checked in Bot::ValidStateCheck:
+			// passive, hold, dead, feared, silenced, amnesiad, HP<0, group.
+			if (by_spell_id) {
+				std::string reason;
+				if (bot_iter->GetBotStance() == Stance::Passive) {
+					reason = "I am in Passive stance";
+				}
+				else if (bot_iter->GetHoldFlag()) {
+					reason = "I am set to hold";
+				}
+				else if (bot_iter->GetAppearance() == eaDead) {
+					reason = "I am dead";
+				}
+				else if (bot_iter->IsFeared()) {
+					reason = "I am feared";
+				}
+				else if (bot_iter->IsSilenced()) {
+					reason = "I am silenced";
+				}
+				else if (bot_iter->IsAmnesiad()) {
+					reason = "I am amnesiad";
+				}
+				else if (bot_iter->GetHP() < 0) {
+					reason = "my hit points are critical";
+				}
+				else if (!bot_iter->IsInGroupOrRaid(c)) {
+					reason = "I am not in your group or raid";
+				}
+				else {
+					reason = "I am in a state that prevents casting";
+				}
+
+				c->Message(
+					Chat::Red,
+					fmt::format(
+						"{} says, 'Ability failed to cast -- {}.'",
+						bot_iter->GetCleanName(),
+						reason
+					).c_str()
+				);
+			}
 			continue;
 		}
 
