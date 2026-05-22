@@ -601,7 +601,20 @@ void bot_command_cast(Client* c, const Seperator* sep)
 			continue;
 		}
 		else if (by_spell_id) {
+			// S39: when the player force-casts a specific spell by ID via the
+			// [Cast] saylink, give a specific reason on each failure instead
+			// of silently skipping. CanUseBotSpell == false means the spell
+			// is not loaded into this bot's AI list (different class /
+			// not yet acquired / bot_spells_entries gap).
 			if (!bot_iter->CanUseBotSpell(chosen_spell_id)) {
+				c->Message(
+					Chat::Red,
+					fmt::format(
+						"{} says, 'Ability failed to cast -- [{}] is not in my AI spell list.'",
+						bot_iter->GetCleanName(),
+						spells[chosen_spell_id].name
+					).c_str()
+				);
 				continue;
 			}
 
@@ -620,6 +633,10 @@ void bot_command_cast(Client* c, const Seperator* sep)
 				is_success = true;
 				++success_count;
 			}
+			// On failure, AttemptForcedCastSpell already emitted a specific
+			// Chat::Red reason (cooldown remaining, no LoS, etc.) -- the
+			// outer "No bots are capable" generic is suppressed below when
+			// by_spell_id is true so the player isn't told twice.
 
 			continue;
 		}
@@ -662,17 +679,36 @@ void bot_command_cast(Client* c, const Seperator* sep)
 	}
 
 	if (!is_success) {
-		c->Message(
-			Chat::Yellow,
-			fmt::format(
-				"No bots are capable of casting [{}] on {}. This could be due to this to any number of things: range, mana, immune, target type, etc.",
-				(by_spell_id ? spells[chosen_spell_id].name : type),
-				tar ? tar->GetCleanName() : "your target"
-			).c_str()
-		);
+		if (by_spell_id) {
+			// S39: per-bot CanUseBotSpell + AttemptForcedCastSpell already
+			// emit a specific Chat::Red reason on every failure path.
+			// Suppress the generic "could be due to any number of things"
+			// catch-all so the player isn't shown a vague second message.
+			// Fallback only if the spawned bot list was empty for this
+			// actionable (e.g. byname target not spawned).
+			if (sbl.empty()) {
+				c->Message(
+					Chat::Red,
+					fmt::format(
+						"No bot found to cast [{}].",
+						spells[chosen_spell_id].name
+					).c_str()
+				);
+			}
+		}
+		else {
+			c->Message(
+				Chat::Yellow,
+				fmt::format(
+					"No bots are capable of casting [{}] on {}. This could be due to this to any number of things: range, mana, immune, target type, etc.",
+					type,
+					tar ? tar->GetCleanName() : "your target"
+				).c_str()
+			);
 
-		if (!aa_type && !by_spell_id) {
-			helper_send_usage_required_bots(c, spell_type);
+			if (!aa_type) {
+				helper_send_usage_required_bots(c, spell_type);
+			}
 		}
 	}
 	else {
