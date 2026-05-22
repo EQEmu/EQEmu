@@ -8815,13 +8815,31 @@ void Bot::ListBotSpells(uint8 min_level)
 	for (const auto& s : (GetBotEnforceSpellSetting()) ? AIBot_spells_enforced : AIBot_spells) {
 		auto b = bot_spell_settings.find(s.spellid);
 		if (b == bot_spell_settings.end() && s.minlevel >= min_level) {
-			// S39 fix #5: per-row [Disable] saylink so a casual player can
-			// one-click stop the bot from casting a specific spell without
-			// having to type the spell id into a chat command.
+			// S39 cast-saylink: per-row [Cast] saylink so the player can
+			// force-cast a specific bot spell on their current target with
+			// one click (e.g. target self, click [Cast] on Bind Affinity).
+			// Bot's clean name is baked into the saylink (byname) so the
+			// actor is locked even if the player retargets between opening
+			// the Spell List and clicking [Cast]. If the spell is on
+			// cooldown, the remaining time is appended inline so the player
+			// knows when it'll be ready -- clicking during cooldown silently
+			// fails via the engine's existing recast gate.
+			uint32 remaining_ms = GetSpellRecastRemainingTime(s.spellid);
+			std::string cd_text;
+			if (remaining_ms > 0) {
+				uint32 sec = remaining_ms / 1000;
+				if (sec >= 60) {
+					cd_text = fmt::format(" (cooldown: {}m {}s)", sec / 60, sec % 60);
+				}
+				else {
+					cd_text = fmt::format(" (cooldown: {}s)", sec);
+				}
+			}
+
 			bot_owner->Message(
 				Chat::White,
 				fmt::format(
-					"Spell {} | Spell: {} (ID: {}) | {} | {}",
+					"Spell {} | Spell: {} (ID: {}) | {} | {} | {}{}",
 					spell_number,
 					Saylink::Silent(
 						fmt::format("^spellinfo {}", s.spellid),
@@ -8831,7 +8849,10 @@ void Bot::ListBotSpells(uint8 min_level)
 					Saylink::Silent(
 						fmt::format("^spellsettingsadd {} {} {} {}", s.spellid, s.priority, s.min_hp, s.max_hp), "Add"),
 					Saylink::Silent(
-						fmt::format("^spelldisable {}", s.spellid), "Disable")
+						fmt::format("^spelldisable {}", s.spellid), "Disable"),
+					Saylink::Silent(
+						fmt::format("^cast spellid {} byname {}", s.spellid, GetCleanName()), "Cast"),
+					cd_text
 				).c_str()
 			);
 
