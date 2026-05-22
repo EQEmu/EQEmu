@@ -8243,6 +8243,67 @@ void Bot::RaidGroupSay(const char* msg, ...) {
 	}
 }
 
+// S39: forward cast-failure MessageString calls to the bot owner. Engine code
+// (e.g. Mob::CastedSpellFinished at spells.cpp:2522) calls
+// MessageString(Chat::Red, TARGET_OUT_OF_RANGE) on the caster when a spell
+// fails to land. For a Bot caster, Mob's no-op virtual catches it and the
+// message vanishes. These overrides forward the standard cast-failure chat
+// types so the owner sees out-of-range, fizzle, too-close, silenced, no-mana,
+// immune, etc. Non-failure types stay no-op so we don't spam in-combat noise.
+static inline bool BotShouldForwardMessageString(uint32 type) {
+	return type == Chat::Red || type == Chat::SpellFailure || type == Chat::TooFarAway;
+}
+
+void Bot::MessageString(uint32 type, uint32 string_id, uint32 distance) {
+	if (!BotShouldForwardMessageString(type)) {
+		return;
+	}
+	Mob* owner = GetBotOwner();
+	if (owner && owner->IsClient()) {
+		owner->CastToClient()->MessageString(type, string_id, distance);
+	}
+}
+
+void Bot::MessageString(uint32 type, uint32 string_id, const char* message1,
+	const char* message2, const char* message3, const char* message4,
+	const char* message5, const char* message6, const char* message7,
+	const char* message8, const char* message9, uint32 distance) {
+	if (!BotShouldForwardMessageString(type)) {
+		return;
+	}
+	Mob* owner = GetBotOwner();
+	if (owner && owner->IsClient()) {
+		owner->CastToClient()->MessageString(type, string_id,
+			message1, message2, message3, message4, message5,
+			message6, message7, message8, message9, distance);
+	}
+}
+
+void Bot::FilteredMessageString(Mob* sender, uint32 type, eqFilterType filter, uint32 string_id) {
+	if (!BotShouldForwardMessageString(type)) {
+		return;
+	}
+	Mob* owner = GetBotOwner();
+	if (owner && owner->IsClient()) {
+		owner->CastToClient()->FilteredMessageString(sender, type, filter, string_id);
+	}
+}
+
+void Bot::FilteredMessageString(Mob* sender, uint32 type, eqFilterType filter, uint32 string_id,
+	const char* message1, const char* message2, const char* message3, const char* message4,
+	const char* message5, const char* message6, const char* message7, const char* message8,
+	const char* message9) {
+	if (!BotShouldForwardMessageString(type)) {
+		return;
+	}
+	Mob* owner = GetBotOwner();
+	if (owner && owner->IsClient()) {
+		owner->CastToClient()->FilteredMessageString(sender, type, filter, string_id,
+			message1, message2, message3, message4, message5,
+			message6, message7, message8, message9);
+	}
+}
+
 bool Bot::UseDiscipline(uint32 spell_id, uint32 target) {
 	if (!IsValidSpell(spell_id)) {
 		RaidGroupSay("Not a valid spell.");

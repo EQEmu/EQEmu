@@ -786,6 +786,24 @@ public:
 	static bool RemoveBotFromGroup(Bot* bot, Group* group);
 	void RaidGroupSay(const char *msg, ...);
 
+	// S39: forward in-flight / post-cast engine MessageString calls to the bot
+	// owner. Mob's MessageString virtuals are no-ops; Client overrides them to
+	// render via eqstr_us. Without these overrides, every Chat::Red emitted by
+	// Mob::CastedSpellFinished (TARGET_OUT_OF_RANGE, TARGET_TOO_CLOSE, fizzle,
+	// wouldn't-hold, immune, etc.) when the caster is a bot vanishes -- the
+	// player has no idea why the cast didn't land. Forwarded for cast-failure
+	// chat types only; high-volume in-combat types stay no-op so we don't spam.
+	void MessageString(uint32 type, uint32 string_id, uint32 distance = 0) override;
+	void MessageString(uint32 type, uint32 string_id, const char* message1,
+		const char* message2 = 0, const char* message3 = 0, const char* message4 = 0,
+		const char* message5 = 0, const char* message6 = 0, const char* message7 = 0,
+		const char* message8 = 0, const char* message9 = 0, uint32 distance = 0) override;
+	void FilteredMessageString(Mob* sender, uint32 type, eqFilterType filter, uint32 string_id) override;
+	void FilteredMessageString(Mob* sender, uint32 type, eqFilterType filter, uint32 string_id,
+		const char* message1, const char* message2 = nullptr, const char* message3 = nullptr,
+		const char* message4 = nullptr, const char* message5 = nullptr, const char* message6 = nullptr,
+		const char* message7 = nullptr, const char* message8 = nullptr, const char* message9 = nullptr) override;
+
 	// "GET" Class Methods
 	uint32 GetBotID() const { return _botID; }
 	uint32 GetBotOwnerCharacterID() const { return _botOwnerCharacterID; }
