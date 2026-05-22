@@ -12017,6 +12017,12 @@ bool Bot::AttemptAACastSpell(Mob* tar, uint16 spell_id, AA::Rank* rank) {
 
 bool Bot::AttemptForcedCastSpell(Mob* tar, uint16 spell_id, bool is_disc) {
 	if (!IsValidSpell(spell_id)) {
+		if (GetBotOwner()) {
+			GetBotOwner()->Message(
+				Chat::Red,
+				fmt::format("{} says, 'Ability failed to cast -- invalid spell ID {}.'", GetCleanName(), spell_id).c_str()
+			);
+		}
 		return false;
 	}
 
@@ -12026,11 +12032,27 @@ bool Bot::AttemptForcedCastSpell(Mob* tar, uint16 spell_id, bool is_disc) {
 		tar = this;
 	}
 
-	if ((IsCharmSpell(spell_id) || (IsPetSpell(spell_id) && HasPet()))) {
+	if (IsCharmSpell(spell_id)) {
+		GetBotOwner()->Message(
+			Chat::Red,
+			fmt::format("{} says, 'Ability failed to cast -- charm spells cannot be force-cast.'", GetCleanName()).c_str()
+		);
+		return false;
+	}
+
+	if (IsPetSpell(spell_id) && HasPet()) {
+		GetBotOwner()->Message(
+			Chat::Red,
+			fmt::format("{} says, 'Ability failed to cast -- I already have a pet summoned.'", GetCleanName()).c_str()
+		);
 		return false;
 	}
 
 	if (IsResurrectSpell(spell_id) && (!tar->IsCorpse() || !tar->CastToCorpse()->IsPlayerCorpse())) {
+		GetBotOwner()->Message(
+			Chat::Red,
+			fmt::format("{} says, 'Ability failed to cast -- resurrection requires a player corpse as the target.'", GetCleanName()).c_str()
+		);
 		return false;
 	}
 
@@ -12058,15 +12080,36 @@ bool Bot::AttemptForcedCastSpell(Mob* tar, uint16 spell_id, bool is_disc) {
 	}
 
 	if (!is_disc && !CheckSpellRecastTimer(spell_id)) {
+		GetBotOwner()->Message(
+			Chat::Yellow,
+			fmt::format(
+				"{} says, 'Ability recovery time not yet met. {} remaining.'",
+				GetCleanName(),
+				Strings::SecondsToTime(GetSpellRecastRemainingTime(spell_id), true)
+			).c_str()
+		);
 		return false;
 	}
 
 	if (!IsInGroupOrRaid(tar, true) &&
 		(!RuleB(Bots, EnableBotTGB) || (IsGroupSpell(spell_id) && !IsTGBCompatibleSpell(spell_id)))) {
+		GetBotOwner()->Message(
+			Chat::Red,
+			fmt::format(
+				"{} says, 'Ability failed to cast -- [{}] is not in my group or raid{}.'",
+				GetCleanName(),
+				tar->GetCleanName(),
+				(IsGroupSpell(spell_id) && !IsTGBCompatibleSpell(spell_id)) ? " (group spell, TGB not allowed)" : ""
+			).c_str()
+		);
 		return false;
 	}
 
 	if (!HasLoS() && !DoLosChecks(tar)) {
+		GetBotOwner()->Message(
+			Chat::Red,
+			fmt::format("{} says, 'Ability failed to cast -- no line of sight to [{}].'", GetCleanName(), tar->GetCleanName()).c_str()
+		);
 		return false;
 	}
 
@@ -12095,6 +12138,13 @@ bool Bot::AttemptForcedCastSpell(Mob* tar, uint16 spell_id, bool is_disc) {
 	}
 
 	if (!CastSpell(spell_id, tar->GetID())) {
+		GetBotOwner()->Message(
+			Chat::Red,
+			fmt::format(
+				"{} says, 'Ability failed to cast -- engine refused the cast (insufficient mana, fizzle, silenced, stunned, or already casting).'",
+				GetCleanName()
+			).c_str()
+		);
 		return false;
 	}
 
