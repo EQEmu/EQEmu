@@ -10191,10 +10191,17 @@ bool Bot::PrecastChecks(Mob* tar, uint16 spell_type) {
 	return true;
 }
 
-bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool prechecks, bool ae_check) {
+bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool prechecks, bool ae_check, std::string* reason) {
+	// S39: helper to populate the optional `reason` output. Internal AI
+	// callers leave it null so this is a no-op for them. Force-cast paths
+	// (AttemptForcedCastSpell) pass &reason and emit the populated string
+	// instead of the generic "could be due to any number of things" catch-all.
+	auto set_reason = [&](const std::string& r) { if (reason) { *reason = r; } };
+
 	if (prechecks) {
 		if (!tar || tar->GetAppearance() == eaDead  || tar->GetHP() < 0) {
 			LogBotSpellChecksDetail("{} says, 'Cancelling cast due to CastChecks !tar.'", GetCleanName());
+			set_reason("target is dead or invalid");
 			return false;
 		}
 
@@ -10212,6 +10219,7 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 
 		if (!PrecastChecks(tar, spell_type)) {
 			LogBotSpellChecksDetail("{} says, 'Cancelling cast due to !PrecastChecks.'", GetCleanName());
+			set_reason("precast checks failed (target state, mana ratio, HP ratio, or recast)");
 			return false;
 		}
 	}
@@ -10220,6 +10228,7 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 
 	if (!IsValidSpell(spell_id)) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast due to !IsValidSpell.'", GetCleanName());
+		set_reason("invalid spell ID");
 		return false;
 	}
 
@@ -10229,6 +10238,7 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 		IsAmnesiad()
 	) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} on {} due to Incapacitated.'", GetCleanName(), GetSpellName(spell_id), (tar ? tar->GetCleanName() : "nobody"));
+		set_reason(IsFeared() ? "I am feared" : (IsSilenced() ? "I am silenced" : "I am amnesiad"));
 		return false;
 	}
 
@@ -10241,6 +10251,7 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 		!IsCastNotStandingSpell(spell_id)
 	) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} on {} due to !IsCastNotStandingSpell.'", GetCleanName(), GetSpellName(spell_id), (tar ? tar->GetCleanName() : "nobody"));
+		set_reason(IsStunned() ? "I am stunned" : (IsMezzed() ? "I am mezzed" : "I am in divine aura"));
 		return false;
 	}
 
@@ -10249,11 +10260,13 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 		!zone->CanDoCombat()
 	) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} on {} due to !CanDoCombat.'", GetCleanName(), GetSpellName(spell_id), (tar ? tar->GetCleanName() : "nobody"));
+		set_reason("combat is not allowed in this zone");
 		return false;
 	}
 
 	if (!CheckSpellRecastTimer(spell_id)) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} due to !CheckSpellRecastTimer.'", GetCleanName(), GetSpellName(spell_id));
+		set_reason("spell is on recast cooldown");
 		return false;
 	}
 
@@ -10261,11 +10274,13 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 
 	if (!BotHasEnoughMana(spell_id) && !is_mana_exempt) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} due to !BotHasEnoughMana.'", GetCleanName(), GetSpellName(spell_id));
+		set_reason("I do not have enough mana");
 		return false;
 	}
 
 	if (zone->IsSpellBlocked(spell_id, glm::vec3(GetPosition()))) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} due to IsSpellBlocked.'", GetCleanName(), GetSpellName(spell_id));
+		set_reason("this spell is blocked in this part of the zone");
 		return false;
 	}
 
@@ -10274,6 +10289,7 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 		!PassCastRestriction(spells[spell_id].caster_requirement_id)
 	) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} due to !PassCastRestriction.'", GetCleanName(), GetSpellName(spell_id));
+		set_reason("I do not meet the caster requirement for this spell");
 		return false;
 	}
 
@@ -10284,6 +10300,7 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 		if (IsBeneficialSpell(spell_id)) {
 			if (IsEngaged()) {
 				LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} due to !can_cast_in_combat.'", GetCleanName(), GetSpellName(spell_id));
+				set_reason("this spell cannot be cast in combat");
 				return false;
 			}
 		}
@@ -10295,6 +10312,7 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 		if (IsBeneficialSpell(spell_id)) {
 			if (!IsEngaged()) {
 				LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} due to !can_cast_out_of_combat.'", GetCleanName(), GetSpellName(spell_id));
+				set_reason("this spell can only be cast in combat");
 				return false;
 			}
 		}
@@ -10308,6 +10326,7 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 			zone->random.Roll(chance)
 		) {
 			LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} due to focusFcMute.'", GetCleanName(), GetSpellName(spell_id));
+			set_reason("I am muted");
 			return false;
 		}
 	}
@@ -10317,6 +10336,7 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 		IsEffectInSpell(spell_id, SpellEffect::Levitate)
 	) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} due to !CanLevitate.'", GetCleanName(), GetSpellName(spell_id));
+		set_reason("levitation is not allowed in this zone");
 		return false;
 	}
 
@@ -10325,6 +10345,7 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 		!zone->zone_time.IsDayTime()
 	) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} due to !IsDayTime.'", GetCleanName(), GetSpellName(spell_id));
+		set_reason("this spell can only be cast during the day");
 		return false;
 	}
 
@@ -10333,6 +10354,7 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 		!zone->zone_time.IsNightTime()
 	) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} due to !IsNightTime.'", GetCleanName(), GetSpellName(spell_id));
+		set_reason("this spell can only be cast at night");
 		return false;
 	}
 
@@ -10341,6 +10363,7 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 		!zone->CanCastOutdoor()
 	) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} due to !CanCastOutdoor.'", GetCleanName(), GetSpellName(spell_id));
+		set_reason("this spell can only be cast outdoors");
 		return false;
 	}
 
@@ -10349,6 +10372,7 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 		!TargetValidation(tar)
 	) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast due to CastChecks !tar.'", GetCleanName());
+		set_reason("target is dead or invalid");
 		return false;
 	}
 
@@ -10358,7 +10382,7 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 		}
 		else {
 			LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} on {} due to ST_Self.'", GetCleanName(), GetSpellName(spell_id), tar->GetCleanName());
-
+			set_reason("this is a self-only spell");
 			return false;
 		}
 	}
@@ -10368,11 +10392,13 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 		IsSacrificeSpell(spell_id)
 	) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} due to IsSacrificeSpell.'", GetCleanName(), GetSpellName(spell_id));
+		set_reason("I cannot sacrifice myself");
 		return false;
 	}
 
 	if (tar->GetSpecialAbility(SpecialAbility::MagicImmunity)) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} on {} due to MagicImmunity.'", GetCleanName(), GetSpellName(spell_id), tar->GetCleanName());
+		set_reason(fmt::format("[{}] is immune to magic", tar->GetCleanName()));
 		return false;
 	}
 
@@ -10381,16 +10407,19 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 		!CombatRange(tar)
 	) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} on {} due to CastingFromRangeImmunity.'", GetCleanName(), GetSpellName(spell_id), tar->GetCleanName());
+		set_reason(fmt::format("[{}] is immune to ranged casting -- I must be in melee range", tar->GetCleanName()));
 		return false;
 	}
 
 	if (tar->CastToBot()->IsImmuneToBotSpell(spell_id, this)) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} on {} due to IsImmuneToBotSpell.'", GetCleanName(), GetSpellName(spell_id), tar->GetCleanName());
+		set_reason(fmt::format("[{}] is immune to this spell", tar->GetCleanName()));
 		return false;
 	}
 
 	if (!tar->CheckSpellLevelRestriction(this, spell_id)) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} on {} due to CheckSpellLevelRestriction.'", GetCleanName(), GetSpellName(spell_id), tar->GetCleanName());
+		set_reason(fmt::format("[{}]'s level is outside the spell's allowed range", tar->GetCleanName()));
 		return false;
 	}
 
@@ -10409,6 +10438,7 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 	) {
 		if (tar->IsBlockedBuff(spell_id)) {
 			LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} on {} due to IsBlockedPetBuff.'", GetCleanName(), GetSpellName(spell_id), tar->GetCleanName());
+			set_reason(fmt::format("[{}] has this buff blocked", tar->GetCleanName()));
 			return false;
 		}
 	}
@@ -10431,17 +10461,20 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 	) {
 		if (tar->GetOwner()->IsBlockedPetBuff(spell_id)) {
 			LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} on {} due to IsBlockedPetBuff.'", GetCleanName(), GetSpellName(spell_id), tar->GetCleanName());
+			set_reason(fmt::format("[{}]'s owner has this pet buff blocked", tar->GetCleanName()));
 			return false;
 		}
 	}
 	//LogBotSpellChecksDetail("{} says, 'Doing CanCastSpellType checks of {} on {}.'", GetCleanName(), GetSpellName(spell_id), tar->GetCleanName());
 	if (!CanCastSpellType(spell_type, spell_id, tar)) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} on {} due to CanCastSpellType.'", GetCleanName(), GetSpellName(spell_id), tar->GetCleanName());
+		set_reason("this spell type cannot be cast in this context");
 		return false;
 	}
 
 	if (!IsValidTargetType(spell_id, GetSpellTargetType(spell_id), tar->GetBodyType())) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} on {} due to IsValidTargetType.'", GetCleanName(), GetSpellName(spell_id), tar->GetCleanName());
+		set_reason(fmt::format("[{}] is the wrong target type for this spell", tar->GetCleanName()));
 		return false;
 	}
 
@@ -10457,6 +10490,7 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 		tar->CanBuffStack(spell_id, GetLevel(), true) < 0
 	) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} on {} due to !CanBuffStack.'", GetCleanName(), GetSpellName(spell_id), tar->GetCleanName());
+		set_reason(fmt::format("this spell would not stack on [{}]", tar->GetCleanName()));
 		return false;
 	}
 
@@ -10465,6 +10499,7 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 		tar->BuffCount() >= tar->GetCurrentBuffSlots() &&
 		CalcBuffDuration(this, tar, spell_id) != 0
 	) {
+		set_reason(fmt::format("[{}] has no available buff slots", tar->GetCleanName()));
 		return false;
 	}
 
@@ -10473,6 +10508,7 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 		!IsValidSpellRange(spell_id, tar)
 	) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} on {} due to IsValidSpellRange.'", GetCleanName(), GetSpellName(spell_id), tar->GetCleanName());
+		set_reason(fmt::format("[{}] is out of range", tar->GetCleanName()));
 		return false;
 	}
 
@@ -10487,11 +10523,13 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 		!tar->IsFleeing()
 	) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} on {} due to HasOrMayGetAggro.'", GetCleanName(), GetSpellName(spell_id), tar->GetCleanName());
+		set_reason("aggro check prevented the cast");
 		return false;
 	}
 
 	if (!DoResistCheckBySpellType(tar, spell_id, spell_type)) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} on {} due to DoResistCheckBySpellType.'", GetCleanName(), GetSpellName(spell_id), tar->GetCleanName());
+		set_reason(fmt::format("[{}] would resist this spell", tar->GetCleanName()));
 		return false;
 	}
 
@@ -10505,6 +10543,7 @@ bool Bot::CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool precheck
 		IsTargetAlreadyReceivingSpell(tar, spell_id)
 	) {
 		LogBotSpellChecksDetail("{} says, 'Cancelling cast of {} on {} due to IsTargetAlreadyReceivingSpell.'", GetCleanName(), GetSpellName(spell_id), tar->GetCleanName());
+		set_reason(fmt::format("[{}] is already receiving this spell from another caster", tar->GetCleanName()));
 		return false;
 	}
 
@@ -12174,12 +12213,18 @@ bool Bot::AttemptForcedCastSpell(Mob* tar, uint16 spell_id, bool is_disc) {
 		return false;
 	}
 
-	if (!CastChecks(spell_id, tar, UINT16_MAX)) {
+	std::string castchecks_reason;
+	if (!CastChecks(spell_id, tar, UINT16_MAX, false, false, &castchecks_reason)) {
+		// S39: CastChecks now populates a specific reason via its optional
+		// out-param. Emit that instead of the generic "could be due to any
+		// number of things" catch-all so the player sees the actual cause
+		// (out of range, immune, no mana, would not stack, etc.).
 		GetBotOwner()->Message(
 			Chat::Red,
 			fmt::format(
-				"{} says, 'Ability failed to cast. This could be due to any number of things: range, mana, line of sight, immune, target type, etc.'",
-				GetCleanName()
+				"{} says, 'Ability failed to cast -- {}.'",
+				GetCleanName(),
+				castchecks_reason.empty() ? "reason unavailable" : castchecks_reason
 			).c_str()
 		);
 

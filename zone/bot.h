@@ -549,7 +549,11 @@ public:
 
 	// Cast checks
 	bool PrecastChecks(Mob* tar, uint16 spell_type);	
-	bool CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool prechecks = false, bool ae_check = false);
+	// S39: `reason` (optional) is populated with a player-friendly explanation
+	// at each return-false so force-cast paths can surface the specific cause
+	// instead of the generic catch-all. Internal AI callers leave it null
+	// (no-op population, no cost). See feedback_systematic_audit_for_silent_failures.md.
+	bool CastChecks(uint16 spell_id, Mob* tar, uint16 spell_type, bool prechecks = false, bool ae_check = false, std::string* reason = nullptr);
 	bool IsImmuneToBotSpell(uint16 spell_id, Mob* caster);
 	bool CanCastSpellType(uint16 spell_type, uint16 spell_id, Mob* tar);
 	bool BotHasEnoughMana(uint16 spell_id);
