@@ -357,13 +357,17 @@ void bot_command_cast(Client* c, const Seperator* sep)
 	Mob* tar = c->GetTarget();
 
 	if (!tar) {
-		if ((!aa_type && !by_spell_id) && spell_type != BotSpellTypes::Escape && spell_type != BotSpellTypes::Pet) {
+		// S39 followup D: `each` mode iterates group/raid members internally
+		// (bot_cast.cpp's Each branch uses c->GetGroup()->members directly),
+		// so the player-target gate is unnecessary -- the Single Speed button
+		// can fire from any context without forcing a manual self-target.
+		if ((!aa_type && !by_spell_id) && spell_type != BotSpellTypes::Escape && spell_type != BotSpellTypes::Pet && sub_target_type != CommandedSubTypes::Each) {
 			c->Message(Chat::Yellow, "You need a target for that.");
 			return;
 		}
 	}
 
-	if (!aa_type && !by_spell_id) {
+	if (!aa_type && !by_spell_id && sub_target_type != CommandedSubTypes::Each) {
 		if (IsPetBotSpellType(spell_type) && !tar->IsPet()) {
 			c->Message(
 				Chat::Yellow,
@@ -455,6 +459,7 @@ void bot_command_cast(Client* c, const Seperator* sep)
 	}
 
 	if (
+		sub_target_type != CommandedSubTypes::Each &&
 		(spell_type == BotSpellTypes::Cure || spell_type == BotSpellTypes::GroupCures || spell_type == BotSpellTypes::PetCures) &&
 		!c->CastToBot()->GetNeedsCured(tar)
 	) {
@@ -504,12 +509,13 @@ void bot_command_cast(Client* c, const Seperator* sep)
 			continue;
 		}
 
-		// S39 fix #6: `each` -- iterate the player's group/raid members and
-		// cast on the first valid one. Each bot can only cast one spell at
-		// a time, so multi-click is required to cover an entire group; per-
-		// click each bot picks the first member where AICastSpell returns
-		// true (engine handles the CanBuffStack / already-buffed filter via
-		// target validation, so already-fully-buffed members get skipped).
+		// S39 fix #6 + followup A: `each` -- queue all group/raid members
+		// for serial single-target casting. Each bot maintains its own
+		// queue and drains one target per AI tick (via DrainEachQueue in
+		// AI_Process after CheckIfCasting clears). One button click can
+		// now cover the whole group over multiple ticks instead of needing
+		// repeated clicks. The downstream CanBuffStack check on each target
+		// silently skips already-buffed members so no mana is wasted.
 		if (sub_target_type == CommandedSubTypes::Each && !aa_type && !by_spell_id) {
 			std::vector<Mob*> member_targets;
 			Group* group = c->GetGroup();
@@ -523,30 +529,17 @@ void bot_command_cast(Client* c, const Seperator* sep)
 				member_targets.push_back(c);
 			}
 
-			bot_iter->SetCommandedSpell(true);
-			for (auto m_target : member_targets) {
-				if (!m_target) continue;
-				if (
-					IsBotSpellTypeBeneficial(spell_type) &&
-					!RuleB(Bots, CrossRaidBuffingAndHealing) &&
-					!bot_iter->IsInGroupOrRaid(m_target, true)
-				) {
-					continue;
+			bot_iter->EnqueueEachTargets(member_targets, spell_type, sub_type);
+
+			// Fire the first cast immediately so the player sees instant
+			// action; the remainder drains on subsequent AI ticks.
+			if (bot_iter->DrainEachQueue()) {
+				if (!first_found) {
+					first_found = bot_iter;
 				}
-				bot_iter->SetHasLoS(BotSpellTypeRequiresLoS(spell_type) ? bot_iter->DoLosChecks(m_target) : true);
-				// Pass SingleTarget so engine selects a single-target variant
-				// (the Each filter in IsValidSpellTypeSubType is identical to
-				// SingleTarget; this keeps spell selection unambiguous).
-				if (bot_iter->AICastSpell(m_target, 100, spell_type, CommandedSubTypes::SingleTarget, sub_type)) {
-					if (!first_found) {
-						first_found = bot_iter;
-					}
-					is_success = true;
-					++success_count;
-					break;  // bot is now mid-cast; can't queue another
-				}
+				is_success = true;
+				++success_count;
 			}
-			bot_iter->SetCommandedSpell(false);
 
 			continue;
 		}

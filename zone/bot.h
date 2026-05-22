@@ -943,6 +943,20 @@ public:
 	void SetBotStance(uint8 stance_id) { _botStance = Stance::IsValid(stance_id) ? stance_id : Stance::Passive; }
 	uint32 GetSpellRecastTimer(uint16 spell_id = 0);
 	bool CheckSpellRecastTimer(uint16 spell_id = 0);
+	// S39 followup B: true when at least one group member could legitimately
+	// receive this buff (CanBuffStack >= 0). Used to bypass the per-spell
+	// recast cooldown so buff coverage isn't stranded for minutes when one
+	// member drops a buff the rest still have.
+	bool HasGroupMemberMissingBuff(uint16 spell_id);
+
+	// S39 followup A: ^cast <type> each serial-cast queue.
+	// EnqueueEachTargets sets the queue + spell-type context; DrainEachQueue
+	// pops the head and tries to cast (returns true if a cast was initiated,
+	// false otherwise -- caller continues normal AI in that case);
+	// ClearEachQueue resets state (used on zone/camp/etc.).
+	void EnqueueEachTargets(const std::vector<Mob*>& targets, uint16 spell_type, uint16 sub_type);
+	bool DrainEachQueue();
+	void ClearEachQueue();
 	uint32 GetSpellRecastRemainingTime(uint16 spell_id = 0);
 	void SetSpellRecastTimer(uint16 spell_id, int32 recast_delay = 0);
 	uint32 CalcSpellRecastTimer(uint16 spell_id);
@@ -1251,6 +1265,13 @@ private:
 	std::vector<BotSpellSettings> m_bot_spell_settings;
 	std::vector<Mob*> _spell_target_list;
 	std::vector<Mob*> _group_spell_target_list;
+	// S39 followup A: per-bot serial-cast queue for ^cast <type> each mode.
+	// Populated when the player invokes ^cast each; drained one target per
+	// AI tick (after CheckIfCasting clears) so one button click can cover
+	// the whole group over multiple sequential casts.
+	std::vector<uint32> m_each_target_queue;
+	uint16 m_each_spell_type = UINT16_MAX;
+	uint16 m_each_sub_type = UINT16_MAX;
 	Raid* _storedRaid;
 	bool _verifiedRaid;
 	uint16 _tempSpellType; // this is used to check the spell type being cast against ^spellannouncecasts status

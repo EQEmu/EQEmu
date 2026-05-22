@@ -1063,8 +1063,25 @@ std::vector<BotSpell_wPriority> Bot::GetPrioritizedBotSpellsBySpellType(Bot* cas
 				}
 			}
 
+			// S39 followup B: compute recast_ok with a missing-member bypass.
+			// CheckSpellRecastTimer alone blocks buff coverage when a member
+			// drops a buff while the spell is on cooldown (e.g. Boon of the
+			// Garou's 180s recast_time stranded a player un-buffed for
+			// minutes). For beneficial buff types, override the cooldown if
+			// any group member legitimately needs the buff (CanBuffStack >=
+			// 0). The downstream CanBuffStack check still skips already-
+			// buffed members so no mana is wasted.
+			bool recast_ok = caster->CheckSpellRecastTimer(bot_spell_list[i].spellid);
 			if (
-				caster->CheckSpellRecastTimer(bot_spell_list[i].spellid) &&
+				!recast_ok &&
+				IsBotBuffSpellType(spell_type) &&
+				caster->HasGroupMemberMissingBuff(bot_spell_list[i].spellid)
+			) {
+				recast_ok = true;
+			}
+
+			if (
+				recast_ok &&
 				(bot_spell_list[i].type == spell_type || bot_spell_list[i].type == GetParentSpellType(spell_type)) &&
 				caster->IsValidSpellTypeBySpellID(spell_type, bot_spell_list[i].spellid)
 			) {

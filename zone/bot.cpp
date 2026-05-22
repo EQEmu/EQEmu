@@ -2228,6 +2228,16 @@ void Bot::AI_Process()
 		return;
 	}
 
+	// S39 followup A: drain ^cast each queued targets. DrainEachQueue
+	// pops the next target and fires AICastSpell -- if a cast initiates,
+	// return so the bot can finish casting before the next iteration.
+	// If all remaining queued targets are no longer valid (already buffed,
+	// dead, out of zone), DrainEachQueue exhausts the queue silently and
+	// returns false, falling through to normal AI.
+	if (DrainEachQueue()) {
+		return;
+	}
+
 	_spell_target_list.clear();
 	_group_spell_target_list.clear();
 	SetTempSpellType(UINT16_MAX);
@@ -9422,6 +9432,106 @@ bool Bot::CheckSpellRecastTimer(uint16 spell_id)
 	}
 
 	return false;
+}
+
+// S39 followup B: returns true if at least one group member could
+// legitimately receive this buff (CanBuffStack returns a valid slot index,
+// not -1). Used to bypass CheckSpellRecastTimer for beneficial buffs in the
+// idle loop: without this, dropping a group buff (e.g. Boon of the Garou,
+// recast_time=180s) left a player without coverage for up to the spell's
+// full recast_time even when the bot could safely refresh it. The bot's
+// per-target CanBuffStack check downstream still prevents wasted casts on
+// already-buffed members.
+bool Bot::HasGroupMemberMissingBuff(uint16 spell_id)
+{
+	if (!IsValidSpell(spell_id)) {
+		return false;
+	}
+
+	const auto& target_list = GetSpellTargetList(false);
+	for (Mob* m : target_list) {
+		if (!m || m->IsCorpse()) {
+			continue;
+		}
+		if (m->CanBuffStack(spell_id, GetLevel(), true) >= 0) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+// S39 followup A: ^cast <type> each serial-cast queue.
+// Each bot can only cast one spell at a time, so to cover multiple members
+// from one button click we queue the target IDs and drain one per AI tick.
+// Drains are non-blocking: if a target no longer needs the buff (CanBuffStack
+// rejects via downstream CastChecks), AICastSpell returns false and we pop
+// the next target in the same call. Real cast initiation returns true and
+// the bot enters its casting state -- the next AI tick re-enters drain after
+// CheckIfCasting clears.
+void Bot::EnqueueEachTargets(const std::vector<Mob*>& targets, uint16 spell_type, uint16 sub_type)
+{
+	m_each_target_queue.clear();
+	m_each_spell_type = spell_type;
+	m_each_sub_type = sub_type;
+
+	for (Mob* m : targets) {
+		if (m && !m->IsCorpse()) {
+			m_each_target_queue.push_back(m->GetID());
+		}
+	}
+}
+
+bool Bot::DrainEachQueue()
+{
+	if (m_each_target_queue.empty() || m_each_spell_type == UINT16_MAX) {
+		return false;
+	}
+
+	SetCommandedSpell(true);
+
+	while (!m_each_target_queue.empty()) {
+		uint32 target_id = m_each_target_queue.front();
+		m_each_target_queue.erase(m_each_target_queue.begin());
+
+		Mob* tar = entity_list.GetMob(target_id);
+		if (!tar || tar->GetAppearance() == eaDead || tar->IsCorpse()) {
+			continue;
+		}
+
+		// Beneficial in-group/raid guard mirrors bot_cast.cpp's per-bot loop.
+		if (
+			IsBotSpellTypeBeneficial(m_each_spell_type) &&
+			!RuleB(Bots, CrossRaidBuffingAndHealing) &&
+			!IsInGroupOrRaid(tar, true)
+		) {
+			continue;
+		}
+
+		SetHasLoS(BotSpellTypeRequiresLoS(m_each_spell_type) ? DoLosChecks(tar) : true);
+
+		// Pass SingleTarget so AICastSpell picks a single-target variant
+		// (matches the original Each branch's spell-selection intent).
+		if (AICastSpell(tar, 100, m_each_spell_type, CommandedSubTypes::SingleTarget, m_each_sub_type)) {
+			SetCommandedSpell(false);
+			return true;
+		}
+		// Failed cast (target already buffed / out of range / etc.) -> next.
+	}
+
+	SetCommandedSpell(false);
+
+	// Queue fully drained -- reset state.
+	m_each_spell_type = UINT16_MAX;
+	m_each_sub_type = UINT16_MAX;
+	return false;
+}
+
+void Bot::ClearEachQueue()
+{
+	m_each_target_queue.clear();
+	m_each_spell_type = UINT16_MAX;
+	m_each_sub_type = UINT16_MAX;
 }
 
 void Bot::SetDisciplineReuseTimer(uint16 spell_id, int32 reuse_timer)
