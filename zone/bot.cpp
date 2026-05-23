@@ -9551,22 +9551,39 @@ bool Bot::CheckSpellRecastTimer(uint16 spell_id)
 // full recast_time even when the bot could safely refresh it. The bot's
 // per-target CanBuffStack check downstream still prevents wasted casts on
 // already-buffed members.
-bool Bot::HasGroupMemberMissingBuff(uint16 spell_id)
-{
-	if (!IsValidSpell(spell_id)) {
-		return false;
-	}
-
+bool Bot::HasGroupMemberMissingBuff(uint16 spell_id) {
+	if (!IsValidSpell(spell_id)) return false;
 	const auto& target_list = GetSpellTargetList(false);
+	const uint16 caster_level = GetCasterLevel(spell_id);
 	for (Mob* m : target_list) {
-		if (!m || m->IsCorpse()) {
-			continue;
+		if (!m || m->IsCorpse()) continue;
+		// S41 amendment: CanBuffStack alone returns a valid slot index when
+		// the buff could geometrically fit. The deeper Mob::AddBuff path
+		// (spells.cpp:3572) re-runs CheckStackConflict with the REAL caster
+		// mobs, which can reject (e.g., Vulak Ancient Breath blocking a
+		// lower-value bard song by value comparison). Without this check the
+		// bot enters a tight retry loop on debuffed members, because the
+		// buff's recast timer is set to buff duration (bot.cpp:12270), not
+		// spell.recast_time, and short-duration songs make that effectively
+		// zero. The original PR #19-B intent (bypass cooldown when a member
+		// legitimately needs the buff) is preserved -- members who would
+		// accept return through both checks; members blocked by a higher-
+		// value debuff return -1 from CanBuffStack too via CheckStackConflict.
+		if (m->CanBuffStack(spell_id, caster_level, true) < 0) continue;
+		bool blocked = false;
+		const int buff_count = m->GetMaxTotalSlots();
+		for (int i = 0; i < buff_count; i++) {
+			const Buffs_Struct &curbuf = m->GetBuffs()[i];
+			if (!IsValidSpell(curbuf.spellid)) continue;
+			int ret = m->CheckStackConflict(
+				curbuf.spellid, curbuf.casterlevel,
+				spell_id, caster_level,
+				entity_list.GetMobID(curbuf.casterid), this, i
+			);
+			if (ret == -1) { blocked = true; break; }
 		}
-		if (m->CanBuffStack(spell_id, GetLevel(), true) >= 0) {
-			return true;
-		}
+		if (!blocked) return true;
 	}
-
 	return false;
 }
 
