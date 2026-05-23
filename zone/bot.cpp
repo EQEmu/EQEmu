@@ -6099,6 +6099,17 @@ bool Bot::SpellOnTarget(
 		return false;
 	}
 
+	// S41: defend against dangling/freed Mob* on spelltar. A bard died to
+	// Vulak melee mid-Bot::SpellOnTarget on her -- the Mob was freed, but
+	// the pointer (non-null) was still held by the caller frame, causing a
+	// vtable call through freed memory -> segfault. entity_list.IsMobInZone
+	// is explicitly dangling-pointer-safe (entity.cpp:4196-4216 comment) and
+	// is the canonical guard for this pattern.
+	if (spelltar && !entity_list.IsMobInZone(spelltar)) {
+		LogSpells("Bot::SpellOnTarget aborted: stale/freed target for spell [{}]", spell_id);
+		return false;
+	}
+
 	if (spelltar) {
 		if (
 			IsDetrimentalSpell(spell_id) &&
@@ -6350,6 +6361,12 @@ bool Bot::DoFinishedSpellSingleTarget(uint16 spell_id, Mob* spellTarget, EQ::spe
 
 		if (!noGroupSpell) {
 			for (Mob* m : GetBuffTargets(spellTarget)) {
+				// S41: skip stale/freed entries -- GetBuffTargets() snapshots a
+				// vector at call time; a member can die / be freed mid-iter.
+				if (!m || !entity_list.IsMobInZone(m)) {
+					continue;
+				}
+
 				if (IsEffectInSpell(thespell, SpellEffect::AbsorbMagicAtt) || IsEffectInSpell(thespell, SpellEffect::Rune)) {
 					for (int i = 0; i < m->GetMaxTotalSlots(); i++) {
 						uint32 buff_count = m->GetMaxTotalSlots();
@@ -6366,7 +6383,10 @@ bool Bot::DoFinishedSpellSingleTarget(uint16 spell_id, Mob* spellTarget, EQ::spe
 
 				SpellOnTarget(thespell, m);
 
+				// S41: SpellOnTarget can mutate the world (damage, death, zone
+				// transitions). Re-validate m before the GetPet() deref.
 				if (
+					entity_list.IsMobInZone(m) &&
 					m->GetPetID() &&
 					(
 						!RuleB(Bots, RequirePetAffinity) ||
@@ -6406,13 +6426,20 @@ bool Bot::DoFinishedSpellGroupTarget(uint16 spell_id, Mob* spellTarget, EQ::spel
 
 		if (spellTarget->IsOfClientBotMerc()) {
 			for (Mob* m : GetBuffTargets(spellTarget)) {
+				// S41: skip stale/freed entries -- GetBuffTargets() snapshots
+				// a vector at call time; a member can die / be freed mid-iter.
+				if (!m || !entity_list.IsMobInZone(m)) {
+					continue;
+				}
 				if (m == this && spellTarget != this) {
 					continue;
 				}
 
 				SpellOnTarget(spell_id, m);
 
-				if (m->GetPetID() && (!RuleB(Bots, RequirePetAffinity) || m->HasPetAffinity())) {
+				// S41: SpellOnTarget can mutate the world; re-validate m
+				// before the GetPet() deref.
+				if (entity_list.IsMobInZone(m) && m->GetPetID() && (!RuleB(Bots, RequirePetAffinity) || m->HasPetAffinity())) {
 					SpellOnTarget(spell_id, m->GetPet());
 				}
 			}
