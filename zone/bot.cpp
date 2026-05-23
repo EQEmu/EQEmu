@@ -7049,6 +7049,18 @@ int64 Bot::CalcMaxHP() {
 	nd += aabonuses.PercentMaxHPChange + spellbonuses.PercentMaxHPChange + itembonuses.PercentMaxHPChange;
 	bot_hp = ((float)bot_hp * (float)nd / (float)10000);
 	bot_hp += (spellbonuses.FlatMaxHPChange + aabonuses.FlatMaxHPChange + itembonuses.FlatMaxHPChange);
+	// Theo-and-Co S44 (Phase 4 prerequisite) — per-class HP calibration
+	// offset. Corrects an engine-side class-asymmetric AA HP grant outcome
+	// where WAR (the dedicated tank) ends up with less HP than PAL/SHD at
+	// L60+. Offset is flat HP added here (AFTER the AA-percent multiplier);
+	// 0 below L51 (no AAs granted, no asymmetry). Per-class audit-anchored
+	// table + level-shape function live in bot_stat_model.h.
+	const int32 hp_calibration = BotComputeHPOffset(GetClass(), GetLevel());
+	bot_hp += hp_calibration;
+#if THEO_GROUPA_HP_CALIBRATION_DIAGNOSE
+	LogInfo("[Theo HP Calibration] bot=[{}] L{} class={} offset={} pre-leadership_hp={}",
+		GetCleanName(), GetLevel(), GetClass(), hp_calibration, bot_hp);
+#endif
 	bot_hp += GroupLeadershipAAHealthEnhancement();
 	max_hp = bot_hp;
 	if (current_hp > max_hp)

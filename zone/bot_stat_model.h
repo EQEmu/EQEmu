@@ -406,6 +406,135 @@ inline BotComputedStats ComputeBotStats(uint8_t class_, uint16_t race, uint8_t l
 }
 
 // =========================================================================
+// PER-CLASS HP CALIBRATION OFFSET (S44, 2026-05-23) — Phase 4 prerequisite
+// =========================================================================
+// Corrects an engine-side class-asymmetric AA HP grant outcome where WAR
+// (the dedicated tank, highest hp_factor 300) ends up with LESS HP than
+// PAL/SHD at L60+. Root cause: Bot::LoadAAs auto-grants every level-
+// eligible AA via GetEarnedAALevel; the granted AAs include class-
+// asymmetric HP grants that flip the design hierarchy.
+//
+// Reference: project_bot_ai_baseline.md §9 (the "bots DO get AA" finding),
+// project_bot_stat_calibration.md (the S42/S43 audit + Option B plan).
+//
+// Audit data (S42/S43, fresh-spawned, no buffs, owner = Alex):
+//
+//   Class | hp_factor | Audit L60 | Audit L65 | Target L60 | Target L65
+//   ------|-----------|-----------|-----------|------------|----------
+//   WAR   | 300       |   3901    |   4374    |   5400     |   6200
+//   CLR   | 264       |   4711    |   5108    |   4000     |   4500
+//   PAL   | 288       |   5028    |   5516    |   4900     |   5600
+//   RNG   | 276       |   3528    |   3972    |   4200     |   4700
+//   SHD   | 288       |   4482    |   4918    |   4900     |   5600
+//   DRU   | 240       |   3403    |   3781    |   3700     |   4200
+//   MNK   | 255       |   3174    |   3570    |   4000     |   4500
+//   BRD   | 264       |   2698    |   3080    |   4000     |   4500
+//   ROG   | 255       |   4562    |   4956    |   4000     |   4500
+//   SHM   | 255       |   4583    |   4993    |   4000     |   4500
+//   NEC   | 240       |   3124    |   3442    |   3200     |   3600
+//   WIZ   | 240       |   4016    |   4340    |   3200     |   3600
+//   MAG   | 240       |   3742    |   4060    |   3200     |   3600
+//   ENC   | 240       |   2731    |   3029    |   3000     |   3400
+//   BST   | 255       |   3146    |   3538    |   4200     |   4700
+//
+// Design intent (Alex-locked S43): "Defiant + small bump" — middle of the
+// pack, better than Defiant floor, ~85% of raid-BiS at the relevant level
+// cap. HP hierarchy from highest to lowest:
+//   WAR > PAL/SHD > RNG/BST > MNK/BRD/ROG/SHM/CLR > DRU > NEC/WIZ/MAG > ENC
+//
+// Critical Rule #10 (at-level play): L60 = Velious/Kunark raid tier,
+// L65 = Luclin/PoP raid tier. Targets land at both.
+//
+// Berserker (class 16) is GoD-era, NOT in PoP-era scope; server-blocked
+// via sql/036. Absent from the table; lookup returns nullptr; caller
+// falls back to 0 offset.
+//
+// PLACEMENT (deviation from project_bot_stat_calibration.md spec): the
+// spec said "before AA-percent multiplier." Implemented AFTER the
+// multiplier (alongside the existing FlatMaxHPChange terms in CalcMaxHP).
+// Reason: per-class AAmult is not modelled — the audit's L60 PAL ~+54%
+// MaxHP isn't reproduced by the 4 HP AAs found at L60 expansion<=4. With
+// the "after" placement, the offset == direct HP delta (audit-anchored,
+// predictable); with "before" placement, the offset would be amplified by
+// an unknown AAmult per class. "After" is cleaner to reason about + tune.
+// =========================================================================
+
+// Diagnostic flag: when ON, every CalcMaxHP call logs the offset applied.
+// CalcMaxHP is a hot path (called on every buff add/fade/tick), so an
+// always-on synchronous LogInfo floods the single-threaded zone — same
+// hot-path-sync-I/O caveat as THEO_GROUPA_STATMODEL_DIAGNOSE. Keep 0 in
+// production; flip to 1 only during first-spawn smoke verification.
+#define THEO_GROUPA_HP_CALIBRATION_DIAGNOSE 0
+
+struct BotClassHPCalibration {
+	uint8_t  class_;
+	int32_t  hp_offset_l60;
+	int32_t  hp_offset_l65;
+};
+
+// 15 PoP-era classes. Offsets are FLAT HP added (NOT multiplied through
+// the AA-percent path). Positive = under-statted class (add HP to reach
+// target). Negative = over-statted class (trim HP to reach target).
+static const BotClassHPCalibration kBotClassHPCalibration[] = {
+	//  class                  L60      L65    role / rationale
+	{  1 /* WAR */,         +1499,   +1826 }, // Primary Tank — biggest under-stat fix
+	{  2 /* CLR */,          -711,    -608 }, // Healer — trim AA over-stat
+	{  3 /* PAL */,          -128,     +84 }, // Hybrid Tank — slight trim L60, slight bump L65
+	{  4 /* RNG */,          +672,    +728 }, // Hybrid Melee
+	{  5 /* SHD */,          +418,    +682 }, // Hybrid Tank
+	{  6 /* DRU */,          +297,    +419 }, // Hybrid Healer (less defensive)
+	{  7 /* MNK */,          +826,    +930 }, // Melee
+	{  8 /* BRD */,         +1302,   +1420 }, // Support — engine under-stats hard
+	{  9 /* ROG */,          -562,    -456 }, // Pure DPS Melee — trim
+	{ 10 /* SHM */,          -583,    -493 }, // Hybrid Healer — trim
+	{ 11 /* NEC */,           +76,    +158 }, // Caster DPS — near target
+	{ 12 /* WIZ */,          -816,    -740 }, // Caster DPS — trim hardest
+	{ 13 /* MAG */,          -542,    -460 }, // Caster DPS — trim
+	{ 14 /* ENC */,          +269,    +371 }, // Caster CC — slight bump
+	{ 15 /* BST */,         +1054,   +1162 }, // Hybrid Melee
+};
+
+inline const BotClassHPCalibration* LookupBotClassHPCalibration(uint8_t class_) {
+	for (const auto &row : kBotClassHPCalibration) {
+		if (row.class_ == class_) {
+			return &row;
+		}
+	}
+	return nullptr;
+}
+
+// HP offset for a bot at a given level. Returns flat HP to ADD — applied
+// AFTER the AA-percent multiplier in Bot::CalcMaxHP, alongside the existing
+// FlatMaxHPChange terms.
+//
+// Shape:
+//   L<51        : 0 (no AAs granted; engine hp_factor produces correct
+//                 hierarchy WAR > PAL > others naturally)
+//   L51..L60    : full L60 offset (AA gate opens at L51; class-asymmetric
+//                 AA grants accumulate within L51-L60; apply full correction
+//                 immediately so hierarchy is correct at every L51+ level)
+//   L60..L65    : linear interp from L60 offset to L65 offset
+//   L>=65       : clamp to L65 offset (player level cap on this server)
+inline int32_t BotComputeHPOffset(uint8_t class_, uint8_t level) {
+	if (level < 51) {
+		return 0;
+	}
+	const BotClassHPCalibration* cal = LookupBotClassHPCalibration(class_);
+	if (!cal) {
+		return 0;
+	}
+	if (level <= 60) {
+		return cal->hp_offset_l60;
+	}
+	if (level >= 65) {
+		return cal->hp_offset_l65;
+	}
+	// L61..L64 linear interp
+	return cal->hp_offset_l60 +
+		(int32_t)((float)(cal->hp_offset_l65 - cal->hp_offset_l60) * (level - 60) / 5.0f);
+}
+
+// =========================================================================
 // SYNTHETIC WEAPON (step 3) — equipped weapon is cosmetic; bot melee damage
 // + attack delay come from class weapon-type, mirroring the armor curve.
 // Scheme CONFIRMED (Alex 2026-05-16). Damage = L1 real baseline ramping to
