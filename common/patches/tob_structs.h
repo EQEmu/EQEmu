@@ -599,7 +599,7 @@ namespace TOB {
 		Rampage: 0x2
 		NoCastOnText: 0x4
 		DoubleBowShot: 0x8
-		UnknownSpellFlag: 0x10
+		UnknownSpellFlag: 0x10 // display flag of some sort, setting to 1 calls DisplayChatText
 		Flurry: 0x20
 		Riposte: 0x40
 		Critical: 0x80
@@ -613,6 +613,9 @@ namespace TOB {
 		Strikethrough: 0x8000
 		LuckyRiposte: 0x10000
 		Twincast: 0x20000
+		ShieldBlock: 0x40000
+		StaffBlock: 0x80000
+		Locked: 0x100000
 		Might be more flags beyond this but I'm not sure
 		*/
 
@@ -620,17 +623,18 @@ namespace TOB {
 		{
 			/*000*/ uint16 target;
 			/*002*/ uint16 source;
-			/*004*/ uint32 unknown1; //not read by the client
+			/*004*/ uint32 unknown1; // not read by the client
 			/*008*/ int64 damage;
-			/*016*/ uint32 special; //flags; will document above
+			/*016*/ uint32 special; // flags; will document above
 			/*020*/ int32 spellid;
-			/*024*/ uint32 spell_level; //spell caster level (unconfirmed; it is used for the spell link)
-			/*028*/ float force; //I haven't actually been able to confirm these three yet
+			/*024*/ uint32 spell_level; // spell caster level (unconfirmed; it is used for the spell link)
+			/*028*/ float force;
 			/*032*/ float hit_heading;
-			/*036*/ int32 hit_pitch;
-			/*040*/ uint8 type;
-			/*041*/ uint8 padding[3];
-			/*044*/ uint32 unknown2; //not read by the client
+			/*036*/ float hit_pitch;
+			/*040*/ uint8 type; // skill
+			/*041*/ uint8 isoffhand; // used for determining skill used for message
+			/*042*/ uint8 padding[2];
+			/*044*/ uint32 unknown2; // not read by the client
 			/*048*/ 
 		};
 

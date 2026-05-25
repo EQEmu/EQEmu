@@ -3725,6 +3725,22 @@ namespace TOB
 		strncpy(emu->DraggerName, DraggerName.c_str(), 64);
 	}
 
+	DECODE(OP_Damage)
+	{
+		DECODE_LENGTH_EXACT(structs::CombatDamage_Struct);
+		SETUP_DIRECT_DECODE(CombatDamage_Struct, structs::CombatDamage_Struct);
+
+		IN(target);
+		IN(source);
+		IN(type);
+		IN(spellid);
+		IN(damage);
+		IN(hit_heading);
+		IN(special);
+
+		FINISH_DIRECT_DECODE();
+	}
+
 	DECODE(OP_DeleteItem)
 	{
 		DECODE_LENGTH_EXACT(structs::DeleteItem_Struct);
