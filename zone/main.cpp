@@ -95,7 +95,7 @@ void CatchSignal(int sig_num);
 
 extern void MapOpcodes();
 
-bool CheckForCompatibleQuestPlugins();
+bool CheckForCompatibleQuestPlugins(const ZoneConfig *config);
 int main(int argc, char **argv)
 {
 	RegisterExecutablePlatform(ExePlatformZone);
@@ -345,7 +345,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if (!CheckForCompatibleQuestPlugins()) {
+	if (!CheckForCompatibleQuestPlugins(Config)) {
 		LogError("Incompatible quest plugins detected, please update your plugins to the latest version");
 		return 1;
 	}
@@ -709,15 +709,15 @@ void UpdateWindowTitle(char *iNewTitle)
 #endif
 }
 
-bool CheckForCompatibleQuestPlugins()
+bool CheckForCompatibleQuestPlugins(const ZoneConfig *config)
 {
-	const std::vector<std::pair<std::string, bool *>> directories = {
-		{"lua_modules", nullptr},
-		{"plugins",     nullptr}
-	};
-
 	bool lua_found  = false;
 	bool perl_found = false;
+
+	const std::vector<std::pair<std::string, bool *>> directories = {
+		{config->LuaModuleDir, &lua_found},
+		{config->PluginDir, &perl_found}
+	};
 
 	try {
 		for (const auto &[directory, flag]: directories) {
@@ -733,12 +733,7 @@ bool CheckForCompatibleQuestPlugins()
 				auto r = File::GetContents(file_path);
 				if (!Strings::Contains(r.contents, "CheckHandin")) { continue; }
 
-				if (directory == "lua_modules") {
-					lua_found = true;
-				}
-				else {
-					perl_found = true;
-				}
+				*flag = true;
 
 				if (lua_found && perl_found) { return true; }
 			}
@@ -748,10 +743,10 @@ bool CheckForCompatibleQuestPlugins()
 	}
 
 	if (!lua_found) {
-		LogError("Failed to find CheckHandin in lua_modules");
+		LogError("Failed to find CheckHandin in the Lua Modules quest dir: {}", config->LuaModuleDir);
 	}
 	if (!perl_found) {
-		LogError("Failed to find CheckHandin in plugins");
+		LogError("Failed to find CheckHandin in the Perl plugins quest dir: {}", config->PluginDir);
 	}
 
 	return lua_found && perl_found;
