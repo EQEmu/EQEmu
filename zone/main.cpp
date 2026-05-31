@@ -95,7 +95,7 @@ void CatchSignal(int sig_num);
 
 extern void MapOpcodes();
 
-bool CheckForCompatibleQuestPlugins(const ZoneConfig *config);
+bool CheckForCompatibleQuestPlugins();
 int main(int argc, char **argv)
 {
 	RegisterExecutablePlatform(ExePlatformZone);
@@ -345,7 +345,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if (!CheckForCompatibleQuestPlugins(Config)) {
+	if (!CheckForCompatibleQuestPlugins()) {
 		LogError("Incompatible quest plugins detected, please update your plugins to the latest version");
 		return 1;
 	}
@@ -709,45 +709,38 @@ void UpdateWindowTitle(char *iNewTitle)
 #endif
 }
 
-bool CheckForCompatibleQuestPlugins(const ZoneConfig *config)
+bool CheckForCompatibleQuestPlugins()
 {
 	bool lua_found  = false;
 	bool perl_found = false;
 
-	const std::vector<std::pair<std::string, bool *>> directories = {
-		{config->LuaModuleDir, &lua_found},
-		{config->PluginDir, &perl_found}
-	};
-
-	try {
-		for (const auto &[directory, flag]: directories) {
-			std::string dir_path = PathManager::Instance()->GetServerPath() + "/" + directory;
-			if (!File::Exists(dir_path)) { continue; }
-
-			for (const auto &file: fs::directory_iterator(dir_path)) {
+	auto check_dir = [&](const std::string& dir_path, bool& found) {
+		if (!File::Exists(dir_path)) { return; }
+		try {
+			for (const auto& file : fs::directory_iterator(dir_path)) {
 				if (!file.is_regular_file()) { continue; }
-
-				std::string file_path = file.path().string();
-				if (!File::Exists(file_path)) { continue; }
-
-				auto r = File::GetContents(file_path);
-				if (!Strings::Contains(r.contents, "CheckHandin")) { continue; }
-
-				*flag = true;
-
-				if (lua_found && perl_found) { return true; }
+				auto r = File::GetContents(file.path().string());
+				if (Strings::Contains(r.contents, "CheckHandin")) {
+					found = true;
+					return;
+				}
 			}
 		}
-	} catch (const fs::filesystem_error &ex) {
-		LogError("Failed to check for compatible quest plugins: {}", ex.what());
+		catch (const fs::filesystem_error& ex) {
+			LogError("Failed to check for compatible quest plugins: {}", ex.what());
+		}
+    };
+
+	for (const auto& path : PathManager::Instance()->GetLuaModulePaths()) {
+		check_dir(path, lua_found);
 	}
 
-	if (!lua_found) {
-		LogError("Failed to find CheckHandin in the Lua Modules quest dir: {}", config->LuaModuleDir);
+	for (const auto& path : PathManager::Instance()->GetPluginPaths()) {
+		check_dir(path, perl_found);
 	}
-	if (!perl_found) {
-		LogError("Failed to find CheckHandin in the Perl plugins quest dir: {}", config->PluginDir);
-	}
+
+	if (!lua_found) { LogError("Failed to find CheckHandin in the Lua module quest directories"); }
+	if (!perl_found) { LogError("Failed to find CheckHandin in the Perl plugins quest directories");}
 
 	return lua_found && perl_found;
 }
