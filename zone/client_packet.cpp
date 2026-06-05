@@ -8868,9 +8868,9 @@ void Client::Handle_OP_Hide(const EQApplicationPacket *app)
 	// newer client respond to OP_CancelSneakHide with OP_Hide with a size of 4 and 0 data
 	if (app->size == 4) {
 		auto data = app->ReadUInt32(0);
-		if (data)
-			LogDebug("Got OP_Hide with unexpected data [{}]", data);
-		return;
+		// only return if data is 0. data == 1 (or potentially non-zero) is the client requesting a hide roll
+		if (data == 0)
+			return;
 	}
 
 	if (!HasSkill(EQ::skills::SkillHide) && GetSkill(EQ::skills::SkillHide) == 0)

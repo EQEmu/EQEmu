@@ -509,6 +509,14 @@ namespace TOB {
 			/*176*/
 		};
 
+		struct Weather_Struct {
+			/*000*/ uint32 val1;     // 0xFF = clear weather
+			/*004*/ uint32 type;     // 0x31=rain, 0x02=snow, 0=normal
+			/*008*/ uint32 unknown;  // TOB wire padding; client skips this offset
+			/*012*/ uint32 mode;     // server struct's mode field, shifted to +0x0C on TOB
+			/*016*/
+		};
+
 		struct WearChange_Struct {
 			/*000*/ uint32 spawn_id;
 			/*004*/ uint32 wear_slot_id;
@@ -521,6 +529,22 @@ namespace TOB {
 			/*032*/
 		};
 
+		struct Who_All_Struct {
+			/*000*/ char    whom[64];
+			/*064*/ uint8   unknown064[64]; // always zero
+			/*128*/ uint32  wrace;          // 0xFFFFFFFF = any race
+			/*132*/ uint32  wclass;         // 0xFFFFFFFF = any class
+			/*136*/ uint32  lvllow;         // 0xFFFFFFFF = any level
+			/*140*/ uint32  lvlhigh;        // 0xFFFFFFFF = any level
+			/*144*/ uint32  gmlookup;       // 0xFFFFFFFF = not filtering by GM
+			/*148*/ uint32  guildid_flag;   // 0xFFFFFFFF = no special filter; 0x7FC00000 = guild/trader/buyer active
+			/*152*/ uint32  guildid;        // actual guild ID for /who guild, else 0
+			/*156*/ uint32  unknown09C;     // always 0
+			/*160*/ uint32  type;           // 0 = /who, 3 = /who all
+			/*164*/ uint8   unknown0A4[12]; // padding
+			/*176*/
+		};
+
 		struct ExpUpdate_Struct
 		{
 			/*000*/ uint64 exp; // This is exp % / 1000 now; eg 69250 = 69.25%
@@ -530,7 +554,7 @@ namespace TOB {
 		struct DeleteSpawn_Struct
 		{
 			/*00*/ uint32 spawn_id;		// Spawn ID to delete
-			/*04*/ uint8 unknown04;		// Seen 1
+			/*04*/ uint8 Decay;			// Seen 1
 			/*05*/
 		};
 
@@ -553,14 +577,13 @@ namespace TOB {
 
 		// Was new for RoF2 - Used for Merchant_Purchase_Struct, doesn't look changed
 		// Can't sellfrom other than main inventory so Slot Type is not needed.
-		// The padding is because these structs are padded to the default 4 bytes
+		// There is in general no padding for this, but sometimes a pad will be added
 		struct TypelessInventorySlot_Struct
 		{
 			/*000*/	int16 Slot;
 			/*002*/	int16 SubIndex;
 			/*004*/	int16 AugIndex;
-			/*006*/	int16 Padding;
-			/*008*/
+			/*006*/
 		};
 
 		struct Consider_Struct {
@@ -576,6 +599,16 @@ namespace TOB {
 			/*024*/
 		};
 
+		struct Consume_Struct
+		{
+			/*000*/ InventorySlot_Struct slot;    // ItemGlobalIndex: Type(4)+Slot(2)+SubIndex(2)+AugIndex(2)+Pad(2)
+			/*012*/ uint32               unknown; // always 0xFFFFFFFF on wire
+			/*016*/ uint8                type;    // 0=Food, 1=Water (server expects 1=Food, 2=Water)
+			/*017*/ uint8                mode;    // 0=auto-consume, 1=right-click
+			/*018*/ uint8                pad[2];
+			/*020*/
+		};
+
 		struct SpawnHPUpdate_Struct
 		{
 			/*00*/ int16	spawn_id;
@@ -587,8 +620,8 @@ namespace TOB {
 		struct ClickDoor_Struct {
 			/*00*/ uint16 player_id;
 			/*02*/ uint8 padding1[2];
-			/*04*/ int32 unknown1;
-			/*08*/ int32 unknown2;
+			/*04*/ uint32 item_id;
+			/*08*/ uint32 picklockskill;
 			/*12*/ uint8 doorid;
 			/*13*/ uint8 padding2[3];
 		};
@@ -638,6 +671,22 @@ namespace TOB {
 			/*048*/ 
 		};
 
+		struct EnvDamage2_Struct {
+			/*0000*/    uint16 entity_id;   // spawn ID of entity taking damage (self)
+			/*0002*/    uint16 unknown2;    // source/attacker spawn_id; 0 for environmental
+			/*0004*/    int32  spell_id;    // spell causing damage; -1 or 0 = none
+			/*0008*/    uint64 unknown8;
+			/*0010*/    int64  damage;      // damage amount
+			/*0018*/    uint64 unknown18;
+			/*0020*/    uint64 unknown20;
+			/*0028*/    float  unknown28;
+			/*002C*/    uint32 unknown2C;
+			/*0030*/    uint32 unknown30;
+			/*0034*/    uint32 unknown34;
+			/*0038*/    uint8  dmgtype;     // 0xFA=Lava, 0xFB=Drowning, 0xFC=Falling, 0xFD=Trap
+			/*0039*/    uint8  unknown39;
+		};
+
 		struct Animation_Struct {
 			/*00*/	uint16 spawnid;
 			/*02*/	uint8 action;
@@ -675,6 +724,31 @@ namespace TOB {
 			/*0028*/
 		};
 
+		struct ItemRecastDelay_Struct
+		{
+			/*000*/ InventorySlot_Struct item_slot;    // zeroed until server struct gains item slot fields
+			/*012*/ uint32               recast_delay; // seconds until item can be used again
+			/*016*/ uint32               recast_type;  // recast group (1..99); SetCoreItemRecastTimer
+			/*020*/
+		};
+
+		struct ItemVerifyRequest_Struct
+		{
+			/*000*/ InventorySlot_Struct inventory_slot; // ItemGlobalIndex: Type(+0 int32) Slot(+4) SubIndex(+6) AugIndex(+8) Pad(+10)
+			/*012*/ uint32 target;                       // Target entity ID (g_pTargetPlayer+0x168), or 0
+			/*016*/
+		};
+
+		struct ItemVerifyReply_Struct
+		{
+			/*000*/ int32  slot;        // Right-clicked slot (passed as ItemGlobalIndex* to GetItemByGlobalIndex)
+			/*004*/ uint32 spell;       // Spell ID; client reads lower 16 bits; 0x407 triggers autobook-scribe
+			/*008*/ uint32 target;      // Target Entity ID
+			/*012*/ int32  unknown0;    // Exit gate: handler skips if < 0; send 0
+			/*016*/ int32  recast_time; // fasttime() timestamp for autobook-scribe path (spell==0x407); send 0
+			/*020*/
+		};
+
 		struct MerchantClickRequest_Struct
 		{
 			/*000*/ uint32 npc_id;      // Merchant NPC's entity id
@@ -704,11 +778,42 @@ namespace TOB {
 			/*015*/
 		};
 
+		// Used for OP_ReadBook in both directions (S→C text display, C→S content request).
+		// IDA-confirmed layout: type+target_id precede invslot (differs from RoF2 ordering).
+		struct BookRequest_Struct
+		{
+			/*0000*/ uint32 window;   // 0xFFFFFFFF = new window; maps from emu->window (0xFF)
+			/*0004*/ uint32 type;     // 0=note/scroll, 1=book, 2=item info
+			/*0008*/ uint32 target_id;
+			/*0012*/ TypelessInventorySlot_Struct invslot;
+			/*0018*/ uint8  padding;
+			/*0019*/ uint8  can_cast;
+			/*0020*/ uint8  can_scribe; // book-path cast button; note-path scribe button
+			/*0021*/ char   txtfile[8194]; // null-terminated text / book file name
+			/*8215*/
+		};
+
+		struct BookButton_Struct
+		{
+			/*000*/ TypelessInventorySlot_Struct slot; // book ItemIndex
+			/*006*/	int16 unknown2;   // zero padding
+			/*008*/	int32 target_id;  // spawn_id of target player or 0
+			/*012*/	int32 unknown3;   // zero padding
+			/*016*/
+		};
+
 		struct MemorizeSpell_Struct {
 			uint32 slot;		// Spot in the spell book/memorized slot
 			int32  spell_id;	// Spell id (200 or c8 is minor healing, etc)
 			uint32 scribing;	// -1 refreshes book, 0 scribe to book, 2 end mem, 1 start mem, 3 unmem, 4 set activated item keyring -- client will send back 2 if a 0 operation updated a memorized spell of the same group + subgroup
 			uint32 reduction;	// lower reuse (only used if scribing is 4)
+		};
+
+		struct LinkedSpellReuseTimer_Struct {
+			uint32 timer_id;    // +0x00 linked spell group index (0–24)
+			uint32 unknown;     // +0x04 extra DWORD present in TOB/TDS+ clients
+			uint32 end_time;    // +0x08 absolute time when spell group is ready
+			uint32 start_time;  // +0x0C server send timestamp (for client latency correction)
 		};
 
 		//I've observed 5 s16 that are all -1.
@@ -735,6 +840,15 @@ namespace TOB {
 			/*34*/  float z_pos;
 			/*38*/	uint8 unknown; //not sure, might also be before y_pos; only ever seen zero for both but should be easy to figure out later
 			/*39*/
+		};
+
+		struct Charm_Struct
+		{
+			/*00*/ uint32 owner_id;
+			/*04*/ uint32 pet_id;
+			/*08*/ uint32 charmer_id; // TOB-only field not present in server Charm_Struct; purpose unknown (passed to sub_1402FA570 when non-null); set to 0
+			/*0C*/ uint8  command;    // 1=make pet, 0=release pet; server sends this as uint32 at +0x08
+			/*0D*/
 		};
 
 		struct InterruptCast_Struct
@@ -924,6 +1038,13 @@ namespace TOB {
 			/*332*/
 		};
 
+		struct IncreaseStat_Struct {
+			/*000*/ uint32 spawn_id;   // must equal g_pLocalPlayer->SpawnID; not in server struct (see encoder TODO)
+			/*004*/ uint32 stat_type;  // 0=STR 1=STA 2=AGI 3=DEX 4=INT 5=WIS 6=CHA; client ignores > 6
+			/*008*/ uint32 value;      // must be > 0 to be applied
+			/*012*/
+		};
+
 		struct moneyOnCorpseStruct {
 			/*000*/ uint8 type; // 0 = someone is already looting, 1 = OK, 2 = cannot access at this time, 3 = OK, 4 = cannot loot while hostile nearby, 5 = too far away to loot, 6 = loot all, 7 = cancel loot, 8 = add access, 9 = using advloot (when right clicking), 10 = show advloot
 			/*001*/ uint8 padding1[3];
@@ -954,7 +1075,21 @@ namespace TOB {
 			/*0144*/ uint32	unknown0144;
 			/*0148*/ uint32	unknown0148;
 			/*0152*/ uint16	unknown0152;
-			/*0154*/
+			/*0154*/ uint8	unknown0154[14];
+			/*0168*/
+		};
+
+		// TOB pick pocket wire format (S→C and C→S identical layout).
+		// coin sits at unaligned offset 0x0D; valid under pack(1).
+		struct PickPocket_Struct {
+			/*0x00*/ uint32 to;
+			/*0x04*/ uint32 from;
+			/*0x08*/ uint32 myskill;
+			/*0x0C*/ uint8  type;
+			/*0x0D*/ uint32 coin;
+			/*0x11*/ uint32 nameLen;
+			// char name[nameLen] follows, then uint8 luckily
+			/*0x15*/
 		};
 
 		struct AugmentInfo_Struct
@@ -982,7 +1117,7 @@ namespace TOB {
 
 		struct ApplyPoison_Struct
 		{
-			TypelessInventorySlot_Struct inventorySlot;
+			InventorySlot_Struct inventorySlot;
 			uint32 success;
 		};
 
@@ -1005,21 +1140,42 @@ namespace TOB {
 		/*92*/
 		};
 
-		//received and sent back as an ACK with different reply_code
+		// Server→Client (38 bytes): container_slot serialized without Padding2 to match client deserializer
 		struct RecipeAutoCombine_Struct {
 			/*00*/	uint32 object_type;
 			/*04*/	uint32 some_id;
-			/*08*/	InventorySlot_Struct container_slot;		//echoed in reply - Was uint32 unknown1
-			/*20*/	InventorySlot_Struct unknown_slot;		//echoed in reply
-			/*32*/	uint32 recipe_id;
-			/*36*/	uint32 reply_code;
-			/*40*/
+			/*08*/	int32  container_type;       // InventorySlot.Type
+			/*12*/	int16  container_slot_index; // InventorySlot.Slot
+			/*14*/	int16  container_subindex;   // InventorySlot.SubIndex
+			/*16*/	int16  container_augindex;   // InventorySlot.AugIndex
+			/*18*/	InventorySlot_Struct unknown_slot;  // 12 bytes; echoed in reply
+			/*30*/	uint32 recipe_id;
+			/*34*/	uint32 reply_code;
+			/*38*/
+		};
+
+		// Client→Server (56 bytes): layout from CTradeskillWnd::HandleCombine
+		struct RecipeAutoCombine_CS_Struct {
+			/*00*/	uint32 con_type;            // GetConType of container
+			/*04*/	uint32 recipe_id;           // GetItemRecordNum of recipe item
+			/*08*/	uint32 unknown1;            // constant 4
+			/*12*/	uint8  unknown2[8];         // zeros (uninitialized)
+			/*20*/	InventorySlot_Struct container_slot;  // 12 bytes
+			/*32*/	uint32 object_type;
+			/*36*/	uint32 some_id;
+			/*40*/	uint8  flag1;
+			/*41*/	uint8  flag2;
+			/*42*/	uint8  unknown3;
+			/*43*/	uint8  flag3;
+			/*44*/	uint32 unknown4;            // zeros (uninitialized)
+			/*48*/	int64  start_tick;
+			/*56*/
 		};
 
 		/*
 		** New Combine Struct
 		** Client requesting to perform a tradeskill combine
-		** Size: 24 bytes
+		** Size: 28 bytes
 		** Used In: OP_TradeSkillCombine
 		** Last Updated: 01-05-2013
 		*/
@@ -1027,7 +1183,15 @@ namespace TOB {
 		{
 			/*00*/	InventorySlot_Struct container_slot;
 			/*12*/	InventorySlot_Struct guildtribute_slot;	// Slot type is 8? (MapGuildTribute = 8)
-			/*24*/
+			/*24*/	uint32               unknown0x18;		// TOB wire format; not used by server
+			/*28*/
+		};
+
+		struct DisciplineTimer_Struct {
+			/*00*/ uint32 TimerID;
+			/*04*/ uint32 Duration;
+			/*08*/ uint32 Unknown08;   // server-side absolute expiry time (fasttime units)
+			/*0C*/ uint32 ServerTime;  // server's current time when packet sent (fasttime units)
 		};
 
 		struct Disciplines_Struct {
@@ -1036,11 +1200,12 @@ namespace TOB {
 
 		struct Merchant_Sell_Request_Struct {
 			/*000*/ uint32 npcid;		// Merchant NPC's entity id
-			/*004*/ uint32 playerid;	// Player's entity id
-			/*008*/ uint32 itemslot;	// Merchant Slot / Item Instance ID
-			/*012*/ uint32 unknown12;
+			/*004*/ uint32 playerid;	// unset by client (stack garbage at this offset)
+			/*008*/ uint32 itemslot;	// lower 4 bytes of 8-byte item instance ID
+			/*012*/ uint32 unknown12;	// upper 4 bytes of 8-byte item instance ID
 			/*016*/ uint32 quantity;	// Already sold
-			/*020*/
+			/*020*/ uint32 unknown20;	// unset by client — trailing pad; client sends 24 bytes total
+			/*024*/
 		};
 
 		struct Merchant_Sell_Response_Struct {
@@ -1058,17 +1223,18 @@ namespace TOB {
 		struct Merchant_Purchase_Request_Struct {
 			/*000*/	uint32	npcid;			// Merchant NPC's entity id
 			/*004*/	TypelessInventorySlot_Struct	inventory_slot;
+			/*010*/ int16 padding;
 			/*012*/	uint32	quantity;
 			/*016*/	
 		};
 
 		struct Merchant_Purchase_Response_Struct {
-			/*000*/	uint32	npcid;			// Merchant NPC's entity id
-			/*004*/	TypelessInventorySlot_Struct	inventory_slot;
-			/*012*/	uint32	quantity;
-			/*016*/	uint32	price;
-			/*020*/ uint32  unknown020;
-			/*024*/
+			/*000*/	TypelessInventorySlot_Struct	inventory_slot;
+			/*006*/ int16 padding;
+			/*008*/	uint32	quantity;
+			/*012*/	uint32	price;
+			/*016*/ uint32  unknown016;
+			/*020*/
 		};
 
 		/*
@@ -1109,6 +1275,20 @@ namespace TOB {
 			uint32 Deity;
 			uint32 AllocationIndex;
 			uint32 Zone;
+		};
+
+		struct fling_struct {
+		/* 00 */ float  speed_z;       // must be > 0 for handler to proceed
+		/* 04 */ float  new_y;
+		/* 08 */ float  new_x;
+		/* 12 */ float  new_z;
+		/* 16 */ float  radius;        // landing zone radius; 0.0f = land exactly at target
+		/* 20 */ uint32 unknown;       // not accessed; padding
+		/* 24 */ int32  travel_time;   // -1 = auto-calc; 0 = default 1000ms; >0 = explicit ms
+		/* 28 */ uint8  collision;     // 0 = disable collision; non-zero = keep collision
+		/* 29 */ uint8  fall_damage;   // 0 = no fall damage (player.408=1); non-zero = take damage
+		/* 30 */ uint8  z_override;    // 1 = override z-target comparison
+		/* 31 */
 		};
 
 		struct BeggingResponse_Struct

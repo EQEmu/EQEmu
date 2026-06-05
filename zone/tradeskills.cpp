@@ -973,6 +973,22 @@ void Client::SendTradeskillDetails(uint32 recipe_id) {
 
 	uint32 total = sizeof(uint32) + dist + datalen;
 
+	// The TOB client reads 4 bytes of trivial after the 10 component slots.
+	// Fetch the trivial from the recipe table and append it so the client doesn't read garbage.
+	uint32 trivial = 0;
+	std::string trivial_query = StringFormat(
+		"SELECT trivial FROM tradeskill_recipe WHERE id = %u LIMIT 1", recipe_id);
+	auto trivial_results = content_db.QueryDatabase(trivial_query);
+	if (trivial_results.Success() && trivial_results.RowCount() > 0) {
+		auto trow = trivial_results.begin();
+		if (trow[0]) {
+			trivial = (uint32)Strings::ToInt(trow[0]);
+		}
+	}
+	uint32 trivial_net = htonl(trivial);
+	memcpy(buf + total, &trivial_net, sizeof(uint32));
+	total += sizeof(uint32);
+
 	auto outapp = new EQApplicationPacket(OP_RecipeDetails);
 	outapp->size = total;
 	outapp->pBuffer = (uchar*) buf;

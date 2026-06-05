@@ -2305,6 +2305,7 @@ void Client::SetStats(uint8 type,int16 set_val){
 				m_pp.CHA=set_val;
 		break;
 	}
+	*reinterpret_cast<uint16*>(iss->unknown13) = GetID();
 	QueuePacket(outapp);
 	safe_delete(outapp);
 }
@@ -2395,6 +2396,7 @@ void Client::IncStats(uint8 type, int16 increase_val)
 			}
 			break;
 	}
+	*reinterpret_cast<uint16*>(iss->unknown13) = GetID();
 	QueuePacket(outapp);
 	safe_delete(outapp);
 }

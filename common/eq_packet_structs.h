@@ -630,8 +630,8 @@ struct GMTrainEnd_Struct
 struct GMSkillChange_Struct {
 /*000*/	uint16		npcid;
 /*002*/ uint8		unknown1[2];	// something like PC_ID, but not really. stays the same thru the session though
-/*002*/ uint16		skillbank;		// 0 if normal skills, 1 if languages
-/*002*/ uint8		unknown2[2];
+/*004*/ uint16		skillbank;		// 0 if normal skills, 1 if languages
+/*006*/ uint8		unknown2[2];
 /*008*/ uint16		skill_id;
 /*010*/ uint8		unknown3[2];
 };
@@ -5334,7 +5334,7 @@ typedef struct {
 struct ControlBoat_Struct {
 /*000*/	uint32	boatId;			// entitylist id of the boat
 /*004*/	bool	TakeControl;	// 01 if taking control, 00 if releasing it
-/*007*/	char	unknown[3];		// no idea what these last three bytes represent
+/*005*/	char	unknown[3];		// no idea what these last three bytes represent
 };
 
 struct AugmentInfo_Struct

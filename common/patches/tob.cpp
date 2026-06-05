@@ -48,6 +48,7 @@ Copyright (C) 2001-2026 EQEmu Development Team
 #include <cassert>
 #include <cinttypes>
 #include <set>
+// #include <boost/tuple/tuple_comparison.hpp> TODO: what was this used for, I don't want to use it
 
 namespace TOB
 {
@@ -220,7 +221,7 @@ namespace TOB
 		ENCODE_LENGTH_EXACT(ApplyPoison_Struct);
 		SETUP_DIRECT_ENCODE(ApplyPoison_Struct, structs::ApplyPoison_Struct);
 
-		eq->inventorySlot = ServerToTOBTypelessSlot(emu->inventorySlot, EQ::invtype::typePossessions);
+		eq->inventorySlot = ServerToTOBSlot(emu->inventorySlot);
 		OUT(success);
 
 		FINISH_ENCODE();
@@ -234,6 +235,10 @@ namespace TOB
 		OUT(itemid);
 		OUT(window);
 		strn0cpy(eq->augment_info, emu->augment_info, 64);
+		// TODO: TOB wire format has 8 extra bytes beyond server struct (total 80 bytes):
+		//   +0x48  uint32  unknown072  -- 0x37 (55) triggers hardcoded "perfected distiller" message in client;
+		//                                0 causes jnz path (loc_1401EFB6D) which likely uses augment_info text
+		//   +0x4C  uint32  unknown076  -- "always matches what client sends"; not echoed by current decoder
 
 		FINISH_ENCODE();
 	}
@@ -248,8 +253,8 @@ namespace TOB
 		OUT(Unknown08);
 		eq->Result = static_cast<uint8>(emu->Result);
 		OUT(Amount);
-		eq->StringSize = 0; // set this to 0, but it's a string size
-		eq->Lucky = 0; // set to 1 to message a lucky beg
+		eq->StringSize = 0; // TODO: set this to 0, but it's a string size
+		eq->Lucky = 0; // TODO: set to 1 to message a lucky beg
 
 		FINISH_ENCODE();
 	}
@@ -314,6 +319,16 @@ namespace TOB
 		//OUT(inventoryslot);
 		OUT(target_id);
 
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_Charm)
+	{
+		SETUP_DIRECT_ENCODE(Charm_Struct, structs::Charm_Struct);
+		eq->owner_id = emu->owner_id;
+		eq->pet_id = emu->pet_id;
+		eq->charmer_id = 0; // TOB wire format has extra spawn ID at +0x08; server struct doesn't provide it; passed to sub_1402FA570 when non-null
+		eq->command = static_cast<uint8>(emu->command);
 		FINISH_ENCODE();
 	}
 
@@ -459,6 +474,12 @@ namespace TOB
 		OUT(type);
 		OUT(icon);
 		eq->unknown16 = 0;
+		// TODO: unknown24 is used by the client as ItemDefinition->ItemNumber (item DB ID for the
+		// world container). Server struct field is labeled unknown24 and may not be populated.
+		// TOB wire: +0x00 drop_id, +0x04 unknown04(-1), +0x08 unknown08(-1), +0x0C type(1B),
+		//           +0x10 unknown16(1B, client overwrites to 10), +0x14 icon, +0x18 unknown24/ItemNumber,
+		//           +0x1C object_name[64]
+		OUT(unknown24);
 		OUT_str(object_name);
 
 		FINISH_ENCODE();
@@ -520,6 +541,7 @@ namespace TOB
 
 		OUT(spawn_id);
 		OUT(killer_id);
+		OUT(corpseid);
 		OUT(spell_id);
 		OUT(attack_skill);
 		OUT(damage);
@@ -566,7 +588,20 @@ namespace TOB
 		SETUP_DIRECT_ENCODE(DeleteSpawn_Struct, structs::DeleteSpawn_Struct);
 
 		OUT(spawn_id);
-		eq->unknown04 = 1;	// Observed
+		OUT(Decay);
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_DisciplineTimer)
+	{
+		ENCODE_LENGTH_EXACT(DisciplineTimer_Struct);
+		SETUP_DIRECT_ENCODE(DisciplineTimer_Struct, structs::DisciplineTimer_Struct);
+
+		OUT(TimerID);
+		OUT(Duration);
+		OUT(Unknown08);
+		eq->ServerTime = Timer::GetCurrentTime();
 
 		FINISH_ENCODE();
 	}
@@ -598,6 +633,28 @@ namespace TOB
 		//later we should change the underlying server to use this more accurate value
 		//and encode the 330 in the other patches
 		eq->exp = emu->exp * 100000 / 330;
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_Fling)
+	{
+		SETUP_DIRECT_ENCODE(fling_struct, structs::fling_struct);
+
+		OUT(speed_z);
+		OUT(new_y);
+		OUT(new_x);
+		OUT(new_z);
+		eq->radius      = 0.0f;
+		eq->unknown     = 0;
+		OUT(travel_time);
+		eq->collision   = static_cast<uint8>(emu->collision != 0 ? 1 : 0);
+		// TODO: verify fall damage semantics — client stores player.408 = (TOB[29] == 0), so
+		// direct copy of disable_fall_damage (1=no damage) yields player.408=0; if player.408
+		// is a "damage disabled" flag this is correct, but if it is "damage enabled" flip to
+		// eq->fall_damage = !emu->disable_fall_damage (needs gameplay test)
+		eq->fall_damage = emu->disable_fall_damage;
+		eq->z_override  = emu->unk3;
 
 		FINISH_ENCODE();
 	}
@@ -695,6 +752,23 @@ namespace TOB
 		delete in;
 	}
 
+	ENCODE(OP_GroupInvite)
+	{
+		ENCODE_LENGTH_EXACT(GroupInvite_Struct);
+		SETUP_VAR_ENCODE(GroupInvite_Struct);
+		// Allocate 4 bytes beyond the struct so the client's read of group_request_id
+		// at offset 168 (past the 168-byte struct) lands in valid, zeroed memory.
+		// The server has no equivalent field; the client receives 0.
+		ALLOC_VAR_ENCODE(structs::GroupGeneric_Struct, sizeof(structs::GroupGeneric_Struct) + sizeof(uint32));
+
+		memcpy(eq->name1, emu->invitee_name, sizeof(eq->name1));
+		memcpy(eq->name2, emu->inviter_name, sizeof(eq->name2));
+		// TODO: determine what the client expects for group_request_id at offset 168 —
+		// it is stored in EverQuest_GroupRequestId and may be used in the accept/decline flow.
+
+		FINISH_ENCODE();
+	}
+
 	ENCODE(OP_HPUpdate)
 	{
 		SETUP_DIRECT_ENCODE(SpawnHPUpdate_Struct, structs::SpawnHPUpdate_Struct);
@@ -730,6 +804,28 @@ namespace TOB
 		FINISH_ENCODE();
 	}
 
+	ENCODE(OP_IncreaseStats)
+	{
+		ENCODE_LENGTH_EXACT(IncreaseStat_Struct);
+		SETUP_VAR_ENCODE(IncreaseStat_Struct);
+		ALLOC_VAR_ENCODE(structs::IncreaseStat_Struct, sizeof(structs::IncreaseStat_Struct));
+
+		// entity_id is stashed in unknown13[0..1] by Client::IncStats/SetStats (zone/client.cpp)
+		// because IncreaseStat_Struct has no spawn_id field. The client validates this against
+		// g_pLocalPlayer->SpawnID before applying the stat.
+		eq->spawn_id = *reinterpret_cast<const uint16 *>(emu->unknown13);
+
+		if      (emu->str)  { eq->stat_type = STAT_STR; eq->value = emu->str; }
+		else if (emu->sta)  { eq->stat_type = STAT_STA; eq->value = emu->sta; }
+		else if (emu->agi)  { eq->stat_type = STAT_AGI; eq->value = emu->agi; }
+		else if (emu->dex)  { eq->stat_type = STAT_DEX; eq->value = emu->dex; }
+		else if (emu->int_) { eq->stat_type = STAT_INT; eq->value = emu->int_; }
+		else if (emu->wis)  { eq->stat_type = STAT_WIS; eq->value = emu->wis; }
+		else if (emu->cha)  { eq->stat_type = STAT_CHA; eq->value = emu->cha; }
+
+		FINISH_ENCODE();
+	}
+
 	ENCODE(OP_ItemPacket)
 	{
 		EQApplicationPacket* in = *p;
@@ -751,14 +847,11 @@ namespace TOB
 			cereal::BinaryInputArchive   ar(ss);
 			ar(pms);
 
-			uint32 player_name_length = pms.player_name.length();
-			uint32 note_length = pms.note.length();
-
 			auto* int_struct = (EQ::InternalSerializedItem_Struct*)pms.serialized_item.data();
 
 			SerializeBuffer buffer;
 			buffer.WriteInt32((int32_t)type);
-			SerializeItem(buffer, (const EQ::ItemInstance*)int_struct->inst, int_struct->slot_id, 0, old_item_pkt->PacketType);
+			SerializeItem(buffer, (const EQ::ItemInstance*)int_struct->inst, pms.slot_id, 0, old_item_pkt->PacketType);
 
 			buffer.WriteUInt32(pms.sent_time);
 			buffer.WriteLengthString(pms.player_name);
@@ -782,6 +875,64 @@ namespace TOB
 		}
 
 		delete in;
+	}
+
+	ENCODE(OP_ItemRecastDelay)
+	{
+		SETUP_DIRECT_ENCODE(ItemRecastDelay_Struct, structs::ItemRecastDelay_Struct);
+
+		// TODO: server struct ItemRecastDelay_Struct needs an ItemGlobalIndex (12 bytes) so the
+		// client can locate the item and update its per-item recast timestamp (item+0x14).
+		// Until that field is added server-side, item_global_index is zeroed and the item
+		// lookup in GetItemByGlobalIndex will fail silently — SetCoreItemRecastTimer (the
+		// core recast-by-type timer) will still fire correctly for valid recast_type values.
+		eq->item_slot    = {};
+		eq->recast_delay = emu->recast_delay;
+		eq->recast_type  = emu->recast_type;
+		// ignore_casting_requirement has no client equivalent (not read by TOB client)
+
+		FINISH_ENCODE();
+	}
+
+	DECODE(OP_ItemVerifyRequest)
+	{
+		DECODE_LENGTH_EXACT(structs::ItemVerifyRequest_Struct);
+		SETUP_DIRECT_DECODE(ItemVerifyRequest_Struct, structs::ItemVerifyRequest_Struct);
+
+		emu->slot = TOBToServerSlot(eq->inventory_slot);
+		IN(target);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	ENCODE(OP_ItemVerifyReply)
+	{
+		ENCODE_LENGTH_EXACT(ItemVerifyReply_Struct);
+		SETUP_DIRECT_ENCODE(ItemVerifyReply_Struct, structs::ItemVerifyReply_Struct);
+
+		OUT(slot);
+		OUT(spell);
+		OUT(target);
+		// TODO: expand server struct ItemVerifyReply_Struct to support autobook-scribe — TOB wire format (20 bytes):
+		//   +0x00  int32   slot        (passed as ItemGlobalIndex* to GetItemByGlobalIndex / IsHeldSlot)
+		//   +0x04  uint32  spell       (client reads lower 16 bits; 0x407 = autobook-scribe path)
+		//   +0x08  uint32  target
+		//   +0x0C  int32   unknown0    (exit gate: handler skips without processing if < 0; send 0)
+		//   +0x10  int32   recast_time (fasttime() timestamp; must be non-zero to enter autobook-scribe
+		//                               path when spell==0x407; zeroed here until server provides it)
+		// unknown0 and recast_time are zeroed by ALLOC_VAR_ENCODE (memset)
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_LinkedReuse)
+	{
+		SETUP_DIRECT_ENCODE(LinkedSpellReuseTimer_Struct, structs::LinkedSpellReuseTimer_Struct);
+		OUT(timer_id);
+		eq->unknown = 0;
+		OUT(end_time);
+		OUT(start_time);
+		FINISH_ENCODE();
 	}
 
 	ENCODE(OP_LogServer) {
@@ -854,6 +1005,22 @@ namespace TOB
 		// these are always multiplied together in non-guild favor calcs for display, live and test send 1.0f
 		*(float*)&__packet->pBuffer[0x768] = 1.0f;
 		*(float*)&__packet->pBuffer[0x76c] = 1.0f;
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_LootItem)
+	{
+		ENCODE_LENGTH_EXACT(LootingItem_Struct);
+		SETUP_DIRECT_ENCODE(LootingItem_Struct, structs::LootingItem_Struct);
+
+		OUT(lootee);
+		OUT(looter);
+		eq->slot_id = ServerToTOBCorpseMainSlot(emu->slot_id);
+		OUT(auto_loot);
+		// TODO: unknown16 appears to be quantity (items looted from a partial stack);
+		// server struct has no quantity field so we cannot populate it here
+		eq->unknown16 = 0;
 
 		FINISH_ENCODE();
 	}
@@ -1084,7 +1251,7 @@ namespace TOB
 		/*
 		s32 NPCAgroMaxDist;
 		*/
-		buffer.WriteInt32(600);
+		buffer.WriteInt32(emu->npc_aggro_max_dist);
 
 		/*
 		s32 ForageLow;
@@ -1205,6 +1372,30 @@ namespace TOB
 		dest->FastQueuePacket(&outapp, ack_req);
 
 		delete in;
+	}
+
+	ENCODE(OP_PickPocket)
+	{
+		ENCODE_LENGTH_EXACT(sPickPocket_Struct);
+		SETUP_VAR_ENCODE(sPickPocket_Struct);
+
+		uint32 nameLen = strnlen(emu->itemname, sizeof(emu->itemname));
+		uint32 pktLen  = sizeof(structs::PickPocket_Struct) + nameLen + 1;
+
+		ALLOC_LEN_ENCODE(pktLen);
+
+		auto *eq    = reinterpret_cast<structs::PickPocket_Struct *>(__packet->pBuffer);
+		eq->to      = emu->to;
+		eq->from    = emu->from;
+		eq->myskill = emu->myskill;
+		eq->type    = static_cast<uint8>(emu->type);
+		eq->coin    = emu->coin;
+		eq->nameLen = nameLen;
+		if (nameLen > 0)
+			memcpy(__packet->pBuffer + sizeof(structs::PickPocket_Struct), emu->itemname, nameLen);
+		__packet->pBuffer[sizeof(structs::PickPocket_Struct) + nameLen] = 0; // luckily
+
+		FINISH_ENCODE();
 	}
 
 	ENCODE(OP_PlayerProfile) {
@@ -2250,6 +2441,22 @@ namespace TOB
 		delete in;
 	}
 
+	ENCODE(OP_ReadBook)
+	{
+		ENCODE_LENGTH_ATLEAST(BookText_Struct);
+		SETUP_DIRECT_ENCODE(BookText_Struct, structs::BookRequest_Struct);
+
+		eq->window = (emu->window == 0xFF) ? 0xFFFFFFFF : emu->window;
+		OUT(type);
+		OUT(target_id);
+		eq->invslot = ServerToTOBTypelessSlot(emu->invslot, invtype::typePossessions);
+		OUT(can_cast);  // wire 0x13 = note-path cast button
+		OUT(can_scribe);  // wire 0x14 = book cast / note scribe button
+		strn0cpy(eq->txtfile, emu->booktext, sizeof(eq->txtfile));
+
+		FINISH_ENCODE();
+	}
+
 	ENCODE(OP_RecipeAutoCombine)
 	{
 		ENCODE_LENGTH_EXACT(RecipeAutoCombine_Struct);
@@ -2257,12 +2464,19 @@ namespace TOB
 
 		OUT(object_type);
 		OUT(some_id);
-		eq->container_slot = ServerToTOBSlot(emu->unknown1);
+		{
+			structs::InventorySlot_Struct cslot = ServerToTOBSlot(emu->unknown1);
+			eq->container_type       = cslot.Type;
+			eq->container_slot_index = cslot.Slot;
+			eq->container_subindex   = cslot.SubIndex;
+			eq->container_augindex   = cslot.AugIndex;
+			// Padding2 intentionally omitted — client deserializer skips it
+		}
 		structs::InventorySlot_Struct TOBSlot;
-		TOBSlot.Type = 8;	// Observed
-		TOBSlot.Slot = 0xffff;
-		TOBSlot.SubIndex = 0xffff;
-		TOBSlot.AugIndex = 0xffff;
+		TOBSlot.Type     = 8;	// Observed
+		TOBSlot.Slot     = -1;
+		TOBSlot.SubIndex = -1;
+		TOBSlot.AugIndex = -1;
 		TOBSlot.Padding2 = 0;
 		eq->unknown_slot = TOBSlot;
 		OUT(recipe_id);
@@ -2286,7 +2500,7 @@ namespace TOB
 		eq->aapoints_assigned[4] = 0;
 		eq->aapoints_assigned[5] = 0;
 
-		for (uint32 i = 0; i < structs::MAX_PP_AA_ARRAY; ++i)
+		for (uint32 i = 0; i < MAX_PP_AA_ARRAY; ++i)  // server struct has 240 entries; TOB expects 300, entries 240-299 remain zero
 		{
 			eq->aa_list[i].AA = emu->aa_list[i].AA;
 			eq->aa_list[i].value = emu->aa_list[i].value;
@@ -2786,7 +3000,6 @@ namespace TOB
 		ENCODE_LENGTH_EXACT(Merchant_Purchase_Struct);
 		SETUP_DIRECT_ENCODE(Merchant_Purchase_Struct, structs::Merchant_Purchase_Response_Struct);
 
-		OUT(npcid);
 		eq->inventory_slot = ServerToTOBTypelessSlot(emu->itemslot, EQ::invtype::typePossessions);
 		OUT(quantity);
 		OUT(price);
@@ -2799,17 +3012,16 @@ namespace TOB
 		ENCODE_LENGTH_EXACT(MerchantClick_Struct);
 		SETUP_DIRECT_ENCODE(MerchantClick_Struct, structs::MerchantClickResponse_Struct);
 
-		if (emu->command == 0) {
-			OUT(player_id);
-			eq->npc_id = 0;
-		}
-		else {
-			OUT(npc_id);
+		OUT(npc_id);
+		if (emu->command != 0) {
 			OUT(player_id);
 			OUT(rate);
 			OUT(tab_display);
 			eq->unknown028 = 256;
+			// TODO: ldon_category (+16), alt_currency1 (+20), alt_currency2 (+24) not in
+			//   MerchantClick_Struct -- always 0; alt-currency/LDON merchants may not open correctly
 		}
+		// close (command==0): player_id stays 0 (SETUP zeroed it) -- byte at offset 4 = 0 -> close path
 
 		FINISH_ENCODE();
 	}
@@ -2881,7 +3093,12 @@ namespace TOB
 			eq->spawn_id = sas->spawn_id;
 			eq->type = ServerToTOBSpawnAppearanceType(sas->type);
 			eq->parameter = sas->parameter;
-	
+			// msg_stat_change reads the primary value from lock_id (offset +16) for half the
+			// TOBAppearance types (MaxHealth, Health, PVP, Sneak, Linkdead, Invisibility visibility).
+			// The other half read from parameter (offset +8). Both are set to the same server value
+			// so either read path works; each case ignores the field it doesn't use.
+			eq->lock_id = sas->parameter;
+
 			dest->FastQueuePacket(&outapp, ack_req);
 			delete in;
 			return;
@@ -2948,6 +3165,50 @@ namespace TOB
 		FINISH_ENCODE();
 	}
 
+	ENCODE(OP_Track)
+	{
+		SETUP_VAR_ENCODE(Track_Struct);
+		int EntryCount = __packet->size / sizeof(Track_Struct);
+
+		if (EntryCount == 0 || (__packet->size % sizeof(Track_Struct)) != 0) {
+			LogNetcode("[STRUCTS] Wrong size on outbound [{}]: Got [{}], expected multiple of [{}]", opcodes->EmuToName(__packet->GetOpcode()), __packet->size, sizeof(Track_Struct));
+			delete __packet;
+			return;
+		}
+
+		int PacketSize = 2;
+		for (int i = 0; i < EntryCount; ++i)
+			PacketSize += 13 + strlen(emu[i].name);
+
+		ALLOC_LEN_ENCODE(PacketSize);
+
+		char *Buffer = (char *)__packet->pBuffer;
+		VARSTRUCT_ENCODE_TYPE(uint16, Buffer, EntryCount);
+		for (int i = 0; i < EntryCount; ++i) {
+			VARSTRUCT_ENCODE_TYPE(uint32, Buffer, emu[i].entityid);
+			VARSTRUCT_ENCODE_TYPE(float,  Buffer, emu[i].distance);
+			VARSTRUCT_ENCODE_TYPE(uint8,  Buffer, emu[i].level);
+			VARSTRUCT_ENCODE_TYPE(uint8,  Buffer, emu[i].is_npc);
+			VARSTRUCT_ENCODE_STRING(Buffer, emu[i].name);
+			VARSTRUCT_ENCODE_TYPE(uint8,  Buffer, emu[i].is_pet);
+			VARSTRUCT_ENCODE_TYPE(uint8,  Buffer, emu[i].is_merc);
+		}
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_Weather)
+	{
+		SETUP_DIRECT_ENCODE(Weather_Struct, structs::Weather_Struct);
+
+		OUT(val1);
+		OUT(type);
+		eq->unknown = 0;
+		OUT(mode);
+
+		FINISH_ENCODE();
+	}
+
 	ENCODE(OP_WearChange)
 	{
 		ENCODE_LENGTH_EXACT(WearChange_Struct);
@@ -2961,6 +3222,60 @@ namespace TOB
 		eq->new_armor_id = emu->hero_forge_model;
 		eq->new_armor_type = emu->unknown18;
 		eq->color = emu->color.Color;
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_WhoAllResponse)
+	{
+		SETUP_VAR_ENCODE(WhoAllReturnStruct);
+
+		int Count = emu->playercount;
+
+		// TOB client expects playercount in unknown44[0] and unknown52 = 0
+		emu->unknown44[0] = Count;
+		emu->unknown52 = 0;
+
+		ALLOC_LEN_ENCODE(__packet->size + (Count * 4));
+
+		char *InBuffer  = (char *)__emu_buffer + sizeof(WhoAllReturnStruct);
+		char *OutBuffer = (char *)__packet->pBuffer;
+
+		memcpy(OutBuffer, __emu_buffer, sizeof(WhoAllReturnStruct));
+		OutBuffer += sizeof(WhoAllReturnStruct);
+
+		for (int i = 0; i < Count; ++i) {
+			uint32 x;
+
+			x = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
+			VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, x);   // FormatMSGID
+
+			InBuffer += 4;                                 // skip server PIDMSGID
+			VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);           // PIDMSGID = 0 (no surname)
+			VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0xffffffff);  // extra uint32 before Name
+
+			char Name[64];
+
+			VARSTRUCT_DECODE_STRING(Name, InBuffer);       // Char Name
+			VARSTRUCT_ENCODE_STRING(OutBuffer, Name);
+
+			x = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
+			VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, x);   // RankMSGID
+
+			VARSTRUCT_DECODE_STRING(Name, InBuffer);       // Guild Name
+			VARSTRUCT_ENCODE_STRING(OutBuffer, Name);
+
+			for (int j = 0; j < 7; ++j) {
+				x = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
+				VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, x);
+			}
+
+			VARSTRUCT_DECODE_STRING(Name, InBuffer);       // Account
+			VARSTRUCT_ENCODE_STRING(OutBuffer, Name);
+
+			x = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
+			VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, x);   // Unknown100
+		}
 
 		FINISH_ENCODE();
 	}
@@ -3479,7 +3794,7 @@ namespace TOB
 		DECODE_LENGTH_EXACT(structs::ApplyPoison_Struct);
 		SETUP_DIRECT_DECODE(ApplyPoison_Struct, structs::ApplyPoison_Struct);
 
-		emu->inventorySlot = TOBToServerTypelessSlot(eq->inventorySlot, invtype::typePossessions);
+		emu->inventorySlot = TOBToServerSlot(eq->inventorySlot);
 		IN(success);
 
 		FINISH_DIRECT_DECODE();
@@ -3494,7 +3809,13 @@ namespace TOB
 		IN(race_id);
 		IN(class_id);
 
-		// TODO: expand the approval logic to include the rest of the TOB struct values (and remove the direct translation here)
+		// TODO: expand approval logic — TOB wire format (84 bytes total):
+		//   +0x00  char[64]  name
+		//   +0x40  uint32    race_id
+		//   +0x44  uint32    class_id
+		//   +0x48  uint32    deity_id      (not in server NameApproval_Struct)
+		//   +0x4c  uint32    heroic_type   (0–4; not in server struct)
+		//   +0x50  uint32    unknown       (always 0)
 
 		FINISH_DIRECT_DECODE();
 	}
@@ -3551,6 +3872,39 @@ namespace TOB
 		emu->Initialise = init;
 	}
 
+	DECODE(OP_BookButton)
+	{
+		DECODE_LENGTH_EXACT(structs::BookButton_Struct);
+		SETUP_DIRECT_DECODE(BookButton_Struct, structs::BookButton_Struct);
+
+		emu->invslot = static_cast<int16_t>(TOBToServerTypelessSlot(eq->slot, invtype::typePossessions));
+		IN(target_id);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_BuffDefinition)
+	{
+		DECODE_LENGTH_EXACT(structs::EQAffectPacket_Struct);
+		SETUP_DIRECT_DECODE(SpellBuffPacket_Struct, structs::EQAffectPacket_Struct);
+
+		emu->entityid           = eq->entity_id;
+		emu->buff.level         = eq->affect.level;
+		emu->buff.bard_modifier = 0;
+		emu->buff.spellid       = eq->affect.spell_id;
+		emu->buff.duration      = eq->affect.duration;
+		emu->buff.counters      = eq->affect.hit_count;
+		emu->buff.player_id     = eq->affect.caster_id.Id;
+		emu->buff.num_hits      = eq->affect.hit_count;
+		emu->buff.y             = eq->affect.y;
+		emu->buff.x             = eq->affect.x;
+		emu->buff.z             = eq->affect.z;
+		emu->slotid             = TOBToServerBuffSlot(static_cast<int>(eq->slot_id));
+		emu->bufffade           = eq->buff_fade;
+
+		FINISH_DIRECT_DECODE();
+	}
+
 	DECODE(OP_BuffRemoveRequest)
 	{
 		// This is to cater for the fact that short buff box buffs start at 30 as opposed to 25 in prior clients.
@@ -3573,7 +3927,7 @@ namespace TOB
 		emu->slot = static_cast<uint32>(TOBToServerCastingSlot(static_cast<spells::CastingSlot>(eq->slot)));
 
 		IN(spell_id);
-		emu->inventoryslot = -1;
+		emu->inventoryslot = TOBToServerSlot(TOBCastingInventorySlotToInventorySlot(eq->inventory_slot));
 		IN(target_id);
 		IN(y_pos);
 		IN(x_pos);
@@ -3615,7 +3969,7 @@ namespace TOB
 		ChannelMessage_Struct* emu = (ChannelMessage_Struct*)__packet->pBuffer;
 
 		strn0cpy(emu->targetname, Target, sizeof(emu->targetname));
-		strn0cpy(emu->sender, Target, sizeof(emu->sender));
+		strn0cpy(emu->sender, Sender, sizeof(emu->sender));
 		emu->language = Language;
 		emu->chan_num = Channel;
 		emu->skill_in_language = Skill;
@@ -3652,7 +4006,32 @@ namespace TOB
 		IN(CHA);
 		IN(tutorial);
 
-		// TODO: can handle the heroic type here as well (new member)
+		// TODO: expand heroic character handling — TOB wire format (168 bytes total):
+		//   +0x00  uint8[72]  padding (zeroed)
+		//   +0x48  uint32     gender
+		//   +0x4c  uint32     race
+		//   +0x50  uint32     class_
+		//   +0x54  uint32     deity
+		//   +0x58  uint32     start_zone
+		//   +0x5c  uint32     haircolor
+		//   +0x60  uint32     beard
+		//   +0x64  uint32     beardcolor
+		//   +0x68  uint32     hairstyle
+		//   +0x6c  uint32     face
+		//   +0x70  uint32     eyecolor1
+		//   +0x74  uint32     eyecolor2
+		//   +0x78  uint32     drakkin_heritage
+		//   +0x7c  uint32     drakkin_tattoo
+		//   +0x80  uint32     drakkin_details
+		//   +0x84  uint32     STR
+		//   +0x88  uint32     STA
+		//   +0x8c  uint32     AGI
+		//   +0x90  uint32     DEX
+		//   +0x94  uint32     WIS
+		//   +0x98  uint32     INT
+		//   +0x9c  uint32     CHA
+		//   +0xa0  uint32     tutorial
+		//   +0xa4  uint32     heroic_type  (0=none, 1=lvl 85, 2=lvl 50, 3=lvl 100, 4=lvl 115; not in server CharCreate_Struct)
 
 		FINISH_DIRECT_DECODE();
 	}
@@ -3664,6 +4043,8 @@ namespace TOB
 
 		IN(doorid);
 		IN(player_id);
+		IN(item_id);
+		emu->picklockskill = static_cast<uint8>(eq->picklockskill);
 
 		FINISH_DIRECT_DECODE();
 	}
@@ -3708,6 +4089,18 @@ namespace TOB
 
 	DECODE(OP_ConsiderCorpse) { DECODE_FORWARD(OP_Consider); }
 
+	DECODE(OP_Consume)
+	{
+		DECODE_LENGTH_EXACT(structs::Consume_Struct);
+		SETUP_DIRECT_DECODE(Consume_Struct, structs::Consume_Struct);
+
+		emu->slot          = TOBToServerSlot(eq->slot);
+		emu->auto_consumed = (eq->mode == 1) ? 0x000003E7u : 0xFFFFFFFFu;
+		emu->type          = static_cast<uint8>(eq->type + 1); // TOB 0/1 → server 1/2
+
+		FINISH_DIRECT_DECODE();
+	}
+
 	DECODE(OP_CorpseDrag)
 	{
 		std::string CorpseName;
@@ -3735,7 +4128,9 @@ namespace TOB
 		IN(type);
 		IN(spellid);
 		IN(damage);
+		IN(force);
 		IN(hit_heading);
+		IN(hit_pitch);
 		IN(special);
 
 		FINISH_DIRECT_DECODE();
@@ -3759,8 +4154,30 @@ namespace TOB
 		SETUP_DIRECT_DECODE(EnterWorld_Struct, structs::EnterWorld_Struct);
 
 		memcpy(emu->name, eq->name, sizeof(emu->name));
+
+		// TODO: map TOB wire fields to server flags.
+		// TOB wire format (72 bytes total):
+		//   +0x00  char[64]  name
+		//   +0x40  int32     unknown1  — 0 normally; 0x00010000 when re-entering after ZoneNotReady
+		//   +0x44  int32     zoneID    — EverQuest_EnterZoneReason: -1 = enter last zone (normal);
+		//                               other values = specific zone ID (tutorial zone? home city?)
+		// Server struct uses separate `tutorial` and `return_home` uint32 flags.
+		// Correct mapping requires knowing which zoneID values correspond to tutorial vs return_home.
 		emu->return_home = 0;
 		emu->tutorial = 0;
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_EnvDamage)
+	{
+		DECODE_LENGTH_EXACT(structs::EnvDamage2_Struct);
+		SETUP_DIRECT_DECODE(EnvDamage2_Struct, structs::EnvDamage2_Struct);
+
+		emu->id = eq->entity_id;
+		emu->damage = static_cast<uint32>(eq->damage);
+		IN(dmgtype);
+		emu->constant = 0xFFFF;
 
 		FINISH_DIRECT_DECODE();
 	}
@@ -3865,6 +4282,48 @@ namespace TOB
 		FINISH_DIRECT_DECODE();
 	}
 
+	DECODE(OP_PickPocket)
+	{
+		DECODE_LENGTH_ATLEAST(structs::PickPocket_Struct);
+		SETUP_DIRECT_DECODE(PickPocket_Struct, structs::PickPocket_Struct);
+
+		emu->to      = eq->to;
+		emu->from    = eq->from;
+		emu->myskill = static_cast<uint16>(eq->myskill);
+		emu->type    = eq->type;
+		emu->coin    = eq->coin;
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_ReadBook)
+	{
+		DECODE_LENGTH_EXACT(structs::BookRequest_Struct);
+		SETUP_DIRECT_DECODE(BookRequest_Struct, structs::BookRequest_Struct);
+
+		IN(type);
+		emu->invslot = static_cast<int16_t>(TOBToServerTypelessSlot(eq->invslot, invtype::typePossessions));
+		IN(target_id);
+		emu->window = (uint8)eq->window;
+		strn0cpy(emu->txtfile, eq->txtfile, sizeof(emu->txtfile));
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_RecipeAutoCombine)
+	{
+		DECODE_LENGTH_EXACT(structs::RecipeAutoCombine_CS_Struct);
+		SETUP_DIRECT_DECODE(RecipeAutoCombine_Struct, structs::RecipeAutoCombine_CS_Struct);
+
+		IN(object_type);   // eq[+32] → emu[+0]
+		IN(some_id);       // eq[+36] → emu[+4]
+		emu->unknown1   = TOBToServerSlot(eq->container_slot);  // eq[+20] → emu[+8]
+		IN(recipe_id);     // eq[+4]  → emu[+12]
+		emu->reply_code = 0;  // junk in client request; server overwrites in reply
+
+		FINISH_DIRECT_DECODE();
+	}
+
 	DECODE(OP_RemoveBlockedBuffs) { DECODE_FORWARD(OP_BlockedBuffs); }
 
 	DECODE(OP_SetServerFilter)
@@ -3951,6 +4410,26 @@ namespace TOB
 		emu->hero_forge_model = eq->new_armor_id;
 		emu->unknown18 = eq->new_armor_type;
 		emu->color.Color = eq->color;
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_WhoAllRequest)
+	{
+		DECODE_LENGTH_EXACT(structs::Who_All_Struct);
+		SETUP_DIRECT_DECODE(Who_All_Struct, structs::Who_All_Struct);
+
+		memcpy(emu->whom, eq->whom, sizeof(emu->whom));
+		IN(wrace);
+		IN(wclass);
+		IN(lvllow);
+		IN(lvlhigh);
+		IN(gmlookup);
+		// TOB splits RoF2's combined guildid field into a flag (0x94) and actual ID (0x98).
+		// When guildid is non-zero it is a real guild ID; otherwise fall back to guildid_flag
+		// which carries 0xFFFFFFFF (no filter) or trader/buyer sentinel values.
+		emu->guildid = eq->guildid ? eq->guildid : eq->guildid_flag;
+		IN(type);
 
 		FINISH_DIRECT_DECODE();
 	}
@@ -5464,6 +5943,8 @@ namespace TOB
 			return item::ItemPacketType::ItemPacketGuildTribute;
 		case ItemPacketType::ItemPacketCharmUpdate:
 			return item::ItemPacketType::ItemPacketCharmUpdate;
+		case ItemPacketType::ItemPacketParcel:
+			return item::ItemPacketType::ItemPacketParcel;
 		default:
 			return item::ItemPacketType::ItemPacketInvalid;
 		}
@@ -5627,6 +6108,11 @@ void MessageComponent::ResolveArguments(uint32_t id, std::array<const char*, 9>&
 	}
 }
 
+// TODO: verify that zone/client.cpp's raw FormattedMessage_Struct path is unreachable for TOB
+// clients. That path builds the packet using the server struct layout (3x uint32 header +
+// null-terminated strings), which is incompatible with the TOB wire format serialized below.
+// There is no ENCODE(OP_FormattedMessage) in tob.cpp to fix it up, so if that path is reachable
+// it would deliver a malformed packet.
 std::unique_ptr<EQApplicationPacket> MessageComponent::Formatted(uint32_t color, uint32_t id,
 	const FormattedArgs& args) const
 {
