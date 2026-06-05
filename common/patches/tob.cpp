@@ -4297,7 +4297,8 @@ namespace TOB
 
 	DECODE(OP_ReadBook)
 	{
-		DECODE_LENGTH_EXACT(structs::BookRequest_Struct);
+		// Client always sends 8216 bytes (struct is 8215); ATLEAST accepts the extra trailing byte.
+		DECODE_LENGTH_ATLEAST(structs::BookRequest_Struct);
 		SETUP_DIRECT_DECODE(BookRequest_Struct, structs::BookRequest_Struct);
 
 		IN(type);
