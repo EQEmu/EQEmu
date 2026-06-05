@@ -48,7 +48,6 @@ Copyright (C) 2001-2026 EQEmu Development Team
 #include <cassert>
 #include <cinttypes>
 #include <set>
-// #include <boost/tuple/tuple_comparison.hpp> TODO: what was this used for, I don't want to use it
 
 namespace TOB
 {
