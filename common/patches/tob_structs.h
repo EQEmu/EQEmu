@@ -1304,5 +1304,86 @@ namespace TOB {
 
 #pragma pack()
 
+
+	// These task structs are not directly serialized because they have variable sized members. They are used
+	// as intermediate structs to deserialize server values
+
+	struct CompletedTask_Struct
+	{
+		uint32 task_id;
+		std::string title;
+		uint32 completed_time;
+	};
+
+	struct TaskActivity_Struct
+	{
+		uint32 task_slot_index;
+		uint32 task_type;
+		uint32 task_id;
+		uint32 activity_id;
+		uint32 list_group;
+		int32  activity_type;
+		uint8  optional_byte;
+		std::string target_name;
+		std::string item_list;
+		uint32 goal_count;
+		std::string skill_list;
+		std::string spell_list;
+		std::string zones;
+		uint32 dz_switch_id;
+		std::string description_override;
+		uint32 done_count;
+		uint8  flag;
+		std::string zones2;
+	};
+
+	struct TaskDescription_Struct
+	{
+		uint32 sequence_number;
+		uint32 task_id;
+		uint8  open_window;
+		uint32 task_type;
+		uint32 reward_type;
+		std::string title;
+		uint32 duration;
+		uint32 dur_code;
+		uint32 start_time;
+		std::string description;
+		uint8  has_rewards;
+		uint32 coin_reward;
+		uint32 xp_reward;
+		uint32 faction_reward;
+		std::string reward_text;
+		std::string item_link;
+		uint32 points;
+		uint8  has_reward_selection;
+	};
+
+	struct TaskSelectWindowSelector_Struct
+	{
+		int32 selector_id;
+		int32 activity_type;
+		int32 request_type; // deprecated
+		std::string target_name;
+		std::string item_list;
+		int32 goal_count;
+		std::string skill_list;
+		std::string spell_list;
+		std::string zones;
+		std::string description_override;
+		std::string zones_internal;
+	};
+
+	struct TaskSelectWindow_Struct
+	{
+		uint32 task_id;
+		float reward_multiplier;
+		uint32 duration;
+		std::string title;
+		std::string description;
+		bool preview_enable;
+		std::vector<TaskSelectWindowSelector_Struct> selectors;
+	};
+
 	};	//end namespace structs
 };	//end namespace tob

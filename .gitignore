@@ -69,3 +69,6 @@ compile_flags.txt
 # CMake Files
 cmake-build-relwithdebinfo/*
 skill-caps.diff
+
+# Analysis files
+tob/packet_analysis

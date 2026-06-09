@@ -74,10 +74,18 @@ public:
 
 	uint8 ReadUInt8() { uint8 value = *(uint8 *)(pBuffer + _rpos); _rpos += sizeof(uint8); return value; }
 	uint8 ReadUInt8(uint32 Offset) const { uint8 value = *(uint8 *)(pBuffer + Offset); return value; }
+	int8 ReadSInt8() { int8 value = *(int8 *)(pBuffer + _rpos); _rpos += sizeof(int8); return value; }
+	int8 ReadSint8(uint32 Offset) const { int8 value = *(int8 *)(pBuffer + Offset); return value; }
 	uint16 ReadUInt16() { uint16 value = *(uint16 *)(pBuffer + _rpos); _rpos += sizeof(uint16); return value; }
 	uint16 ReadUInt16(uint32 Offset) const { uint16 value = *(uint16 *)(pBuffer + Offset); return value; }
+	int16 ReadSInt16() { int16 value = *(int16 *)(pBuffer + _rpos); _rpos += sizeof(int16); return value; }
+	int16 ReadSInt16(uint32 Offset) const { int16 value = *(int16 *)(pBuffer + Offset); return value; }
 	uint32 ReadUInt32() { uint32 value = *(uint32 *)(pBuffer + _rpos); _rpos += sizeof(uint32); return value; }
 	uint32 ReadUInt32(uint32 Offset) const { uint32 value = *(uint32 *)(pBuffer + Offset); return value; }
+	int32 ReadSInt32() { int32 value = *(int32 *)(pBuffer + _rpos); _rpos += sizeof(int32); return value; }
+	int32 ReadSint32(uint32 Offset) const { int32 value = *(int32 *)(pBuffer + Offset); return value; }
+	float ReadFloat() { float value = *(float *)(pBuffer + _rpos); _rpos += sizeof(float); return value; }
+	float ReadFloat(uint32 Offset) const { float value = *(float *)(pBuffer + Offset); return value; }
 	void ReadString(char *str) { uint32 len = static_cast<uint32>(strlen((char *)(pBuffer + _rpos))) + 1; memcpy(str, pBuffer + _rpos, len); _rpos += len; }
 	void ReadString(std::string &str) { str = reinterpret_cast<char *>(pBuffer + _rpos); _rpos += str.length() + 1; }
 	void ReadString(char *str, uint32 Offset, uint32 MaxLength) const;

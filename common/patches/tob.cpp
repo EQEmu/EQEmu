@@ -3164,6 +3164,322 @@ namespace TOB
 		FINISH_ENCODE();
 	}
 
+	ENCODE(OP_CompletedTasks)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		uint32 count = in->ReadUInt32();
+		uint32 out_size = sizeof(uint32); // count
+
+		std::vector<structs::CompletedTask_Struct> tasks;
+		tasks.reserve(count);
+		for (uint32 i = 0; i < count; ++i) {
+			structs::CompletedTask_Struct task;
+			task.task_id = in->ReadUInt32();
+			out_size += sizeof(task.task_id);
+			in->ReadString(task.title);
+			out_size += task.title.size() + 1;
+			task.completed_time = in->ReadUInt32();
+			out_size += sizeof(uint64); // zero-extended to uint64
+			tasks.emplace_back(std::move(task));
+		}
+
+		SerializeBuffer buf(out_size);
+		buf.WriteUInt32(count);
+		for (const auto& task : tasks) {
+			buf.WriteUInt32(task.task_id);
+			buf.WriteString(task.title);
+			buf.WriteUInt64(static_cast<uint64>(task.completed_time));
+		}
+
+		uchar *emu_buffer = in->pBuffer;
+		in->size = buf.size();
+		in->pBuffer = new uint8[buf.size()];
+		memcpy(in->pBuffer, buf.buffer(), buf.size());
+		delete[] emu_buffer;
+		dest->FastQueuePacket(&in, ack_req);
+	}
+
+	ENCODE(OP_TaskActivity)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		// Short (25-byte) and reset (activity_type==0) packets are format-compatible
+		if (in->size <= 25) {
+			dest->FastQueuePacket(&in, ack_req);
+			return;
+		}
+
+		structs::TaskActivity_Struct task;
+		task.task_slot_index = in->ReadUInt32();
+		task.task_type       = in->ReadUInt32();
+		task.task_id         = in->ReadUInt32();
+		task.activity_id     = in->ReadUInt32();
+		task.list_group      = in->ReadUInt32();
+		task.activity_type   = in->ReadSInt32();
+		task.optional_byte   = in->ReadUInt8();
+		in->SetReadPosition(in->GetReadPosition() + sizeof(int32)); // skip request_type
+		in->ReadString(task.target_name);
+		in->ReadLengthString(task.item_list);
+		task.goal_count      = in->ReadUInt32();
+		in->ReadLengthString(task.skill_list);
+		in->ReadLengthString(task.spell_list);
+		in->ReadString(task.zones); // null-terminated in RoF+; TOB expects length-prefixed
+		task.dz_switch_id    = in->ReadUInt32();
+		in->ReadString(task.description_override);
+		task.done_count      = in->ReadUInt32();
+		task.flag            = in->ReadUInt8();
+		in->ReadString(task.zones2);
+
+		uint32 out_size = 5 * sizeof(uint32)                        // task_slot_index..list_group
+		                + sizeof(int32)                              // activity_type
+		                + sizeof(uint8)                              // optional_byte
+		                + task.target_name.size() + 1
+		                + sizeof(uint32) + task.item_list.size()
+		                + sizeof(uint32)                             // goal_count
+		                + sizeof(uint32) + task.skill_list.size()
+		                + sizeof(uint32) + task.spell_list.size()
+		                + sizeof(uint32) + task.zones.size()         // length-prefixed
+		                + 1                                          // empty string (new TOB field)
+		                + sizeof(uint32)                             // dz_switch_id
+		                + task.description_override.size() + 1
+		                + sizeof(uint32)                             // done_count
+		                + sizeof(uint8)                              // flag
+		                + task.zones2.size() + 1;
+
+		SerializeBuffer buf(out_size);
+		buf.WriteUInt32(task.task_slot_index);
+		buf.WriteUInt32(task.task_type);
+		buf.WriteUInt32(task.task_id);
+		buf.WriteUInt32(task.activity_id);
+		buf.WriteUInt32(task.list_group);
+		buf.WriteInt32(task.activity_type);
+		buf.WriteUInt8(task.optional_byte);
+		buf.WriteString(task.target_name);
+		buf.WriteLengthString(task.item_list);
+		buf.WriteUInt32(task.goal_count);
+		buf.WriteLengthString(task.skill_list);
+		buf.WriteLengthString(task.spell_list);
+		buf.WriteLengthString(task.zones);  // converted null-term → length-prefixed
+		buf.WriteString("");                // new TOB field
+		buf.WriteUInt32(task.dz_switch_id);
+		buf.WriteString(task.description_override);
+		buf.WriteUInt32(task.done_count);
+		buf.WriteUInt8(task.flag);
+		buf.WriteString(task.zones2);
+
+		uchar *emu_buffer = in->pBuffer;
+		in->size = buf.size();
+		in->pBuffer = new uint8[buf.size()];
+		memcpy(in->pBuffer, buf.buffer(), buf.size());
+		delete[] emu_buffer;
+		dest->FastQueuePacket(&in, ack_req);
+	}
+
+	ENCODE(OP_TaskDescription)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		structs::TaskDescription_Struct task;
+		task.sequence_number      = in->ReadUInt32();
+		task.task_id              = in->ReadUInt32();
+		task.open_window          = in->ReadUInt8();
+		task.task_type            = in->ReadUInt32();
+		task.reward_type          = in->ReadUInt32();
+		in->ReadString(task.title);
+		task.duration             = in->ReadUInt32();
+		in->SetReadPosition(in->GetReadPosition() + sizeof(uint32)); // skip dur_code
+		task.start_time           = in->ReadUInt32();
+		in->ReadString(task.description);
+		task.has_rewards          = in->ReadUInt8();
+		task.coin_reward          = in->ReadUInt32();
+		task.xp_reward            = in->ReadUInt32();
+		task.faction_reward       = in->ReadUInt32();
+		in->ReadString(task.reward_text);
+		in->ReadString(task.item_link);
+		task.points               = in->ReadUInt32();
+		task.has_reward_selection = in->ReadUInt8();
+
+		std::string new_item_link;
+		ServerToTOBConvertLinks(new_item_link, task.item_link);
+
+		uint32 out_size = sizeof(uint32) + sizeof(uint32) + sizeof(uint8) + sizeof(uint32) + sizeof(uint32) // header
+		                + task.title.size() + 1
+		                + sizeof(uint32) + sizeof(uint32)  // duration, start_time
+		                + task.description.size() + 1
+		                + sizeof(uint8)                    // has_rewards
+		                + sizeof(uint8)                    // has_reward_selection
+		                + 4 * sizeof(uint32)               // player_levels
+		                + task.reward_text.size() + 1;
+
+		if (task.has_rewards) {
+			out_size += sizeof(uint32)             // coin_reward
+			          + sizeof(uint8)              // xp_reward as flag
+			          + sizeof(uint32)             // faction_reward
+			          + sizeof(uint32)             // new unknown field
+			          + new_item_link.size() + 1
+			          + sizeof(uint32);            // points
+		}
+
+		SerializeBuffer buf(out_size);
+		buf.WriteUInt32(task.sequence_number);
+		buf.WriteUInt32(task.task_id);
+		buf.WriteUInt8(task.open_window);
+		buf.WriteUInt32(task.task_type);
+		buf.WriteUInt32(task.reward_type);
+		buf.WriteString(task.title);
+		buf.WriteUInt32(task.duration);
+		buf.WriteUInt32(task.start_time);
+		buf.WriteString(task.description);
+		buf.WriteUInt8(task.has_rewards);
+		if (task.has_rewards) {
+			buf.WriteUInt32(task.coin_reward);
+			buf.WriteUInt8(task.xp_reward > 0 ? 1 : 0);
+			buf.WriteUInt32(task.faction_reward);
+			buf.WriteUInt32(0); // new field, no emu equivalent
+			buf.WriteString(new_item_link);
+			buf.WriteUInt32(task.points);
+		}
+		buf.WriteUInt8(task.has_reward_selection);
+		buf.WriteUInt32(0); // player_level1
+		buf.WriteUInt32(0); // player_level2
+		buf.WriteUInt32(0); // player_level3
+		buf.WriteUInt32(0); // player_level4
+		buf.WriteString(task.reward_text);
+
+		uchar *emu_buffer = in->pBuffer;
+		in->size = buf.size();
+		in->pBuffer = new uint8[buf.size()];
+		memcpy(in->pBuffer, buf.buffer(), buf.size());
+		delete[] emu_buffer;
+		dest->FastQueuePacket(&in, ack_req);
+	}
+
+	ENCODE(OP_TaskSelectWindow)
+	{
+		EQApplicationPacket* in = *p;
+		*p = nullptr;
+
+		// need to calculate the size of the buffer, which can only be done after reading all the strings stored
+		uint32 task_count = in->ReadUInt32();
+		uint32 type = in->ReadUInt32();
+		uint32 task_giver_id = in->ReadUInt32();
+
+		uint32 out_size = 3 * sizeof(uint32); // initial size is the header here
+
+		std::vector<structs::TaskSelectWindow_Struct> tasks;
+		tasks.reserve(task_count);
+		for (int i = 0; i < task_count ; i++) {
+			structs::TaskSelectWindow_Struct task;
+			task.task_id = in->ReadUInt32();
+			out_size += sizeof(task.task_id);
+
+			task.reward_multiplier = in->ReadFloat();
+			out_size += sizeof(task.reward_multiplier);
+
+			task.duration = in->ReadUInt32();
+			out_size += sizeof(task.duration);
+
+			in->SetReadPosition(in->GetReadPosition() + sizeof(uint32)); // skip duration_code
+
+			in->ReadString(task.title);
+			out_size += task.title.size() + 1;
+
+			in->ReadString(task.description);
+			out_size += task.description.size() + 1;
+
+			task.preview_enable = static_cast<bool>(in->ReadUInt8());
+			out_size += sizeof(task.preview_enable);
+
+			uint32 selector_count = in->ReadUInt32();
+			out_size += sizeof(selector_count);
+
+			std::vector<structs::TaskSelectWindowSelector_Struct> selectors;
+			selectors.reserve(selector_count);
+			for (int j = 0; j < selector_count; j++) {
+				structs::TaskSelectWindowSelector_Struct selector;
+				selector.selector_id = in->ReadSInt32();
+				out_size += sizeof(selector.selector_id);
+
+				selector.activity_type = in->ReadSInt32();
+				out_size += sizeof(selector.activity_type);
+
+				in->SetReadPosition(in->GetReadPosition() + sizeof(int32)); // skip request_type
+
+				in->ReadString(selector.target_name);
+				out_size += selector.target_name.size() + 1;
+
+				in->ReadLengthString(selector.item_list);
+				out_size += sizeof(uint32) + selector.item_list.size();
+
+				selector.goal_count = in->ReadSInt32();
+				out_size += sizeof(selector.goal_count);
+
+				in->ReadLengthString(selector.skill_list);
+				out_size += sizeof(uint32) + selector.skill_list.size();
+
+				in->ReadLengthString(selector.spell_list);
+				out_size += sizeof(uint32) + selector.spell_list.size();
+
+				in->ReadString(selector.zones);
+				out_size += selector.zones.size() + 1;
+
+				in->ReadString(selector.description_override);
+				out_size += selector.description_override.size() + 1;
+
+				in->ReadString(selector.zones_internal);
+				out_size += selector.zones_internal.size() + 1;
+
+				selectors.push_back(std::move(selector));
+			}
+
+			task.selectors = std::move(selectors);
+			tasks.push_back(std::move(task));
+		}
+
+		SerializeBuffer buf(out_size);
+		buf.WriteUInt32(task_count);
+		buf.WriteUInt32(type);
+		buf.WriteUInt32(task_giver_id);
+
+		for (const auto& task : tasks) {
+			buf.WriteUInt32(task.task_id);
+			buf.WriteFloat(task.reward_multiplier);
+			buf.WriteUInt32(task.duration);
+			buf.WriteString(task.title);
+			buf.WriteString(task.description);
+			buf.WriteUInt8(task.preview_enable);
+			buf.WriteUInt32(task.selectors.size());
+			for (const auto& selector : task.selectors) {
+				buf.WriteUInt32(selector.selector_id);
+				buf.WriteUInt32(selector.activity_type);
+				buf.WriteString(selector.target_name);
+				buf.WriteLengthString(selector.item_list);
+				buf.WriteUInt32(selector.goal_count);
+				buf.WriteLengthString(selector.skill_list);
+				buf.WriteLengthString(selector.spell_list);
+				buf.WriteString(selector.zones);
+				buf.WriteString(selector.description_override);
+				buf.WriteString(selector.zones_internal);
+			}
+		}
+
+		// will need to delete this after we swap, or it will leak
+		uchar* emu_buffer = in->pBuffer;
+
+		// swap into in
+		in->size = buf.size();
+		in->pBuffer = new uint8[buf.size()];
+		memcpy(in->pBuffer, buf.buffer(), buf.size());
+
+		delete[] emu_buffer;
+
+		dest->FastQueuePacket(&in, ack_req);
+	}
+
 	ENCODE(OP_Track)
 	{
 		SETUP_VAR_ENCODE(Track_Struct);
