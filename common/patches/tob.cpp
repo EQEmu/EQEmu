@@ -3358,6 +3358,95 @@ namespace TOB
 		dest->FastQueuePacket(&in, ack_req);
 	}
 
+	ENCODE(OP_TaskHistoryReply)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		in->SetReadPosition(0);
+		uint32 TaskIndex     = in->ReadUInt32();
+		uint32 ActivityCount = in->ReadUInt32();
+		if (ActivityCount > 20)
+			ActivityCount = 20;
+
+		struct Act {
+			uint32      type;
+			std::string target_name;
+			std::string item_list;
+			uint32      goal_count;
+			uint32      unknown04;
+			uint32      unknown08;
+			uint32      zone_id;
+			uint32      unknown16;
+			std::string desc;
+		};
+
+		std::vector<Act> acts;
+		acts.reserve(ActivityCount);
+
+		for (uint32 i = 0; i < ActivityCount; ++i) {
+			Act a;
+			a.type = in->ReadUInt32();
+			while (uint8 c = in->ReadUInt8()) a.target_name += c;
+			while (uint8 c = in->ReadUInt8()) a.item_list   += c;
+			a.goal_count = in->ReadUInt32();
+			a.unknown04  = in->ReadUInt32();
+			a.unknown08  = in->ReadUInt32();
+			a.zone_id    = in->ReadUInt32();
+			a.unknown16  = in->ReadUInt32();
+			while (uint8 c = in->ReadUInt8()) a.desc += c;
+			acts.push_back(std::move(a));
+		}
+
+		// TOB wire format per activity (sub_1401841E0 @ 0x1401841E0):
+		//   wire[1]  uint32         ActivityType          → act-1
+		//   wire[2]  null-term      target_name           → act+0   (max 63 stored)
+		//   wire[3]  uint32 (CSB)   GoalCount assumed     → act+340  // TODO: confirm field order via live capture
+		//   wire[4]  uint32 (direct) ZoneID assumed       → act+48   // TODO: confirm field order via live capture
+		//   wire[5]  uint32 (CSB)   unknown               → act+348  // TODO: identify field
+		//   wire[6]  uint32 (CSB)   unknown               → act+356  // TODO: identify field
+		//   wire[7]  null-term      item_list             → act+364 (CXStr, max 1023)
+		//   wire[8]  null-term      unknown               → act+64   // TODO: identify field; sending empty
+		//   wire[9]  uint32 (direct) unknown              → act+51   // TODO: identify field
+		//   wire[10] null-term      description_override assumed → act+208 (max 127) // TODO: confirm
+		//   wire[11] null-term      unknown               → act+128  // TODO: identify field; sending empty
+		uint32 OutSize = 8;
+		for (const auto& a : acts) {
+			OutSize += 4;                        // wire[1]: ActivityType
+			OutSize += a.target_name.size() + 1; // wire[2]: target_name
+			OutSize += 16;                       // wire[3-6]: 4x uint32
+			OutSize += a.item_list.size() + 1;   // wire[7]: item_list
+			OutSize += 1;                        // wire[8]: empty string
+			OutSize += 4;                        // wire[9]: uint32
+			OutSize += a.desc.size() + 1;        // wire[10]: description_override
+			OutSize += 1;                        // wire[11]: empty string
+		}
+
+		auto outapp = new EQApplicationPacket(OP_TaskHistoryReply, OutSize);
+		outapp->WriteUInt32(TaskIndex);
+		outapp->WriteUInt32(static_cast<uint32>(acts.size()));
+
+		for (const auto& a : acts) {
+			outapp->WriteUInt32(a.type);                            // wire[1]
+			for (char c : a.target_name) outapp->WriteUInt8(c);
+			outapp->WriteUInt8(0);                                  // wire[2]
+			outapp->WriteUInt32(a.goal_count);                      // wire[3] TODO: confirm order
+			outapp->WriteUInt32(a.zone_id);                         // wire[4] TODO: confirm order
+			outapp->WriteUInt32(0);                                 // wire[5] TODO: identify
+			outapp->WriteUInt32(0);                                 // wire[6] TODO: identify
+			for (char c : a.item_list) outapp->WriteUInt8(c);
+			outapp->WriteUInt8(0);                                  // wire[7]
+			outapp->WriteUInt8(0);                                  // wire[8] TODO: identify; sending empty
+			outapp->WriteUInt32(0);                                 // wire[9] TODO: identify
+			for (char c : a.desc) outapp->WriteUInt8(c);
+			outapp->WriteUInt8(0);                                  // wire[10] TODO: confirm desc here
+			outapp->WriteUInt8(0);                                  // wire[11] TODO: identify; sending empty
+		}
+
+		delete in;
+		dest->FastQueuePacket(&outapp, ack_req);
+	}
+
 	ENCODE(OP_TaskSelectWindow)
 	{
 		EQApplicationPacket* in = *p;
@@ -3478,6 +3567,11 @@ namespace TOB
 		delete[] emu_buffer;
 
 		dest->FastQueuePacket(&in, ack_req);
+	}
+
+	ENCODE(OP_SharedTaskSelectWindow)
+	{
+		ENCODE_FORWARD(OP_TaskSelectWindow);
 	}
 
 	ENCODE(OP_Track)
