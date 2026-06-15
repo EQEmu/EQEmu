@@ -999,7 +999,7 @@ RoF2  Built May 10 2013 23:30:08
 0x48a2  OP_OpenNewTasksWindow
 0x3010
 0x45db
-0x36e8  OP_AvaliableTask
+0x36e8  OP_AvailableTask
 0x4865
 0x322e
 0x7582
