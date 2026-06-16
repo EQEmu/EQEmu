@@ -3292,7 +3292,7 @@ namespace TOB
 		task.reward_type          = in->ReadUInt32();
 		in->ReadString(task.title);
 		task.duration             = in->ReadUInt32();
-		in->SetReadPosition(in->GetReadPosition() + sizeof(uint32)); // skip dur_code
+		in->SetReadPosition(in->GetReadPosition() + sizeof(uint32)); // skip dur_code (not in TOB wire format)
 		task.start_time           = in->ReadUInt32();
 		in->ReadString(task.description);
 		task.has_rewards          = in->ReadUInt8();
@@ -3308,21 +3308,21 @@ namespace TOB
 		ServerToTOBConvertLinks(new_item_link, task.item_link);
 
 		uint32 out_size = sizeof(uint32) + sizeof(uint32) + sizeof(uint8) + sizeof(uint32) + sizeof(uint32) // header
-		                + task.title.size() + 1
-		                + sizeof(uint32) + sizeof(uint32)  // duration, start_time
-		                + task.description.size() + 1
-		                + sizeof(uint8)                    // has_rewards
-		                + sizeof(uint8)                    // has_reward_selection
-		                + 4 * sizeof(uint32)               // player_levels
-		                + task.reward_text.size() + 1;
+		                + sizeof(uint32) + task.title.size()        // length-prefixed title
+		                + sizeof(uint32) + sizeof(uint32)           // duration, start_time
+		                + sizeof(uint32) + task.description.size()  // length-prefixed description
+		                + sizeof(uint8)                             // has_rewards
+		                + sizeof(uint8)                             // has_reward_selection
+		                + 4 * sizeof(uint32)                        // player_levels
+		                + sizeof(uint32) + task.reward_text.size(); // length-prefixed reward_text
 
 		if (task.has_rewards) {
-			out_size += sizeof(uint32)             // coin_reward
-			          + sizeof(uint8)              // xp_reward as flag
-			          + sizeof(uint32)             // faction_reward
-			          + sizeof(uint32)             // new unknown field
-			          + new_item_link.size() + 1
-			          + sizeof(uint32);            // points
+			out_size += sizeof(uint32)                      // coin_reward
+			          + sizeof(uint8)                       // xp_reward as flag
+			          + sizeof(uint32)                      // faction_reward
+			          + sizeof(uint32)                      // new unknown field
+			          + sizeof(uint32) + new_item_link.size() // length-prefixed item_link
+			          + sizeof(uint32);                     // points
 		}
 
 		SerializeBuffer buf(out_size);
@@ -3331,17 +3331,17 @@ namespace TOB
 		buf.WriteUInt8(task.open_window);
 		buf.WriteUInt32(task.task_type);
 		buf.WriteUInt32(task.reward_type);
-		buf.WriteString(task.title);
+		buf.WriteLengthString(task.title);
 		buf.WriteUInt32(task.duration);
 		buf.WriteUInt32(task.start_time);
-		buf.WriteString(task.description);
+		buf.WriteLengthString(task.description);
 		buf.WriteUInt8(task.has_rewards);
 		if (task.has_rewards) {
 			buf.WriteUInt32(task.coin_reward);
 			buf.WriteUInt8(task.xp_reward > 0 ? 1 : 0);
 			buf.WriteUInt32(task.faction_reward);
 			buf.WriteUInt32(0); // new field, no emu equivalent
-			buf.WriteString(new_item_link);
+			buf.WriteLengthString(new_item_link);
 			buf.WriteUInt32(task.points);
 		}
 		buf.WriteUInt8(task.has_reward_selection);
@@ -3349,7 +3349,7 @@ namespace TOB
 		buf.WriteUInt32(0); // player_level2
 		buf.WriteUInt32(0); // player_level3
 		buf.WriteUInt32(0); // player_level4
-		buf.WriteString(task.reward_text);
+		buf.WriteLengthString(task.reward_text);
 
 		uchar *emu_buffer = in->pBuffer;
 		in->size = buf.size();

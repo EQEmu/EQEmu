@@ -1346,7 +1346,6 @@ namespace TOB {
 		uint32 reward_type;
 		std::string title;
 		uint32 duration;
-		uint32 dur_code;
 		uint32 start_time;
 		std::string description;
 		uint8  has_rewards;
