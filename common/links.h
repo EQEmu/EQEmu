@@ -3,7 +3,6 @@
 //
 
 #pragma once
-#include "item_instance.h"
 
 namespace EQ { class ItemInstance; }
 
