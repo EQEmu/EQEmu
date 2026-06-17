@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "item_instance.h"
 
 namespace EQ { class ItemInstance; }
 
@@ -46,9 +47,10 @@ enum ETagCodes
 // Create an item link from the given item.
 void FormatItemLink(char* Buffer, size_t BufferSize, const EQ::ItemInstance* item);
 
-// Create a spell link for the given spell, including spell name. Spells on items often have
+// Create a spell link for the given spell, with optional spell name override. Spells on items often have
 // spell name overrides that changes the display name of the spell.
-void FormatSpellLink(char* Buffer, size_t BufferSize, int32_t SpellID, const char* spellName);
+void FormatSpellLink(char* Buffer, size_t BufferSize, int32_t SpellID,
+    const char* spellNameOverride = nullptr);
 
 // Format text into a clickable dialog link. The keyword is the text that will be displayed in the chat window,
 // and the text is the text that will be sent to the server when the link is clicked. If no text is provided,

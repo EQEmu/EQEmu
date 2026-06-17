@@ -336,7 +336,7 @@ bool Mob::DoCastSpell(int32 spell_id, uint16 target_id, CastingSlot slot,
 		StopCasting();
 
 		char spell_link[Links::MAX_LINK_SIZE];
-		Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spell_id, GetSpellName(spell_id));
+		Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spell_id);
 
 		if (IsClient())
 			ClientPatch::SendMessageString(CastToClient(), Chat::SpellFailure, fizzle_msg, spell_link);
@@ -1302,7 +1302,7 @@ void Mob::InterruptSpell(uint16 message, uint16 color, int32 spellid)
 	{
 		// the interrupt message
 		char spell_link[Links::MAX_LINK_SIZE];
-		Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spellid, GetSpellName(spellid));
+		Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spellid);
 		ClientPatch::InterruptSpell(CastToClient(), message, GetID(), spell_link);
 		SendSpellBarEnable(spellid);
 	}
@@ -1330,7 +1330,7 @@ void Mob::InterruptSpell(uint16 message, uint16 color, int32 spellid)
 
 	// this is the actual message, it works the same as a formatted message
 	char spell_link[Links::MAX_LINK_SIZE];
-	Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spellid, GetSpellName(spellid));
+	Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spellid);
 	ClientPatch::InterruptSpellOther(this, message_other, GetID(), GetCleanName(), spell_link);
 }
 
@@ -7035,7 +7035,7 @@ void Mob::DoBardCastingFromItemClick(bool is_casting_bard_song, uint32 cast_time
 		//For spells with cast times. Cancel song cast, stop pulsing and start item cast.
 		if (cast_time != 0) {
 			char spell_link[Links::MAX_LINK_SIZE];
-			Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spell_id, GetSpellName(spell_id));
+			Links::FormatSpellLink(spell_link, Links::MAX_LINK_SIZE, spell_id);
 			ClientPatch::InterruptSpell(CastToClient(), SONG_ENDS, GetID(), spell_link);
 
 			ZeroCastingVars();
