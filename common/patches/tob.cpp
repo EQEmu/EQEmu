@@ -28,6 +28,7 @@ Copyright (C) 2001-2026 EQEmu Development Team
 #include "common/crc32.h"
 
 #include "common/eq_packet_structs.h"
+#include "common/links.h"
 #include "common/misc_functions.h"
 #include "common/strings.h"
 #include "common/inventory_profile.h"
@@ -5664,6 +5665,31 @@ namespace TOB
 					size_t index = 1;
 					std::string item_id = segments[segment_iter].substr(index, 5);
 					index += 5;
+
+					// Say links are encoded as item links with SAYLINK_ITEM_ID (0xFFFFF = "FFFFF").
+					// TOB supports dialog links natively, so convert to a proper dialog link.
+					if (item_id == "FFFFF") {
+						// keyword = proxy text (display name), phrase = saylink text from DB
+						std::string keyword = segments[segment_iter].substr(EQ::constants::SAY_LINK_BODY_SIZE);
+						uint32 aug1_id = std::stoul(segments[segment_iter].substr(6, 5), nullptr, 16);
+						uint32 aug2_id = std::stoul(segments[segment_iter].substr(11, 5), nullptr, 16);
+						uint32 saylink_id = (aug1_id != 0) ? aug1_id : aug2_id;
+						auto saylink = SaylinkRepository::FindOne(database, saylink_id);
+						char dialog_link[Links::MAX_LINK_SIZE];
+						Links::FormatDialogLink(dialog_link, sizeof(dialog_link), keyword, saylink.phrase);
+						// The client's TagBracketedTextAsDialogueResponseLinks runs before ConvertItemTags
+						// and converts [text] -> [\x124text\x12]. Strip surrounding brackets so it doesn't
+						// double-wrap the already-converted dialog link into a malformed nested tag.
+						if (!message_out.empty() && message_out.back() == '[') {
+							message_out.pop_back();
+						}
+						message_out.append(dialog_link);
+						size_t next_seg = segment_iter + 1;
+						if (next_seg < segments.size() && !segments[next_seg].empty() && segments[next_seg].front() == ']') {
+							segments[next_seg].erase(0, 1);
+						}
+						break;
+					}
 
 					std::string aug1 = segments[segment_iter].substr(index, 5);
 					index += 5;
