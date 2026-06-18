@@ -711,48 +711,36 @@ void UpdateWindowTitle(char *iNewTitle)
 
 bool CheckForCompatibleQuestPlugins()
 {
-	const std::vector<std::pair<std::string, bool *>> directories = {
-		{"lua_modules", nullptr},
-		{"plugins",     nullptr}
-	};
-
 	bool lua_found  = false;
 	bool perl_found = false;
 
-	try {
-		for (const auto &[directory, flag]: directories) {
-			std::string dir_path = PathManager::Instance()->GetServerPath() + "/" + directory;
-			if (!File::Exists(dir_path)) { continue; }
-
-			for (const auto &file: fs::directory_iterator(dir_path)) {
+	auto check_dir = [&](const std::string& dir_path, bool& found) {
+		if (!File::Exists(dir_path)) { return; }
+		try {
+			for (const auto& file : fs::directory_iterator(dir_path)) {
 				if (!file.is_regular_file()) { continue; }
-
-				std::string file_path = file.path().string();
-				if (!File::Exists(file_path)) { continue; }
-
-				auto r = File::GetContents(file_path);
-				if (!Strings::Contains(r.contents, "CheckHandin")) { continue; }
-
-				if (directory == "lua_modules") {
-					lua_found = true;
+				auto r = File::GetContents(file.path().string());
+				if (Strings::Contains(r.contents, "CheckHandin")) {
+					found = true;
+					return;
 				}
-				else {
-					perl_found = true;
-				}
-
-				if (lua_found && perl_found) { return true; }
 			}
 		}
-	} catch (const fs::filesystem_error &ex) {
-		LogError("Failed to check for compatible quest plugins: {}", ex.what());
+		catch (const fs::filesystem_error& ex) {
+			LogError("Failed to check for compatible quest plugins: {}", ex.what());
+		}
+    };
+
+	for (const auto& path : PathManager::Instance()->GetLuaModulePaths()) {
+		check_dir(path, lua_found);
 	}
 
-	if (!lua_found) {
-		LogError("Failed to find CheckHandin in lua_modules");
+	for (const auto& path : PathManager::Instance()->GetPluginPaths()) {
+		check_dir(path, perl_found);
 	}
-	if (!perl_found) {
-		LogError("Failed to find CheckHandin in plugins");
-	}
+
+	if (!lua_found) { LogError("Failed to find CheckHandin in the Lua module quest directories"); }
+	if (!perl_found) { LogError("Failed to find CheckHandin in the Perl plugins quest directories");}
 
 	return lua_found && perl_found;
 }

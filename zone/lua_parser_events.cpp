@@ -2340,6 +2340,53 @@ void handle_player_merchant(
 	lua_setfield(L, -2, "item_cost");
 }
 
+void handle_player_merchant_open(
+	QuestInterface* parse,
+	lua_State* L,
+	Client* client,
+	std::string data,
+	uint32 extra_data,
+	std::vector<std::any>* extra_pointers
+) {
+	if (!extra_pointers || extra_pointers->size() < 1) return;
+
+	auto mob_ptr = std::any_cast<Mob*>(extra_pointers->at(0));
+	if (!mob_ptr) return;
+
+	Lua_Mob l_mob(mob_ptr);
+	luabind::adl::object l_mob_o = luabind::adl::object(L, l_mob);
+	l_mob_o.push(L);
+	lua_setfield(L, -2, "other");
+}
+
+void handle_player_merchant_presell(
+	QuestInterface* parse,
+	lua_State* L,
+	Client* client,
+	std::string data,
+	uint32 extra_data,
+	std::vector<std::any>* extra_pointers
+) {
+	Seperator sep(data.c_str());
+	lua_pushinteger(L, Strings::ToInt(sep.arg[0])); lua_setfield(L, -2, "slot_id");
+	lua_pushinteger(L, Strings::ToInt(sep.arg[1])); lua_setfield(L, -2, "item_id");
+	lua_pushinteger(L, Strings::ToInt(sep.arg[2])); lua_setfield(L, -2, "item_type");
+
+	if (!extra_pointers || extra_pointers->size() < 2) return;
+
+	auto mob_ptr = std::any_cast<Mob*>(extra_pointers->at(0));
+	auto inst_ptr = std::any_cast<EQ::ItemInstance*>(extra_pointers->at(1));
+	if (!mob_ptr || !inst_ptr) return;
+
+	Lua_Mob l_mob(mob_ptr);
+	luabind::adl::object(L, l_mob).push(L);
+	lua_setfield(L, -2, "other");
+
+	Lua_ItemInst l_iteminst(inst_ptr);
+	luabind::adl::object(L, l_iteminst).push(L);
+	lua_setfield(L, -2, "item");
+}
+
 void handle_player_augment_insert(
 	QuestInterface *parse,
 	lua_State* L,

@@ -14361,9 +14361,8 @@ void Client::Handle_OP_ShopPlayerSell(const EQApplicationPacket *app)
 			sizeof(Merchant_Purchase_Struct), app->size);
 		return;
 	}
-	RDTSC_Timer t1(true);
+	
 	Merchant_Purchase_Struct* mp = (Merchant_Purchase_Struct*)app->pBuffer;
-
 	Mob* vendor = entity_list.GetMob(mp->npcid);
 
 	if (vendor == 0 || !vendor->IsNPC() || vendor->GetClass() != Class::Merchant)
@@ -14373,35 +14372,51 @@ void Client::Handle_OP_ShopPlayerSell(const EQApplicationPacket *app)
 	if (DistanceSquared(m_Position, vendor->GetPosition()) > USE_NPC_RANGE2)
 		return;
 
-	uint32 price = 0;
 	uint32 itemid = GetItemIDAt(mp->itemslot);
 	if (itemid == 0)
 		return;
+
 	const EQ::ItemData* item = database.GetItem(itemid);
 	EQ::ItemInstance* inst = GetInv().GetItem(mp->itemslot);
 	if (!item || !inst) {
-		Message(Chat::Red, "You seemed to have misplaced that item..");
+		Message(Chat::Red, "You seem to have misplaced that item..");
 		return;
 	}
-	if (mp->quantity > 1)
-	{
+
+	if (!item->NoDrop) {
+		return;
+	}
+
+	if (mp->quantity > 1) {
 		if ((inst->GetCharges() < 0) || (mp->quantity > (uint32)inst->GetCharges()))
 			return;
 	}
 
-	if (!item->NoDrop) {
-		//Message(Chat::Red,"%s tells you, 'LOL NOPE'", vendor->GetName());
-		return;
+	// Check for veto from script
+	if (parse->PlayerHasQuestSub(EVENT_MERCHANT_PRESELL)) {
+		std::string export_string = fmt::format("{} {} {}", mp->itemslot, itemid, inst->GetItemType());
+		std::vector<std::any> extra_pointers = { vendor, inst };
+
+		int result = parse->EventPlayer(EVENT_MERCHANT_PRESELL, this, export_string, 0, &extra_pointers);
+		// CANCEL: If a script returns -1 for this event, the sale wil be cancelled.  Sends a dummy packet sent to satisfy the client
+		if (result == -1) {
+			auto outapp = new EQApplicationPacket(OP_ShopPlayerSell, sizeof(Merchant_Purchase_Struct));
+			Merchant_Purchase_Struct* mco = (Merchant_Purchase_Struct*)outapp->pBuffer;
+			mco->npcid = vendor->GetID();
+			mco->itemslot = -1; // Critical or the client will remove the item visually
+			mco->quantity = 0;
+			mco->price = 0;
+			QueuePacket(outapp);
+			safe_delete(outapp);
+			return;
+		}
 	}
 
-	uint32 cost_quantity = mp->quantity;
-	if (inst->IsCharged())
-		uint32 cost_quantity = 1;
-
-	uint32 i;
+	uint32 cost_quantity = inst->IsCharged() ? 1 : mp->quantity;
+	uint32 price = 0;
 
 	if (RuleB(Merchant, UsePriceMod)) {
-		for (i = 1; i <= cost_quantity; i++) {
+		for (uint32 i = 1; i <= cost_quantity; i++) {
 			price = (uint32)(item->Price * i) * Client::CalcPriceMod(vendor, true);
 
 			// Don't use SellCostMod if using UseClassicPriceMod
@@ -14419,7 +14434,7 @@ void Client::Handle_OP_ShopPlayerSell(const EQApplicationPacket *app)
 		}
 	}
 	else {
-		for (i = 1; i <= cost_quantity; i++) {
+		for (uint32 i = 1; i <= cost_quantity; i++) {
 			price = (uint32)((item->Price * i)*(RuleR(Merchant, BuyCostMod)) + 0.5); // need to round up, because client does it automatically when displaying price
 			if (price > 4000000000) {
 				cost_quantity = i;
@@ -14431,6 +14446,7 @@ void Client::Handle_OP_ShopPlayerSell(const EQApplicationPacket *app)
 
 	AddMoneyToPP(price);
 
+	// Update merchant stock and refresh client
 	if (inst->IsStackable() || inst->IsCharged())
 	{
 		unsigned int i_quan = inst->GetCharges();
@@ -14544,6 +14560,8 @@ void Client::Handle_OP_ShopPlayerSell(const EQApplicationPacket *app)
 	QueuePacket(outapp);
 	safe_delete(outapp);
 	SendMoneyUpdate();
+
+	RDTSC_Timer t1(true);
 	t1.start();
 	Save(1);
 	t1.stop();
@@ -14664,6 +14682,11 @@ void Client::Handle_OP_ShopRequest(const EQApplicationPacket *app)
 
 		if ((tabs_to_display & Parcel) == Parcel) {
 			SendBulkParcels();
+		}
+
+		if (parse->PlayerHasQuestSub(EVENT_MERCHANT_OPEN)) {
+			std::vector<std::any> extra_pointers = { tmp };
+			parse->EventPlayer(EVENT_MERCHANT_OPEN, this, "", 0, &extra_pointers);
 		}
 	}
 

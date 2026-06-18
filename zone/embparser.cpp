@@ -163,8 +163,10 @@ const char* QuestEventSubroutines[_LargestEventID] = {
 	"EVENT_LANGUAGE_SKILL_UP",
 	"EVENT_ALT_CURRENCY_MERCHANT_BUY",
 	"EVENT_ALT_CURRENCY_MERCHANT_SELL",
+	"EVENT_MERCHANT_OPEN",
 	"EVENT_MERCHANT_BUY",
 	"EVENT_MERCHANT_SELL",
+	"EVENT_MERCHANT_PRESELL",
 	"EVENT_INSPECT",
 	"EVENT_TASK_BEFORE_UPDATE",
 	"EVENT_AA_BUY",
@@ -2286,6 +2288,33 @@ void PerlembParser::ExportEventVariables(
 			ExportVar(package_name.c_str(), "item_id", sep.arg[2]);
 			ExportVar(package_name.c_str(), "item_quantity", sep.arg[3]);
 			ExportVar(package_name.c_str(), "item_cost", sep.arg[4]);
+			break;
+		}
+
+		case EVENT_MERCHANT_OPEN: {
+			if (!extra_pointers || extra_pointers->size() < 1) break;
+
+			auto mob_ptr = std::any_cast<Mob*>(extra_pointers->at(0));
+			if (!mob_ptr) break;
+
+			ExportVar(package_name.c_str(), "other", "Mob", mob_ptr);
+			break;
+		}
+
+		case EVENT_MERCHANT_PRESELL: {
+			Seperator sep(data);
+			ExportVar(package_name.c_str(), "slot_id", sep.arg[0]);
+			ExportVar(package_name.c_str(), "item_id", sep.arg[1]);
+			ExportVar(package_name.c_str(), "item_type", sep.arg[2]);
+
+			if (!extra_pointers || extra_pointers->size() < 2) break;
+
+			auto mob_ptr = std::any_cast<Mob*>(extra_pointers->at(0));
+			auto inst_ptr = std::any_cast<EQ::ItemInstance*>(extra_pointers->at(1));
+			if (!mob_ptr || !inst_ptr) break;
+
+			ExportVar(package_name.c_str(), "other", "Mob", mob_ptr);
+			ExportVar(package_name.c_str(), "item", "ItemInstance", inst_ptr);
 			break;
 		}
 

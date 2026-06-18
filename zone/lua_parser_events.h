@@ -671,6 +671,24 @@ void handle_player_merchant(
 	std::vector<std::any> *extra_pointers
 );
 
+void handle_player_merchant_open(
+	QuestInterface* parse,
+	lua_State* L,
+	Client* client,
+	std::string data,
+	uint32 extra_data,
+	std::vector<std::any>* extra_pointers
+);
+
+void handle_player_merchant_presell(
+	QuestInterface* parse,
+	lua_State* L,
+	Client* client,
+	std::string data,
+	uint32 extra_data,
+	std::vector<std::any>* extra_pointers
+);
+
 void handle_player_inspect(
 	QuestInterface *parse,
 	lua_State* L,

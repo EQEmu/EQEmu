@@ -512,7 +512,7 @@ bool BotDatabase::SaveNewBot(Bot* b, uint32& bot_id)
 	e.poison                 = b->GetBasePR();
 	e.disease                = b->GetBaseDR();
 	e.corruption             = b->GetBaseCorrup();
-	e.expansion_bitmask      = b->GetExpansionBitmask();
+	e.expansion_bitmask      = RuleI(Bots, BotExpansionSettings);
 
 	e = BotDataRepository::InsertOne(database, e);
 

@@ -71,6 +71,7 @@ public:
 	bool IsAmmo();
 	uint32 GetID();
 	uint32 GetItemScriptID();
+	uint8 GetItemType();
 	int GetCharges();
 	void SetCharges(int charges);
 	uint32 GetPrice();
