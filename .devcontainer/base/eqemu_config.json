@@ -32,8 +32,8 @@
 			"loginserver1": {
 				"account": "",
 				"password": "",
-				"legacy": 0,
-				"host": "login.projecteq.net",
+				"legacy": 1,
+				"host": "login.eqemulator.net",
 				"port": "5998"
 			},
 			"tcp": {
