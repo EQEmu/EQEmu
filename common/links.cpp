@@ -4,7 +4,7 @@
 
 #include "links.h"
 
-void Links::FormatItemLink(char* Buffer, size_t BufferSize, const EQ::ItemInstance* item)
+void Links::FormatItemLink(char* Buffer, size_t BufferSize, const std::string& text, const EQ::SayLinkBody_Struct item)
 {
     // TODO: Reverse 0x14064B220 to get definition of this function
 }

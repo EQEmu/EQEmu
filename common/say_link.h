@@ -93,13 +93,12 @@ namespace EQ
 		void SetTaskUse() { m_TaskUse = true; }
 
 		const std::string& GenerateLink();
-		bool LinkError() { return m_Error; }
+		bool LinkError() const { return m_Error; }
 
-		const std::string& Link() { return m_Link; }			// contains full string format: '\x12' '<LinkBody>' '<LinkText>' '\x12'
-		const std::string& LinkBody() { return m_LinkBody; }	// contains string format: '<LinkBody>'
-		const std::string& LinkText() { return m_LinkText; }	// contains string format: '<LinkText>'
+		const std::string& Link() const { return m_Link; }			// contains full string format: '\x12' '<LinkBody>' '<LinkText>' '\x12'
 
 		static std::string GenerateQuestSaylink(const std::string& saylink_text, bool silent, const std::string& link_name);
+		static std::string FindCachedSaylinkById(uint32_t saylink_id);
 
 		void Reset();
 

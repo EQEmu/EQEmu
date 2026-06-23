@@ -3,8 +3,7 @@
 //
 
 #pragma once
-
-namespace EQ { class ItemInstance; }
+#include "say_link.h"
 
 namespace Links
 {
@@ -44,7 +43,7 @@ enum ETagCodes
 //     std::string_view playerName);
 
 // Create an item link from the given item.
-void FormatItemLink(char* Buffer, size_t BufferSize, const EQ::ItemInstance* item);
+void FormatItemLink(char* Buffer, size_t BufferSize, const std::string& text, EQ::SayLinkBody_Struct item);
 
 // Create a spell link for the given spell, including spell name. Spells on items often have
 // spell name overrides that changes the display name of the spell.

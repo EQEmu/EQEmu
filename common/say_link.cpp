@@ -54,6 +54,7 @@ bool EQ::saylink::DegenerateLinkBody(SayLinkBody_Struct &say_link_body_struct, c
 
 bool EQ::saylink::GenerateLinkBody(std::string &say_link_body, const SayLinkBody_Struct &say_link_body_struct)
 {
+	// TODO: This is unused, I think I should delete it in favor of the item link constructor function if they are the same
 	say_link_body = StringFormat(
 		"%1X" "%05X" "%05X" "%05X" "%05X" "%05X" "%05X" "%05X" "%1X" "%04X" "%02X" "%05X" "%08X",
 		(0x0F & say_link_body_struct.action_id),
@@ -85,10 +86,16 @@ EQ::SayLinkEngine::SayLinkEngine()
 
 const std::string &EQ::SayLinkEngine::GenerateLink()
 {
+	// At this point, we can assume that we are generated an item link. Any client before TOB can only do item links
+	// so even dialog links will end up here. Other types of links aren't supported by the server yet, but they
+	// would require TOB+ without some other hacks like dialog links use now
+
 	m_Link.clear();
 	m_LinkBody.clear();
 	m_LinkText.clear();
 
+	// These two functions translate multiple server-internal objects into the saylink-internal struct for rendering
+	// to the packet. Detect the client version after this
 	generate_body();
 	generate_text();
 
@@ -371,6 +378,16 @@ std::string EQ::SayLinkEngine::InjectSaylinksIfNotExist(const char *message)
 	LogSaylinkDetail("new_message [{}]", new_message);
 
 	return new_message;
+}
+
+std::string EQ::SayLinkEngine::FindCachedSaylinkById(uint32_t saylink_id)
+{
+	for (const auto& s : g_cached_saylinks) {
+		if (static_cast<uint32_t>(s.id) == saylink_id) {
+			return s.phrase;
+		}
+	}
+	return {};
 }
 
 void EQ::SayLinkEngine::LoadCachedSaylinks()
