@@ -5674,19 +5674,20 @@ namespace TOB
 						uint32 aug2_id = std::stoul(segments[segment_iter].substr(11, 5), nullptr, 16);
 						uint32 saylink_id = (aug1_id != 0) ? aug1_id : aug2_id;
 						std::string phrase = EQ::SayLinkEngine::GetSaylinkPhrase(saylink_id);
-						char dialog_link[Links::MAX_LINK_SIZE];
-						Links::FormatDialogLink(dialog_link, sizeof(dialog_link), keyword, phrase);
+
 						// The client's TagBracketedTextAsDialogueResponseLinks runs before ConvertItemTags
-						// and converts [text] -> [\x124text\x12]. Strip surrounding brackets so it doesn't
-						// double-wrap the already-converted dialog link into a malformed nested tag.
-						if (!message_out.empty() && message_out.back() == '[') {
-							message_out.pop_back();
-						}
-						message_out.append(dialog_link);
+						// and converts [text] -> [\x124text\x12]. Only send the content of the link in this case
+						char dialog_link[Links::MAX_LINK_SIZE];
 						size_t next_seg = segment_iter + 1;
-						if (next_seg < segments.size() && !segments[next_seg].empty() && segments[next_seg].front() == ']') {
-							segments[next_seg].erase(0, 1);
+						if (!message_out.empty() && message_out.back() == '[' &&
+							next_seg < segments.size() && !segments[next_seg].empty() && segments[next_seg].front() == ']') {
+							// only do this if it is enclosed by square brackets
+							Links::FormatDialogLinkContent(dialog_link, sizeof(dialog_link), keyword, phrase);
+						} else {
+							Links::FormatDialogLink(dialog_link, sizeof(dialog_link), keyword, phrase);
 						}
+
+						message_out.append(dialog_link);
 						break;
 					}
 

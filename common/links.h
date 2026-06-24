@@ -55,4 +55,10 @@ void FormatSpellLink(char* Buffer, size_t BufferSize, int32_t SpellID, const cha
 void FormatDialogLink(char* Buffer, size_t BufferSize, std::string_view keyword,
     std::string_view text = {});
 
+// Format text into a clickable dialog link. The keyword is the text that will be displayed in the chat window,
+// and the text is the text that will be sent to the server when the link is clicked. If no text is provided,
+// then the keyword will be used as the text.
+void FormatDialogLinkContent(char* Buffer, size_t BufferSize, std::string_view keyword,
+    std::string_view text = {});
+
 }

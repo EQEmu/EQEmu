@@ -26,3 +26,15 @@ void Links::FormatDialogLink(char* Buffer, size_t BufferSize, std::string_view k
             static_cast<int>(text.length()), text.data(), ITEM_TAG_CHAR);
     }
 }
+
+void Links::FormatDialogLinkContent(char* Buffer, size_t BufferSize, std::string_view keyword, std::string_view text)
+{
+    if (text.empty()) {
+        snprintf(Buffer, BufferSize, "%.*s",
+            static_cast<int>(keyword.length()), keyword.data());
+    } else {
+        snprintf(Buffer, BufferSize, "%.*s:%.*s",
+            static_cast<int>(keyword.length()), keyword.data(),
+            static_cast<int>(text.length()), text.data());
+    }
+}
