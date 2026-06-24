@@ -39,8 +39,6 @@ Copyright (C) 2001-2026 EQEmu Development Team
 #include "common/packet_dump.h"
 #include "common/races.h"
 #include "common/raid.h"
-#include "world/sof_char_create_data.h"
-#include "zone/client.h"
 #include "zone/mob.h"
 #include "zone/string_ids.h"
 

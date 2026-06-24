@@ -29,7 +29,6 @@
 #include "common/rulesys.h"
 #include "common/strings.h"
 #include "common/zone_store.h"
-#include "world/sof_char_create_data.h"
 
 #include <cstdlib>
 #include <vector>
