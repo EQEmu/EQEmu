@@ -24,6 +24,7 @@
 #include <string>
 
 struct LootItem;
+class SharedDatabase;
 
 namespace EQ
 {
@@ -99,6 +100,7 @@ namespace EQ
 
 		static std::string GenerateQuestSaylink(const std::string& saylink_text, bool silent, const std::string& link_name);
 		static std::string FindCachedSaylinkById(uint32_t saylink_id);
+		static void SetDatabase(SharedDatabase* db);
 
 		void Reset();
 

@@ -396,6 +396,7 @@ int main(int argc, char **argv)
 
 	ZoneEventScheduler::Instance()->SetDatabase(&database)->LoadScheduledEvents();
 
+	EQ::SayLinkEngine::SetDatabase(&database);
 	EQ::SayLinkEngine::LoadCachedSaylinks();
 
 	if (RuleB(Bots, Enabled) && database.DoesTableExist("bot_command_settings")) {

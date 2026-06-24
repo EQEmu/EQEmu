@@ -739,6 +739,7 @@ set(common_headers
 	version.h
 	zone_store.h
 	links.h
+	database_stubs.h
 )
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${common_sources})
