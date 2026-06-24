@@ -382,7 +382,7 @@ std::string EQ::SayLinkEngine::InjectSaylinksIfNotExist(const char *message)
 	return new_message;
 }
 
-std::string EQ::SayLinkEngine::FindCachedSaylinkById(uint32_t saylink_id)
+std::string EQ::SayLinkEngine::GetSaylinkPhrase(uint32_t saylink_id)
 {
 	auto cached_link = std::find_if(g_cached_saylinks.begin(), g_cached_saylinks.end(),
 		[&saylink_id](const SaylinkRepository::Saylink& saylink) {

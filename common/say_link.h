@@ -99,7 +99,7 @@ namespace EQ
 		const std::string& Link() const { return m_Link; }			// contains full string format: '\x12' '<LinkBody>' '<LinkText>' '\x12'
 
 		static std::string GenerateQuestSaylink(const std::string& saylink_text, bool silent, const std::string& link_name);
-		static std::string FindCachedSaylinkById(uint32_t saylink_id);
+		static std::string GetSaylinkPhrase(uint32_t saylink_id);
 		static void SetDatabase(SharedDatabase* db);
 
 		void Reset();

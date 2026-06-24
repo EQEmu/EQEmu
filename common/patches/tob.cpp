@@ -5675,7 +5675,7 @@ namespace TOB
 						uint32 aug1_id = std::stoul(segments[segment_iter].substr(6, 5), nullptr, 16);
 						uint32 aug2_id = std::stoul(segments[segment_iter].substr(11, 5), nullptr, 16);
 						uint32 saylink_id = (aug1_id != 0) ? aug1_id : aug2_id;
-						std::string phrase = EQ::SayLinkEngine::FindCachedSaylinkById(saylink_id);
+						std::string phrase = EQ::SayLinkEngine::GetSaylinkPhrase(saylink_id);
 						char dialog_link[Links::MAX_LINK_SIZE];
 						Links::FormatDialogLink(dialog_link, sizeof(dialog_link), keyword, phrase);
 						// The client's TagBracketedTextAsDialogueResponseLinks runs before ConvertItemTags
