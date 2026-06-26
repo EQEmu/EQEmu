@@ -17,7 +17,7 @@
 */
 #include "say_link.h"
 
-#include "features.h"
+#include "common/features.h"
 #include "common/emu_constants.h"
 #include "common/strings.h"
 #include "common/item_instance.h"
