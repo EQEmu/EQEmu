@@ -34,7 +34,7 @@ void command_summonitem(Client *c, const Seperator *sep)
 
 	if (link_open != link_close && (cmd_msg.length() - link_open) > EQ::constants::SAY_LINK_BODY_SIZE) {
 		EQ::SayLinkBody_Struct link_body;
-		EQ::saylink::DegenerateLinkBody(link_body, cmd_msg.substr(link_open + 1, EQ::constants::SAY_LINK_BODY_SIZE));
+		EQ::saylink::DeserializeLinkBody(link_body, cmd_msg.substr(link_open + 1, EQ::constants::SAY_LINK_BODY_SIZE));
 		item_id       = link_body.item_id;
 		augment_one   = link_body.augment_1;
 		augment_two   = link_body.augment_2;

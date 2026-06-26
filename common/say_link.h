@@ -40,8 +40,8 @@ namespace EQ
 			SayLinkItemInst
 		};
 
-		extern bool DegenerateLinkBody(SayLinkBody_Struct& say_Link_body_struct, const std::string& say_link_body);
-		extern bool GenerateLinkBody(std::string& say_link_body, const SayLinkBody_Struct& say_link_body_struct);
+		bool DeserializeLinkBody(SayLinkBody_Struct& say_Link_body_struct, const std::string& say_link_body);
+		bool SerializeLinkBody(std::string& say_link_body, const SayLinkBody_Struct& say_link_body_struct);
 
 	} /*saylink*/
 

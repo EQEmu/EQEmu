@@ -825,6 +825,8 @@ namespace TOB
 		FINISH_ENCODE();
 	}
 
+	ENCODE(OP_ItemLinkResponse) { ENCODE_FORWARD(OP_ItemPacket); }
+
 	ENCODE(OP_ItemPacket)
 	{
 		EQApplicationPacket* in = *p;
@@ -832,47 +834,76 @@ namespace TOB
 		uchar* __emu_buffer = in->pBuffer;
 		ItemPacket_Struct* old_item_pkt = (ItemPacket_Struct*)__emu_buffer;
 
-		auto type = ServerToTOBItemPacketType(old_item_pkt->PacketType);
-		if (type == item::ItemPacketType::ItemPacketInvalid) {
-			delete in;
-			return;
-		}
-
-		switch (type)
-		{
-		case item::ItemPacketType::ItemPacketParcel: {
-			ParcelMessaging_Struct       pms{};
-			EQ::Util::MemoryStreamReader ss(reinterpret_cast<char*>(in->pBuffer), in->size);
-			cereal::BinaryInputArchive   ar(ss);
-			ar(pms);
-
-			auto* int_struct = (EQ::InternalSerializedItem_Struct*)pms.serialized_item.data();
-
-			SerializeBuffer buffer;
-			buffer.WriteInt32((int32_t)type);
-			SerializeItem(buffer, (const EQ::ItemInstance*)int_struct->inst, pms.slot_id, 0, old_item_pkt->PacketType);
-
-			buffer.WriteUInt32(pms.sent_time);
-			buffer.WriteLengthString(pms.player_name);
-			buffer.WriteLengthString(pms.note);
-
-			auto outapp = new EQApplicationPacket(OP_ItemPacket, buffer.size());
-			outapp->WriteData(buffer.buffer(), buffer.size());
-			dest->FastQueuePacket(&outapp, ack_req);
-			break;
-		}
-		default: {
+		// ItemPacketViewLink (0) is not in the TOB OP_ItemPacket type table.
+		// The client shows item windows from link clicks via OP_ItemLinkResponse (0x7805),
+		// whose handler sub_1402136D0 reads [int32 type][int32 position][uint32 display_mode]
+		// then serialized item, then calls CItemDisplayManager::ShowItem.
+		if (old_item_pkt->PacketType == ItemPacketViewLink) {
 			EQ::InternalSerializedItem_Struct* int_struct = (EQ::InternalSerializedItem_Struct*)(&__emu_buffer[4]);
 			SerializeBuffer buffer;
-			buffer.WriteInt32((int32_t)type);
-			SerializeItem(buffer, (const EQ::ItemInstance*)int_struct->inst, int_struct->slot_id, 0, old_item_pkt->PacketType);
-
-			auto outapp = new EQApplicationPacket(OP_ItemPacket, buffer.size());
+			buffer.WriteInt32(0);  // type: display mode (0 = default)
+			buffer.WriteInt32(0);  // position: window slot (0 = default/new window)
+			buffer.WriteUInt32(0); // display_mode: ShowItem arg (0 = default)
+			SerializeItem(buffer, (const EQ::ItemInstance*)int_struct->inst, int_struct->slot_id, 0,
+				old_item_pkt->PacketType);
+			auto outapp = new EQApplicationPacket(OP_ItemLinkResponse, buffer.size());
 			outapp->WriteData(buffer.buffer(), buffer.size());
 			dest->FastQueuePacket(&outapp, ack_req);
-		}
+		} else {
+			switch (const auto type = ServerToTOBItemPacketType(old_item_pkt->PacketType)) {
+			case item::ItemPacketType::ItemPacketInvalid:
+				break;
+			case item::ItemPacketType::ItemPacketParcel: {
+				ParcelMessaging_Struct pms{};
+				EQ::Util::MemoryStreamReader ss(reinterpret_cast<char*>(in->pBuffer), in->size);
+				cereal::BinaryInputArchive ar(ss);
+				ar(pms);
+
+				auto* int_struct = (EQ::InternalSerializedItem_Struct*)pms.serialized_item.data();
+
+				SerializeBuffer buffer;
+				buffer.WriteInt32((int32_t)type);
+				SerializeItem(buffer, (const EQ::ItemInstance*)int_struct->inst, pms.slot_id, 0, old_item_pkt->PacketType);
+
+				buffer.WriteUInt32(pms.sent_time);
+				buffer.WriteLengthString(pms.player_name);
+				buffer.WriteLengthString(pms.note);
+
+				auto outapp = new EQApplicationPacket(OP_ItemPacket, buffer.size());
+				outapp->WriteData(buffer.buffer(), buffer.size());
+				dest->FastQueuePacket(&outapp, ack_req);
+				break;
+			}
+			default: {
+				EQ::InternalSerializedItem_Struct* int_struct = (EQ::InternalSerializedItem_Struct*)(&__emu_buffer[4]);
+				SerializeBuffer buffer;
+				buffer.WriteInt32((int32_t)type);
+				SerializeItem(buffer, (const EQ::ItemInstance*)int_struct->inst, int_struct->slot_id, 0, old_item_pkt->PacketType);
+
+				auto outapp = new EQApplicationPacket(OP_ItemPacket, buffer.size());
+				outapp->WriteData(buffer.buffer(), buffer.size());
+				dest->FastQueuePacket(&outapp, ack_req);
+				break;
+			}
+			}
 		}
 
+		delete in;
+	}
+
+	ENCODE(OP_ItemPreviewRequest)
+	{
+		EQApplicationPacket* in = *p;
+		*p = nullptr;
+		uchar* in_buf = in->pBuffer;
+		auto int_item = (EQ::InternalSerializedItem_Struct*) in_buf;
+
+		SerializeBuffer buf;
+		SerializeItem(buf, (const EQ::ItemInstance*) int_item->inst, int_item->slot_id, 0, ItemPacketInvalid);
+
+		auto outapp = new EQApplicationPacket(OP_ItemPreviewRequest, buf.size());
+		outapp->WriteData(buf.buffer(), buf.size());
+		dest->FastQueuePacket(&outapp, ack_req);
 		delete in;
 	}
 
@@ -891,6 +922,45 @@ namespace TOB
 		// ignore_casting_requirement has no client equivalent (not read by TOB client)
 
 		FINISH_ENCODE();
+	}
+
+	DECODE(OP_ItemLinkClick)
+	{
+		// TOB sends 84 bytes (InspectItemSafe); first 52 are layout-compatible with ItemViewRequest_Struct.
+		// Extra 32 bytes (offsets 52-83) are uncharted — likely luck
+		DECODE_LENGTH_ATLEAST(ItemViewRequest_Struct);
+		SETUP_DIRECT_DECODE(ItemViewRequest_Struct, ItemViewRequest_Struct);
+		MEMSET_IN(ItemViewRequest_Struct);
+
+		IN(item_id);
+		for (int r = EQ::invaug::SOCKET_BEGIN; r <= EQ::invaug::SOCKET_END; r++) {
+			IN(augments[r]);
+		}
+		IN(link_hash);
+		IN(icon);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_ItemLinkResponse)
+	{
+		// TOB sends 80 bytes; EQEMu LDONItemViewRequest_Struct is 72 bytes.
+		// First 72 bytes are layout-identical — extra 8 bytes (unknown072/076) are ignored.
+		DECODE_LENGTH_ATLEAST(LDONItemViewRequest_Struct);
+		SETUP_DIRECT_DECODE(LDONItemViewRequest_Struct, LDONItemViewRequest_Struct);
+		MEMSET_IN(LDONItemViewRequest_Struct);
+		IN(item_id);
+		memcpy(emu->unknown004, eq->unknown004, sizeof(emu->unknown004));
+		strncpy(emu->item_name, eq->item_name, sizeof(emu->item_name) - 1);
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_ItemPreviewRequest)
+	{
+		DECODE_LENGTH_EXACT(structs::ItemPreviewRequest_Struct);
+		SETUP_DIRECT_DECODE(ItemPreview_Struct, structs::ItemPreviewRequest_Struct);
+		IN(itemid);
+		FINISH_DIRECT_DECODE();
 	}
 
 	DECODE(OP_ItemVerifyRequest)
@@ -5688,67 +5758,25 @@ namespace TOB
 						}
 
 						message_out.append(dialog_link);
-						break;
+					} else {
+						EQ::SayLinkBody_Struct body{};
+						if (EQ::saylink::DeserializeLinkBody(body, segments[segment_iter].substr(0, EQ::constants::SAY_LINK_BODY_SIZE))) {
+							std::string text = segments[segment_iter].substr(EQ::constants::SAY_LINK_BODY_SIZE);
+							char item_link[Links::MAX_LINK_SIZE];
+							Links::FormatItemLink(item_link, sizeof(item_link), text, body);
+
+							// the TOB client will replace anything in between [] with a dialog link, which explicitly
+							// breaks item links, so replace [] with ()
+							if (!message_out.empty() && message_out.back() == '[')
+								message_out.back() = '(';
+
+							message_out.append(item_link);
+
+							size_t next_seg = segment_iter + 1;
+							if (next_seg < segments.size() && !segments[next_seg].empty() && segments[next_seg].front() == ']')
+								segments[next_seg].front() = ')';
+						}
 					}
-
-					std::string aug1 = segments[segment_iter].substr(index, 5);
-					index += 5;
-
-					std::string aug2 = segments[segment_iter].substr(index, 5);
-					index += 5;
-
-					std::string aug3 = segments[segment_iter].substr(index, 5);
-					index += 5;
-
-					std::string aug4 = segments[segment_iter].substr(index, 5);
-					index += 5;
-
-					std::string aug5 = segments[segment_iter].substr(index, 5);
-					index += 5;
-
-					std::string aug6 = segments[segment_iter].substr(index, 5);
-					index += 5;
-
-					std::string is_evolving = segments[segment_iter].substr(index, 1);
-					index += 1;
-
-					std::string evolutionGroup = segments[segment_iter].substr(index, 4);
-					index += 4;
-
-					std::string evolutionLevel = segments[segment_iter].substr(index, 2);
-					index += 2;
-
-					std::string ornamentationIconID = segments[segment_iter].substr(index, 5);
-					index += 5;
-
-					std::string itemHash = segments[segment_iter].substr(index, 8);
-					index += 8;
-
-					std::string text = segments[segment_iter].substr(index);
-
-					message_out.push_back('\x12');
-					message_out.push_back('0'); //etag item
-					message_out.append(item_id);
-					message_out.append(aug1);
-					message_out.append("00000");
-					message_out.append(aug2);
-					message_out.append("00000");
-					message_out.append(aug3);
-					message_out.append("00000");
-					message_out.append(aug4);
-					message_out.append("00000");
-					message_out.append(aug5);
-					message_out.append("00000");
-					message_out.append(aug6);
-					message_out.append("00000");
-					message_out.append(is_evolving);
-					message_out.append(evolutionGroup);
-					message_out.append(evolutionLevel);
-					message_out.append(ornamentationIconID);
-					message_out.append("00000");
-					message_out.append(itemHash);
-					message_out.append(text);
-					message_out.push_back('\x12');
 
 					break;
 				}
@@ -5766,7 +5794,57 @@ namespace TOB
 	}
 
 	static void TOBToServerConvertLinks(std::string& message_out, const std::string& message_in) {
-		message_out = message_in;
+		if (message_in.find('\x12') == std::string::npos) {
+			message_out = message_in;
+			return;
+		}
+
+		// TOB item link body layout (91 chars, positions within segment after \x12):
+		//   [0]     ETAG (1)
+		//   [1-5]   item_id (5)
+		//   [6-65]  [aug(5) + luck(5)] * 6 = 60
+		//   [66]    is_evolving (1)
+		//   [67-70] evolve_group (4)
+		//   [71-72] evolve_level (2)
+		//   [73-77] ornament_icon (5)
+		//   [78-82] luck (5)
+		//   [83-90] hash (8)
+		//   [91+]   text
+		constexpr size_t TOB_ITEM_BODY_SIZE = 91;
+
+		std::vector<std::string> segments = Strings::Split(message_in, '\x12');
+		for (size_t i = 0; i < segments.size(); ++i) {
+			if (!(i & 1)) {
+				message_out.append(segments[i]);
+				continue;
+			}
+
+			if (segments[i].empty() || segments[i][0] - '0' != Links::ETAG_ITEM
+				|| segments[i].length() < TOB_ITEM_BODY_SIZE) {
+				message_out.push_back('\x12');
+				message_out.append(segments[i]);
+				message_out.push_back('\x12');
+				continue;
+			}
+
+			// Strip luck fields to produce RoF2 body:
+			//   action_id(1) item_id(5) aug1-6(30) is_evolving(1) evolve_group(4)
+			//   evolve_level(2) ornament_icon(5) hash(8) text
+			message_out.push_back('\x12');
+			message_out += segments[i][0];                         // action_id
+			message_out += segments[i].substr(1, 5);               // item_id
+			for (int aug = 0; aug < 6; ++aug) {
+				message_out += segments[i].substr(6 + aug * 10, 5); // aug, skip luck
+			}
+			message_out += segments[i].substr(66, 1);              // is_evolving
+			message_out += segments[i].substr(67, 4);              // evolve_group
+			message_out += segments[i].substr(71, 2);              // evolve_level
+			message_out += segments[i].substr(73, 5);              // ornament_icon
+			// skip luck [78-82]
+			message_out += segments[i].substr(83, 8);              // hash
+			message_out += segments[i].substr(91);                 // text
+			message_out.push_back('\x12');
+		}
 	}
 
 	static inline uint32 ServerToTOBSpawnAppearanceType(uint32 server_type) {

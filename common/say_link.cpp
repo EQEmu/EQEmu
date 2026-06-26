@@ -30,7 +30,7 @@ static SharedDatabase* s_database = nullptr;
 // static bucket global
 std::vector<SaylinkRepository::Saylink> g_cached_saylinks = {};
 
-bool EQ::saylink::DegenerateLinkBody(SayLinkBody_Struct &say_link_body_struct, const std::string &say_link_body)
+bool EQ::saylink::DeserializeLinkBody(SayLinkBody_Struct &say_link_body_struct, const std::string &say_link_body)
 {
 	memset(&say_link_body_struct, 0, sizeof(say_link_body_struct));
 	if (say_link_body.length() != EQ::constants::SAY_LINK_BODY_SIZE) {
@@ -54,9 +54,9 @@ bool EQ::saylink::DegenerateLinkBody(SayLinkBody_Struct &say_link_body_struct, c
 	return true;
 }
 
-bool EQ::saylink::GenerateLinkBody(std::string &say_link_body, const SayLinkBody_Struct &say_link_body_struct)
+bool EQ::saylink::SerializeLinkBody(std::string &say_link_body, const SayLinkBody_Struct &say_link_body_struct)
 {
-	// TODO: This is unused, I think I should delete it in favor of the item link constructor function if they are the same
+	// This is specifically the server struct for link bodies
 	say_link_body = StringFormat(
 		"%1X" "%05X" "%05X" "%05X" "%05X" "%05X" "%05X" "%05X" "%1X" "%04X" "%02X" "%05X" "%08X",
 		(0x0F & say_link_body_struct.action_id),

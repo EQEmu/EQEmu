@@ -724,6 +724,20 @@ namespace TOB {
 			/*0028*/
 		};
 
+		struct ItemPreviewRequest_Struct
+		{
+			/*0x00*/ uint32 itemid;             // GetItemRecordNum()
+			/*0x04*/ uint32 actor_tag1;         // ItemBase::ActorTag1 [+0x5C] if mold applied, else 0
+			/*0x08*/ uint32 actor_tag2;         // ItemBase::ActorTag2 [+0xF8] if mold applied, else 0
+			/*0x0C*/ uint32 mold_points;        // GetTotalPointsByThemeEarned if mold, else 0xFFFFFFFF
+			/*0x10*/ uint32 mold_data1;         // sub_14064F970(item) if mold, else 0
+			/*0x14*/ uint32 mold_data2;         // sub_1406501A0(item) if mold, else 0
+			/*0x18*/ uint8  is_marketplace;     // 1 when sent from CMarketplaceWnd, else 0
+			/*0x19*/ uint8  is_mold_applied;    // 1 when transformation mold applied (BYTE1 of word), else 0
+			/*0x1A*/ uint16 unknown01a;         // uninitialized stack — dword read at var_10 spills 2 extra bytes
+			/*0x1C*/
+		};
+
 		struct ItemRecastDelay_Struct
 		{
 			/*000*/ InventorySlot_Struct item_slot;    // zeroed until server struct gains item slot fields
