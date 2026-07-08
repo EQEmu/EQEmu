@@ -39,7 +39,7 @@ void command_giveitem(Client *c, const Seperator *sep)
 
 	if (link_open != link_close && (cmd_msg.length() - link_open) > EQ::constants::SAY_LINK_BODY_SIZE) {
 		EQ::SayLinkBody_Struct link_body;
-		EQ::saylink::DegenerateLinkBody(
+		EQ::saylink::DeserializeLinkBody(
 			link_body,
 			cmd_msg.substr(link_open + 1, EQ::constants::SAY_LINK_BODY_SIZE)
 		);

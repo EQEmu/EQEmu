@@ -71,7 +71,6 @@ set(world_headers
 	queryserv.h
 	shared_task_manager.h
 	shared_task_world_messaging.h
-	sof_char_create_data.h
 	ucs.h
 	web_interface.h
 	web_interface_eqw.h

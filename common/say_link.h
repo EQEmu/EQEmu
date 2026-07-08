@@ -24,6 +24,7 @@
 #include <string>
 
 struct LootItem;
+class SharedDatabase;
 
 namespace EQ
 {
@@ -39,8 +40,8 @@ namespace EQ
 			SayLinkItemInst
 		};
 
-		extern bool DegenerateLinkBody(SayLinkBody_Struct& say_Link_body_struct, const std::string& say_link_body);
-		extern bool GenerateLinkBody(std::string& say_link_body, const SayLinkBody_Struct& say_link_body_struct);
+		bool DeserializeLinkBody(SayLinkBody_Struct& say_Link_body_struct, const std::string& say_link_body);
+		bool SerializeLinkBody(std::string& say_link_body, const SayLinkBody_Struct& say_link_body_struct);
 
 	} /*saylink*/
 
@@ -93,13 +94,13 @@ namespace EQ
 		void SetTaskUse() { m_TaskUse = true; }
 
 		const std::string& GenerateLink();
-		bool LinkError() { return m_Error; }
+		bool LinkError() const { return m_Error; }
 
-		const std::string& Link() { return m_Link; }			// contains full string format: '\x12' '<LinkBody>' '<LinkText>' '\x12'
-		const std::string& LinkBody() { return m_LinkBody; }	// contains string format: '<LinkBody>'
-		const std::string& LinkText() { return m_LinkText; }	// contains string format: '<LinkText>'
+		const std::string& Link() const { return m_Link; }			// contains full string format: '\x12' '<LinkBody>' '<LinkText>' '\x12'
 
 		static std::string GenerateQuestSaylink(const std::string& saylink_text, bool silent, const std::string& link_name);
+		static std::string GetSaylinkPhrase(uint32_t saylink_id);
+		static void SetDatabase(SharedDatabase* db);
 
 		void Reset();
 

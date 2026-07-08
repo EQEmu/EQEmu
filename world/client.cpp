@@ -49,7 +49,6 @@
 #include "world/clientlist.h"
 #include "world/login_server_list.h"
 #include "world/login_server.h"
-#include "world/sof_char_create_data.h"
 #include "world/wguild_mgr.h"
 #include "world/world_config.h"
 #include "world/worlddb.h"
