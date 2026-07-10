@@ -1,6 +1,6 @@
 module should-release
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/google/go-github/v41 v41.0.0
@@ -9,5 +9,5 @@ require (
 
 require (
 	github.com/google/go-querystring v1.1.0 // indirect
-	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/crypto v0.52.0 // indirect
 )
