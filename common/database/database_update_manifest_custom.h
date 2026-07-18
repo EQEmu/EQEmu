@@ -24,15 +24,20 @@
 std::vector<ManifestEntry> manifest_entries_custom = {
 	ManifestEntry{
 		.version = 1,
-		.description = "2025_05_16_new_database_check_test",
-		.check = "SHOW TABLES LIKE 'new_table'",
+		.description = "2026_07_17_dragonhoard_items",
+		.check = "SHOW TABLES LIKE 'dragonhoard_items'",
 		.condition = "empty",
 		.match = "",
 		.sql = R"(
-CREATE TABLE `new_table`  (
-  `id` int NOT NULL AUTO_INCREMENT,
-  PRIMARY KEY (`id`)
-);
+CREATE TABLE `dragonhoard_items` (
+  `account_id`  int unsigned      NOT NULL,
+  `slot_id`     smallint unsigned NOT NULL COMMENT '0..199 (max 200 slots)',
+  `item_id`     int unsigned      NOT NULL,
+  `item_name`   varchar(64)       NOT NULL DEFAULT '',
+  `stack_count` int unsigned      NOT NULL DEFAULT 1,
+  PRIMARY KEY (`account_id`, `slot_id`),
+  KEY `ix_account_id` (`account_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 )",
 		.content_schema_update = false,
 	},
