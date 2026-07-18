@@ -1561,7 +1561,7 @@ enum ItemPacketType {
     ItemPacketCharmUpdate    = 0x6E, // noted as incorrect
     ItemPacketRecovery       = 0x71,
     ItemPacketParcel         = 0x73,
-    ItemPacketDragonHoard    = 0x77,
+    ItemPacketDragonHoard    = 0x77, // TOB Dragon's Hoard
     ItemPacketInvalid        = 0xFF
 };
 
@@ -1630,17 +1630,6 @@ struct MoveItem_Struct
 /*0004*/ uint32 to_slot;
 /*0008*/ uint32 number_in_stack;
 /*0012*/
-};
-
-// Dragon's Hoard packet struct - 16 byte payload
-// actual wire format from packet capture
-struct DragonHoard_Struct
-{
-/*0000*/ uint32 action;      // action type (3 = retrieve)
-/*0004*/ uint32 unknown04;   // unknown
-/*0008*/ uint32 list_index;  // index in the DH list (0-based)
-/*0012*/ uint32 slot_id;     // DH slot_id (maps to DB slot_id)
-/*0016*/
 };
 
 // New for RoF2 - Size: 12
@@ -6067,8 +6056,8 @@ struct Membership_Struct
 /*004*/ uint32 races;	// Seen ff ff 01 00
 /*008*/ uint32 classes;	// Seen ff ff 01 01
 /*012*/ uint32 entrysize; // Seen 15 00 00 00
-/*016*/ int32 entries[30]; // Varied; extended for TOB feature slots through entry 29
-/*136*/ uint32 exit_url_length;	// Length of the exit_url string (0 for none)
+/*016*/ int32 entries[21]; //Varies. Seen ff ff ff ff, and 01 00 00 00
+/*104*/ uint32 exit_url_length;	// Length of the exit_url string (0 for none)
 /*108*/ // char exit_url[0];	// URL that will open when EQ is exited
 };
 // Used by MercenaryListEntry_Struct
@@ -6076,8 +6065,6 @@ struct MercenaryStance_Struct {
 /*0000*/	uint32	StanceIndex;	// Index of this stance (sometimes reverse reverse order - 3, 2, 1, 0 for 4 stances etc)
 /*0004*/	uint32	Stance;			// From dbstr_us.txt - 1^24^Passive^0, 2^24^Balanced^0, etc (1 to 9 as of April 2012)
 };
-
-#pragma pack(push, 1)
 
 struct Membership_Entry_Struct
 {
@@ -6088,25 +6075,25 @@ struct Membership_Entry_Struct
 
 struct Membership_Setting_Struct
 {
-/*000*/ int8 setting_index;	// aligned with TOB structs::Membership_Setting_Struct (was uint32)
-/*001*/ int32 setting_id;	// was uint32; TOB wire uses int32 at offset 1
-/*005*/ int32 setting_value;
-/*009*/
+/*000*/ uint32 setting_index;	// 0, 1, or 2
+/*004*/ uint32 setting_id;		// 0 to 21
+/*008*/ int32 setting_value;	// All can be 0, 1, or -1
+/*012*/
 };
 
 struct Membership_Details_Struct
 {
-/*0000*/ uint32 membership_setting_count;
-/*0004*/ Membership_Setting_Struct settings[96];   // 96 entries
-/*0364*/ uint32 race_entry_count;
-/*0368*/ Membership_Entry_Struct membership_races[32];   // expanded to 32
-/*0468*/ uint32 class_entry_count;
-/*046c*/ Membership_Entry_Struct membership_classes[32]; // expanded to 32
-/*056c*/ uint32 exit_url_length;
-/*0570*/ uint32 exit_url_length2;
+/*0000*/ uint32 membership_setting_count;	// Seen 66
+/*0016*/ Membership_Setting_Struct settings[66];
+/*0012*/ uint32 race_entry_count;	// Seen 15
+/*1044*/ Membership_Entry_Struct membership_races[15];
+/*0012*/ uint32 class_entry_count;	// Seen 15
+/*1044*/ Membership_Entry_Struct membership_classes[15];
+/*1044*/ uint32 exit_url_length;	// Length of the exit_url string (0 for none)
+/*1048*/ //char exit_url[42];		// Upgrade to Silver or Gold Membership URL
+/*1048*/ uint32 exit_url_length2;	// Length of the exit_url2 string (0 for none)
+/*0000*/ //char exit_url2[49];		// Upgrade to Gold Membership URL
 };
-
-#pragma pack(pop)
 
 struct ItemPreview_Struct
 {

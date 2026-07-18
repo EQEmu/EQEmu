@@ -9158,7 +9158,7 @@ void Client::SendMembership() {
 		mc->membership = 2;				//Hardcode to gold for now. We don't use anything else.
 		mc->races = 0x1ffff;			// Available Races (4110 for silver)
 		mc->classes = 0x1ffff;			// Available Classes (4614 for silver) - Was 0x101ffff
-		mc->entrysize = 30;				// Number of membership setting entries below
+		mc->entrysize = 21;				// Number of membership setting entries below
 		mc->entries[0] = 0xffffffff;	// Max AA Restriction
 		mc->entries[1] = 0xffffffff;	// Max Level Restriction
 		mc->entries[2] = 0xffffffff;	// Max Char Slots per Account (not used by client?)
@@ -9180,15 +9180,6 @@ void Client::SendMembership() {
 		mc->entries[18] = 1;			// 0 for Silver
 		mc->entries[19] = 0xffffffff;	// 0 for Silver
 		mc->entries[20] = 0xffffffff;	// 0 for Silver
-		mc->entries[21] = 0;            // MountKeyRingSlots
-		mc->entries[22] = 0;            // IllusionKeyRingSlots
-		mc->entries[23] = 0;            // FamiliarKeyRingSlots
-		mc->entries[24] = 0;            // FamiliarAutoLeave
-		mc->entries[25] = 0;            // HeroForgeKeyRingSlots
-		mc->entries[26] = 0;            // unknown
-		mc->entries[27] = 0;            // unknown
-		mc->entries[28] = 0;            // unknown
-		mc->entries[29] = 200;          // DragonHoardSlots
 		mc->exit_url_length = 0;
 		//mc->exit_url = 0; // Used on Live: "http://www.everquest.com/free-to-play/exit-silver"
 
