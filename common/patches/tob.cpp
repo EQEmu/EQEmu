@@ -113,7 +113,7 @@ namespace TOB
 		} while (0)
 		REGISTER_OPCODE(OP_DragonHoard1, 0x5807);
 		REGISTER_OPCODE(OP_DragonHoard2, 0x603D);
-		REGISTER_OPCODE(OP_FeatureUnlock, 0x5B9B); // [FEATURE_UNLOCK] server->client store-feature unlock (DH, depot, keyrings)
+		REGISTER_OPCODE(OP_FeatureUnlock, 0x5B9B); // server->client store-feature unlock (DH, depot, keyrings)
 #undef REGISTER_OPCODE
 
 		//ok, now we have what we need to register.

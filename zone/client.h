@@ -2170,7 +2170,7 @@ private:
 	Timer process_timer;
 	Timer consume_food_timer;
 	Timer zoneinpacket_timer;
-	Timer dragonhoard_zonein_timer; // [DH_TIMER] one-shot delay before DH unlock/item list
+	Timer dragonhoard_zonein_timer; // one-shot delay before DH unlock/item list
 	Timer linkdead_timer;
 	Timer dead_timer;
 	Timer global_channel_timer;

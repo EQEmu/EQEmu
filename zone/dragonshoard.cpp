@@ -2,35 +2,28 @@
 #include "client.h"
 #include "../common/global_define.h"
 #include "../common/item_instance.h"
-#include "../common/rulesys.h" // [DH_RULE]
+#include "../common/rulesys.h"
 #include "../common/strings.h"
-#include <cstring> // [DH_UNLOCK] memset for DH unlock packets
-#if __has_include("../common/repositories/dragonhoard_items_repository.h")
-#include "../common/repositories/dragonhoard_items_repository.h"
-#else
-// TODO: create repository.
-#endif
+#include <cstring>
 
-// Dragon's Hoard feature handler
-// Universal implementation - patch-agnostic logic
-// Opcodes (TOB): OP_DragonHoard1=0x5807 (window/list), OP_DragonHoard2=0x603D (deposit/retrieve)
-// Item packet type: ItemPacketDragonHoard=0x77
-// Feature unlock slot: entry[29] DragonHoardSlots=200
+// Dragon's Hoard feature handler (The Outer Brood client).
+// Opcodes: OP_DragonHoard1=0x5807 (window/list/unlock + deposit/retrieve action codes),
+//          OP_FeatureUnlock=0x5B9B (client feature array). Item packet: ItemPacketDragonHoard=0x77.
+
+bool DragonHoard::IsEnabled(Client* client)
+{
+	return client
+		&& RuleB(Features, DragonHoardEnabled)
+		&& client->ClientVersion() >= EQ::versions::ClientVersion::TOB;
+}
 
 void DragonHoard::SendItemList(Client* client)
 {
-	if (!client) {
-		return;
-	}
-
-	if (!RuleB(Features, DragonHoardEnabled)) {
+	if (!IsEnabled(client)) {
 		return;
 	}
 
 	const uint32 account_id = client->AccountID();
-	//client->Message(Chat::Yellow, "[DH] SendItemList called for account_id %u", account_id); // [DH_DEBUG_MSG_REMOVED]
-
-	// [DH_SEND_ITEM_LIST]
 	if (!account_id) {
 		return;
 	}
@@ -42,8 +35,6 @@ void DragonHoard::SendItemList(Client* client)
 			account_id
 		)
 	);
-
-	//client->Message(Chat::Yellow, "[DH] Query returned %i rows", results.RowCount()); // [DH_DEBUG_MSG_REMOVED]
 
 	if (!results.Success()) {
 		LogError(
@@ -74,9 +65,9 @@ void DragonHoard::SendItemList(Client* client)
 			continue;
 		}
 
-		// [DH_RETRIEVE_FIX] Stamp a stable per-slot serial (slot_id + 1, so it's never 0)
-		// so the client echoes it back on retrieve and we can identify the exact item
-		// by serial instead of a fragile positional index.
+		// Stamp a stable per-slot serial (slot_id + 1, so it's never 0). The client echoes
+		// it back on retrieve, letting us identify the exact item by serial instead of a
+		// fragile positional index.
 		inst->SetSerialNumber(static_cast<int32>(slot_id + 1));
 
 		client->SendItemPacket(slot_id, inst, ItemPacketType::ItemPacketDragonHoard);
@@ -86,23 +77,19 @@ void DragonHoard::SendItemList(Client* client)
 	LogDebug("DragonHoard::SendItemList sent items to account_id {}", account_id);
 }
 
-// [FEATURE_UNLOCK] OP_FeatureUnlock (0x5B9B) — populate the client-side feature array.
-// The TOB client (eqgame.exe sub_1402DC7E0) reads a list of {feature_id, count} pairs into
-// player+0x2620. The DH deposit path first checks sub_14065B0E0(player, 2016763); if that
-// feature isn't present with count>0 the client silently refuses to send a deposit. This is
-// the same mechanism as Laurion's OP_FeatureUnlock (there 0x4451); TOB uses 0x5B9B.
+// OP_FeatureUnlock (0x5B9B) populates the client's feature array (player+0x2620). The TOB
+// client (sub_1402DC7E0) reads {feature_id, count} pairs; the deposit path first checks
+// sub_14065B0E0(player, 2016763), and without a count>0 entry the client silently refuses to
+// deposit. Same mechanism as Laurion's OP_FeatureUnlock (0x4451 there).
 // Wire format: [u8 header=0][u32 feature_count][ {u32 feature_id, u32 count>=1} x feature_count ]
 void DragonHoard::SendFeatureUnlock(Client* client)
 {
-	if (!client) {
-		return;
-	}
-	if (!RuleB(Features, DragonHoardEnabled)) {
+	if (!IsEnabled(client)) {
 		return;
 	}
 
-	// TOB feature IDs (from client sub_1402DC7E0). Dragon's Hoard is the only one the server
-	// currently implements; the Tradeskill Depot IDs (2018125 / 2018260) are noted for future use.
+	// TOB feature IDs (from client sub_1402DC7E0). Dragon's Hoard is the only feature the
+	// server implements; Tradeskill Depot IDs (2018125 / 2018260) are noted for future use.
 	static const uint32 feature_ids[] = {
 		2016763, // 0x1EC5FB — Dragon's Hoard
 	};
@@ -128,53 +115,39 @@ void DragonHoard::SendFeatureUnlock(Client* client)
 	LogDebug("DragonHoard::SendFeatureUnlock sent {} feature(s) to {}", num_features, client->GetName());
 }
 
-// [DH_UNLOCK] Send feature enable and slot count to client
+// Sent at zone-in after SendFeatureUnlock: action=8 sets the client's enabled flag,
+// action=2 sets the max slot count.
 void DragonHoard::SendUnlock(Client* client)
 {
-	if (!client) { // [DH_UNLOCK]
-		return;
-	}
-	if (!RuleB(Features, DragonHoardEnabled)) { // [DH_UNLOCK]
+	if (!IsEnabled(client)) {
 		return;
 	}
 
-	// [DH_UNLOCK] action=8 — sets enabled flag at qword_140E65D90 + 0x2468
+	// action=8 — enable flag
 	auto* outapp = new EQApplicationPacket(OP_DragonHoard1, 5);
-	memset(outapp->pBuffer, 0, 5); // [DH_UNLOCK]
-	*reinterpret_cast<uint32_t*>(outapp->pBuffer) = 8; // [DH_UNLOCK]
-	outapp->pBuffer[4] = 0; // [DH_UNLOCK]
+	memset(outapp->pBuffer, 0, 5);
+	*reinterpret_cast<uint32_t*>(outapp->pBuffer) = 8;
+	outapp->pBuffer[4] = 0;
 
-	// [DH_UNLOCK] action=2 — sets max slots at qword_140E65D90 + 0x246C
+	// action=2 — max slot count
 	auto* outapp2 = new EQApplicationPacket(OP_DragonHoard1, 8);
-	memset(outapp2->pBuffer, 0, 8); // [DH_UNLOCK]
-	*reinterpret_cast<uint32_t*>(outapp2->pBuffer) = 2; // [DH_UNLOCK]
-	*reinterpret_cast<uint32_t*>(outapp2->pBuffer + 4) = static_cast<uint32_t>(MAX_SLOTS); // [DH_UNLOCK]
+	memset(outapp2->pBuffer, 0, 8);
+	*reinterpret_cast<uint32_t*>(outapp2->pBuffer) = 2;
+	*reinterpret_cast<uint32_t*>(outapp2->pBuffer + 4) = static_cast<uint32_t>(MAX_SLOTS);
 
-	client->FastQueuePacket(&outapp); // [DH_UNLOCK]
-	client->FastQueuePacket(&outapp2); // [DH_UNLOCK]
+	client->FastQueuePacket(&outapp);
+	client->FastQueuePacket(&outapp2);
 
-	LogDebug("DragonHoard::SendUnlock sent to {}", client->GetName()); // [DH_UNLOCK]
+	LogDebug("DragonHoard::SendUnlock sent to {}", client->GetName());
 }
 
 void DragonHoard::HandleDeposit(Client* client, const EQApplicationPacket* app)
 {
-	// [DH_DEPOSIT_RETRIEVE]
-	// OP_DragonHoard2 (0x603D) — client deposits cursor item into Dragon's Hoard
-	if (!client || !app) {
+	if (!app || !IsEnabled(client)) {
 		return;
 	}
 
-	if (!RuleB(Features, DragonHoardEnabled)) { // [DH_RULE]
-		return;
-	}
-
-	// [DH_OLD] if (app->size < sizeof(DragonHoard_Struct)) {
-	// [DH_OLD] 	LogError("DragonHoard::HandleDeposit bad packet size {} from {}", app->size, client->GetName());
-	// [DH_OLD] 	return;
-	// [DH_OLD] }
-
-	// [DH_ACTION_ROUTE] deposit packet layout: action=4 (uint32), item_id (uint64)
-	// Minimum size is 12 bytes
+	// deposit packet layout: [action=4 u32][item_id u64] — minimum 12 bytes
 	if (app->size < 12) {
 		LogError("DragonHoard::HandleDeposit packet too small: {}", app->size);
 		return;
@@ -243,31 +216,16 @@ void DragonHoard::HandleDeposit(Client* client, const EQApplicationPacket* app)
 
 void DragonHoard::HandleRetrieve(Client* client, const EQApplicationPacket* app)
 {
-	// [DH_DEPOSIT_RETRIEVE]
-	// OP_DragonHoard1 (0x5807) — client retrieves item from Dragon's Hoard to cursor
-	if (!client || !app) {
+	if (!app || !IsEnabled(client)) {
 		return;
 	}
 
-	if (!RuleB(Features, DragonHoardEnabled)) { // [DH_RULE]
-		return;
-	}
-
-	// [DH_OLD] if (app->size < sizeof(DragonHoard_Struct)) {
-	// [DH_OLD] 	// [DH_NO_RESEND] window open request — items already sent on zone-in, do not resend
-	// [DH_OLD] 	return;
-	// [DH_OLD] }
-
-	// [DH_OLD] auto* dh = (DragonHoard_Struct*)app->pBuffer;
-	// [DH_OLD] // [DH_RETRIEVE_FIX] client sends alphabetical list index, not slot_id
-	// [DH_OLD] uint32 list_index = dh->list_index;
-
-	// [DH_RETRIEVE_FIX] retrieve packet layout (client sub_14010DAE0):
-	// +0x00 uint32 action=3
-	// +0x04 uint64 serial   <- the SELECTED row's item serial (we stamped it = slot_id+1)
-	// +0x0C uint32 index     <- positional index; unreliable, ignored
+	// retrieve packet layout (client sub_14010DAE0):
+	//   +0x00 u32 action=3
+	//   +0x04 u64 serial  <- the selected row's item serial (we stamped it = slot_id+1)
+	//   +0x0C u32 index   <- positional index; unreliable, ignored
 	// The old code used the +0x0C index with ORDER BY item_name, but SendItemList sends
-	// ORDER BY slot_id, so the index never matched the clicked row (always wrong/first item).
+	// ORDER BY slot_id, so the index never matched the clicked row (always the wrong item).
 	if (app->size < 16) {
 		return;
 	}
@@ -331,12 +289,11 @@ void DragonHoard::HandleRetrieve(Client* client, const EQApplicationPacket* app)
 		safe_delete(inst);
 	}
 
-	// [DH_RETRIEVE_FIX] Send the action=3 retrieve CONFIRMATION. Without it the client
-	// leaves a pending DH operation open, which locks the item on the cursor and never
-	// updates the window. The client handler (sub_14020B560 case 3 -> sub_14010D8C0)
-	// matches the item by serial (item+0x18), removes the row (when qty >= its stack),
-	// and decrements the pending-op counter, releasing the cursor.
-	// Layout mirrors the request: [action=3 @0][serial u64 @+4][qty u32 @+12].
+	// Send the action=3 retrieve confirmation. Without it the client leaves a pending DH
+	// operation open, which locks the item on the cursor and never updates the window. The
+	// client handler (sub_14020B560 case 3 -> sub_14010D8C0) matches the item by serial,
+	// removes the row (when qty >= its stack), and decrements the pending-op counter, which
+	// releases the cursor. Layout mirrors the request: [action=3][serial u64][qty u32].
 	auto* confirm = new EQApplicationPacket(OP_DragonHoard1, 16);
 	memset(confirm->pBuffer, 0, 16);
 	*reinterpret_cast<uint32*>(confirm->pBuffer)      = 3;
@@ -349,11 +306,7 @@ void DragonHoard::HandleRetrieve(Client* client, const EQApplicationPacket* app)
 
 void DragonHoard::SendItemUpdate(Client* client, uint32 slot_id, uint32 item_id, bool remove)
 {
-	if (!client) {
-		return;
-	}
-
-	if (!RuleB(Features, DragonHoardEnabled)) {
+	if (!IsEnabled(client)) {
 		return;
 	}
 

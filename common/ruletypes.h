@@ -1180,7 +1180,7 @@ RULE_BOOL(EvolvingItems, DestroyAugmentsOnEvolve, false, "If this is enabled, an
 RULE_CATEGORY_END()
 
 RULE_CATEGORY(Features)
-// [DH_RULE] Dragon's Hoard — requires TOB client, default off
+// Dragon's Hoard — requires TOB client, default off
 RULE_BOOL(Features, DragonHoardEnabled, false, "Enables the Dragon's Hoard storage feature. Requires The Outer Brood (TOB) client. Default off.")
 RULE_CATEGORY_END()
 

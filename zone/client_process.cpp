@@ -30,7 +30,7 @@
 #include "common/skills.h"
 #include "common/spdat.h"
 #include "common/strings.h"
-#include "zone/dragonshoard.h" // [DH_TIMER]
+#include "zone/dragonshoard.h"
 #include "zone/dynamic_zone.h"
 #include "zone/event_codes.h"
 #include "zone/guild_mgr.h"
@@ -99,10 +99,10 @@ bool Client::Process() {
 			}
 		}
 
-		// [DH_TIMER] deferred Dragon's Hoard unlock — fires once ~4s after CompleteConnect
+		// Deferred Dragon's Hoard unlock — fires once ~4s after CompleteConnect.
 		if (dragonhoard_zonein_timer.Check()) {
 			dragonhoard_zonein_timer.Disable();
-			DragonHoard::SendFeatureUnlock(this); // [FEATURE_UNLOCK] must precede SendUnlock — gates deposit
+			DragonHoard::SendFeatureUnlock(this); // must precede SendUnlock — gates deposit
 			DragonHoard::SendUnlock(this);
 			DragonHoard::SendItemList(this);
 		}

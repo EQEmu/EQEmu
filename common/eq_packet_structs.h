@@ -1633,7 +1633,7 @@ struct MoveItem_Struct
 };
 
 // Dragon's Hoard packet struct - 16 byte payload
-// [DH_STRUCT_FIX] actual wire format from packet capture
+// actual wire format from packet capture
 struct DragonHoard_Struct
 {
 /*0000*/ uint32 action;      // action type (3 = retrieve)
@@ -6067,7 +6067,7 @@ struct Membership_Struct
 /*004*/ uint32 races;	// Seen ff ff 01 00
 /*008*/ uint32 classes;	// Seen ff ff 01 01
 /*012*/ uint32 entrysize; // Seen 15 00 00 00
-/*016*/ int32 entries[30]; // [DH_MEMBERSHIP_FIX] Varied; extended for TOB feature slots through entry 29
+/*016*/ int32 entries[30]; // Varied; extended for TOB feature slots through entry 29
 /*136*/ uint32 exit_url_length;	// Length of the exit_url string (0 for none)
 /*108*/ // char exit_url[0];	// URL that will open when EQ is exited
 };
@@ -6088,8 +6088,8 @@ struct Membership_Entry_Struct
 
 struct Membership_Setting_Struct
 {
-/*000*/ int8 setting_index;	// [DH_MEMBERSHIP_FIX] aligned with TOB structs::Membership_Setting_Struct (was uint32)
-/*001*/ int32 setting_id;	// [DH_MEMBERSHIP_FIX] was uint32; TOB wire uses int32 at offset 1
+/*000*/ int8 setting_index;	// aligned with TOB structs::Membership_Setting_Struct (was uint32)
+/*001*/ int32 setting_id;	// was uint32; TOB wire uses int32 at offset 1
 /*005*/ int32 setting_value;
 /*009*/
 };
@@ -6097,11 +6097,11 @@ struct Membership_Setting_Struct
 struct Membership_Details_Struct
 {
 /*0000*/ uint32 membership_setting_count;
-/*0004*/ Membership_Setting_Struct settings[96];   // [DH_MEMBERSHIP_FIX] 96 entries
+/*0004*/ Membership_Setting_Struct settings[96];   // 96 entries
 /*0364*/ uint32 race_entry_count;
-/*0368*/ Membership_Entry_Struct membership_races[32];   // [DH_MEMBERSHIP_FIX] expanded to 32
+/*0368*/ Membership_Entry_Struct membership_races[32];   // expanded to 32
 /*0468*/ uint32 class_entry_count;
-/*046c*/ Membership_Entry_Struct membership_classes[32]; // [DH_MEMBERSHIP_FIX] expanded to 32
+/*046c*/ Membership_Entry_Struct membership_classes[32]; // expanded to 32
 /*056c*/ uint32 exit_url_length;
 /*0570*/ uint32 exit_url_length2;
 };
