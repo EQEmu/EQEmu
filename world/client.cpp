@@ -340,7 +340,7 @@ void Client::SendMembershipSettings() {
 		}
 	}
 
-	mds->race_entry_count = 16; // [DH_MEMBERSHIP_FIX]
+	mds->race_entry_count = 15;
 	mds->class_entry_count = 15;
 
 	uint32 cur_purchase_id = 90287;
@@ -393,10 +393,6 @@ void Client::SendMembershipSettings() {
 		}
 		cur_bitwise_value *= 2;
 	}
-
-	// [DH_MEMBERSHIP_FIX] Dragon's Hoard feature enabled
-	mds->membership_races[15].purchase_id = 2016763;
-	mds->membership_races[15].bitwise_entry = 131071;
 
 	mds->exit_url_length = 0;	// Live uses 42
 	//strcpy(eq->exit_url, "http://www.everquest.com/free-to-play/exit");

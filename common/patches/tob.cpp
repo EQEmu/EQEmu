@@ -2976,7 +2976,7 @@ namespace TOB
 			{ 1, 23, 0 }, { 3, 22, 0 }, { 2, 23, 0 }, { 3, 23, 0 }
 		};
 
-		uint32 races[18][2] = { // [DH_MEMBERSHIP_FIX]
+		uint32 races[17][2] = {
 			{ 1, 131071 },
 			{ 333, 131071 },
 			{ 90287, 131071 },
@@ -2993,8 +2993,7 @@ namespace TOB
 			{ 90299, 32768 },
 			{ 90300, 65536 },
 			{ 2012271, 131071 },
-			{ 2012277, 131071 },
-			{ 2016763, 131071 }, // [DH_MEMBERSHIP_FIX] Dragon's Hoard feature enabled
+			{ 2012277, 131071 }
 		};
 		
 		uint32 classes[17][2] = {
@@ -3031,8 +3030,8 @@ namespace TOB
 			eq->membership_classes[i].bitwise_entry = classes[i][1];
 		}
 
-		eq->race_entry_count = 18; // [DH_MEMBERSHIP_FIX]
-		for (int i = 0; i < 18; ++i) { // [DH_MEMBERSHIP_FIX]
+		eq->race_entry_count = 17;
+		for (int i = 0; i < 17; ++i) {
 			eq->membership_races[i].purchase_id = races[i][0];
 			eq->membership_races[i].bitwise_entry = races[i][1];
 		}
