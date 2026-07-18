@@ -360,10 +360,18 @@ void DragonHoard::HandleRetrieve(Client* client, const EQApplicationPacket* app)
 		safe_delete(inst);
 	}
 
-	// [DH_RETRIEVE_FIX] Refresh the DH window so the retrieved row disappears and the
-	// client reconciles the cursor item (otherwise the item appears "locked" on cursor
-	// because the client still thinks it lives in the hoard).
-	SendItemList(client);
+	// [DH_RETRIEVE_FIX] Send the action=3 retrieve CONFIRMATION. Without it the client
+	// leaves a pending DH operation open, which locks the item on the cursor and never
+	// updates the window. The client handler (sub_14020B560 case 3 -> sub_14010D8C0)
+	// matches the item by serial (item+0x18), removes the row (when qty >= its stack),
+	// and decrements the pending-op counter, releasing the cursor.
+	// Layout mirrors the request: [action=3 @0][serial u64 @+4][qty u32 @+12].
+	auto* confirm = new EQApplicationPacket(OP_DragonHoard1, 16);
+	memset(confirm->pBuffer, 0, 16);
+	*reinterpret_cast<uint32*>(confirm->pBuffer)      = 3;
+	*reinterpret_cast<uint64*>(confirm->pBuffer + 4)  = client_serial; // == slot_id+1 we stamped
+	*reinterpret_cast<uint32*>(confirm->pBuffer + 12) = stack;         // >= stack removes the row
+	client->FastQueuePacket(&confirm);
 
 	LogDebug("DragonHoard::HandleRetrieve account_id {} slot {} retrieved item_id {}", account_id, target_slot, item_id);
 }
