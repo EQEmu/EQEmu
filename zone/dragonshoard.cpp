@@ -74,6 +74,11 @@ void DragonHoard::SendItemList(Client* client)
 			continue;
 		}
 
+		// [DH_RETRIEVE_FIX] Stamp a stable per-slot serial (slot_id + 1, so it's never 0)
+		// so the client echoes it back on retrieve and we can identify the exact item
+		// by serial instead of a fragile positional index.
+		inst->SetSerialNumber(static_cast<int32>(slot_id + 1));
+
 		client->SendItemPacket(slot_id, inst, ItemPacketType::ItemPacketDragonHoard);
 		safe_delete(inst);
 	}
@@ -286,27 +291,34 @@ void DragonHoard::HandleRetrieve(Client* client, const EQApplicationPacket* app)
 	// [DH_OLD] // [DH_RETRIEVE_FIX] client sends alphabetical list index, not slot_id
 	// [DH_OLD] uint32 list_index = dh->list_index;
 
-	// [DH_ACTION_ROUTE] retrieve packet layout:
+	// [DH_RETRIEVE_FIX] retrieve packet layout (client sub_14010DAE0):
 	// +0x00 uint32 action=3
-	// +0x04 uint64 item_id
-	// +0x0C uint32 list_index (1-based)
+	// +0x04 uint64 serial   <- the SELECTED row's item serial (we stamped it = slot_id+1)
+	// +0x0C uint32 index     <- positional index; unreliable, ignored
+	// The old code used the +0x0C index with ORDER BY item_name, but SendItemList sends
+	// ORDER BY slot_id, so the index never matched the clicked row (always wrong/first item).
 	if (app->size < 16) {
 		return;
 	}
-	uint32_t list_index = *(uint32_t*)(app->pBuffer + 12);
+	uint64 client_serial = 0;
+	memcpy(&client_serial, app->pBuffer + 4, sizeof(uint64));
+	if (client_serial == 0) {
+		return;
+	}
+	const uint32 target_slot = static_cast<uint32>(client_serial) - 1; // undo the +1 from SendItemList
 
 	const uint32 account_id = client->AccountID();
 
 	auto result = database.QueryDatabase(
 		fmt::format(
 			"SELECT slot_id, item_id, stack_count FROM dragonhoard_items "
-			"WHERE account_id = {} ORDER BY item_name LIMIT 1 OFFSET {}",
-			account_id, list_index
+			"WHERE account_id = {} AND slot_id = {}",
+			account_id, target_slot
 		)
 	);
 
 	if (!result.Success() || result.RowCount() == 0) {
-		LogError("DragonHoard::HandleRetrieve list_index {} not found for account_id {}", list_index, account_id);
+		LogError("DragonHoard::HandleRetrieve slot {} not found for account_id {}", target_slot, account_id);
 		return;
 	}
 
@@ -348,7 +360,12 @@ void DragonHoard::HandleRetrieve(Client* client, const EQApplicationPacket* app)
 		safe_delete(inst);
 	}
 
-	LogDebug("DragonHoard::HandleRetrieve account_id {} list_index {} retrieved item_id {} from slot {}", account_id, list_index, item_id, slot_id);
+	// [DH_RETRIEVE_FIX] Refresh the DH window so the retrieved row disappears and the
+	// client reconciles the cursor item (otherwise the item appears "locked" on cursor
+	// because the client still thinks it lives in the hoard).
+	SendItemList(client);
+
+	LogDebug("DragonHoard::HandleRetrieve account_id {} slot {} retrieved item_id {}", account_id, target_slot, item_id);
 }
 
 void DragonHoard::SendItemUpdate(Client* client, uint32 slot_id, uint32 item_id, bool remove)
