@@ -30,6 +30,7 @@
 #include "common/skills.h"
 #include "common/spdat.h"
 #include "common/strings.h"
+#include "zone/dragonshoard.h" // [DH_TIMER]
 #include "zone/dynamic_zone.h"
 #include "zone/event_codes.h"
 #include "zone/guild_mgr.h"
@@ -96,6 +97,13 @@ bool Client::Process() {
 			if (adventure_leaderboard_timer->Check()) {
 				safe_delete(adventure_leaderboard_timer);
 			}
+		}
+
+		// [DH_TIMER] deferred Dragon's Hoard unlock — fires once ~4s after CompleteConnect
+		if (dragonhoard_zonein_timer.Check()) {
+			dragonhoard_zonein_timer.Disable();
+			DragonHoard::SendUnlock(this);
+			DragonHoard::SendItemList(this);
 		}
 
 		if (dead) {

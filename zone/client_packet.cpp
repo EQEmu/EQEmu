@@ -39,6 +39,7 @@
 #include "zone/bot.h"
 #include "zone/client_version.h"
 #include "zone/dialogue_window.h"
+#include "zone/dragonshoard.h" // [DH_OPCODE_WIRE]
 #include "zone/dynamic_zone.h"
 #include "zone/event_codes.h"
 #include "zone/gm_commands/door_manipulation.h"
@@ -180,6 +181,8 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_Disarm] = &Client::Handle_OP_Disarm;
 	ConnectedOpcodes[OP_DisarmTraps] = &Client::Handle_OP_DisarmTraps;
 	ConnectedOpcodes[OP_DoGroupLeadershipAbility] = &Client::Handle_OP_DoGroupLeadershipAbility;
+	ConnectedOpcodes[OP_DragonHoard1] = &Client::Handle_OP_DragonHoard1; // [DH_OPCODE_WIRE]
+	ConnectedOpcodes[OP_DragonHoard2] = &Client::Handle_OP_DragonHoard2; // [DH_OPCODE_WIRE]
 	ConnectedOpcodes[OP_DuelDecline] = &Client::Handle_OP_DuelDecline;
 	ConnectedOpcodes[OP_DuelAccept] = &Client::Handle_OP_DuelAccept;
 	ConnectedOpcodes[OP_DumpName] = &Client::Handle_OP_DumpName;
@@ -770,7 +773,18 @@ void Client::CompleteConnect()
 	else
 		TaskPeriodic_Timer.Disable();
 
-	conn_state = ClientConnectFinished;
+	if (conn_state != ClientConnectFinished) {
+		conn_state = ClientConnectFinished;
+		// [DH_DOUBLE_SEND_FIX] send DH items exactly once on first connect
+		//DragonHoard::SendItemList(this); // [DH_OLD]
+		// [DH_UNLOCK] send unlock + slot count before item list
+		// [DH_OLD] DragonHoard::SendUnlock(this); // [DH_UNLOCK]
+		// [DH_OLD] DragonHoard::SendItemList(this); // [DH_UNLOCK]
+		// [DH_TIMER] defer DH unlock until client StartWorldDisplay is complete
+		dragonhoard_zonein_timer.Start(4000);
+	} else {
+		conn_state = ClientConnectFinished;
+	}
 
 	if (zone)
 		zone->weatherSend(this);
@@ -1781,6 +1795,7 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 		}
 
 		BulkSendInventoryItems();
+		//DragonHoard::SendItemList(this); // [DH_ZONEIN_FIX] moved to CompleteConnect()
 		/* Send stuff on the cursor which isn't sent in bulk */
 		for (auto iter = m_inv.cursor_cbegin(); iter != m_inv.cursor_cend(); ++iter) {
 			/* First item cursor is sent in bulk inventory packet */
@@ -17439,4 +17454,31 @@ void Client::SyncWorldPositionsToClient(bool ignore_idle)
 	if (ignore_idle && reset_idle) {
 		m_is_idle = false;
 	}
+}
+
+// [DH_OPCODE_WIRE] Dragon's Hoard handlers
+void Client::Handle_OP_DragonHoard1(const EQApplicationPacket *app)
+{
+	// [DH_OPCODE_WIRE] OP_DragonHoard1 (0x5807) — client requests DH window open or retrieve item
+	// [DH_OLD] DragonHoard::HandleRetrieve(this, app);
+
+	// [DH_ACTION_ROUTE] route by action field
+	if (!app || app->size < 4) {
+		return;
+	}
+	uint32_t action = *(uint32_t*)app->pBuffer;
+	if (action == 4) {
+		DragonHoard::HandleDeposit(this, app);
+	} else if (action == 3) {
+		DragonHoard::HandleRetrieve(this, app);
+	}
+	// action=0 = window open request, no server response needed
+}
+
+void Client::Handle_OP_DragonHoard2(const EQApplicationPacket *app)
+{
+	// [DH_OPCODE_WIRE] OP_DragonHoard2 (0x603D) — client deposits item from cursor
+	// [DH_OLD] DragonHoard::HandleDeposit(this, app);
+	// [DH_ACTION_ROUTE] 0x603D may not be sent by TOB client — log if we ever receive it
+	LogDebug("DragonHoard: Handle_OP_DragonHoard2 received (unexpected) size={}", app ? app->size : 0);
 }

@@ -105,6 +105,16 @@ namespace TOB
 			}
 		}
 
+#define REGISTER_OPCODE(emu_name, eq_value) \
+		do { \
+			if (opcodes != nullptr && opcodes->Mutable()) { \
+				static_cast<RegularOpcodeManager *>(opcodes)->SetOpcode((emu_name), (eq_value)); \
+			} \
+		} while (0)
+		REGISTER_OPCODE(OP_DragonHoard1, 0x5807);
+		REGISTER_OPCODE(OP_DragonHoard2, 0x603D);
+#undef REGISTER_OPCODE
+
 		//ok, now we have what we need to register.
 
 		EQStreamInterface::Signature signature;
@@ -2926,7 +2936,7 @@ namespace TOB
 		eq->entries[26] = 0;  // FamiliarKeyRingSlots
 		eq->entries[27] = 0;  // FamiliarAutoLeave
 		eq->entries[28] = 0;  // HeroForgeKeyRingSlots
-		eq->entries[29] = 0;  // DragonHoardSlots
+		eq->entries[29] = 200;  // DragonHoardSlots
 		eq->entries[30] = 0;  // TeleportKeyRingSlots
 		eq->entries[31] = 0;  // PersonalDepotSlots
 		eq->entries[32] = 0;
@@ -2965,7 +2975,7 @@ namespace TOB
 			{ 1, 23, 0 }, { 3, 22, 0 }, { 2, 23, 0 }, { 3, 23, 0 }
 		};
 
-		uint32 races[17][2] = {
+		uint32 races[18][2] = { // [DH_MEMBERSHIP_FIX]
 			{ 1, 131071 },
 			{ 333, 131071 },
 			{ 90287, 131071 },
@@ -2982,7 +2992,8 @@ namespace TOB
 			{ 90299, 32768 },
 			{ 90300, 65536 },
 			{ 2012271, 131071 },
-			{ 2012277, 131071 }
+			{ 2012277, 131071 },
+			{ 2016763, 131071 }, // [DH_MEMBERSHIP_FIX] Dragon's Hoard feature enabled
 		};
 		
 		uint32 classes[17][2] = {
@@ -3019,8 +3030,8 @@ namespace TOB
 			eq->membership_classes[i].bitwise_entry = classes[i][1];
 		}
 
-		eq->race_entry_count = 17;
-		for (int i = 0; i < 17; ++i) {
+		eq->race_entry_count = 18; // [DH_MEMBERSHIP_FIX]
+		for (int i = 0; i < 18; ++i) { // [DH_MEMBERSHIP_FIX]
 			eq->membership_races[i].purchase_id = races[i][0];
 			eq->membership_races[i].bitwise_entry = races[i][1];
 		}
@@ -6459,6 +6470,8 @@ namespace TOB
 			return item::ItemPacketType::ItemPacketCharmUpdate;
 		case ItemPacketType::ItemPacketParcel:
 			return item::ItemPacketType::ItemPacketParcel;
+		case ItemPacketType::ItemPacketDragonHoard:
+			return item::ItemPacketType::ItemPacketDragonHoard;
 		default:
 			return item::ItemPacketType::ItemPacketInvalid;
 		}

@@ -86,12 +86,12 @@ namespace TOB {
 		{
 			/*000*/ uint32 membership_setting_count;	// Seen 96
 			/*004*/ Membership_Setting_Struct settings[96]; // 864 Bytes
-			/*364*/ uint32 race_entry_count;	// Seen 17
-			/*368*/ Membership_Entry_Struct membership_races[17]; // 136 Bytes
-			/*3f0*/ uint32 class_entry_count;	// Seen 15
-			/*3f4*/ Membership_Entry_Struct membership_classes[17]; // 136 Bytes
-			/*47c*/ uint32 exit_url_length;	// Length of the exit_url string (0 for none)
-			/*480*/ //char exit_url[42];		// Upgrade to Silver or Gold Membership URL
+			/*364*/ uint32 race_entry_count;	// Seen up to 18 entries sent (array holds up to 32)
+			/*368*/ Membership_Entry_Struct membership_races[32]; // [DH_MEMBERSHIP_FIX] 256 Bytes (32 × Membership_Entry_Struct)
+			/*468*/ uint32 class_entry_count;	// Seen 15 (array holds up to 32)
+			/*46c*/ Membership_Entry_Struct membership_classes[32]; // [DH_MEMBERSHIP_FIX] 256 Bytes (32 × Membership_Entry_Struct)
+			/*56c*/ uint32 exit_url_length;	// Length of the exit_url string (0 for none)
+			/*570*/ //char exit_url[42];		// Upgrade to Silver or Gold Membership URL
 		};
 
 		struct MaxCharacters_Struct {

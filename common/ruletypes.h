@@ -1179,6 +1179,11 @@ RULE_INT(EvolvingItems, DelayUponEquipping, 30000, "Delay in ms before an evolvi
 RULE_BOOL(EvolvingItems, DestroyAugmentsOnEvolve, false, "If this is enabled, any augments in an item will be destroyed when the item evolves. Otherwise, send augments to the player via the parcel system (requires that the Parcel System be enabled).")
 RULE_CATEGORY_END()
 
+RULE_CATEGORY(Features)
+// [DH_RULE] Dragon's Hoard — requires TOB client, default off
+RULE_BOOL(Features, DragonHoardEnabled, false, "Enables the Dragon's Hoard storage feature. Requires The Outer Brood (TOB) client. Default off.")
+RULE_CATEGORY_END()
+
 #undef RULE_CATEGORY
 #undef RULE_INT
 #undef RULE_REAL
