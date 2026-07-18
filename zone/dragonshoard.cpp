@@ -143,9 +143,6 @@ void DragonHoard::SendUnlock(Client* client)
 	memset(outapp->pBuffer, 0, 5); // [DH_UNLOCK]
 	*reinterpret_cast<uint32_t*>(outapp->pBuffer) = 8; // [DH_UNLOCK]
 	outapp->pBuffer[4] = 0; // [DH_UNLOCK]
-	// [DH_UNLOCK_DEBUG]
-	client->Message(Chat::Yellow, "[DH] SendUnlock action=8 byte[0-4]: %u %u %u %u %u",
-		outapp->pBuffer[0], outapp->pBuffer[1], outapp->pBuffer[2], outapp->pBuffer[3], outapp->pBuffer[4]);
 
 	// [DH_UNLOCK] action=2 — sets max slots at qword_140E65D90 + 0x246C
 	auto* outapp2 = new EQApplicationPacket(OP_DragonHoard1, 8);
@@ -153,19 +150,8 @@ void DragonHoard::SendUnlock(Client* client)
 	*reinterpret_cast<uint32_t*>(outapp2->pBuffer) = 2; // [DH_UNLOCK]
 	*reinterpret_cast<uint32_t*>(outapp2->pBuffer + 4) = static_cast<uint32_t>(MAX_SLOTS); // [DH_UNLOCK]
 
-	// [DH_UNLOCK_DEBUG2]
-	uint8_t dbg_byte4 = outapp->pBuffer[4];
-	uint32_t dbg_maxslots = *((uint32_t*)outapp2->pBuffer + 1);
-
 	client->FastQueuePacket(&outapp); // [DH_UNLOCK]
 	client->FastQueuePacket(&outapp2); // [DH_UNLOCK]
-
-	// [DH_OLD] client->Message(Chat::Yellow, "[DH] Sent action=8 packet size=5 byte4=%u", outapp->pBuffer[4]);
-	// [DH_OLD] client->Message(Chat::Yellow, "[DH] Sent action=2 packet size=8 maxslots=%u", *((uint32_t*)outapp2->pBuffer + 1));
-
-	// [DH_UNLOCK_DEBUG2]
-	client->Message(Chat::Yellow, "[DH] Sent action=8 size=5 byte4=%u", dbg_byte4);
-	client->Message(Chat::Yellow, "[DH] Sent action=2 size=8 maxslots=%u", dbg_maxslots);
 
 	LogDebug("DragonHoard::SendUnlock sent to {}", client->GetName()); // [DH_UNLOCK]
 }
@@ -265,21 +251,6 @@ void DragonHoard::HandleRetrieve(Client* client, const EQApplicationPacket* app)
 
 	if (!RuleB(Features, DragonHoardEnabled)) { // [DH_RULE]
 		return;
-	}
-
-	// [DH_RETRIEVE_DEBUG] dump raw packet
-	client->Message(Chat::Yellow, "[DH] Retrieve packet size: %u", app->size);
-	if (app->size >= 4) {
-		uint32 raw0 = *(uint32*)app->pBuffer;
-		client->Message(Chat::Yellow, "[DH] Raw uint32[0]: %u (0x%08X)", raw0, raw0);
-	}
-	if (app->size >= 8) {
-		uint32 raw1 = *(uint32*)(app->pBuffer + 4);
-		client->Message(Chat::Yellow, "[DH] Raw uint32[1]: %u (0x%08X)", raw1, raw1);
-	}
-	if (app->size >= 12) {
-		uint32 raw2 = *(uint32*)(app->pBuffer + 8);
-		client->Message(Chat::Yellow, "[DH] Raw uint32[2]: %u (0x%08X)", raw2, raw2);
 	}
 
 	// [DH_OLD] if (app->size < sizeof(DragonHoard_Struct)) {
