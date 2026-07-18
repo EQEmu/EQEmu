@@ -353,6 +353,10 @@ void DragonHoard::SendItemUpdate(Client* client, uint32 slot_id, uint32 item_id,
 		return;
 	}
 
+	if (!RuleB(Features, DragonHoardEnabled)) {
+		return;
+	}
+
 	(void)slot_id;
 	(void)item_id;
 	(void)remove;
