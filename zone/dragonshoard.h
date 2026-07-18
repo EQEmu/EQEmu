@@ -16,6 +16,10 @@ namespace DragonHoard {
 	// Called on zone-in to populate the DH window with the character's stored items
 	void SendItemList(Client* client);
 
+	// [FEATURE_UNLOCK] Send OP_FeatureUnlock (0x5B9B) to populate the client feature array
+	// (player+0x2620). This is the gate the deposit path checks; must be sent before SendUnlock.
+	void SendFeatureUnlock(Client* client);
+
 	// [DH_UNLOCK] Send action=8 (enable flag) and action=2 (slot count) to unlock the DH window
 	void SendUnlock(Client* client);
 

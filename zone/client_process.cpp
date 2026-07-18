@@ -102,6 +102,7 @@ bool Client::Process() {
 		// [DH_TIMER] deferred Dragon's Hoard unlock — fires once ~4s after CompleteConnect
 		if (dragonhoard_zonein_timer.Check()) {
 			dragonhoard_zonein_timer.Disable();
+			DragonHoard::SendFeatureUnlock(this); // [FEATURE_UNLOCK] must precede SendUnlock — gates deposit
 			DragonHoard::SendUnlock(this);
 			DragonHoard::SendItemList(this);
 		}

@@ -81,6 +81,48 @@ void DragonHoard::SendItemList(Client* client)
 	LogDebug("DragonHoard::SendItemList sent items to account_id {}", account_id);
 }
 
+// [FEATURE_UNLOCK] OP_FeatureUnlock (0x5B9B) — populate the client-side feature array.
+// The TOB client (eqgame.exe sub_1402DC7E0) reads a list of {feature_id, count} pairs into
+// player+0x2620. The DH deposit path first checks sub_14065B0E0(player, 2016763); if that
+// feature isn't present with count>0 the client silently refuses to send a deposit. This is
+// the same mechanism as Laurion's OP_FeatureUnlock (there 0x4451); TOB uses 0x5B9B.
+// Wire format: [u8 header=0][u32 feature_count][ {u32 feature_id, u32 count>=1} x feature_count ]
+void DragonHoard::SendFeatureUnlock(Client* client)
+{
+	if (!client) {
+		return;
+	}
+	if (!RuleB(Features, DragonHoardEnabled)) {
+		return;
+	}
+
+	// TOB feature IDs (from client sub_1402DC7E0). Dragon's Hoard is the only one the server
+	// currently implements; the Tradeskill Depot IDs (2018125 / 2018260) are noted for future use.
+	static const uint32 feature_ids[] = {
+		2016763, // 0x1EC5FB — Dragon's Hoard
+	};
+	const uint32 num_features = static_cast<uint32>(sizeof(feature_ids) / sizeof(feature_ids[0]));
+	const uint32 active_count = 1; // any value > 0 marks the feature active
+
+	const uint32 packet_size = 1 + 4 + (num_features * 8);
+	auto* outapp = new EQApplicationPacket(OP_FeatureUnlock, packet_size);
+	memset(outapp->pBuffer, 0, packet_size);
+
+	uint8* buf = outapp->pBuffer;
+	buf[0] = 0; // header byte
+	*reinterpret_cast<uint32*>(buf + 1) = num_features;
+	uint32 off = 5;
+	for (uint32 i = 0; i < num_features; ++i) {
+		*reinterpret_cast<uint32*>(buf + off)     = feature_ids[i];
+		*reinterpret_cast<uint32*>(buf + off + 4) = active_count;
+		off += 8;
+	}
+
+	client->FastQueuePacket(&outapp);
+
+	LogDebug("DragonHoard::SendFeatureUnlock sent {} feature(s) to {}", num_features, client->GetName());
+}
+
 // [DH_UNLOCK] Send feature enable and slot count to client
 void DragonHoard::SendUnlock(Client* client)
 {
