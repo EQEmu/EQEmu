@@ -214,6 +214,14 @@ void DragonHoard::HandleDeposit(Client* client, const EQApplicationPacket* app)
 		safe_delete(inst);
 	}
 
+	// Send the action=10 (0xA) deposit acknowledgement. The client increments an internal
+	// pending-operation counter when it sends a deposit and freezes inventory/mouse input
+	// until the server acks it (client sub_14020B560 case 0xA -> decrement dword_140EE2B2C).
+	// Unlike action=3 this only clears the pending op; it does not remove a window row.
+	auto* ack = new EQApplicationPacket(OP_DragonHoard1, 4);
+	*reinterpret_cast<uint32*>(ack->pBuffer) = 10;
+	client->FastQueuePacket(&ack);
+
 	LogDebug("DragonHoard::HandleDeposit account_id {} deposited item_id {} slot {}", account_id, item_id, slot_id);
 }
 
