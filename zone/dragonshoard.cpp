@@ -204,9 +204,12 @@ void DragonHoard::HandleDeposit(Client* client, const EQApplicationPacket* app)
 	// Remove item from cursor
 	client->DeleteItemInInventory(EQ::invslot::slotCursor, 0, true);
 
-	// Send item to DH window
+	// Send item to DH window. Stamp the same stable per-slot serial (slot_id + 1) that
+	// SendItemList uses, so the item can be retrieved immediately without re-zoning —
+	// otherwise a freshly deposited item carries an ephemeral serial that maps to no slot.
 	EQ::ItemInstance* inst = database.CreateItem(item_data, static_cast<int16>(stack));
 	if (inst) {
+		inst->SetSerialNumber(static_cast<int32>(slot_id + 1));
 		client->SendItemPacket(slot_id, inst, ItemPacketType::ItemPacketDragonHoard);
 		safe_delete(inst);
 	}
