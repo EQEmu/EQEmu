@@ -9150,44 +9150,6 @@ void Client::SendHPUpdateMarquee(){
 	SendMarqueeMessage(Chat::Yellow, 510, 0, 3000, 3000, health_update_notification);
 }
 
-void Client::SendMembership() {
-	if (m_ClientVersion >= EQ::versions::ClientVersion::TOB) {
-		auto outapp = new EQApplicationPacket(OP_SendMembership, sizeof(Membership_Struct));
-		Membership_Struct* mc = (Membership_Struct*)outapp->pBuffer;
-
-		mc->membership = 2;				//Hardcode to gold for now. We don't use anything else.
-		mc->races = 0x1ffff;			// Available Races (4110 for silver)
-		mc->classes = 0x1ffff;			// Available Classes (4614 for silver) - Was 0x101ffff
-		mc->entrysize = 21;				// Number of membership setting entries below
-		mc->entries[0] = 0xffffffff;	// Max AA Restriction
-		mc->entries[1] = 0xffffffff;	// Max Level Restriction
-		mc->entries[2] = 0xffffffff;	// Max Char Slots per Account (not used by client?)
-		mc->entries[3] = 0xffffffff;	// 1 for Silver
-		mc->entries[4] = 0xffffffff;	// Main Inventory Size (0xffffffff on Live for Gold, but limiting to 8 until 10 is supported)
-		mc->entries[5] = 0xffffffff;	// Max Platinum per level
-		mc->entries[6] = 1;				// 0 for Silver
-		mc->entries[7] = 1;				// 0 for Silver
-		mc->entries[8] = 1;				// 1 for Silver
-		mc->entries[9] = 0xffffffff;	// Unknown - Maybe Loyalty Points every 12 hours? 60 per week for Silver
-		mc->entries[10] = 1;			// 1 for Silver
-		mc->entries[11] = 0xffffffff;	// Shared Bank Slots
-		mc->entries[12] = 0xffffffff;	// Unknown - Maybe Max Active Tasks?
-		mc->entries[13] = 1;			// 1 for Silver
-		mc->entries[14] = 1;			// 0 for Silver
-		mc->entries[15] = 1;			// 0 for Silver
-		mc->entries[16] = 1;			// 1 for Silver
-		mc->entries[17] = 1;			// 0 for Silver
-		mc->entries[18] = 1;			// 0 for Silver
-		mc->entries[19] = 0xffffffff;	// 0 for Silver
-		mc->entries[20] = 0xffffffff;	// 0 for Silver
-		mc->exit_url_length = 0;
-		//mc->exit_url = 0; // Used on Live: "http://www.everquest.com/free-to-play/exit-silver"
-
-		QueuePacket(outapp);
-		safe_delete(outapp);
-	}
-}
-
 uint32 Client::GetMoney(uint8 type, uint8 subtype) {
 	uint32 value = 0;
 

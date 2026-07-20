@@ -31,6 +31,7 @@ set(zone_sources
 	corpse.cpp
 	dialogue_window.cpp
 	doors.cpp
+	dragonshoard.cpp
 	dynamic_zone.cpp
 	effects.cpp
 	embparser.cpp
@@ -136,6 +137,7 @@ set(zone_headers
 	corpse.h
 	dialogue_window.h
 	doors.h
+	dragonshoard.h
 	dynamic_zone.h
 	embparser.h
 	embperl.h

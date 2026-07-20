@@ -1561,6 +1561,7 @@ enum ItemPacketType {
     ItemPacketCharmUpdate    = 0x6E, // noted as incorrect
     ItemPacketRecovery       = 0x71,
     ItemPacketParcel         = 0x73,
+    ItemPacketDragonHoard    = 0x77, // TOB Dragon's Hoard
     ItemPacketInvalid        = 0xFF
 };
 

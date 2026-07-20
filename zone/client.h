@@ -1852,7 +1852,6 @@ public:
 	void ResetHPUpdateTimer() { hpupdate_timer.Start(); }
 
 	void SendHPUpdateMarquee();
-	void SendMembership();
 
 	void CheckRegionTypeChanges();
 

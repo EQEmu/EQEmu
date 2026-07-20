@@ -393,6 +393,7 @@ void Client::SendMembershipSettings() {
 		}
 		cur_bitwise_value *= 2;
 	}
+
 	mds->exit_url_length = 0;	// Live uses 42
 	//strcpy(eq->exit_url, "http://www.everquest.com/free-to-play/exit");
 	mds->exit_url_length2 = 0;	// Live uses 49

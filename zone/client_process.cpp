@@ -30,6 +30,7 @@
 #include "common/skills.h"
 #include "common/spdat.h"
 #include "common/strings.h"
+#include "zone/dragonshoard.h"
 #include "zone/dynamic_zone.h"
 #include "zone/event_codes.h"
 #include "zone/guild_mgr.h"
