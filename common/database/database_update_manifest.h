@@ -7265,6 +7265,35 @@ ALTER TABLE `character_pet_buffs`
 	CHANGE COLUMN `instrument_mod` `instrument_mod` INT(10) UNSIGNED NOT NULL DEFAULT 10 AFTER `ExtraDIChance`;
 )",
 	},
+	ManifestEntry{
+		.version = 9331,
+		.description = "2026_07_17_dragonhoard_items.sql",
+		.check = "SHOW TABLES LIKE 'dragonhoard_items'",
+		.condition = "empty",
+		.match = "",
+		.sql = R"(
+CREATE TABLE `dragonhoard_items` (
+  `id`          int unsigned NOT NULL AUTO_INCREMENT,
+  `account_id`  int          NOT NULL,
+  `slot_id`     int          NOT NULL,
+  `item_id`     int          NOT NULL DEFAULT 0,
+  `item_name`   varchar(128) NOT NULL DEFAULT '',
+  `stack_count` int unsigned NOT NULL DEFAULT 1,
+  `charges`     int          NOT NULL DEFAULT 0,
+  `serial`      bigint       NOT NULL DEFAULT 0,
+  `augslot1`    int          NOT NULL DEFAULT 0,
+  `augslot2`    int          NOT NULL DEFAULT 0,
+  `augslot3`    int          NOT NULL DEFAULT 0,
+  `augslot4`    int          NOT NULL DEFAULT 0,
+  `augslot5`    int          NOT NULL DEFAULT 0,
+  `augslot6`    int          NOT NULL DEFAULT 0,
+  `custom_data` text         DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `account_slot` (`account_id`, `slot_id`),
+  KEY `account_id` (`account_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+)",
+	},
 // -- template; copy/paste this when you need to create a new entry
 //	ManifestEntry{
 //		.version = 9228,

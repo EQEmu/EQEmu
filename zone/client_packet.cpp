@@ -181,8 +181,7 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_Disarm] = &Client::Handle_OP_Disarm;
 	ConnectedOpcodes[OP_DisarmTraps] = &Client::Handle_OP_DisarmTraps;
 	ConnectedOpcodes[OP_DoGroupLeadershipAbility] = &Client::Handle_OP_DoGroupLeadershipAbility;
-	ConnectedOpcodes[OP_DragonHoard1] = &Client::Handle_OP_DragonHoard1;
-	ConnectedOpcodes[OP_DragonHoard2] = &Client::Handle_OP_DragonHoard2;
+	ConnectedOpcodes[OP_DragonHoard] = &Client::Handle_OP_DragonHoard;
 	ConnectedOpcodes[OP_DuelDecline] = &Client::Handle_OP_DuelDecline;
 	ConnectedOpcodes[OP_DuelAccept] = &Client::Handle_OP_DuelAccept;
 	ConnectedOpcodes[OP_DumpName] = &Client::Handle_OP_DumpName;
@@ -773,12 +772,16 @@ void Client::CompleteConnect()
 	else
 		TaskPeriodic_Timer.Disable();
 
-	if (conn_state != ClientConnectFinished) {
-		conn_state = ClientConnectFinished;
-		// Defer Dragon's Hoard unlock/item-send until the client's world display is ready.
-		dragonhoard_zonein_timer.Start(4000);
-	} else {
-		conn_state = ClientConnectFinished;
+	const bool first_connect = (conn_state != ClientConnectFinished);
+	conn_state = ClientConnectFinished;
+	if (first_connect) {
+		// Dragon's Hoard: the feature GRANT now rides the player-profile claims array (see the TOB
+		// OP_PlayerProfile encode) — that replaces the standalone OP_FeatureUnlock. SendUnlock still
+		// sets the DH window's own enable/slot fields (OP_DragonHoard action 8/2 -> player+0x2468/
+		// 0x246C), which the claim doesn't populate. SendItemList pushes the stored items. Fires on
+		// OP_ClientReady -> CompleteConnect, after OP_EnterWorld (DH window global is valid).
+		DragonHoard::SendUnlock(this);
+		DragonHoard::SendItemList(this);
 	}
 
 	if (zone)
@@ -1708,8 +1711,6 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	if ((m_pp.RestTimer > RuleI(Character, RestRegenTimeToActivate)) && (m_pp.RestTimer > RuleI(Character, RestRegenRaidTimeToActivate)))
 		m_pp.RestTimer = 0;
 
-	SendMembership();
-	
 	outapp = new EQApplicationPacket(OP_PlayerProfile, sizeof(PlayerProfile_Struct));
 
 	/* The entityid field in the Player Profile is used by the Client in relation to Group Leadership AA */
@@ -17451,24 +17452,17 @@ void Client::SyncWorldPositionsToClient(bool ignore_idle)
 }
 
 // Dragon's Hoard handlers
-void Client::Handle_OP_DragonHoard1(const EQApplicationPacket *app)
+void Client::Handle_OP_DragonHoard(const EQApplicationPacket *app)
 {
-	// OP_DragonHoard1 (0x5807) carries several actions; route by the leading action field.
+	// Carries several actions; route by the leading action field.
 	if (!app || app->size < 4) {
 		return;
 	}
-	uint32_t action = *(uint32_t*)app->pBuffer;
-	if (action == 4) {
+	const uint32 action = *reinterpret_cast<const uint32*>(app->pBuffer);
+	if (action == DragonHoard::Deposit) {
 		DragonHoard::HandleDeposit(this, app);
-	} else if (action == 3) {
+	} else if (action == DragonHoard::Retrieve) {
 		DragonHoard::HandleRetrieve(this, app);
 	}
-	// action=0 = window open request, no server response needed
-}
-
-void Client::Handle_OP_DragonHoard2(const EQApplicationPacket *app)
-{
-	// OP_DragonHoard2 (0x603D) isn't sent by the TOB client (deposits route through
-	// OP_DragonHoard1 action=4); log if we ever receive it.
-	LogDebug("DragonHoard: Handle_OP_DragonHoard2 received (unexpected) size={}", app ? app->size : 0);
+	// DragonHoard::WindowOpen needs no server response.
 }

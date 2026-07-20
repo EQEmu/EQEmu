@@ -105,16 +105,8 @@ namespace TOB
 			}
 		}
 
-#define REGISTER_OPCODE(emu_name, eq_value) \
-		do { \
-			if (opcodes != nullptr && opcodes->Mutable()) { \
-				static_cast<RegularOpcodeManager *>(opcodes)->SetOpcode((emu_name), (eq_value)); \
-			} \
-		} while (0)
-		REGISTER_OPCODE(OP_DragonHoard1, 0x5807);
-		REGISTER_OPCODE(OP_DragonHoard2, 0x603D);
-		REGISTER_OPCODE(OP_FeatureUnlock, 0x5B9B); // server->client store-feature unlock (DH, depot, keyrings)
-#undef REGISTER_OPCODE
+		// OP_DragonHoard1/2 and OP_FeatureUnlock are defined in patch_TOB.conf and loaded by
+		// the RegularOpcodeManager like every other TOB opcode — no manual registration here.
 
 		//ok, now we have what we need to register.
 
@@ -2109,9 +2101,18 @@ namespace TOB
 		//u32 bank_shared_plat;
 		out.WriteUInt32(emu->platinum_shared);
 
-		//u32 claim_count;
-		out.WriteUInt32(0);
-		//Claim claims[claim_count];
+		// Claims — the features the account has unlocked, sent with the player profile at zone-in.
+		// Each is { claim_id (= feature id), value (= current unlocked amount, e.g. slot count) }.
+		// This is how the client is told which store features it has; the standalone OP_FeatureUnlock
+		// message is only for live marketplace-purchase updates. (In MQ these are GameFeatures.)
+		constexpr uint32 kClaimDragonHoard = 2016763; // 0x1EC5FB — Dragon's Hoard
+		const bool dragonhoard_enabled = RuleB(Features, DragonHoardEnabled);
+
+		out.WriteUInt32(dragonhoard_enabled ? 1 : 0); // claim_count
+		if (dragonhoard_enabled) {
+			out.WriteUInt32(kClaimDragonHoard);
+			out.WriteUInt32(static_cast<uint32>(RuleI(Features, DragonHoardSlots))); // current unlocked amount
+		}
 
 		//Tribute tribute;
 		/*
@@ -2937,7 +2938,7 @@ namespace TOB
 		eq->entries[26] = 0;  // FamiliarKeyRingSlots
 		eq->entries[27] = 0;  // FamiliarAutoLeave
 		eq->entries[28] = 0;  // HeroForgeKeyRingSlots
-		eq->entries[29] = 200;  // DragonHoardSlots
+		eq->entries[29] = RuleI(Features, DragonHoardSlots);  // DragonHoardSlots
 		eq->entries[30] = 0;  // TeleportKeyRingSlots
 		eq->entries[31] = 0;  // PersonalDepotSlots
 		eq->entries[32] = 0;

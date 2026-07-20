@@ -1852,7 +1852,6 @@ public:
 	void ResetHPUpdateTimer() { hpupdate_timer.Start(); }
 
 	void SendHPUpdateMarquee();
-	void SendMembership();
 
 	void CheckRegionTypeChanges();
 
@@ -2170,7 +2169,6 @@ private:
 	Timer process_timer;
 	Timer consume_food_timer;
 	Timer zoneinpacket_timer;
-	Timer dragonhoard_zonein_timer; // one-shot delay before DH unlock/item list
 	Timer linkdead_timer;
 	Timer dead_timer;
 	Timer global_channel_timer;

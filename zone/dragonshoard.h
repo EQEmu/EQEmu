@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../common/eq_packet_structs.h"
-#include "../common/types.h"
+#include "common/eq_packet_structs.h"
+#include "common/types.h"
 
 class Client;
 class EQApplicationPacket;
@@ -11,29 +11,30 @@ class EQApplicationPacket;
 
 namespace DragonHoard {
 
+	// OP_DragonHoard action codes — the leading u32 of the packet body.
+	enum Action : uint32 {
+		WindowOpen   = 0,  // c->s: window opened (no server response needed)
+		SetSlotCount = 2,  // s->c: max slot count
+		Retrieve     = 3,  // c->s request / s->c confirm
+		Deposit      = 4,  // c->s: deposit the cursor item
+		Enable       = 8,  // s->c: set the client enabled flag
+		DepositAck   = 10, // s->c: clear the pending-op counter after a deposit
+	};
+
 	// True only when the feature rule is on AND the client is TOB or later.
 	bool IsEnabled(Client* client);
 
 	// Zone-in: populate the DH window with the character's stored items.
 	void SendItemList(Client* client);
 
-	// OP_FeatureUnlock (0x5B9B): populate the client feature array (player+0x2620).
-	// This is the gate the deposit path checks; must be sent before SendUnlock.
-	void SendFeatureUnlock(Client* client);
-
-	// Send action=8 (enable flag) and action=2 (slot count) to unlock the DH window.
+	// Send the DH window's enable flag + slot capacity (the feature grant rides the player-profile
+	// claims array, not this).
 	void SendUnlock(Client* client);
 
-	// Client deposits the cursor item into the hoard (OP_DragonHoard1 action=4).
+	// Client deposits the cursor item into the hoard.
 	void HandleDeposit(Client* client, const EQApplicationPacket* app);
 
-	// Client retrieves an item from the hoard to the cursor (OP_DragonHoard1 action=3).
+	// Client retrieves an item from the hoard to the cursor.
 	void HandleRetrieve(Client* client, const EQApplicationPacket* app);
-
-	// Send a single item add/remove delta to the DH window.
-	void SendItemUpdate(Client* client, uint32 slot_id, uint32 item_id, bool remove);
-
-	// Max slots available in Dragon's Hoard.
-	static constexpr int MAX_SLOTS = 200;
 
 } // namespace DragonHoard

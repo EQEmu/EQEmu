@@ -137,6 +137,7 @@ set(zone_headers
 	corpse.h
 	dialogue_window.h
 	doors.h
+	dragonshoard.h
 	dynamic_zone.h
 	embparser.h
 	embperl.h

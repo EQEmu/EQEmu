@@ -147,6 +147,7 @@ namespace DatabaseSchema {
 			"completed_tasks",
 			"data_buckets",
 			"discovered_items",
+			"dragonhoard_items",
 			"faction_values",
 			"friends",
 			"guild_bank",

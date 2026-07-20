@@ -215,6 +215,7 @@ set(repositories
 	repositories/base/base_discord_webhooks_repository.h
 	repositories/base/base_discovered_items_repository.h
 	repositories/base/base_doors_repository.h
+	repositories/base/base_dragonhoard_items_repository.h
 	repositories/base/base_dynamic_zone_lockouts_repository.h
 	repositories/base/base_dynamic_zone_members_repository.h
 	repositories/base/base_dynamic_zone_templates_repository.h
@@ -413,6 +414,7 @@ set(repositories
 	repositories/discord_webhooks_repository.h
 	repositories/discovered_items_repository.h
 	repositories/doors_repository.h
+	repositories/dragonhoard_items_repository.h
 	repositories/dynamic_zone_lockouts_repository.h
 	repositories/dynamic_zone_members_repository.h
 	repositories/dynamic_zone_templates_repository.h
