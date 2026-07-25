@@ -121,6 +121,7 @@ void Raid::HandleOfflineBots(uint32 owner) {
 				if (m.is_bot && strcmp(m.member_name, b.bot_name) == 0) {
 					uint32 gid = GetGroup(m.member_name);
 					SendRaidGroupRemove(m.member_name, gid);
+					RemoveRaidDelegates(m.member_name);
 					RemoveMember(m.member_name);
 					GroupUpdate(gid);
 					if (!RaidCount()) {
@@ -163,6 +164,11 @@ void Bot::CreateBotRaid(Mob* invitee, Client* invitor, bool group_invite, Raid* 
 
 	Group* g_invitee = invitee->GetGroup();
 	Group* g_invitor = invitor->GetGroup();
+
+	if (g_invitee && g_invitee->GetRaid() != nullptr) {
+		invitor->Message(Chat::Red, "%s is already in a raid.", invitee->GetCleanName());
+		return;
+	}
 
 	if (g_invitee && invitor->IsClient() && !g_invitee->IsLeader(invitee)) {
 		if (g_invitee->GetLeader()) {

@@ -51,7 +51,7 @@ private:
 
 class Group : public GroupIDConsumer {
 public:
-	Group(Mob* leader);
+	Group(Mob* leader, bool is_raid_subgroup = false);
 	Group(uint32 gid);
 	~Group();
 
@@ -64,6 +64,8 @@ public:
 
 	bool	AddMember(Mob* new_member, std::string new_member_name = std::string(), uint32 character_id = 0, bool is_merc = false);
 	void	AddMember(const std::string& new_member_name);
+	void	AddRaidMember(Mob* m);
+	bool	RemoveRaidMember(Mob* m);
 	void	SendUpdate(uint32 type,Mob* member);
 	void	SendLeadershipAAUpdate();
 	bool	DelMemberOOZ(const char *Name);
@@ -129,10 +131,13 @@ public:
 	void	NotifyPullerTarget(Client *c);
 	void	DelegateMarkNPC(const char *NewNPCMarkerName);
 	void	UnDelegateMarkNPC(const char *OldNPCMarkerName);
+	void	DelegateMasterLooter(const char *NewMasterLooterName);
+	void	UnDelegateMasterLooter(const char *OldMasterLooterName);
 	void	NotifyMainTank(Client *c, uint8 toggle = 0);
 	void	NotifyMainAssist(Client *c, uint8 toggle = 0);
 	void	NotifyPuller(Client *c, uint8 toggle = 0);
 	void	NotifyMarkNPC(Client *c);
+	void	NotifyMasterLooter(Client *c, bool toggle = 0);
 	inline	uint32 GetNPCMarkerID() { return NPCMarkerID; }
 	void	SetMainTank(const char *NewMainTankName);
 	void	SetMainAssist(const char *NewMainAssistName);
@@ -140,6 +145,8 @@ public:
 	const char *GetMainTankName() { return MainTankName.c_str(); }
 	const char *GetMainAssistName() { return MainAssistName.c_str(); }
 	const char *GetPullerName() { return PullerName.c_str(); }
+	const char *GetMasterLooterName() { return MasterLooterName.c_str(); }
+	void	SetMasterLooter(const char *NewMasterLooterName);
 	bool	AmIMainTank(const char *mob_name);
 	bool	AmIMainAssist(const char *mob_name);
 	bool	AmIPuller(const char *mob_name);
@@ -168,6 +175,9 @@ public:
 
 	bool AnyMemberHasDzLockout(const std::string& expedition, const std::string& event);
 
+	inline void	SetRaid(Raid* r, uint32 slot) { raid = r; raid_group_slot = slot; }
+	inline Raid*	GetRaid() const { return raid; }
+
 	Mob*	members[MAX_GROUP_MEMBERS] {nullptr};
 	char	membername[MAX_GROUP_MEMBERS][64] {""};
 	uint8	MemberRoles[MAX_GROUP_MEMBERS] {0};
@@ -181,6 +191,7 @@ private:
 	std::string	MainAssistName;
 	std::string	PullerName;
 	std::string	NPCMarkerName;
+	std::string	MasterLooterName; // tracking only; no loot-permission logic reads this yet
 	uint16	NPCMarkerID;
 	uint16	AssistTargetID;
 	uint16	TankTargetID;
@@ -190,6 +201,9 @@ private:
 	std::string mentoree_name;
 	Client *mentoree;
 	int mentor_percent;
+
+	Raid*	raid = nullptr;
+	uint32	raid_group_slot = 0xFFFFFFFF;
 
 	XTargetAutoHaters m_autohatermgr;
 };

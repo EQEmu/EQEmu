@@ -1093,6 +1093,53 @@ namespace TOB {
 			/*0168*/
 		};
 
+		struct GroupFollowGeneric_Struct {
+			/*0000*/ GroupGeneric_Struct groupGeneric;
+			/*0168*/ uint32	group_request_id;
+			/*0172*/ uint32	unknown0172;
+			/*0176*/
+		};
+
+		struct GroupRole_Struct {
+			/*000*/ char   Name1[64];       // member name whose role is being set
+			/*064*/ char   Name2[64];       // group leader name
+			/*128*/ uint32 Unknown128;
+			/*132*/ uint32 Unknown132;
+			/*136*/ uint32 GroupID;         // C→S
+			/*140*/ uint32 RoleNumber;
+			/*144*/ uint8  Unknown144[16];
+			/*160*/ uint8  Toggle;
+			/*161*/ uint8  ExtraFlag;       // C→S: flag for sent from WndNotification?
+			/*162*/
+		};
+
+		struct GroupJoin_Struct {
+			/*000*/	char	owner_name[64]; // merc
+			/*064*/	char	membername[64];
+			/*128*/	uint8	type;
+			/*129*/	uint8	padding129[3];
+			/*132*/	uint32	level;
+			/*136*/
+		};
+
+		struct GroupMakeLeader_Struct {
+			/*0000*/ uint32	action; // always 8 (groupActMakeLeader)
+			/*0004*/ char	CurrentLeader[64]; // sender's own name; unused server-side
+			/*0068*/ char	NewLeader[64];
+			/*0132*/ uint32	unknown0132; // always zero; first 4 bytes of server's 324-byte trailing field
+			/*0136*/
+		};
+
+		struct InspectBuffs_Struct {
+			/*000*/ int32 spell_id[BUFF_COUNT];
+			/*248*/ int32 tics_remaining[BUFF_COUNT];
+		};
+
+		// TOB C->S request wire format: sub_1402300B0 @ 0x1402300b0
+		struct InspectBuffsRequest_Struct {
+			/*000*/ uint8 mine; // 0 = inspect current target; 1 = inspect self ("/inspectbuffs mine")
+		};
+
 		// TOB pick pocket wire format (S→C and C→S identical layout).
 		// coin sits at unaligned offset 0x0D; valid under pack(1).
 		struct PickPocket_Struct {
@@ -1104,6 +1151,48 @@ namespace TOB {
 			/*0x11*/ uint32 nameLen;
 			// char name[nameLen] follows, then uint8 luckily
 			/*0x15*/
+		};
+
+		struct RaidGeneral_Struct {
+			/*00*/	uint32		action;
+			/*04*/	char		player_name[64];
+			/*68*/	uint32		unknown68;
+			/*72*/	char		leader_name[64];
+		    /*136*/ uint32		field5;
+			/*140*/ uint32		field6;
+			/*144*/
+		};
+
+		struct RaidAddMember_Struct {
+			/*000*/ RaidGeneral_Struct raidGen; //param = (group num-1); 0xFFFFFFFF = no group
+			/*144*/	uint32 parameter;
+			/*148*/ uint8 _class;
+			/*149*/	uint8 level;
+		};
+
+		struct RaidNote_Struct {
+			/*000*/ RaidGeneral_Struct general;
+			/*140*/ char note[64];
+		};
+
+		struct RaidMOTD_Struct {
+			/*000*/ RaidGeneral_Struct general;
+			/*140*/ char motd[1024];
+		};
+
+		struct RaidLeadershipUpdate_Struct {
+			/*000*/	uint32 action;
+			/*004*/	char player_name[64];
+			/*068*/	uint32 Unknown068;
+			/*072*/	char leader_name[64];
+			/*136*/ uint32 Unknown136;
+			/*140*/
+		};
+
+		struct RaidCreate_Struct {
+			/*00*/	uint32		action;	//=8
+			/*04*/	char		leader_name[64];
+			/*68*/	uint32		leader_id;
 		};
 
 		struct AugmentInfo_Struct
@@ -1314,6 +1403,22 @@ namespace TOB {
 			/*13*/	uint32	Amount;
 			/*17*/  uint32  StringSize; // set this to 0, but it's a string size
 			/*21*/  uint8   Lucky; // set to 1 to message a lucky beg
+		};
+
+		struct LFGGetMatchesRequest_Struct
+		{
+			/*000*/	uint32	Unknown000;
+			/*004*/	uint32	FromLevel;
+			/*008*/	uint32	ToLevel;
+			/*012*/ // no class-filter field on the wire in TOB (RoF2 had a 4th uint32 Classes field here)
+		};
+
+		struct LFPGetMatchesRequest_Struct
+		{
+			/*000*/	uint32	Unknown000;
+			/*004*/	uint32	FromLevel;
+			/*008*/	uint32	ToLevel;
+			/*012*/	uint32	Classes; // new in TOB; no equivalent in server's LFPGetMatchesRequest_Struct (dropped, see DECODE)
 		};
 
 #pragma pack()

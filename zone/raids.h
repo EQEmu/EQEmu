@@ -27,10 +27,11 @@ class EQApplicationPacket;
 class Mob;
 
 enum {
-	FindNextMarkerSlot     = 1,
-	FindNextAssisterSlot   = 2,
-	RaidDelegateMainAssist = 3,
-	RaidDelegateMainMarker = 4
+	FindNextMarkerSlot       = 1,
+	FindNextAssisterSlot     = 2,
+	RaidDelegateMainAssist   = 3,
+	RaidDelegateMainMarker   = 4,
+	RaidDelegateMasterLooter = 5
 };
 
 typedef enum {
@@ -83,6 +84,7 @@ struct RaidMember{
 	bool is_group_leader{ false };
 	bool is_raid_leader{ false };
 	bool is_looter{ false };
+	bool is_master_looter{ false };
 	uint8 main_marker{ 0 };
 	uint8 main_assister{ 0 };
 	bool is_bot{ false };
@@ -122,6 +124,10 @@ public:
 	void	SetGroupLeader(const char *who, bool glFlag = true);
 	Client	*GetGroupLeader(uint32 group_id);
 	void	RemoveGroupLeader(const char *who);
+
+	Group*	GetGroupObject(uint32 group_id) { return group_id < MAX_RAID_GROUPS ? subgroups[group_id] : nullptr; }
+	void	LoadGroupLeaders(uint32 gid, Group *g);
+	void	OnGroupDestroyed(uint32 gid, Group* g) { if (gid < MAX_RAID_GROUPS && subgroups[gid] == g) subgroups[gid] = nullptr; }
 	bool	IsGroupLeader(const char* name);
 	bool	IsGroupLeader(Client *c);
 	bool	IsRaidMember(const char* name);
@@ -133,6 +139,7 @@ public:
 	void    EmptyRaidMembers();
 
 	uint32	GetFreeGroup();
+	uint32	GetGroupWithRoom();
 	uint8	GroupCount(uint32 gid);
 	uint8	RaidCount();
 	uint32	GetHighestLevel();
@@ -145,6 +152,13 @@ public:
 	void	ChangeLootType(uint32 type);
 	void	AddRaidLooter(const char* looter);
 	void	RemoveRaidLooter(const char* looter);
+
+	void	DelegateRaidMasterLooter(const char *name);
+	void	UndelegateRaidMasterLooter(const char *name);
+	const char *GetRaidMasterLooter();
+
+	bool	GetGroupOnInvite() { return group_on_invite; }
+	void	SetGroupOnInvite(bool flag);
 
 	inline void	SetRaidMOTD(const std::string& in_motd) { motd = in_motd; };
 
@@ -192,6 +206,7 @@ public:
 	std::vector<RaidMember> GetMembersWithNotes();
 	void	DelegateAbilityAssist(Mob* mob, const char* who);
 	void	DelegateAbilityMark(Mob* mob, const char* who);
+	void	DelegateAbilityMasterLooter(Mob* mob, const char* who);
 	void    RaidMarkNPC(Mob* mob, uint32 parameter);
 	void    UpdateXTargetType(XTargetType Type, Mob* m, const char* name = (const char*)nullptr);
 	int     FindNextRaidDelegateSlot(int option);
@@ -204,6 +219,8 @@ public:
 	void	SendRaidCreate(Client *to);
 	void	SendRaidAdd(const char *who, Client *to);
 	void	SendRaidAddAll(const char *who);
+	void	SendClassLevelUpdate(const char *who, Client *to);
+	void	SendClassLevelUpdateAll(const char *who);
 	void	SendRaidRemove(const char *who, Client *to);
 	void	SendRaidRemoveAll(const char *who);
 	void	SendRaidDisband(Client *to);
@@ -219,8 +236,8 @@ public:
 	void    SendRaidAssistTarget();
 	void    SendAssistTarget(Client* c);
 	void	GroupUpdate(uint32 gid, bool initial = true);
-	void	SendGroupUpdate(Client *to);
 	void	SendGroupDisband(Client *to);
+	void	SendGroupLeaderChange(uint32 group_id, const char *old_leader_name, const char *new_leader_name);
 	void	SendRaidLock();
 	void	SendRaidUnlock();
 	void	SendRaidLockTo(Client *c);
@@ -284,17 +301,23 @@ public:
 	char main_assister_pcs[MAX_NO_RAID_MAIN_ASSISTERS][64];
 	char main_marker_pcs[MAX_NO_RAID_MAIN_MARKERS][64];
 	Raid_Marked_NPC	marked_npcs[MAX_MARKED_NPCS];
+
+	void	SetRaidLeadersColumn(uint32 gid, const std::string &column, const std::string &value) const;
 protected:
+
 	Client *leader;
 	bool locked;
 	uint32 LootType;
 	bool disbandCheck;
 	bool forceDisband;
 	std::string motd;
+	bool group_on_invite{ false };
 	RaidLeadershipAA_Struct raid_aa{};
 	GroupLeadershipAA_Struct group_aa[MAX_RAID_GROUPS]{};
 
 	GroupMentor group_mentor[MAX_RAID_GROUPS];
+
+	Group*	subgroups[MAX_RAID_GROUPS] {nullptr};
 
 	XTargetAutoHaters m_autohatermgr;
 };

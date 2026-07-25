@@ -7225,6 +7225,7 @@ void Bot::RemoveBotFromRaid(Bot* bot) {
 	if (bot_raid) {
 		uint32 gid = bot_raid->GetGroup(bot->GetName());
 		bot_raid->SendRaidGroupRemove(bot->GetName(), gid);
+		bot_raid->RemoveRaidDelegates(bot->GetName());
 		bot_raid->RemoveMember(bot->GetName());
 		bot_raid->GroupUpdate(gid);
 		if (!bot_raid->RaidCount()) {

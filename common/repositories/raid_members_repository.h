@@ -125,4 +125,169 @@ public:
 			)
 		);
 	}
+
+	static int ReplaceMember(
+		Database& db,
+		int32_t raid_id,
+		int32_t character_id,
+		int32_t bot_id,
+		uint32_t group_id,
+		int8_t class_,
+		int8_t level,
+		const std::string& character_name,
+		int8_t is_group_leader,
+		int8_t is_raid_leader,
+		int8_t is_looter
+	) {
+		auto results = db.QueryDatabase(
+			fmt::format(
+				"REPLACE INTO `{}` SET raidid = {}, charid = {}, bot_id = {}, "
+				"groupid = {}, _class = {}, level = {}, name = '{}', "
+				"isgroupleader = {}, israidleader = {}, islooter = {};",
+				TableName(),
+				raid_id,
+				character_id,
+				bot_id,
+				group_id,
+				class_,
+				level,
+				Strings::Escape(character_name),
+				is_group_leader,
+				is_raid_leader,
+				is_looter
+			)
+		);
+
+		return results.Success() ? results.RowsAffected() : 0;
+	}
+
+	static int UpdateGroupId(
+		Database& db,
+		const std::string& character_name,
+		uint32_t group_id
+	) {
+		auto results = db.QueryDatabase(
+			fmt::format(
+				"UPDATE `{}` SET `groupid` = {} WHERE `name` = '{}';",
+				TableName(),
+				group_id,
+				Strings::Escape(character_name)
+			)
+		);
+
+		return results.Success() ? results.RowsAffected() : 0;
+	}
+
+	static int UpdateGroupLeaderFlag(
+		Database& db,
+		const std::string& character_name,
+		int8_t value
+	) {
+		auto results = db.QueryDatabase(
+			fmt::format(
+				"UPDATE `{}` SET `isgroupleader` = {} WHERE `name` = '{}';",
+				TableName(),
+				value,
+				Strings::Escape(character_name)
+			)
+		);
+
+		return results.Success() ? results.RowsAffected() : 0;
+	}
+
+	static int UpdateRaidLeaderFlag(
+		Database& db,
+		const std::string& character_name,
+		int8_t value
+	) {
+		auto results = db.QueryDatabase(
+			fmt::format(
+				"UPDATE `{}` SET `israidleader` = {} WHERE `name` = '{}';",
+				TableName(),
+				value,
+				Strings::Escape(character_name)
+			)
+		);
+
+		return results.Success() ? results.RowsAffected() : 0;
+	}
+
+	static int UpdateMemberLevel(
+		Database& db,
+		const std::string& character_name,
+		int8_t level
+	) {
+		auto results = db.QueryDatabase(
+			fmt::format(
+				"UPDATE `{}` SET `level` = {} WHERE `name` = '{}';",
+				TableName(),
+				level,
+				Strings::Escape(character_name)
+			)
+		);
+
+		return results.Success() ? results.RowsAffected() : 0;
+	}
+
+	static int UpdateLooterFlag(
+		Database& db,
+		const std::string& character_name,
+		int8_t value
+	) {
+		auto results = db.QueryDatabase(
+			fmt::format(
+				"UPDATE `{}` SET `islooter` = {} WHERE `name` = '{}';",
+				TableName(),
+				value,
+				Strings::Escape(character_name)
+			)
+		);
+
+		return results.Success() ? results.RowsAffected() : 0;
+	}
+
+	static int ClearAllLooters(Database& db, int32_t raid_id)
+	{
+		auto results = db.QueryDatabase(
+			fmt::format(
+				"UPDATE `{}` SET `islooter` = 0 WHERE `raidid` = {};",
+				TableName(),
+				raid_id
+			)
+		);
+
+		return results.Success() ? results.RowsAffected() : 0;
+	}
+
+	static int ClearMasterLooter(Database& db, int32_t raid_id)
+	{
+		auto results = db.QueryDatabase(
+			fmt::format(
+				"UPDATE `{}` SET `is_master_looter` = 0 WHERE `raidid` = {};",
+				TableName(),
+				raid_id
+			)
+		);
+
+		return results.Success() ? results.RowsAffected() : 0;
+	}
+
+	static int UpdateMasterLooterFlag(
+		Database& db,
+		int32_t raid_id,
+		const std::string& character_name,
+		int8_t value
+	) {
+		auto results = db.QueryDatabase(
+			fmt::format(
+				"UPDATE `{}` SET `is_master_looter` = {} WHERE `raidid` = {} AND `name` = '{}';",
+				TableName(),
+				value,
+				raid_id,
+				Strings::Escape(character_name)
+			)
+		);
+
+		return results.Success() ? results.RowsAffected() : 0;
+	}
 };

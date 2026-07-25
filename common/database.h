@@ -194,7 +194,8 @@ public:
 		char* marknpc = nullptr,
 		char* mentoree = nullptr,
 		int* mentor_percent = nullptr,
-		GroupLeadershipAA_Struct* GLAA = nullptr
+		GroupLeadershipAA_Struct* GLAA = nullptr,
+		char* masterlooter = nullptr
 	);
 	std::string GetGroupLeaderName(uint32 group_id);
 	uint32 GetGroupID(const std::string& name);

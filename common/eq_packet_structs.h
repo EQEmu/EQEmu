@@ -4895,6 +4895,12 @@ struct RaidAddMember_Struct {
 /*139*/	uint8 flags[5]; //no idea if these are needed...
 };
 
+struct RaidUpdateClassLevel_Struct {
+/*000*/ RaidGeneral_Struct general; //parameter unused
+/*140*/ uint32 _class;
+/*144*/ uint8  level;
+};
+
 struct RaidNote_Struct {
 /*000*/ RaidGeneral_Struct general;
 /*140*/ char note[64];

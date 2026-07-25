@@ -324,76 +324,61 @@ void Client::CalculateLeadershipExp(uint64 &add_exp, uint8 conlevel)
 	{
 		add_exp = static_cast<uint64>(static_cast<float>(add_exp) * 0.8f);
 
-		if (GetGroup())
+		if (IsRaidGrouped())
 		{
+			if (Raid *raid = GetRaid()) {
+				// Raid leaders CAN NOT gain group AA XP, other group leaders can though!
+				if (raid->IsLeader(this)) {
+					if (m_pp.raid_leadership_points < MaxBankedRaidLeadershipPoints(GetLevel())
+						&& RuleI(Character, KillsPerRaidLeadershipAA) > 0) {
+						AddLeadershipEXP(0, RAID_EXP_PER_POINT / RuleI(Character, KillsPerRaidLeadershipAA));
+						MessageString(Chat::LeaderShip, GAIN_RAID_LEADERSHIP_EXP);
+					} else {
+						MessageString(Chat::LeaderShip, MAX_RAID_LEADERSHIP_POINTS);
+					}
+				} else {
+					if (m_pp.group_leadership_points < MaxBankedGroupLeadershipPoints(GetLevel())
+						&& RuleI(Character, KillsPerGroupLeadershipAA) > 0) {
+						uint32 group_id = raid->GetGroup(this);
+						uint64 exp = GROUP_EXP_PER_POINT / RuleI(Character, KillsPerGroupLeadershipAA);
+						Client *mentoree = raid->GetMentoree(group_id);
+						if (raid->GetMentorPercent(group_id) && mentoree &&
+							mentoree->GetGroupPoints() < MaxBankedGroupLeadershipPoints(mentoree->GetLevel())) {
+							uint64 mentor_exp = exp * (raid->GetMentorPercent(group_id) / 100.0f);
+							exp -= mentor_exp;
+							mentoree->AddLeadershipEXP(mentor_exp, 0);
+							mentoree->MessageString(Chat::LeaderShip, GAIN_GROUP_LEADERSHIP_EXP);
+						}
+
+						if (exp > 0) {
+							AddLeadershipEXP(exp, 0);
+							MessageString(Chat::LeaderShip, GAIN_GROUP_LEADERSHIP_EXP);
+						}
+					} else {
+						MessageString(Chat::LeaderShip, MAX_GROUP_LEADERSHIP_POINTS);
+					}
+				}
+			}
+		} else if (GetGroup()) {
 			if (m_pp.group_leadership_points < MaxBankedGroupLeadershipPoints(GetLevel())
-				&& RuleI(Character, KillsPerGroupLeadershipAA) > 0)
-			{
+				&& RuleI(Character, KillsPerGroupLeadershipAA) > 0) {
 				uint64 exp = GROUP_EXP_PER_POINT / RuleI(Character, KillsPerGroupLeadershipAA);
 				Client *mentoree = GetGroup()->GetMentoree();
 				if (GetGroup()->GetMentorPercent() && mentoree &&
-					mentoree->GetGroupPoints() < MaxBankedGroupLeadershipPoints(mentoree->GetLevel()))
-				{
+					mentoree->GetGroupPoints() < MaxBankedGroupLeadershipPoints(mentoree->GetLevel())) {
 					uint64 mentor_exp = exp * (GetGroup()->GetMentorPercent() / 100.0f);
 					exp -= mentor_exp;
 					mentoree->AddLeadershipEXP(mentor_exp, 0); // ends up rounded down
 					mentoree->MessageString(Chat::LeaderShip, GAIN_GROUP_LEADERSHIP_EXP);
 				}
-				if (exp > 0)
-				{
+
+				if (exp > 0) {
 					// possible if you mentor 100% to the other client
 					AddLeadershipEXP(exp, 0); // ends up rounded up if mentored, no idea how live actually does it
 					MessageString(Chat::LeaderShip, GAIN_GROUP_LEADERSHIP_EXP);
 				}
-			}
-			else
-			{
+			} else {
 				MessageString(Chat::LeaderShip, MAX_GROUP_LEADERSHIP_POINTS);
-			}
-		}
-		else
-		{
-			Raid *raid = GetRaid();
-			// Raid leaders CAN NOT gain group AA XP, other group leaders can though!
-			if (raid->IsLeader(this))
-			{
-				if (m_pp.raid_leadership_points < MaxBankedRaidLeadershipPoints(GetLevel())
-					&& RuleI(Character, KillsPerRaidLeadershipAA) > 0)
-				{
-					AddLeadershipEXP(0, RAID_EXP_PER_POINT / RuleI(Character, KillsPerRaidLeadershipAA));
-					MessageString(Chat::LeaderShip, GAIN_RAID_LEADERSHIP_EXP);
-				}
-				else
-				{
-					MessageString(Chat::LeaderShip, MAX_RAID_LEADERSHIP_POINTS);
-				}
-			}
-			else
-			{
-				if (m_pp.group_leadership_points < MaxBankedGroupLeadershipPoints(GetLevel())
-					&& RuleI(Character, KillsPerGroupLeadershipAA) > 0)
-				{
-					uint32 group_id = raid->GetGroup(this);
-					uint64 exp = GROUP_EXP_PER_POINT / RuleI(Character, KillsPerGroupLeadershipAA);
-					Client *mentoree = raid->GetMentoree(group_id);
-					if (raid->GetMentorPercent(group_id) && mentoree &&
-						mentoree->GetGroupPoints() < MaxBankedGroupLeadershipPoints(mentoree->GetLevel()))
-					{
-						uint64 mentor_exp = exp * (raid->GetMentorPercent(group_id) / 100.0f);
-						exp -= mentor_exp;
-						mentoree->AddLeadershipEXP(mentor_exp, 0);
-						mentoree->MessageString(Chat::LeaderShip, GAIN_GROUP_LEADERSHIP_EXP);
-					}
-					if (exp > 0)
-					{
-						AddLeadershipEXP(exp, 0);
-						MessageString(Chat::LeaderShip, GAIN_GROUP_LEADERSHIP_EXP);
-					}
-				}
-				else
-				{
-					MessageString(Chat::LeaderShip, MAX_GROUP_LEADERSHIP_POINTS);
-				}
 			}
 		}
 	}

@@ -490,6 +490,11 @@ int Client::HandlePacket(const EQApplicationPacket *app)
 		ClientPacketProc p;
 		p = ConnectedOpcodes[opcode];
 		if (p == nullptr) {
+			LogNetcode(
+				"Unknown opcode from client [{:#06x}] size [{}] -- add to patch_TOB.conf and handle",
+				app->GetProtocolOpcode(),
+				app->size
+			);
 			if (parse->PlayerHasQuestSub(EVENT_UNHANDLED_OPCODE)) {
 				std::vector<std::any> args = {const_cast<EQApplicationPacket *>(app)};
 				parse->EventPlayer(EVENT_UNHANDLED_OPCODE, this, "", 0, &args);
@@ -601,7 +606,6 @@ void Client::CompleteConnect()
 			raid->SendRaidCreate(this);
 			raid->SendRaidAdd(GetName(), this);
 			raid->SendBulkRaid(this);
-			raid->SendGroupUpdate(this);
 			raid->SendRaidMOTD(this);
 			if (raid->IsLeader(this)) { // We're a raid leader, lets update just in case!
 				raid->UpdateRaidAAs();
@@ -615,7 +619,6 @@ void Client::CompleteConnect()
 				raid->CheckGroupMentor(grpID, this);
 				if (raid->IsGroupLeader(GetName())) { // group leader same thing!
 					raid->UpdateGroupAAs(raid->GetGroup(this));
-					raid->GroupUpdate(grpID, false);
 				}
 			}
 			raid->SendGroupLeadershipAA(this, grpID); // this may get sent an extra time ...
@@ -1608,11 +1611,12 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 		char AssistName[64];
 		char PullerName[64];
 		char NPCMarkerName[64];
+		char MasterLooterName[64];
 		char mentoree_name[64];
 		int mentor_percent;
 		GroupLeadershipAA_Struct GLAA;
 		memset(ln, 0, 64);
-		database.GetGroupLeadershipInfo(group->GetID(), ln, MainTankName, AssistName, PullerName, NPCMarkerName, mentoree_name, &mentor_percent, &GLAA);
+		database.GetGroupLeadershipInfo(group->GetID(), ln, MainTankName, AssistName, PullerName, NPCMarkerName, mentoree_name, &mentor_percent, &GLAA, MasterLooterName);
 		group->LearnMembers();
 
 		if (!group->GetLeader()) {
@@ -1626,6 +1630,7 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 		group->SetMainAssist(AssistName);
 		group->SetPuller(PullerName);
 		group->SetNPCMarker(NPCMarkerName);
+		group->SetMasterLooter(MasterLooterName);
 		group->SetGroupAAs(&GLAA);
 		group->SetGroupMentor(mentor_percent, mentoree_name);
 		JoinGroupXTargets(group);
@@ -7173,9 +7178,35 @@ void Client::Handle_OP_GroupCancelInvite(const EQApplicationPacket *app)
 void Client::Handle_OP_GroupDelete(const EQApplicationPacket *app)
 {
 	//should check for leader, only they should be able to do this..
-	Group* group = GetGroup();
-	if (group)
-		group->DisbandGroup();
+	if (IsRaidGrouped()) {
+		Raid *raid = entity_list.GetRaidByClient(this);
+		if (raid != nullptr && raid->IsGroupLeader(GetName())) {
+			uint32 grp = raid->GetGroup(GetName());
+			if (grp < MAX_RAID_GROUPS) {
+				// Snapshot names first, MoveMember mutates raid->members
+				std::vector<std::string> member_names;
+				for (const auto &m : raid->members) {
+					if (m.group_number == grp && strlen(m.member_name) > 0) {
+						if (m.is_group_leader)
+							raid->SetGroupLeader(m.member_name, false);
+
+						member_names.emplace_back(m.member_name);
+					}
+				}
+
+				for (const auto &name : member_names) {
+					Mob *m = entity_list.GetMob(name.c_str());
+					raid->MoveMember(name.c_str(), RAID_GROUPLESS);
+					if (m && m->IsClient())
+						raid->SendGroupDisband(m->CastToClient());
+				}
+			}
+		}
+	} else {
+		Group* group = GetGroup();
+		if (group)
+			group->DisbandGroup();
+	}
 
 	if (LFP)
 		UpdateLFP();
@@ -7227,6 +7258,7 @@ void Client::Handle_OP_GroupDisband(const EQApplicationPacket *app)
 						if (strlen(raid->members[x].member_name) > 0 &&
 							strcmp(raid->members[x].member_name, memberToDisband->GetName()) != 0) {
 							raid->SetGroupLeader(raid->members[x].member_name);
+							raid->SendGroupLeaderChange(grp, memberToDisband->GetName(), raid->members[x].member_name);
 							break;
 						}
 					}
@@ -7575,37 +7607,42 @@ void Client::Handle_OP_GroupRoles(const EQApplicationPacket *app)
 
 	Group *g = GetGroup();
 
-	if (!g)
-		return;
-
-	switch (grs->RoleNumber)
-	{
-	case 1: //Main Tank
-	{
-		if (grs->Toggle)
-			g->DelegateMainTank(grs->Name1, grs->Toggle);
-		else
-			g->UnDelegateMainTank(grs->Name1, grs->Toggle);
-		break;
-	}
-	case 2: //Main Assist
-	{
-		if (grs->Toggle)
-			g->DelegateMainAssist(grs->Name1, grs->Toggle);
-		else
-			g->UnDelegateMainAssist(grs->Name1, grs->Toggle);
-		break;
-	}
-	case 3: //Puller
-	{
-		if (grs->Toggle)
-			g->DelegatePuller(grs->Name1, grs->Toggle);
-		else
-			g->UnDelegatePuller(grs->Name1, grs->Toggle);
-		break;
-	}
-	default:
-		break;
+	if (g != nullptr) {
+		switch (grs->RoleNumber)
+		{
+		case 1: //Main Tank
+			if (grs->Toggle)
+				g->DelegateMainTank(grs->Name1, grs->Toggle);
+			else
+				g->UnDelegateMainTank(grs->Name1, grs->Toggle);
+			break;
+		case 2: //Main Assist
+			if (grs->Toggle)
+				g->DelegateMainAssist(grs->Name1, grs->Toggle);
+			else
+				g->UnDelegateMainAssist(grs->Name1, grs->Toggle);
+			break;
+		case 3: //Puller
+			if (grs->Toggle)
+				g->DelegatePuller(grs->Name1, grs->Toggle);
+			else
+				g->UnDelegatePuller(grs->Name1, grs->Toggle);
+			break;
+		case 4: //Master Looter
+			if (grs->Toggle)
+				g->DelegateMasterLooter(grs->Name1);
+			else
+				g->UnDelegateMasterLooter(grs->Name1);
+			break;
+		case 5: //Mark NPC
+			if (grs->Toggle)
+				g->DelegateMarkNPC(grs->Name1);
+			else
+				g->UnDelegateMarkNPC(grs->Name1);
+			break;
+		default:
+			break;
+		}
 	}
 }
 
@@ -12453,6 +12490,7 @@ void Client::Handle_OP_RaidCommand(const EQApplicationPacket* app)
 		}
 	}
 
+	case RaidCommandAcceptInviteIntoExisting:
 	case RaidCommandAcceptInvite: {
 		Client* player_sending_invite = entity_list.GetClientByName(raid_command_packet->player_name);
 
@@ -12557,7 +12595,7 @@ void Client::Handle_OP_RaidCommand(const EQApplicationPacket* app)
 				}
 				else {
 					raid->SendRaidCreate(this);
-					raid->AddMember(this);
+					raid->AddMember(this, raid->GetGroupOnInvite() ? raid->GetGroupWithRoom() : RAID_GROUPLESS);
 					raid->SendBulkRaid(this);
 					raid->SendMakeLeaderPacketTo(raid->leadername, this);
 					if (raid->IsLocked()) {
@@ -12643,6 +12681,7 @@ void Client::Handle_OP_RaidCommand(const EQApplicationPacket* app)
 					else {
 						raid->SendRaidCreate(player_sending_invite);
 						raid->AddMember(player_sending_invite, RAID_GROUPLESS, true, false, true);
+						raid->SendMakeLeaderPacketTo(raid->leadername, player_sending_invite);
 					}
 
 					Client* client_to_add = nullptr;
@@ -12775,6 +12814,7 @@ void Client::Handle_OP_RaidCommand(const EQApplicationPacket* app)
 						raid->SendRaidCreate(player_sending_invite);
 						raid->SendRaidCreate(this);
 						raid->AddMember(player_sending_invite, RAID_GROUPLESS, true, false, true);
+						raid->SendMakeLeaderPacketTo(raid->leadername, player_sending_invite);
 						raid->SendBulkRaid(this);
 						raid->AddMember(this);
 						raid->SendMakeLeaderPacketTo(raid->leadername, this);
@@ -13044,6 +13084,19 @@ void Client::Handle_OP_RaidCommand(const EQApplicationPacket* app)
 
 		break;
 	}
+	case RaidCommandRemoveGroupLeader:
+	{
+		Raid* raid = entity_list.GetRaidByClient(this);
+		if (raid) {
+			uint32 group_id = raid->GetGroup(raid_command_packet->leader_name);
+			raid->SetGroupLeader(raid_command_packet->leader_name, false);
+			if (group_id < MAX_RAID_GROUPS) {
+				raid->UpdateGroupAAs(group_id);
+				raid->GroupUpdate(group_id);
+			}
+		}
+		break;
+	}
 	case RaidCommandRaidLock:
 	{
 		Raid* raid = entity_list.GetRaidByClient(this);
@@ -13135,6 +13188,14 @@ void Client::Handle_OP_RaidCommand(const EQApplicationPacket* app)
 		RaidNote_Struct* note = (RaidNote_Struct*)app->pBuffer;
 		raid->SaveRaidNote(raid_command_packet->leader_name, note->note);
 		raid->SendRaidNotesToWorld();
+		break;
+	}
+	case RaidCommandGroupOnInvite:
+	{
+		Raid* raid = entity_list.GetRaidByClient(this);
+		if (raid && raid->IsLeader(this))
+			raid->SetGroupOnInvite(raid_command_packet->parameter != 0);
+
 		break;
 	}
 	default: {
@@ -16806,6 +16867,13 @@ void Client::Handle_OP_RaidDelegateAbility(const EQApplicationPacket *app)
 			if (r) {
 				r->DelegateAbilityMark(this, das->Name);
 			}
+			break;
+		}
+		case RaidDelegateMasterLooter: {
+			auto r = GetRaid();
+			if (r)
+				r->DelegateAbilityMasterLooter(this, das->Name);
+
 			break;
 		}
 		default:

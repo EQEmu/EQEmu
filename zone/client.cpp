@@ -4954,6 +4954,9 @@ void Client::DiscoverItem(uint32 item_id) {
 
 void Client::UpdateLFP() {
 
+	if (IsRaidGrouped())
+		return;
+
 	Group *g = GetGroup();
 
 	if(g && !g->IsLeader(this)) {
@@ -5313,34 +5316,30 @@ bool Client::IsLeadershipEXPOn() {
 	if(!m_pp.leadAAActive)
 		return false;
 
-	Group *g = GetGroup();
+	// Raid-subgrouped members must never fall into the plain-Group branch
+	// below: once a raid subgroup is a real, findable Group (see
+	// Raid::VerifyRaid()), g->GroupCount() only reflects locally-resolved
+	// subgroup members, not the full persisted raid roster raid->GroupCount()
+	// uses -- checking raid status first keeps the "raid leaders can only
+	// gain raid AA XP" rule from being bypassed by a raid leader who also
+	// happens to lead their own subgroup.
+	if (IsRaidGrouped()) {
+		Raid *r = GetRaid();
 
-	if (g && g->IsLeader(this) && g->GroupCount() > 2)
-		return true;
-
-	Raid *r = GetRaid();
-
-	if (!r)
-		return false;
-
-	// raid leaders can only gain raid AA XP
-	if (r->IsLeader(this)) {
-		if (r->RaidCount() > 17)
-			return true;
-		else
+		if (!r)
 			return false;
+
+		// raid leaders can only gain raid AA XP
+		if (r->IsLeader(this))
+			return r->RaidCount() > 17;
+
+		uint32 gid = r->GetGroup(this);
+		return gid < MAX_RAID_GROUPS && r->IsGroupLeader(GetName()) && r->GroupCount(gid) > 2;
 	}
 
-	uint32 gid = r->GetGroup(this);
+	Group *g = GetGroup();
 
-	if (gid > 11) // not in a group
-		return false;
-
-	if (r->IsGroupLeader(GetName()) && r->GroupCount(gid) > 2)
-		return true;
-
-	return false;
-
+	return g && g->IsLeader(this) && g->GroupCount() > 2;
 }
 
 uint32 Client::GetAggroCount() {
