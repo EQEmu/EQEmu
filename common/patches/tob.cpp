@@ -2889,7 +2889,7 @@ namespace TOB
 			);
 
 			outapp->WriteUInt32(emu->general.action);
-			outapp->WriteString(emu->general.player_name)
+			outapp->WriteString(emu->general.player_name);
 			outapp->WriteUInt32(emu->general.unknown1);
 			outapp->WriteLengthString(strlen(emu->general.leader_name), emu->general.leader_name);
 			outapp->WriteUInt32(emu->_class);
