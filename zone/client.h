@@ -339,6 +339,11 @@ public:
 	LootItem *AdvLootResolve(uint16 corpse_id, int slot, uint32 expect_item);  // verify a stale ref
 	static uint64 AdvLootSellValue(const EQ::ItemData *d, int charges);  // what a vendor would pay
 	bool HandleAdvLootSay(const char *msg);        // handle /say alspick|alslootall|alsrefresh|alsfilters|alsfilterdel
+
+	// AoTv4 region-locked progression (zone/regions.cpp owns the logic)
+	bool UnlockRegion(uint32 region_id);   // false if the region does not exist or was already held
+	bool HasRegion(uint32 region_id);      // true if this char_id + region_id row exists
+	uint32 GetRegionMaxLevel();            // level ceiling from the best unlocked region
 //	void TraderPriceUpdate(const EQApplicationPacket *app);
 	uint8 WithCustomer(uint16 NewCustomer);
 	std::vector<uint32> GetKeyRing() { return keyring; }

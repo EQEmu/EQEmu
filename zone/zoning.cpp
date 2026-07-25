@@ -16,6 +16,7 @@
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "client.h"
+#include "regions.h"
 
 #include "common/eqemu_logsys.h"
 #include "common/events/player_event_logs.h"
@@ -193,6 +194,24 @@ void Client::Handle_OP_ZoneChange(const EQApplicationPacket *app) {
 		LogError("Zoning [{}]: Unable to get zone name for zone id [{}]", GetName(), target_zone_id);
 		SendZoneCancel(zc);
 		return;
+	}
+
+	/* AoTv4 region lock: refuse the zone BEFORE any of the work below (instance checks, zone data
+	   lookups, the actual handoff to world). SendZoneCancel is the loop-safe refusal -- it returns
+	   the client to m_RewindLocation rather than the spot that triggered the request, so standing on
+	   the zone line does not immediately re-fire it. A zone with no region mapping is unrestricted,
+	   and GMs are exempt (see RegionManager::CanEnterZone). */
+	{
+		std::string reason;
+		if (!region_manager.CanEnterZone(this, target_zone_id, reason)) {
+			Message(Chat::Red, "%s", reason.c_str());
+			LogZoning(
+				"Client [{}] blocked from zone [{}] ({}): region not unlocked",
+				GetCleanName(), target_zone_name, target_zone_id
+			);
+			SendZoneCancel(zc);
+			return;
+		}
 	}
 
 	auto target_instance_version = database.GetInstanceVersion(target_instance_id);
@@ -693,6 +712,22 @@ void Client::ProcessMovePC(uint32 zoneID, uint32 instance_id, float x, float y, 
 
 	if(zoneID == 0)
 		zoneID = zone->GetZoneID();
+
+	/* AoTv4 region lock, server-initiated side. Handle_OP_ZoneChange covers the client walking into a
+	   zone line; this covers everything the SERVER moves a player with -- quest MovePC, our PoK book
+	   travel, succor. Without it those would be a way straight past the lock. `ignorerestrictions`
+	   is honoured so GM moves and scripted teleports that deliberately bypass rules still work. */
+	if (!ignorerestrictions && zoneID != zone->GetZoneID()) {
+		std::string reason;
+		if (!region_manager.CanEnterZone(this, zoneID, reason)) {
+			Message(Chat::Red, "%s", reason.c_str());
+			LogZoning(
+				"Client [{}] blocked from server-side move to zone [{}]: region not unlocked",
+				GetCleanName(), zoneID
+			);
+			return;
+		}
+	}
 
 	if(zoneID == zone->GetZoneID() && instance_id == zone->GetInstanceID()) {
 		// TODO: Determine if this condition is necessary.

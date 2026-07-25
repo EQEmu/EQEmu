@@ -17,6 +17,7 @@
 */
 #include "zone.h"
 #include "advloot.h"
+#include "regions.h"
 
 #include "common/data_verification.h"
 #include "common/eqemu_logsys.h"
@@ -1203,6 +1204,7 @@ bool Zone::Init(bool is_static) {
 	LoadZoneObjects();
 	LoadZoneDoors();
 	LoadZoneBlockedSpells();
+	region_manager.LoadZoneRegions();   // AoTv4 region-locked progression (zone/regions.cpp)
 	LoadVeteranRewards();
 	LoadAlternateCurrencies();
 	LoadNPCEmotes(&npc_emote_list);

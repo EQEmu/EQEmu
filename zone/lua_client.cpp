@@ -1415,6 +1415,22 @@ void Lua_Client::SetItemPrice(int item_id, int price) {
 	self->SetItemPrice(static_cast<uint32>(item_id), static_cast<uint32>(price));
 }
 
+// AoTv4 region-locked progression
+bool Lua_Client::UnlockRegion(int region_id) {
+	Lua_Safe_Call_Bool();
+	return self->UnlockRegion(static_cast<uint32>(region_id));
+}
+
+bool Lua_Client::HasRegion(int region_id) {
+	Lua_Safe_Call_Bool();
+	return self->HasRegion(static_cast<uint32>(region_id));
+}
+
+int Lua_Client::GetRegionMaxLevel() {
+	Lua_Safe_Call_Int();
+	return static_cast<int>(self->GetRegionMaxLevel());
+}
+
 std::string Lua_Client::GetPriceBook() {
 	Lua_Safe_Call_String();
 	return self->GetPriceBook();
@@ -4040,6 +4056,9 @@ luabind::scope lua_register_client() {
 	.def("AddItemsToShop", &Lua_Client::AddItemsToShop)
 	.def("PullShopItem", &Lua_Client::PullShopItem)
 	.def("SetItemPrice", &Lua_Client::SetItemPrice)
+	.def("UnlockRegion", &Lua_Client::UnlockRegion)
+	.def("HasRegion", &Lua_Client::HasRegion)
+	.def("GetRegionMaxLevel", &Lua_Client::GetRegionMaxLevel)
 	.def("GetPriceBook", &Lua_Client::GetPriceBook)
 	.def("GetPriceLog", &Lua_Client::GetPriceLog)
 	.def("IsTrader", &Lua_Client::IsTrader)

@@ -336,6 +336,9 @@ set(repositories
     repositories/base/base_tributes_repository.h
     repositories/base/base_veteran_reward_templates_repository.h
     repositories/base/base_zone_points_repository.h
+    repositories/base/base_character_regions_unlocked_repository.h
+    repositories/base/base_regions_repository.h
+    repositories/base/base_zone_regions_repository.h
     repositories/base/base_zone_repository.h
 
     # Extended Repositories
@@ -532,6 +535,9 @@ set(repositories
     repositories/tributes_repository.h
     repositories/veteran_reward_templates_repository.h
     repositories/zone_points_repository.h
+    repositories/character_regions_unlocked_repository.h
+    repositories/regions_repository.h
+    repositories/zone_regions_repository.h
     repositories/zone_repository.h
 )
 

@@ -373,6 +373,9 @@ public:
 	int AddItemsToShop(std::string csv);
 	int PullShopItem(int serial);
 	void SetItemPrice(int item_id, int price);
+	bool UnlockRegion(int region_id);
+	bool HasRegion(int region_id);
+	int  GetRegionMaxLevel();
 	std::string GetPriceBook();
 	std::string GetPriceLog();
 	bool IsTrader();
