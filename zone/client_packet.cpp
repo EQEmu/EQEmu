@@ -16,6 +16,7 @@
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "client.h"
+#include "advloot.h"
 
 #include "common/data_bucket.h"
 #include "common/data_verification.h"
@@ -6275,6 +6276,7 @@ void Client::Handle_OP_EndLootRequest(const EQApplicationPacket *app)
 	}
 
 	SetLooting(0);
+	SendAdvLootClose();   // AoTv4: close the dll's Advanced Loot window with the corpse session
 
 	Entity* entity = entity_list.GetID(*((uint16*)app->pBuffer));
 	if (entity == 0) {
@@ -10319,9 +10321,24 @@ void Client::Handle_OP_LootRequest(const EQApplicationPacket *app)
 	}
 	if (ent->IsCorpse())
 	{
+		// AoTv4 Advanced Loot: in live's model the stock loot window does not open at all -- the corpse
+		// simply feeds your personal loot list. Answer the request immediately with OP_LootComplete so
+		// the client doesn't sit waiting on loot packets, then push the refreshed list. We deliberately
+		// do NOT SetLooting()/MakeLootRequestPackets(): the per-item ClaimLootSession in AdvLootSlot
+		// establishes the session only for the instant it takes to run the native LootCorpseItem, so a
+		// corpse is never left locked to a window that isn't open.
+		if (RuleB(AoT, AdvLootReplacesLootWindow)) {
+			auto outapp = new EQApplicationPacket(OP_LootComplete, 0);
+			QueuePacket(outapp);
+			safe_delete(outapp);
+			SendAdvLootData();
+			return;
+		}
+
 		SetLooting(ent->GetID()); //store the entity we are looting
 
 		ent->CastToCorpse()->MakeLootRequestPackets(this, app);
+		SendAdvLootData();   // complement mode: stock window AND the Advanced Loot window
 		return;
 	}
 	else {
@@ -10330,6 +10347,766 @@ void Client::Handle_OP_LootRequest(const EQApplicationPacket *app)
 		Corpse::SendLootReqErrorPacket(this);
 	}
 	return;
+}
+
+// ================================================================ AoTv4 Advanced Loot (complement mode)
+// The native loot window still opens (MakeLootRequestPackets above); this ADDITIONALLY drives the dll's
+// native AdvLootWnd over chat: on corpse-open SendAdvLootData() pushes "LOOTDATA <n>^lootslot|itemid|icon|
+// name|npc^..." (the dll swallows it), and /say alspick|alslootall|alsfilters|alsfilterdel route back into
+// HandleAdvLootSay(). Actual looting reuses the native Corpse::LootCorpseItem, so lore/weight/cursor/
+// remove-from-corpse safety is unchanged -- NO bespoke item-grant code (important after the escrow fixes).
+// Advanced Loot deliberately has NO range requirement (kill credit grants the loot, see
+// Corpse::ClaimLootSession). ADVLOOT_MAX_ROWS bounds the chat line: Client::Message
+// truncates at 4096 bytes and a burst of long lines gets dropped/reordered by the RoF2 chat pipe (the
+// lesson from the achievement live-refresh), so cap the row count rather than risk a silent truncation.
+static const int   ADVLOOT_MAX_ROWS  = 60;
+
+// Live's persistent per-item rules, set from the AN / AG / Never columns:
+//   AN "Always Need"  -- auto-marked need each time it drops
+//   AG "Always Greed" -- auto-marked greed; only wins a roll if nobody needs
+//   NV "Never"        -- "you will never be awarded it if apply filters is checked"
+// One bucket per character, "itemid:rule,itemid:rule". Rule 0 clears the entry.
+//   AS "Always Sell"  -- AoTv4 addition: auto-sold to coin at vendor rate the moment it drops
+enum AdvLootRule {
+	ADVLOOT_RULE_NONE = 0, ADVLOOT_RULE_AN = 1, ADVLOOT_RULE_AG = 2,
+	ADVLOOT_RULE_NV = 3, ADVLOOT_RULE_AS = 4
+};
+
+static std::map<uint32, int> AdvLootLoadRules(SharedDatabase &db, uint32 char_id)
+{
+	std::map<uint32, int> rules;
+	for (const auto &tok : Strings::Split(DataBucket::GetData(&db, fmt::format("alsrules_{}", char_id)), ",")) {
+		if (tok.empty()) { continue; }
+		const auto kv = Strings::Split(tok, ":");
+		if (kv.size() != 2) { continue; }
+		const uint32 iid = Strings::ToUnsignedInt(kv[0]);
+		const int    r   = Strings::ToInt(kv[1]);
+		if (iid && r >= ADVLOOT_RULE_AN && r <= ADVLOOT_RULE_AS) { rules[iid] = r; }
+	}
+	return rules;
+}
+
+static void AdvLootSaveRules(SharedDatabase &db, uint32 char_id, const std::map<uint32, int> &rules)
+{
+	std::string out;
+	for (const auto &e : rules) {
+		if (e.second == ADVLOOT_RULE_NONE) { continue; }
+		out += (out.empty() ? "" : ",") + fmt::format("{}:{}", e.first, e.second);
+	}
+	DataBucket::SetData(&db, fmt::format("alsrules_{}", char_id), out);
+}
+
+// "Apply Filters" checkbox state (default ON, like live). Only when it is on does an NV rule actually
+// hide the item -- otherwise the row still lists, just marked NV.
+static bool AdvLootApplyFilters(SharedDatabase &db, uint32 char_id)
+{
+	const std::string v = DataBucket::GetData(&db, fmt::format("alsapply_{}", char_id));
+	return v.empty() || v == "1";
+}
+
+// Live's rule: "when you receive credit for a kill" the items enter your PERSONAL loot list -- not
+// "when you open the corpse". So this lists every corpse in the zone we hold loot rights to
+// (Corpse::CanPlayerLoot, which NPC::Death already populates for the killer / group / raid per
+// RaidLootType), regardless of whether a loot window is open. Out-of-reach rows are still listed but
+// flagged locked=1, matching live's red-lock overlay: awardable, not lootable until you close.
+void Client::SendAdvLootData()
+{
+	const std::map<uint32, int> rules  = AdvLootLoadRules(database, CharacterID());
+	const bool                  filter = AdvLootApplyFilters(database, CharacterID());
+	std::string                 csv;
+	int                         n = 0;
+
+	for (const auto &ce : entity_list.GetCorpseList()) {
+		Corpse *corpse = ce.second;
+		if (!corpse || corpse->IsPlayerCorpse()) { continue; }        // personal list is NPC loot only
+		if (!corpse->CanPlayerLoot(CharacterID())) { continue; }      // no kill credit -> not your loot
+		// someone else mid-loot on this corpse: their session wins, don't advertise it
+		if (corpse->IsBeingLooted() && !corpse->IsBeingLootedBy(this)) { continue; }
+
+		// The player never opened this corpse, so nothing has numbered its items yet. Without this
+		// every row would carry an aliased handle and actions would land on the wrong item.
+		corpse->AssignLootSlots();
+
+		// Standing rules act the moment the item lands in your list -- that is the whole point of
+		// them. What "act" means depends on whether anyone else could contest it:
+		//
+		//   SOLO   Always Need / Always Greed both simply auto-loot (there is nobody to roll against),
+		//          and Always Sell auto-sells.
+		//   GROUP  Always Need / Always Greed / Always Sell become your opening vote and start the
+		//          30-second roll; the roll then resolves need > greed > sell (see advloot.cpp).
+		//
+		// Snapshot the slots first: looting and selling both mutate the corpse's item list.
+		{
+			const bool solo = (AdvLootManager::GroupKeyFor(this) == 0);
+			std::vector<std::pair<uint16, int>> acts;   // lootslot -> rule
+			for (auto *it : corpse->GetLootItems()) {
+				if (!it || it->lootslot == 0xFFFF) { continue; }
+				const auto ri = rules.find(it->item_id);
+				if (ri != rules.end() && ri->second != ADVLOOT_RULE_NV) {
+					acts.emplace_back(it->lootslot, ri->second);
+				}
+			}
+			for (const auto &a : acts) {
+				Corpse   *cp = entity_list.GetCorpseByID(corpse->GetID());
+				LootItem *li = cp ? cp->GetItem(a.first) : nullptr;
+				if (!li) { continue; }
+				if (a.second == ADVLOOT_RULE_AS && solo) {
+					AdvLootSell(corpse->GetID(), a.first, true);   // auto: never spam about worthless items
+				}
+				else if (solo) {                      // AN / AG solo -> just take it
+					AdvLootSlot(corpse->GetID(), a.first);
+				}
+				else {
+					advloot_manager.SeedRule(this, corpse->GetID(), a.first, li->item_id, a.second);
+				}
+			}
+		}
+
+		// Corpse name is "<npc>`s corpse"; the NPC Name column wants just the NPC.
+		std::string npc = corpse->GetCleanName();
+		for (const char *suffix : {"`s corpse", "'s corpse", " corpse"}) {
+			const auto p = npc.rfind(suffix);
+			if (p != std::string::npos) { npc.erase(p); break; }
+		}
+		for (auto &ch : npc) { if (ch == '|' || ch == '^') { ch = ' '; } }
+
+		for (auto *it : corpse->GetLootItems()) {
+			if (!it || it->lootslot == 0xFFFF) { continue; }          // not a client-visible loot slot
+			const auto ri   = rules.find(it->item_id);
+			const int  rule = (ri == rules.end()) ? ADVLOOT_RULE_NONE : ri->second;
+			// NV only hides while "Apply Filters" is checked -- live's exact wording. The item is never
+			// destroyed either way: it stays on the corpse and the stock loot window still shows it.
+			if (rule == ADVLOOT_RULE_NV && filter) { continue; }
+			const EQ::ItemData *d = database.GetItem(it->item_id);
+			if (!d) { continue; }
+			if (n >= ADVLOOT_MAX_ROWS) { break; }                     // keep the chat line bounded
+			std::string name = d->Name;
+			for (auto &ch : name) { if (ch == '|' || ch == '^') { ch = ' '; } }
+			// charges is the stack size for stackables; for everything else it's item charges (often 0/-1),
+			// which is not a quantity -- show 1.
+			const int qty = (d->Stackable && it->charges > 0) ? it->charges : 1;
+			// field 1 is "<corpse entity id>:<lootslot>" -- the list spans MANY corpses, so a bare
+			// lootslot would be ambiguous.
+			// group decision layer: my current ND/GD/NO vote and a short status for the row
+			const uint8 vote   = advloot_manager.VoteOf(this, corpse->GetID(), it->lootslot);
+			std::string status = advloot_manager.StatusText(this, corpse->GetID(), it->lootslot);
+			for (auto &ch : status) { if (ch == '|' || ch == '^') { ch = ' '; } }
+
+			// "<corpse>:<slot>:<itemid>" | itemid | icon | name | npc | qty | rule | vote | status | value
+			// The item id is repeated: once inside the reference (where the server uses it to verify the
+			// slot still holds what the client thinks) and once as its own field (where the dll reads it).
+			// Three characters of redundancy is cheaper than another field-offset mismatch.
+			csv += fmt::format(
+				"{}:{}:{}|{}|{}|{}|{}|{}|{}|{}|{}|{}^",
+				corpse->GetID(), it->lootslot, it->item_id,
+				it->item_id, d->Icon, name,
+				npc, qty, rule, vote, status, AdvLootSellValue(d, it->charges)
+			);
+			++n;
+		}
+		if (n >= ADVLOOT_MAX_ROWS) { break; }
+	}
+
+	Message(Chat::White, "%s", fmt::format("LOOTDATA {}^{}", n, csv).c_str());
+
+	// Group context for the window header: mode + who the master looter is. Sent alongside every list
+	// refresh so the readout can never disagree with the decisions the rows are showing.
+	const uint32 gk   = AdvLootManager::GroupKeyFor(this);
+	const auto   mode = advloot_manager.GetMode(gk);
+	std::string  ml;
+	if (gk) {
+		if (Raid *r = GetRaid()) {
+			ml = r->GetLeaderName();
+		}
+		else if (Group *g = GetGroup()) {
+			ml = g->GetLeaderName();
+		}
+	}
+	Message(Chat::White, "%s", fmt::format("LOOTMODE {}|{}", (int) mode, ml).c_str());
+}
+
+// Tell the dll to clear + hide the AdvLootWnd (the corpse session is over). The dll's chat detour
+// swallows this line, so it never reaches the chat window.
+void Client::SendAdvLootClose()
+{
+	Message(Chat::White, "LOOTCLOSE");
+}
+
+// The Edit Filters view: every saved rule, newest semantics first come first served.
+void Client::SendAdvLootFilters()
+{
+	const std::map<uint32, int> rules = AdvLootLoadRules(database, CharacterID());
+	std::string                 csv;
+	int                         n = 0;
+	for (const auto &e : rules) {
+		const EQ::ItemData *d = database.GetItem(e.first);
+		if (!d) { continue; }
+		std::string name = d->Name;
+		for (auto &ch : name) { if (ch == '|' || ch == '^') { ch = ' '; } }
+		const char *label = (e.second == ADVLOOT_RULE_AN) ? "Always Need"
+		                  : (e.second == ADVLOOT_RULE_AG) ? "Always Greed"
+		                  : (e.second == ADVLOOT_RULE_AS) ? "Always Sell" : "Never";
+		// carry the vendor value too -- the filters view has a Value column and it is worth seeing
+		csv += fmt::format("{}|{}|{}|{}|{}^", e.first, d->Icon, name, label, AdvLootSellValue(d, 1));
+		++n;
+	}
+	Message(
+		Chat::White,
+		"%s",
+		fmt::format("FILTERDATA {}^{}", n, csv).c_str()
+	);
+	// tell the dll the Apply Filters checkbox state so the box matches the server
+	Message(Chat::White, "%s", fmt::format("LOOTAPPLY {}", AdvLootApplyFilters(database, CharacterID()) ? 1 : 0).c_str());
+}
+
+// Loot one item via the NATIVE handler (reuses all its safety checks + corpse removal). The corpse
+// need NOT be open: ClaimLootSession establishes exactly the session state MakeLootRequestPackets
+// would have, and we hand it back afterwards unless the player already had it open for real.
+bool Client::AdvLootSlot(uint16 corpse_id, int slot)
+{
+	Corpse *corpse = entity_list.GetCorpseByID(corpse_id);
+	if (!corpse || slot < 0) { return false; }
+
+	// Group decision layer (advloot.cpp). In FFA this always passes; under Master Looter or Need/Greed
+	// it blocks anyone the group hasn't awarded the item to. Rights were already settled by
+	// Corpse::CanPlayerLoot -- this only arbitrates between people who all have rights.
+	if (LootItem *li = corpse->GetItem((uint16) slot)) {
+		std::string why;
+		if (!advloot_manager.CanLoot(this, corpse_id, (uint16) slot, li->item_id, why)) {
+			if (!why.empty()) { Message(Chat::Yellow, "%s", why.c_str()); }
+			return true;                                      // handled, just not allowed
+		}
+	}
+
+	const bool held_before = corpse->IsBeingLootedBy(this);   // a real, player-opened loot window
+	if (!held_before && !corpse->ClaimLootSession(this)) {
+		return false;                                         // no rights, or someone else holds it
+	}
+
+	// LootCorpseItem's 10ms anti-spam throttle is measured against the zone TICK, which does not move
+	// inside one packet handler -- so ANY server-side batch (Loot All, or several Always Need items
+	// landing off one kill) would loot exactly one item and have the rest fail. Clearing it here means
+	// every caller is safe rather than each batch loop having to remember. No duplication risk: the
+	// item is removed from the corpse, so a slot cannot be looted twice.
+	corpse->ResetLootCooldown();
+
+	auto app = new EQApplicationPacket(OP_LootItem, sizeof(LootingItem_Struct));
+	auto l   = (LootingItem_Struct *) app->pBuffer;
+	l->lootee  = corpse_id;
+	l->looter  = GetID();
+	l->slot_id = (uint16) slot;
+	// auto_loot=1 -> AutoPutLootInInventory (free bag slot), cursor only as the fallback. With 0 every
+	// item lands on the CURSOR, and the next loot then trips Character:CheckCursorEmptyWhenLooting
+	// (default true) -> error + ResetLooter, so Loot All would stop dead after one item.
+	l->auto_loot = 1;
+	corpse->LootCorpseItem(this, app);
+	safe_delete(app);
+
+	if (!held_before) { corpse->ReleaseLootSession(this); }
+	// the slot is gone (or refilled by a later corpse) -- drop any shared decision attached to it
+	advloot_manager.ForgetSlot(corpse_id, (uint16) slot);
+	return true;
+}
+
+// Render an item as STML for the Advanced Loot detail panel, laid out like the client's own item
+// display. STML is the same markup CStmlWnd renders everywhere else, so this reads as a real inspect
+// rather than a text dump. Kept on ONE chat line (no newlines) -- <br> does the line breaks.
+static std::string AdvLootItemStml(const EQ::ItemData *d, int charges)
+{
+	if (!d) { return ""; }
+
+	auto stat = [](const char *label, int v) {
+		return v ? fmt::format("{} {}{}  ", label, v > 0 ? "+" : "", v) : std::string();
+	};
+
+	std::string s;
+	s += fmt::format("<c \"#F0E68C\">{}</c><br>", d->Name);
+
+	// weapons lead with damage/delay, the way the item window does
+	if (d->Damage && d->Delay) {
+		const double ratio = (double) d->Damage / ((double) d->Delay / 10.0);
+		s += fmt::format("DMG: {}  Dly: {}  (ratio {:.2f})<br>", d->Damage, d->Delay, ratio);
+	}
+
+	if (d->AC)   { s += fmt::format("AC: {}  ", d->AC); }
+	if (d->HP)   { s += fmt::format("HP: {}  ", d->HP); }
+	if (d->Mana) { s += fmt::format("Mana: {}  ", d->Mana); }
+	if (d->AC || d->HP || d->Mana) { s += "<br>"; }
+
+	const std::string attrs =
+		stat("STR", d->AStr) + stat("STA", d->ASta) + stat("AGI", d->AAgi) + stat("DEX", d->ADex) +
+		stat("WIS", d->AWis) + stat("INT", d->AInt) + stat("CHA", d->ACha);
+	if (!attrs.empty()) { s += attrs + "<br>"; }
+
+	const std::string saves =
+		stat("SvMagic", d->MR) + stat("SvFire", d->FR) + stat("SvCold", d->CR) +
+		stat("SvDisease", d->DR) + stat("SvPoison", d->PR);
+	if (!saves.empty()) { s += saves + "<br>"; }
+
+	s += fmt::format("WT: {:.1f}  Size: {}<br>", (double) d->Weight / 10.0,
+	                 d->Size == 0 ? "TINY" : d->Size == 1 ? "SMALL" : d->Size == 2 ? "MEDIUM"
+	                              : d->Size == 3 ? "LARGE" : "GIANT");
+
+	// Spell effects, in the order the item window lists them. A proc is often the whole reason a
+	// weapon is worth keeping, so leaving it out made the panel misleading rather than merely sparse.
+	auto effect = [](const char *label, const EQ::item::ItemEffect_Struct &e) {
+		if (e.Effect <= 0 || !IsValidSpell(e.Effect)) { return std::string(); }
+		std::string line = fmt::format("<c \"#9CCFFF\">{}: {}</c>", label, GetSpellName(e.Effect));
+		if (e.Level) { line += fmt::format(" (level {})", e.Level); }
+		return line + "<br>";
+	};
+	s += effect("Combat Effect", d->Proc);    // the proc
+	s += effect("Effect",        d->Click);   // clicky
+	s += effect("Worn",          d->Worn);
+	s += effect("Focus",         d->Focus);
+	s += effect("Scroll",        d->Scroll);
+	s += effect("Bard",          d->Bard);
+
+	if (d->ReqLevel) { s += fmt::format("Required level: {}<br>", d->ReqLevel); }
+	if (d->RecLevel) { s += fmt::format("Recommended level: {}<br>", d->RecLevel); }
+
+	if (!d->NoDrop) { s += "<c \"#FF8080\">NO DROP</c><br>"; }
+	if (!d->NoRent) { s += "<c \"#FF8080\">TEMPORARY</c><br>"; }
+
+	// Compact coin, matching the list's Value column. Strings::Money spells it out in full
+	// ("2 platinum, 5 gold, 6 silver, and 4 copper"), which reads as a sentence in a stat block.
+	const uint64 value = Client::AdvLootSellValue(d, charges);
+	std::string  coin  = "none";
+	if (value) {
+		coin.clear();
+		if (value / 1000)       { coin += fmt::format("{}p ", value / 1000); }
+		if ((value / 100) % 10) { coin += fmt::format("{}g ", (value / 100) % 10); }
+		if ((value / 10)  % 10) { coin += fmt::format("{}s ", (value / 10) % 10); }
+		if (value % 10)         { coin += fmt::format("{}c",  value % 10); }
+	}
+	s += fmt::format("<c \"#E0C86E\">Vendor value: {}</c>", coin);
+
+	// the transport is a single chat line; strip anything that would break it apart
+	for (auto &ch : s) { if (ch == '\n' || ch == '\r' || ch == '^') { ch = ' '; } }
+	return s;
+}
+
+// What a vendor would pay for this item, using the same basis as Handle_OP_ShopPlayerSell:
+// item->Price scaled by Merchant:BuyCostMod. There is no vendor involved here, so the CHA/faction
+// CalcPriceMod term is deliberately left out -- auto-sell pays the flat, predictable rate.
+uint64 Client::AdvLootSellValue(const EQ::ItemData *d, int charges)
+{
+	if (!d || d->NoDrop == 0) { return 0; }        // No Drop items have no vendor value
+	const int    qty  = (d->Stackable && charges > 0) ? charges : 1;
+	const double each = (double) d->Price * (RuleB(Merchant, UseClassicPriceMod)
+	                                         ? 1.0
+	                                         : RuleR(Merchant, BuyCostMod));
+	return (uint64) (each * qty);
+}
+
+// Sell a corpse item straight to coin at vendor rate, without looting it first.
+//
+// This does NOT go through Corpse::LootCorpseItem, because nothing is being granted -- the item is
+// consumed. It still reuses the same rights + group gates as looting, and mirrors LootCorpseItem's
+// removal pair (DeleteItemOffCharacterCorpse then RemoveItem). Order is REMOVE THEN PAY: paying first
+// and failing to remove would duplicate the item, which is far worse than the reverse.
+bool Client::AdvLootSell(uint16 corpse_id, int slot, bool quiet)
+{
+	Corpse *corpse = entity_list.GetCorpseByID(corpse_id);
+	if (!corpse || slot < 0) { return false; }
+
+	LootItem *li = corpse->GetItem((uint16) slot);
+	if (!li) { return false; }
+
+	// same rights the loot path enforces
+	if (!corpse->CanPlayerLoot(CharacterID())) { return false; }
+	std::string why;
+	if (!advloot_manager.CanLoot(this, corpse_id, (uint16) slot, li->item_id, why)) {
+		if (!why.empty()) { Message(Chat::Yellow, "%s", why.c_str()); }
+		return true;
+	}
+
+	const EQ::ItemData *d = database.GetItem(li->item_id);
+	if (!d) { return false; }
+
+	const uint64 value = AdvLootSellValue(d, li->charges);
+	if (!value) {
+		// Nothing to sell it for. Leave it on the corpse so it can still be looted or left by hand.
+		// quiet=true is the auto-sell path: an Always Sell rule on a worthless item would otherwise
+		// print this on every single kill that drops one.
+		if (!quiet) {
+			Message(Chat::Yellow, "%s has no vendor value; it cannot be sold.", d->Name);
+		}
+		return true;
+	}
+
+	// Proceeds are divided between everyone entitled to roll on the corpse, exactly as a resolved
+	// Sell vote is. Paying the clicker 100% would make Sell a way to pocket the whole value of
+	// something the group jointly earned.
+	std::vector<uint32> entitled;
+	for (int i = 0; i < MAX_LOOTERS; i++) {
+		const int cid = corpse->GetAllowedLooter(i);
+		if (cid) { entitled.push_back((uint32) cid); }
+	}
+	if (entitled.empty()) { entitled.push_back(CharacterID()); }   // unrestricted corpse
+
+	const uint64 share = value / entitled.size();
+	const auto   money = [](uint64 v) {
+		return Strings::Money(v / 1000, (v / 100) % 10, (v / 10) % 10, v % 10);
+	};
+
+	database.DeleteItemOffCharacterCorpse(corpse->GetCorpseDBID(), li->equip_slot, li->item_id);
+	corpse->RemoveItem((uint16) slot);
+	advloot_manager.ForgetSlot(corpse_id, (uint16) slot);
+
+	for (uint32 cid : entitled) {
+		if (Client *sc = entity_list.GetClientByCharID(cid)) {
+			sc->AddMoneyToPP(share, true);
+			if (entitled.size() == 1) {
+				sc->Message(Chat::Yellow, "You sell %s for %s.", d->Name, money(share).c_str());
+			}
+			else {
+				sc->Message(
+					Chat::Yellow, "%s is sold for %s, split %d ways; your share is %s.",
+					d->Name, money(value).c_str(), (int) entitled.size(), money(share).c_str()
+				);
+			}
+		}
+	}
+	return true;
+}
+
+// "<corpse entity id>:<lootslot>:<item id>" -> its three parts.
+//
+// The item id is a GUARD, not decoration. Entity ids are recycled, corpses decay, and slots empty as
+// things are looted, so a reference the client captured a moment ago can resolve to a completely
+// different item -- which is exactly how an action aimed at one row ended up hitting another. Callers
+// verify the slot still holds this item before doing anything. item id 0 means "don't check" (an
+// older dll that has not been rebuilt yet).
+static bool AdvLootParseRef(const char *s, uint16 &corpse_id, int &slot, uint32 &item_id)
+{
+	unsigned int cid = 0, iid = 0;
+	int          sl  = -1;
+	const int    n   = sscanf(s, "%u:%d:%u", &cid, &sl, &iid);
+	if (n < 2 || cid == 0 || sl < 0) { return false; }
+	corpse_id = (uint16) cid;
+	slot      = sl;
+	item_id   = (n >= 3) ? iid : 0;
+	return true;
+}
+
+// Resolve a reference to the loot item it names, or nullptr if the world moved on underneath it.
+LootItem *Client::AdvLootResolve(uint16 corpse_id, int slot, uint32 expect_item)
+{
+	Corpse *corpse = entity_list.GetCorpseByID(corpse_id);
+	if (!corpse) { return nullptr; }
+	LootItem *li = corpse->GetItem((uint16) slot);
+	if (!li) { return nullptr; }
+	if (expect_item && li->item_id != expect_item) { return nullptr; }   // slot now holds something else
+	return li;
+}
+
+// Route the dll's /say als* commands. Returns true if it was one of ours (so the say is swallowed).
+bool Client::HandleAdvLootSay(const char *msg)
+{
+	if (!msg) { return false; }
+
+	if (strncmp(msg, "alspick ", 8) == 0) {
+		char ref[32] = {0};
+		char act[16] = {0};
+		if (sscanf(msg + 8, "%31s %15s", ref, act) == 2) {
+			uint16 corpse_id = 0;
+			int    slot      = -1;
+			uint32 want      = 0;
+			if (AdvLootParseRef(ref, corpse_id, slot, want)) {
+				if (strcmp(act, "loot") == 0) {
+					if (!AdvLootResolve(corpse_id, slot, want)) {
+						Message(Chat::Yellow, "That item is no longer there; the list has been refreshed.");
+						SendAdvLootData();
+						return true;
+					}
+					if (!AdvLootSlot(corpse_id, slot)) {
+						// no longer a range failure -- the corpse is gone, or someone else holds it
+						Message(Chat::Yellow, "That item is no longer available.");
+					}
+				}
+				else if (strcmp(act, "sell") == 0) {
+					if (!AdvLootResolve(corpse_id, slot, want)) {
+						Message(Chat::Yellow, "That item is no longer there; the list has been refreshed.");
+						SendAdvLootData();
+						return true;
+					}
+					AdvLootSell(corpse_id, slot);
+				}
+				else {
+					// AN / AG / Never / clear -- persistent per-ITEM rules, so resolve the row to its item id
+					int rule = -1;
+					if      (strcmp(act, "an")    == 0) { rule = ADVLOOT_RULE_AN; }
+					else if (strcmp(act, "ag")    == 0) { rule = ADVLOOT_RULE_AG; }
+					else if (strcmp(act, "never") == 0) { rule = ADVLOOT_RULE_NV; }
+					else if (strcmp(act, "asell") == 0) { rule = ADVLOOT_RULE_AS; }
+					else if (strcmp(act, "clear") == 0) { rule = ADVLOOT_RULE_NONE; }
+					// "leave" falls through with rule -1: a no-op, the item just stays on the corpse
+
+					if (rule >= 0) {
+						LootItem *li = AdvLootResolve(corpse_id, slot, want);
+						if (!li) {
+							// The row the client clicked no longer names what it did when the list was
+							// built. Refuse and resync rather than quietly acting on whatever occupies
+							// that slot now -- that is how a rule aimed at one item landed on another.
+							Message(Chat::Yellow, "That item is no longer there; the list has been refreshed.");
+							SendAdvLootData();
+							return true;
+						}
+
+						// Always Sell on something with no vendor value can never do anything, so say
+						// so instead of storing a rule that silently no-ops on every future drop.
+						if (li && rule == ADVLOOT_RULE_AS) {
+							const EQ::ItemData *sd = database.GetItem(li->item_id);
+							if (sd && !AdvLootSellValue(sd, li->charges)) {
+								Message(
+									Chat::Yellow,
+									"%s has no vendor value (No Drop or worthless) and cannot be set to Always Sell.",
+									sd->Name
+								);
+								li = nullptr;   // fall through without saving a rule
+							}
+						}
+
+						if (li) {
+							auto rules = AdvLootLoadRules(database, CharacterID());
+							// clicking the same rule again toggles it off, like the native checkboxes
+							const auto cur     = rules.find(li->item_id);
+							const bool clearing =
+								(rule == ADVLOOT_RULE_NONE || (cur != rules.end() && cur->second == rule));
+							if (clearing) { rules.erase(li->item_id); }
+							else          { rules[li->item_id] = rule; }
+							AdvLootSaveRules(database, CharacterID(), rules);
+
+							// Always name the item the rule landed on. Which row an action actually hit
+							// has been the single most persistent bug in this window, and an explicit
+							// echo makes a mis-click self-evident instead of something to reverse-engineer.
+							const EQ::ItemData *rd = database.GetItem(li->item_id);
+							const char *rn = (rule == ADVLOOT_RULE_AN) ? "Always Need"
+							               : (rule == ADVLOOT_RULE_AG) ? "Always Greed"
+							               : (rule == ADVLOOT_RULE_AS) ? "Always Sell" : "Never";
+							Message(
+								Chat::Yellow, "%s: %s",
+								clearing ? "Cleared rule on" : rn,
+								rd ? rd->Name : "that item"
+							);
+						}
+					}
+				}
+			}
+		}
+		SendAdvLootData();
+		return true;
+	}
+	if (strcmp(msg, "alslootall") == 0) {
+		const auto rules  = AdvLootLoadRules(database, CharacterID());
+		const bool filter = AdvLootApplyFilters(database, CharacterID());
+		// Snapshot (corpse, slot) pairs across EVERY in-reach corpse we have rights to, because looting
+		// mutates each corpse's item list as we go.
+		std::vector<std::pair<uint16, uint16>> picks;
+		for (const auto &ce : entity_list.GetCorpseList()) {
+			Corpse *corpse = ce.second;
+			if (!corpse || corpse->IsPlayerCorpse()) { continue; }
+			if (!corpse->CanPlayerLoot(CharacterID())) { continue; }
+			if (corpse->IsBeingLooted() && !corpse->IsBeingLootedBy(this)) { continue; }
+			// no range filter: kill credit is what grants the loot, not proximity
+			for (auto *it : corpse->GetLootItems()) {
+				if (!it || it->lootslot == 0xFFFF) { continue; }
+				const auto ri = rules.find(it->item_id);
+				// Loot All must honour the same NV filter the list is showing
+				if (filter && ri != rules.end() && ri->second == ADVLOOT_RULE_NV) { continue; }
+				{
+					picks.emplace_back(corpse->GetID(), it->lootslot);
+				}
+			}
+		}
+
+		for (const auto &p : picks) {
+			// Inventory filled up and an item fell through to the cursor: stop cleanly instead of
+			// letting LootCorpseItem's cursor check fire ResetLooter and end the whole session.
+			if (RuleB(Character, CheckCursorEmptyWhenLooting) && !GetInv().CursorEmpty()) {
+				Message(Chat::Yellow, "Loot All stopped -- clear your cursor, then Loot All again.");
+				break;
+			}
+			Corpse *corpse = entity_list.GetCorpseByID(p.first);
+			if (!corpse) { continue; }                 // emptied + deleted under us
+			AdvLootSlot(p.first, p.second);
+		}
+		SendAdvLootData();
+		return true;
+	}
+	// "/say alsinspect <corpse:slot:itemid>" -- push the item's stats to the window's detail panel as
+	// STML (the same markup the client's own item display renders), so nothing goes to chat.
+	if (strncmp(msg, "alsinspect ", 11) == 0) {
+		uint16 corpse_id = 0;
+		int    slot      = -1;
+		uint32 want      = 0;
+		if (AdvLootParseRef(msg + 11, corpse_id, slot, want)) {
+			LootItem *li = AdvLootResolve(corpse_id, slot, want);
+			const EQ::ItemData *d = li ? database.GetItem(li->item_id) : nullptr;
+			if (d) {
+				Message(Chat::White, "%s", fmt::format("LOOTINFO {}", AdvLootItemStml(d, li->charges)).c_str());
+			}
+			else {
+				Message(Chat::White, "LOOTINFO ");   // clears the panel
+			}
+		}
+		return true;
+	}
+	// "/say alssellall" -- sell every listed item at vendor rate in one go
+	if (strcmp(msg, "alssellall") == 0) {
+		const auto rules  = AdvLootLoadRules(database, CharacterID());
+		const bool filter = AdvLootApplyFilters(database, CharacterID());
+		std::vector<std::pair<uint16, uint16>> picks;
+		for (const auto &ce : entity_list.GetCorpseList()) {
+			Corpse *corpse = ce.second;
+			if (!corpse || corpse->IsPlayerCorpse()) { continue; }
+			if (!corpse->CanPlayerLoot(CharacterID())) { continue; }
+			if (corpse->IsBeingLooted() && !corpse->IsBeingLootedBy(this)) { continue; }
+			corpse->AssignLootSlots();
+			for (auto *it : corpse->GetLootItems()) {
+				if (!it || it->lootslot == 0xFFFF) { continue; }
+				const auto ri = rules.find(it->item_id);
+				if (filter && ri != rules.end() && ri->second == ADVLOOT_RULE_NV) { continue; }
+				picks.emplace_back(corpse->GetID(), it->lootslot);
+			}
+		}
+		for (const auto &p : picks) { AdvLootSell(p.first, p.second); }
+		SendAdvLootData();
+		return true;
+	}
+	// "/say alsinspectitem <itemid>" -- inspect straight from an item id, with no corpse involved.
+	// The Edit Filters view lists RULES, not corpse contents, so its rows have no corpse:slot handle.
+	if (strncmp(msg, "alsinspectitem ", 15) == 0) {
+		const uint32        iid = (uint32) atoi(msg + 15);
+		const EQ::ItemData *d   = iid ? database.GetItem(iid) : nullptr;
+		Message(
+			Chat::White, "%s",
+			d ? fmt::format("LOOTINFO {}", AdvLootItemStml(d, 1)).c_str() : "LOOTINFO "
+		);
+		return true;
+	}
+	if (strcmp(msg, "alsrefresh") == 0) { SendAdvLootData();    return true; }
+	if (strcmp(msg, "alsfilters") == 0) { SendAdvLootFilters(); return true; }
+	// "/say alsfilterset <itemid> <rule>" -- change an existing rule from the Edit Filters view
+	if (strncmp(msg, "alsfilterset ", 13) == 0) {
+		unsigned int iid  = 0;
+		int          rule = 0;
+		if (sscanf(msg + 13, "%u %d", &iid, &rule) == 2 &&
+		    iid && rule >= ADVLOOT_RULE_AN && rule <= ADVLOOT_RULE_AS) {
+			auto rules  = AdvLootLoadRules(database, CharacterID());
+			rules[iid]  = rule;
+			AdvLootSaveRules(database, CharacterID(), rules);
+		}
+		SendAdvLootFilters();
+		return true;
+	}
+	if (strncmp(msg, "alsfilterdel ", 13) == 0) {
+		auto rules = AdvLootLoadRules(database, CharacterID());
+		rules.erase((uint32) atoi(msg + 13));
+		AdvLootSaveRules(database, CharacterID(), rules);
+		SendAdvLootFilters();
+		return true;
+	}
+	// ---------------- group/raid shared loot (advloot.cpp owns the decisions) ----------------
+	// "/say alsmode ffa|master|roll" -- master looter (or group leader) sets how the group splits loot
+	if (strncmp(msg, "alsmode ", 8) == 0) {
+		const uint32 gk = AdvLootManager::GroupKeyFor(this);
+		if (!gk) {
+			Message(Chat::Yellow, "You are not in a group or raid.");
+			return true;
+		}
+		if (!AdvLootManager::IsMasterLooter(this)) {
+			Message(Chat::Red, "Only the master looter can change the loot mode.");
+			return true;
+		}
+		const char *m    = msg + 8;
+		AdvLootMode mode = ADVLOOT_MODE_FFA;
+		if      (strcmp(m, "master") == 0) { mode = ADVLOOT_MODE_MASTER; }
+		else if (strcmp(m, "roll")   == 0) { mode = ADVLOOT_MODE_NEEDGREED; }
+		advloot_manager.SetMode(gk, mode);
+		const char *label = (mode == ADVLOOT_MODE_MASTER) ? "Master Looter"
+		                  : (mode == ADVLOOT_MODE_NEEDGREED) ? "Need/Greed" : "Free For All";
+		entity_list.MessageGroup(this, true, Chat::Yellow, "Group loot is now %s.", label);
+		advloot_manager.NotifyGroup(gk);
+		return true;
+	}
+	// "/say alsroll <corpse:slot> nd|gd|no"
+	if (strncmp(msg, "alsroll ", 8) == 0) {
+		char ref[32] = {0};
+		char v[8]    = {0};
+		if (sscanf(msg + 8, "%31s %7s", ref, v) == 2) {
+			uint16 corpse_id = 0;
+			int    slot      = -1;
+			uint32 want      = 0;
+			if (AdvLootParseRef(ref, corpse_id, slot, want)) {
+				LootItem *li = AdvLootResolve(corpse_id, slot, want);
+				if (li) {
+					const uint8 vote = (strcmp(v, "nd") == 0) ? ADVLOOT_VOTE_NEED
+					                 : (strcmp(v, "gd") == 0) ? ADVLOOT_VOTE_GREED
+					                 : (strcmp(v, "sl") == 0) ? ADVLOOT_VOTE_SELL
+					                                          : ADVLOOT_VOTE_PASS;
+					advloot_manager.Vote(this, corpse_id, (uint16) slot, li->item_id, vote);
+				}
+			}
+		}
+		SendAdvLootData();
+		return true;
+	}
+	// "/say alsresolve <corpse:slot>" -- master looter runs the roll now
+	if (strncmp(msg, "alsresolve ", 11) == 0) {
+		uint16 corpse_id = 0;
+		int    slot      = -1;
+		uint32 want      = 0;
+		if (AdvLootParseRef(msg + 11, corpse_id, slot, want)) {
+			if (!AdvLootManager::IsMasterLooter(this)) {
+				Message(Chat::Red, "Only the master looter can call the roll.");
+			}
+			else {
+				advloot_manager.Resolve(this, corpse_id, (uint16) slot);
+			}
+		}
+		SendAdvLootData();
+		return true;
+	}
+	// "/say alsaward <corpse:slot> <player>"
+	if (strncmp(msg, "alsaward ", 9) == 0) {
+		char ref[32]  = {0};
+		char who[64]  = {0};
+		if (sscanf(msg + 9, "%31s %63s", ref, who) == 2) {
+			uint16 corpse_id = 0;
+			int    slot      = -1;
+			uint32 want      = 0;
+			if (AdvLootParseRef(ref, corpse_id, slot, want)) {
+				advloot_manager.Award(this, corpse_id, (uint16) slot, who);
+			}
+		}
+		SendAdvLootData();
+		return true;
+	}
+	// "/say alsfree <corpse:slot>" -- master looter releases an item to first-come-first-served
+	if (strncmp(msg, "alsfree ", 8) == 0) {
+		uint16 corpse_id = 0;
+		int    slot      = -1;
+		uint32 want      = 0;
+		if (AdvLootParseRef(msg + 8, corpse_id, slot, want)) {
+			advloot_manager.SetFreeGrab(this, corpse_id, (uint16) slot);
+		}
+		SendAdvLootData();
+		return true;
+	}
+
+	// "Apply Filters" checkbox -> whether NV rules actually hide rows
+	if (strncmp(msg, "alsapply ", 9) == 0) {
+		DataBucket::SetData(
+			&database,
+			fmt::format("alsapply_{}", CharacterID()),
+			(atoi(msg + 9) != 0) ? "1" : "0"
+		);
+		SendAdvLootData();
+		return true;
+	}
+	return false;
 }
 
 void Client::Handle_OP_ManaChange(const EQApplicationPacket *app)

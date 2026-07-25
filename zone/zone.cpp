@@ -16,6 +16,7 @@
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "zone.h"
+#include "advloot.h"
 
 #include "common/data_verification.h"
 #include "common/eqemu_logsys.h"
@@ -1520,6 +1521,9 @@ uint32 Zone::CountAuth() {
 
 bool Zone::Process() {
 	spawn_conditions.Process();
+
+	// AoTv4 Advanced Loot: expire group Need/Greed rolls once their timer runs out.
+	advloot_manager.Process();
 
 	if (spawn2_timer.Check()) {
 		LinkedListIterator<Spawn2 *> iterator(spawn2_list);

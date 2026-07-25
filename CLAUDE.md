@@ -15,6 +15,23 @@ so it works on a **vanilla RoF2 client — no MacroQuest/E3 required**.
 
 ---
 
+## 0. Version control — THREE separate git repos, and the parent ignores two of them
+
+`/src` is its own repo, but **`.devcontainer/.gitignore` has `repo/`**, so the two most valuable trees
+are NOT in it — they are independent nested clones with their own remotes and branches:
+
+| Tree | Repo / remote | Branch holding AoTv4 work |
+|---|---|---|
+| `/src` (server C++, SQL, docs) | this repo | `aotv4-spell-rebuild` |
+| `.devcontainer/repo/eq-core-dll` (the **dll**) | `Twochords/Dinput` | `aotv4-advloot-module` |
+| `.devcontainer/repo/quests` (**all Lua**) | clone of `ProjectEQ/projecteqquests` | `aotv4` |
+
+⚠️ **`git status` in `/src` tells you NOTHING about the dll or the Lua.** As of 2026-07-25 every AoTv4
+Lua module (`spell_choice`, `aa_choice`, `aa_pool`, `era_system`, `pok_travel`, `bazaar_broker`, the
+43xxx spell scripts…) had **never been committed anywhere**, and the dll had nothing since the
+`tradeskill window` commit. Both now have a first recovery point on the branches above (local commits,
+not pushed). **`cd` into each repo and check it separately before assuming work is safe.**
+
 ## 1. Environment & layout
 
 - `/src` (dev container) == `C:\AoTv3\AoTv4` (Windows, 9p mount). The EQ **client** is a
@@ -558,6 +575,25 @@ quantity and add a priced item to your shop) / **My Shop** (pull a listing back)
   (`ZSList::SendPacket`) → each zone pushes `AddTraderToBazaarWindow` to all online RoF2 clients. So a listing
   appears in others' open bazaar windows without a relog — but the buyer must still click **Search** (the
   bazaar has no passive item feed). This only *worked* once the global-search fix above unmasked it.
+- ⚠️⚠️ **The `trader` table is PERMANENT escrow storage — NEVER truncate or wholesale-delete it (2026-07).**
+  A listed item is removed from the player's satchel and lives ONLY as its `trader` row, so any stock code
+  that clears the table destroys REAL items (not a runtime cache like on live EQ). Five stock deletion paths
+  were closed — do not reintroduce them:
+  1. **`Database::ClearTraderDetails`** (`common/database.cpp`) — ran `TRUNCATE TABLE trader` on **every world
+     boot** (`world_boot.cpp`), wiping ALL shops on any restart. Now only clears the transient
+     `active_transaction` lock.
+  2. **`Client::TraderEndTrader`** (`zone/trading.cpp`) — the stock `!persist_listings` branch did
+     `DeleteWhere(char_id)`; it's called on **zoning, camp, inventory moves, invalid-item, …** (default flag
+     = delete). Delete is disabled — end-trader only flips live state now.
+  3. **Trader's-Satchel move** (`zone/inventory.cpp`) — moving any item in/out of a satchel `while IsTrader()`
+     ended trading (→ deleted). The whole block is removed: escrowed items aren't in the satchel, so staging
+     the next item to list must not disturb the shop.
+  4. **Native satchel relist** (`TraderStartTrader`) / **price=0 unlist** (`UpdateTraderItemPrice`, zonedb.cpp)
+     / **Bazaar-zone cycle** (`CheckToClearTraderAndBuyerTables`, entity.cpp) — dormant native-window paths,
+     defensively neutered so they never wipe escrow.
+
+  Listings are removed by EXACTLY three legit paths: **unlist (`PullShopItem`), a sale, and login
+  reconciliation (`ReclaimOfflineShop`)**. All fixes are **world + zone** binaries → need a restart/cutover.
 - **Do NOT resurrect** (removed on request): the Bazaar Broker NPC (2000050), the Shopkeeper stand-in NPC
   (2000051), the Trader's-Satchel `vpset/vshop` flow, or `Bazaar:UseAlternateBazaarSearch` (keep it false —
   it's Bazaar-zone-sharded, the opposite of trader-anywhere).
@@ -726,3 +762,123 @@ categories showing 0/0 and later in-scope tiers empty. Fixes:
 - **Native EQ-menu "Achievements" button is intentionally NOT hooked** — it opens RoF2's stock `CAchievementsWnd`
   (which we never populate), not our window. Redirecting it needs RE of the client's native-open call; by choice
   the window is opened via `#ach`/`/ach` instead.
+
+## 16. Advanced Loot window (`/advl`) — 2026-07
+
+A native SIDL **Advanced Loot** window in **complement mode**: the stock RoF2 loot window still opens
+(`MakeLootRequestPackets` is untouched); ours lists the SAME corpse and adds **Loot / Leave / Never**,
+**Loot All**, and a persistent **Never** filter list. Same "server → chat line → dll → window" pattern as
+§3/§6/§11/§13/§15.
+
+- **Protocol (chat, dll swallows all of it):** server → `LOOTDATA <n>^lootslot|itemid|icon|name|npcname|qty^…`
+  (pushed from `Handle_OP_LootRequest`; `qty` = stack size for stackables else 1, appended **last** so an
+  older 5-field dll parse still works), `FILTERDATA <n>^itemid|icon|name|rule^…`, `LOOTCLOSE`
+  (from `Handle_OP_EndLootRequest` + `event_enter_zone`). dll → `/say alspick <lootslot> loot|leave|never`,
+  `/say alslootall`, `/say alsrefresh`, `/say alsfilters`, `/say alsfilterdel <itemid>`.
+- **Server (`zone/client_packet.cpp`, `Client::`):** `SendAdvLootData` / `SendAdvLootFilters` /
+  `SendAdvLootClose` / `AdvLootSlot` / `HandleAdvLootSay`. The `/say als*` commands are intercepted in
+  **`Client::ChannelMessageReceived`** (`zone/client.cpp`, before EVENT_SAY/broadcast) so they never spam
+  chat or reach quests — **NOT** in Lua, unlike the other windows. **Needs a zone rebuild.**
+- ⚠️ **Looting reuses the NATIVE `Corpse::LootCorpseItem`** — `AdvLootSlot` synthesizes an `OP_LootItem`
+  packet and calls it, so lore/cursor/weight/corpse-removal are the stock checks and there is **no bespoke
+  item-grant path** (the lesson from the escrow work, §13). It only works while the corpse is actually being
+  looted (`LootCorpseItem` requires `IsBeingLootedBy`) — which is why this is complement mode, not a
+  standalone accumulating loot list.
+- **`lootslot` is the handle**, not an entity id (the dll's `g_lootEid[]` is historically misnamed).
+  `Corpse::RemoveItem` does **not** renumber lootslots, so `alslootall`'s slot snapshot stays valid while
+  it loots down the list.
+- ⚠️ **Two traps when driving `LootCorpseItem` from a server-side batch (both fixed; don't reintroduce):**
+  1. **The 10 ms loot throttle is per zone TICK.** `Corpse::m_loot_cooldown_timer(10)` is checked against
+     the global `current_time`, which does **not** advance inside one packet handler — so in a tight loop
+     the first `Check()` passes and resets it and **every later item fails**, each failure calling
+     `SendEndLootErrorPacket` + `ResetLooter()` (Loot All would loot one item and kill the loot session).
+     `Corpse::ResetLootCooldown()` (corpse.h, `Timer::Trigger()`) is called between items. Safe because
+     `LootCorpseItem` removes the item from the corpse, so a slot can't be looted twice.
+  2. **`auto_loot` must be 1.** With `0`, `LootCorpseItem` does `PutLootInInventory(slotCursor,…)` — every
+     item piles on the **cursor**, and `Character:CheckCursorEmptyWhenLooting` (default **true**) then
+     refuses the next loot *and* calls `ResetLooter()`. With `1` it uses `AutoPutLootInInventory` (free bag
+     slot, cursor only as fallback). `alslootall` additionally **stops cleanly** if the cursor is occupied.
+  The synthesized `OP_LootItem` carries a **server-space** lootslot; the ACK `QueuePacket(app)` runs through
+  `ENCODE(OP_LootItem)` (`ServerToRoF2CorpseMainSlot`), so it keeps the native loot window in sync.
+- **Never list** = data bucket `alsnever_<charid>` (CSV of item ids). A filtered item is only **omitted from
+  LOOTDATA** — it stays on the corpse and still shows in the native loot window. Nothing is destroyed.
+- **dll — its OWN translation unit `core_advloot.cpp/.h`** (2026-07-25; was inside `core_spellwindow.cpp`),
+  like `core_allcasters` / `core_achievements_native`. Flag `areLootWindowEnabled` → `InitAdvLoot()`.
+  It installs **NO detours**: the dll already owns `dsp_chat` / `InterpretCmd` / `ProcessGameEvents` and two
+  modules can't hook the same address, so those call in via `AdvLootParseTransport` (LOOTDATA/FILTERDATA/
+  LOOTCLOSE), `AdvLootIsOurEcho` (`/say als*` echoes), `AdvLootShow` (`/advl`, from `core_bazaar.h`) and
+  `AdvLootOnUiReset` (from the `CleanGameUI`/`ReloadUI` detour `core_achievements_native.cpp` owns).
+  `AdvLootWnd : CCustomWnd` over `EQUI_AdvLootWnd.xml`, with the same `ppSidlMgr`/`ppWndMgr` wiring fix as
+  §15. **Static layout only** and **one listbox** (§13). The game-thread command queue is shared as
+  `AoTQueueGameCommand()` (`VendorQueue` is now a wrapper on it).
+  ⚠️ New `.cpp` files **must be added to `eq-core-dll-vs2022.vcxproj`** or they silently don't compile.
+  The old **GDI** loot overlay was deleted (~300 lines) — it had been dead since the SIDL window landed.
+- ✅ **ALWAYS run `bash aotv4_client_install/validate_ui_xml.sh` before copying any `EQUI_*.xml` into
+  the client.** It checks the four things that have actually broken us: `--` inside a comment, tag
+  balance, undefined `<Pieces>` targets, and modern-only tags (`<Sortable>`, column `<Tooltip>`) that
+  no RoF2-shipped file uses. The `--` bug has cost TWO sessions — the second time it was written into
+  a comment that was itself warning about the bug. Do not trust a visual scan.
+  (`<Pieces>` also accepts a type-qualified `Screen:NAME` form — the validator strips that prefix.)
+- ⚠️ **A `--` inside an XML comment CRASHES the client at UI load** (bit us on `EQUI_AdvLootWnd.xml`).
+  Double hyphens are illegal in XML comments; the SIDL parser aborts the **whole file** and the client
+  dies before char select. Diagnose with **`UIErrorLog.txt`** in the EQ root — it names the file and the
+  exact line (`ParseNodeList() SyntaxError` + `Error reading XML.`). Applies to every `EQUI_*.xml` we ship;
+  use commas/single hyphens in comments. Container has no xmllint/python, so scan with
+  `sed 's/<!--/«/g; s/-->/»/g' f.xml | grep -n -- "--"` (must print nothing).
+- **Client install:** `aotv4_client_install/ADVLOOT_WINDOW_INSTALL.md` (copy the XML to `uifiles/default/`,
+  `<Include>` it in `EQUI.xml`, rebuild the dll).
+
+## 17. Database access from Windows + container recovery — 2026-07-24
+
+### Connecting a GUI client (HeidiSQL) to the peq DB
+MariaDB runs **inside the dev container** (`eqemu_config.json` → `127.0.0.1:3306`; there is no separate DB
+container). To reach it from Windows it is published as a **real Docker port**, exactly like the EQ ports:
+
+- `devcontainer.json` `appPort`: **`"127.0.0.1:3307:3306"`** → HeidiSQL connects to **`127.0.0.1:3307`**,
+  user `peq` / `peqpass`. Host-side bind is loopback, so the DB is reachable from Windows only, never the LAN.
+- ⚠️ **Do NOT use `forwardPorts` / the VS Code PORTS tunnel for MySQL.** It was `forwardPorts: [3306]` and it
+  **does not work**: MySQL is a **server-speaks-first** protocol (the server sends the greeting before the
+  client says anything), and the tunnel fails exactly there → HeidiSQL reports **"Lost connection to server at
+  'handshake: reading initial communication packet'"**. In the PORTS panel a tunnel shows Origin
+  `Dev Containers`; a published port shows **`Statically Forwarded`** (what 5998/5999/7000-7005/9000 use, which
+  is why the EQ client always worked). `forwardPorts` was removed so it can't also grab 3307 and shift the port.
+- ⚠️ Three things must ALL be true or you get a *different* wall each time:
+  1. **`bind-address = 0.0.0.0`** in the container. Stock is `127.0.0.1` (`50-server.cnf:27`), and a published
+     port forwards to `eth0` where nothing would be listening. Set via a drop-in
+     `/etc/mysql/mariadb.conf.d/99-aotv4.cnf` written by **`postStartCommand`** — an edit made by hand inside
+     the container lives on the **container layer** and is silently lost on the next rebuild.
+  2. **A `peq'@'%'` grant.** A published port arrives from the **docker gateway (172.17.0.1)**, NOT loopback,
+     so the stock `peq'@'127.0.0.1'` user does not match → "Access denied for user 'peq'". Both users now exist.
+  3. **Right port.** Connecting to `127.0.0.1:3306` on Windows hits whatever local MySQL owns 3306 (that's WHY
+     VS Code picked 3307) — the tell is `Access denied for user 'peq'@'localhost'`, i.e. a *different server*
+     answering, not a credential problem.
+- `postStartCommand` also **starts MariaDB on every container start**, so it no longer has to be started by hand.
+
+### A rebuild does NOT destroy the DB — the OLD CONTAINER STILL HAS IT
+The `aotv4-mysql-data` volume (§2) was committed **Jul 21 02:45** but a mount only takes effect on the next
+rebuild, and none happened until **Jul 24 22:31** — so the DB lived on the *container layer* for those 3 days
+and the fresh container came up with an empty volume. **The data was never lost**: the previous container was
+still there (stopped or even running) with its datadir intact. Before importing any snapshot, **check the old
+containers first** — a snapshot import silently costs every day of work since the snapshot was taken.
+
+```powershell
+docker ps -a --format "{{.ID}}  {{.CreatedAt}}  {{.Status}}  {{.Image}}"   # incl. stopped; image vsc-aotv4-*
+foreach ($c in "<ids>") { docker exec -u root $c sh -c "ls /var/lib/mysql | tr '\n' ' '; echo" }
+docker exec -u root <ID> sh -c "du -sh /var/lib/mysql/peq; ls -l /var/lib/mysql/peq/character_data.ibd; ls /var/lib/mysql/peq | grep -c custom_achievement"
+docker exec -u root <ID> sh -c "service mariadb start; sleep 8; mysqldump --single-transaction --routines --events --databases peq | gzip > /tmp/peq_recovered.sql.gz"
+docker cp <ID>:/tmp/peq_recovered.sql.gz C:\AoTv3\AoTv4\peq_recovered.sql.gz
+```
+- ⚠️ **`docker exec` MUST use `-u root`.** Dev-container images default to user `vscode`, and the per-database
+  dirs are `drwx------ mysql` → `du /var/lib/mysql/peq` returns **Permission denied**. A check written as
+  `du … || echo "no peq db"` therefore reports **"no DB" on a container that has the full database** — this
+  cost an hour and nearly triggered a needless snapshot import.
+- **Pick the right container by evidence, not by name:** `du` size (live DB ≈ 750 MB), `character_data.ibd`
+  mtime (the newest = last session; InnoDB flushes lazily so the mtime lags the true last write), and a
+  `custom_achievement*` file count > 0 (proves the Jul-23 achievement work is in it).
+- MariaDB will not be running in an old container (PID 1 is the sleep loop) — that is normal, `service mariadb
+  start` first. Its startup runs **InnoDB crash recovery**, replaying `ib_logfile0`, which is exactly why you
+  dump from a started server instead of copying the datadir files.
+- Verify a dump before trusting it: `gzip -dc x.sql.gz | grep -c "^CREATE TABLE"` (expect **233** now — 223
+  pre-achievements) and a `Dump completed on …` marker at the tail. **36 MB gzipped ≈ 341 MB SQL is normal.**
+- **Canonical recovery point is now `/src/peq_recovered.sql.gz`** (Jul 24 23:18, full `peq`, achievements
+  included), NOT the stale `/src/aotv4_current.sql` (Jul 21) that `POST_REBUILD_RECOVERY.md` used to point at.

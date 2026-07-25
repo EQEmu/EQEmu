@@ -8,7 +8,8 @@
 set -uo pipefail
 
 BIN=/src/build/bin
-SNAP=/src/aotv4_current.sql
+SNAP=/src/peq_recovered.sql.gz      # canonical recovery point (2026-07-24, incl. achievements)
+SNAP_OLD=/src/aotv4_current.sql     # Jul 21 fallback — PREDATES the achievement system
 DBPASS=peqpass
 
 say(){ printf '\n=== %s ===\n' "$*"; }
@@ -24,14 +25,45 @@ done
 say "2/3. Seed peq DB + grants (only if empty)"
 TABLES=$(sudo mariadb -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='peq';" 2>/dev/null)
 if [ "${TABLES:-0}" -lt 100 ]; then
-  echo "peq has ${TABLES:-0} tables — seeding from $SNAP ..."
-  [ -f "$SNAP" ] || { echo "SNAPSHOT MISSING: $SNAP — cannot seed. Copy it onto /src and re-run."; exit 1; }
-  pv -f "$SNAP" 2>/dev/null | sudo mariadb || { echo "import failed"; exit 1; }
+  # STOP. Seeding is NOT the first move -- see POST_REBUILD_RECOVERY.md step 0 / CLAUDE.md §17.
+  # On 2026-07-24 an empty volume did NOT mean the DB was gone: the PREVIOUS container still had the
+  # full datadir, and importing a snapshot here would have discarded 3 days of work (the whole
+  # achievement catalog, which exists nowhere on disk). Check the old containers FIRST.
+  cat <<'WARN'
+
+  !!  peq is EMPTY -- do NOT seed until you have checked the previous container.  !!
+
+  A container rebuild leaves the OLD container holding the real datadir. On the Windows host:
+
+    docker ps -a --format "{{.ID}}  {{.CreatedAt}}  {{.Status}}  {{.Image}}"
+    docker exec -u root <ID> sh -c "ls /var/lib/mysql | tr '\n' ' '; echo"    # a `peq` entry = jackpot
+
+  ( -u root is MANDATORY: as `vscode` the per-DB dirs are drwx------ mysql, so the check
+    falsely reports "no DB" on a container that has the full database. )
+
+  If a container has peq, recover it (CLAUDE.md §17) instead of seeding.
+  To seed anyway, re-run with:   SEED=1 bash /src/.devcontainer/recover.sh
+
+WARN
+  [ "${SEED:-0}" = "1" ] || { echo "aborting without seeding."; exit 1; }
+  if [ -f "$SNAP" ]; then
+    echo "seeding from $SNAP ..."
+    gzip -dc "$SNAP" | sudo mariadb || { echo "import failed"; exit 1; }
+  elif [ -f "$SNAP_OLD" ]; then
+    echo "WARNING: $SNAP missing, falling back to $SNAP_OLD (PREDATES achievements/43xxx spells/auras)"
+    pv -f "$SNAP_OLD" 2>/dev/null | sudo mariadb || { echo "import failed"; exit 1; }
+  else
+    echo "NO SNAPSHOT on /src — cannot seed."; exit 1
+  fi
 else
   echo "peq already has $TABLES tables (persistent volume intact) — skipping import."
 fi
+# peq@'%' as well as @127.0.0.1: a PUBLISHED docker port arrives from the gateway (172.17.0.1), not
+# loopback, so HeidiSQL on 127.0.0.1:3307 fails "Access denied" with only the @127.0.0.1 user. (§17)
 sudo mariadb -e "CREATE USER IF NOT EXISTS 'peq'@'127.0.0.1' IDENTIFIED BY '$DBPASS';
-                 GRANT ALL PRIVILEGES ON *.* TO 'peq'@'127.0.0.1'; FLUSH PRIVILEGES;"
+                 GRANT ALL PRIVILEGES ON *.* TO 'peq'@'127.0.0.1';
+                 CREATE USER IF NOT EXISTS 'peq'@'%' IDENTIFIED BY '$DBPASS';
+                 GRANT ALL PRIVILEGES ON *.* TO 'peq'@'%'; FLUSH PRIVILEGES;"
 
 say "4. Verify (expect chars>=1, hallowed/mythic>0, spelldmg_rule=true)"
 mysql -h127.0.0.1 -upeq -p"$DBPASS" peq -N -e "

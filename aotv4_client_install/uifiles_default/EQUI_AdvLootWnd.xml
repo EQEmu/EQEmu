@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<XML ID="EQInterfaceDefinitionLanguage">
+	<Schema xmlns="EverQuestData" xmlns:dt="EverQuestDataTypes" />
+
+	<!-- AoTv4 Advanced Loot window (CCustomWnd "AdvLootWnd"), modelled on the live client's
+	     EQUI_AdvancedLootWnd.xml (ADLW_*).
+	     LAYOUT: everything uses AutoStretch + anchors, exactly like the native window, so the list
+	     fills whatever width the client actually gives the window and its scrollbar always stays on
+	     the visible right edge. Fixed pixel positions were clipping on the right.
+	     LIMITS of this RoF2 build (all verified, not assumed):
+	       * no Sortable / per-column Tooltip: live uses them, no RoF2-shipped file does, and one
+	         unsupported token aborts the WHOLE file at parse time.
+	       * one Listbox, no nested container Screens: both have caused UI-load errors here.
+	       * decision cells cannot be buttons. CListWnd::GetCurCol has no address in this build and the
+	         (point, row, col) GetItemAtPoint overload is unmapped, so the column a click landed in is
+	         unknowable. Cells show STATE; the buttons below act on the selected row, and right-click
+	         on a row links the item so it can be inspected.
+	     NOTE: never put a double hyphen inside an XML comment. It is illegal XML, the parser aborts
+	     the whole file, and the client CRASHES at UI load. Run validate_ui_xml.sh before copying. -->
+
+	<!-- ===== the loot list: stretches to fill the window ===== -->
+
+	<!-- ===== header ===== -->
+	<Label item="ALW_Hint">
+		<ScreenID>ALW_Hint</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>10</X><Y>8</Y></Location>
+		<Size><CX>380</CX><CY>18</CY></Size>
+		<Text>Personal Loot</Text>
+		<TextColor><R>228</R><G>210</G><B>142</B></TextColor>
+		<NoWrap>true</NoWrap>
+	</Label>
+
+	<!-- ===== group context readout, just under the list ===== -->
+
+	<!-- ===== row 1: loot actions (anchored to the bottom edge) ===== -->
+
+	<!-- ===== row 2: persistent rules + filter view ===== -->
+
+	<!-- ===== row 3: toggles + refresh ===== -->
+
+	<!-- Item detail: the client's own STML renderer, the same one the stock item display uses, so an
+	     inspected item reads exactly like a real inspect. Filled via CStmlWnd::SetSTMLText from the
+	     server's LOOTINFO line; nothing is pushed to chat. -->
+	<Button item="ALW_SellAll"><ScreenID>ALW_SellAll</ScreenID><RelativePosition>true</RelativePosition><Location><X>208</X><Y>4</Y></Location><Size><CX>112</CX><CY>22</CY></Size><Text>Sell All</Text><TextColor><R>255</R><G>230</G><B>140</B></TextColor><Template>BDT_Normal</Template></Button>
+	<Button item="ALW_LootAll"><ScreenID>ALW_LootAll</ScreenID><RelativePosition>true</RelativePosition><Location><X>324</X><Y>4</Y></Location><Size><CX>112</CX><CY>22</CY></Size><Text>Loot All</Text><TextColor><R>140</R><G>255</G><B>140</B></TextColor><Template>BDT_Normal</Template></Button>
+	<Listbox item="ALW_ItemList"><ScreenID>ALW_ItemList</ScreenID><DrawTemplate>WDT_Inner</DrawTemplate><RelativePosition>true</RelativePosition><AutoStretch>true</AutoStretch><LeftAnchorToLeft>true</LeftAnchorToLeft><LeftAnchorOffset>8</LeftAnchorOffset><RightAnchorToLeft>false</RightAnchorToLeft><RightAnchorOffset>8</RightAnchorOffset><TopAnchorToTop>true</TopAnchorToTop><TopAnchorOffset>28</TopAnchorOffset><BottomAnchorToTop>true</BottomAnchorToTop><BottomAnchorOffset>186</BottomAnchorOffset><Location><X>8</X><Y>28</Y></Location><Size><CX>428</CX><CY>158</CY></Size><TextColor><R>255</R><G>255</G><B>255</B></TextColor><Style_Border>true</Style_Border><Style_VScroll>true</Style_VScroll><Columns><Width>200</Width><Heading>Item Name</Heading></Columns><Columns><Width>70</Width><Heading>Value</Heading></Columns><Columns><Width>140</Width><Heading>NPC Name</Heading></Columns></Listbox>
+	<STMLbox item="ALW_Detail"><ScreenID>ALW_Detail</ScreenID><DrawTemplate>WDT_Inner</DrawTemplate><RelativePosition>true</RelativePosition><Location><X>8</X><Y>192</Y></Location><Size><CX>428</CX><CY>140</CY></Size><Style_Border>true</Style_Border><Style_VScroll>true</Style_VScroll><TextColor><R>240</R><G>240</G><B>240</B></TextColor></STMLbox>
+	<Button item="ALW_Loot"><ScreenID>ALW_Loot</ScreenID><RelativePosition>true</RelativePosition><Location><X>8</X><Y>340</Y></Location><Size><CX>104</CX><CY>26</CY></Size><Text>Loot</Text><TextColor><R>140</R><G>255</G><B>140</B></TextColor><Template>BDT_Normal</Template></Button>
+	<Button item="ALW_Leave"><ScreenID>ALW_Leave</ScreenID><RelativePosition>true</RelativePosition><Location><X>116</X><Y>340</Y></Location><Size><CX>104</CX><CY>26</CY></Size><Text>Leave</Text><TextColor><R>255</R><G>210</G><B>140</B></TextColor><Template>BDT_Normal</Template></Button>
+	<Button item="ALW_Sell"><ScreenID>ALW_Sell</ScreenID><RelativePosition>true</RelativePosition><Location><X>224</X><Y>340</Y></Location><Size><CX>104</CX><CY>26</CY></Size><Text>Sell</Text><TextColor><R>255</R><G>230</G><B>140</B></TextColor><Template>BDT_Normal</Template></Button>
+	<Button item="ALW_Never"><ScreenID>ALW_Never</ScreenID><RelativePosition>true</RelativePosition><Location><X>332</X><Y>340</Y></Location><Size><CX>104</CX><CY>26</CY></Size><Text>Never</Text><TextColor><R>255</R><G>150</G><B>150</B></TextColor><Template>BDT_Normal</Template></Button>
+	<Button item="ALW_FilterDel"><ScreenID>ALW_FilterDel</ScreenID><RelativePosition>true</RelativePosition><Location><X>332</X><Y>340</Y></Location><Size><CX>104</CX><CY>26</CY></Size><Text>Remove</Text><TextColor><R>255</R><G>150</G><B>150</B></TextColor><Template>BDT_Normal</Template></Button>
+	<Button item="ALW_AN"><ScreenID>ALW_AN</ScreenID><RelativePosition>true</RelativePosition><Location><X>8</X><Y>370</Y></Location><Size><CX>110</CX><CY>26</CY></Size><Text>Always Need</Text><TextColor><R>140</R><G>200</G><B>255</B></TextColor><Template>BDT_Normal</Template></Button>
+	<Button item="ALW_AG"><ScreenID>ALW_AG</ScreenID><RelativePosition>true</RelativePosition><Location><X>122</X><Y>370</Y></Location><Size><CX>110</CX><CY>26</CY></Size><Text>Always Greed</Text><TextColor><R>200</R><G>200</G><B>255</B></TextColor><Template>BDT_Normal</Template></Button>
+	<Button item="ALW_ASell"><ScreenID>ALW_ASell</ScreenID><RelativePosition>true</RelativePosition><Location><X>236</X><Y>370</Y></Location><Size><CX>110</CX><CY>26</CY></Size><Text>Always Sell</Text><TextColor><R>255</R><G>230</G><B>140</B></TextColor><Template>BDT_Normal</Template></Button>
+	<Button item="ALW_EditFilters"><ScreenID>ALW_EditFilters</ScreenID><RelativePosition>true</RelativePosition><Location><X>350</X><Y>370</Y></Location><Size><CX>86</CX><CY>26</CY></Size><Text>Edit Filters</Text><TextColor><R>255</R><G>255</G><B>255</B></TextColor><Template>BDT_Normal</Template></Button>
+	<Button item="ALW_ApplyFilters"><ScreenID>ALW_ApplyFilters</ScreenID><RelativePosition>true</RelativePosition><Location><X>8</X><Y>402</Y></Location><Size><CX>170</CX><CY>22</CY></Size><Style_Checkbox>true</Style_Checkbox><Text>Apply Filters</Text><TextColor><R>255</R><G>255</G><B>255</B></TextColor><Template>BDT_CheckboxWithText</Template><DecalSize><CX>16</CX><CY>16</CY></DecalSize><TextAlignCenter>false</TextAlignCenter><TextOffsetX>18</TextOffsetX></Button>
+	<Button item="ALW_GroupByNpc"><ScreenID>ALW_GroupByNpc</ScreenID><RelativePosition>true</RelativePosition><Location><X>194</X><Y>402</Y></Location><Size><CX>190</CX><CY>22</CY></Size><Style_Checkbox>true</Style_Checkbox><Text>Group by NPC</Text><TextColor><R>255</R><G>255</G><B>255</B></TextColor><Template>BDT_CheckboxWithText</Template><DecalSize><CX>16</CX><CY>16</CY></DecalSize><TextAlignCenter>false</TextAlignCenter><TextOffsetX>18</TextOffsetX></Button>
+	<Button item="ALW_Need"><ScreenID>ALW_Need</ScreenID><RelativePosition>true</RelativePosition><Location><X>8</X><Y>430</Y></Location><Size><CX>60</CX><CY>26</CY></Size><Text>Need</Text><TextColor><R>140</R><G>255</G><B>200</B></TextColor><Template>BDT_Normal</Template></Button>
+	<Button item="ALW_Greed"><ScreenID>ALW_Greed</ScreenID><RelativePosition>true</RelativePosition><Location><X>76</X><Y>430</Y></Location><Size><CX>60</CX><CY>26</CY></Size><Text>Greed</Text><TextColor><R>255</R><G>230</G><B>140</B></TextColor><Template>BDT_Normal</Template></Button>
+	<Button item="ALW_Pass"><ScreenID>ALW_Pass</ScreenID><RelativePosition>true</RelativePosition><Location><X>144</X><Y>430</Y></Location><Size><CX>52</CX><CY>26</CY></Size><Text>Pass</Text><TextColor><R>200</R><G>200</G><B>200</B></TextColor><Template>BDT_Normal</Template></Button>
+	<Label item="ALW_MasterLooter"><ScreenID>ALW_MasterLooter</ScreenID><RelativePosition>true</RelativePosition><Location><X>206</X><Y>432</Y></Location><Size><CX>230</CX><CY>20</CY></Size><Text></Text><TextColor><R>200</R><G>200</G><B>200</B></TextColor><NoWrap>true</NoWrap></Label>
+	<Editbox item="ALW_Search">
+		<ScreenID>ALW_Search</ScreenID>
+		<DrawTemplate>WDT_Inner</DrawTemplate>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>8</X><Y>341</Y></Location>
+		<Size><CX>212</CX><CY>24</CY></Size>
+		<TextColor><R>255</R><G>255</G><B>255</B></TextColor>
+		<Style_Border>true</Style_Border>
+	</Editbox>
+	<Button item="ALW_Find"><ScreenID>ALW_Find</ScreenID><RelativePosition>true</RelativePosition><Location><X>224</X><Y>340</Y></Location><Size><CX>104</CX><CY>26</CY></Size><Text>Find</Text><TextColor><R>255</R><G>255</G><B>255</B></TextColor><Template>BDT_Normal</Template></Button>
+	<!-- ===== window ===== -->
+	<Screen item="AdvLootWnd">
+		<RelativePosition>false</RelativePosition>
+		<Location><X>180</X><Y>110</Y></Location>
+		<Size><CX>452</CX><CY>472</CY></Size>
+		<Text>Advanced Loot</Text>
+		<Style_Transparent>false</Style_Transparent>
+		<DrawTemplate>WDT_Def</DrawTemplate>
+		<Style_Titlebar>true</Style_Titlebar>
+		<Style_Closebox>true</Style_Closebox>
+		<Style_Border>true</Style_Border>
+		<Style_Sizable>true</Style_Sizable>
+		<Pieces>ALW_Hint</Pieces>
+		<Pieces>ALW_LootAll</Pieces>
+		<Pieces>ALW_ItemList</Pieces>
+		<Pieces>ALW_Detail</Pieces>
+		<Pieces>ALW_Search</Pieces>
+		<Pieces>ALW_Find</Pieces>
+		<Pieces>ALW_MasterLooter</Pieces>
+		<Pieces>ALW_Loot</Pieces>
+		<Pieces>ALW_Leave</Pieces>
+		<Pieces>ALW_Sell</Pieces>
+		<Pieces>ALW_SellAll</Pieces>
+		<Pieces>ALW_Need</Pieces>
+		<Pieces>ALW_Greed</Pieces>
+		<Pieces>ALW_Pass</Pieces>
+		<Pieces>ALW_AN</Pieces>
+		<Pieces>ALW_AG</Pieces>
+		<Pieces>ALW_Never</Pieces>
+		<Pieces>ALW_ASell</Pieces>
+		<Pieces>ALW_EditFilters</Pieces>
+		<Pieces>ALW_FilterDel</Pieces>
+		<Pieces>ALW_ApplyFilters</Pieces>
+		<Pieces>ALW_GroupByNpc</Pieces>
+	</Screen>
+</XML>

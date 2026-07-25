@@ -1198,6 +1198,7 @@ RULE_REAL(AoT, PotencyPerHInt,     			1.0,  "How much does heroic intellect boos
 RULE_REAL(AoT, PotencyCapPerHInt,     		2.5,  "How much does heroic intellect boost potency cap")
 RULE_INT(AoT, PotencySoftCap,     			400,  "After potency cap is reached, deminishing returns apply")
 RULE_REAL(AoT, PotencyAfterCapReturns,     	0.2,  "Beyond the potency cap, potency is worth this value per point")
+RULE_BOOL(AoT, AdvLootReplacesLootWindow,	true, "Advanced Loot mode: right-clicking a corpse feeds the Advanced Loot window instead of opening the stock loot window (live behaviour). Set false to restore the stock window as a fallback if the AdvLoot window ever fails to open.")
 RULE_REAL(AoT, ResistPerWis,     			0.5,  "Points of global resist per wisdom")
 RULE_REAL(AoT, eHPPerResist,     			1.0,  "How much does resists improve survivability")
 RULE_REAL(AoT, ResistPerHWis,     			1.0,  "How much does heroic wisdom boost global resist")

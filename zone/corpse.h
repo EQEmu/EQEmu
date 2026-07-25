@@ -263,6 +263,37 @@ public:
 
 	void SyncEntityVariablesToCorpseDB();
 
+	// AoTv4 Advanced Loot: LootCorpseItem's 10ms anti-spam throttle is checked against the zone TICK's
+	// current_time, which does not advance inside a single packet handler -- so a server-driven batch
+	// (alslootall) fails every item after the first, and each failure calls SendEndLootErrorPacket +
+	// ResetLooter, killing the loot session. Bounded server-side loops call this between items. No
+	// duplication risk: LootCorpseItem removes the item from the corpse, so a slot can only be looted once.
+	void ResetLootCooldown() { m_loot_cooldown_timer.Trigger(); }
+
+	// AoTv4 Advanced Loot: the window loots from corpses the player never right-clicked, but
+	// LootCorpseItem hard-requires an established session (IsBeingLootedBy) AND a permissive
+	// m_loot_request_type -- both normally set by MakeLootRequestPackets. Claim reproduces ONLY that
+	// function's rights + session bookkeeping (same checks, same order, same 25u range) so the actual
+	// item transfer still runs through the untouched native path. Never steals a corpse someone else
+	// holds. Release only clears the session if WE claimed it (a real open loot window must survive).
+	bool ClaimLootSession(Client *c);
+	void ReleaseLootSession(Client *c);
+
+	// Give every item a unique lootslot.
+	//
+	// Stock EQEmu assigns these ONLY inside MakeLootRequestPackets, i.e. when the player opens the
+	// corpse. LootItem::lootslot has no initialiser, so until that happens the values are garbage or
+	// all zero -- and Corpse::GetItem(lootslot) returns the FIRST item that matches. Advanced Loot
+	// lists corpses the player never opened, so it must number them itself or every handle it issues
+	// aliases onto the same item. Idempotent: only the first call numbers, so a corpse two players are
+	// both looking at cannot be renumbered underneath one of them.
+	void AssignLootSlots();
+
+	// character_id granted loot rights in slot i (0 = empty). Lets NPC::Death push the refreshed
+	// Advanced Loot list to exactly the set AllowPlayerLoot just decided, without duplicating the
+	// killer/group/RaidLootType logic that produced it.
+	int GetAllowedLooter(int i) const { return (i >= 0 && i < MAX_LOOTERS) ? m_allowed_looters[i] : 0; }
+
 protected:
 	void MoveItemToCorpse(Client *client, EQ::ItemInstance *inst, int16 equipSlot, std::list<uint32> &removedList);
 
@@ -294,6 +325,7 @@ private:
 	Timer                    m_corpse_delay_timer;
 	Timer                    m_corpse_graveyard_timer;
 	Timer                    m_loot_cooldown_timer;
+	bool                     m_loot_slots_assigned = false;   // see AssignLootSlots
 	Timer                    m_check_owner_online_timer;
 	Timer                    m_check_rezzable_timer;
 	uint8                    m_killed_by_type;

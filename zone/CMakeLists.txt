@@ -27,6 +27,7 @@ set(zone_sources
     client_bot.cpp
     client_evolving_items.cpp
     client_mods.cpp
+    advloot.cpp
     client_packet.cpp
     client_process.cpp
     combat_record.cpp
@@ -131,6 +132,7 @@ set(zone_headers
     bot_structs.h
     cheat_manager.h
     client.h
+    advloot.h
     client_packet.h
     combat_record.h
     command.h

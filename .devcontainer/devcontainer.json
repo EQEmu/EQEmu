@@ -13,9 +13,14 @@
         "7004:7004/udp",
         "7005:7005/udp",
         "9000:9000/udp",
-        "9001:9001/udp"
+        "9001:9001/udp",
+        "127.0.0.1:3307:3306"
     ],
-    "forwardPorts": [3306],
+
+    "// db port": "MariaDB is published as a REAL Docker port (host 127.0.0.1:3307 -> container 3306) like the EQ ports, NOT via VS Code's forwardPorts tunnel. The tunnel breaks MySQL because MySQL is server-speaks-first: HeidiSQL opens TCP, waits for the server greeting, and dies with 'Lost connection at handshake: reading initial communication packet'. Bound to 127.0.0.1 on the host so the DB is reachable from Windows only, never the LAN. Needs bind-address=0.0.0.0 in the container (postStartCommand) + a peq@'%' grant, because a published port arrives from the docker gateway (172.17.0.1), not loopback.",
+
+    "// postStartCommand": "Runs on EVERY container start (survives rebuilds because it lives here, on /src). Writes the bind-address drop-in -- an edit to /etc/mysql/*.cnf inside the container is on the container layer and would be lost on rebuild -- then starts MariaDB so the DB is up without starting it by hand.",
+    "postStartCommand": "sudo sh -c 'printf \"[mysqld]\\nbind-address = 0.0.0.0\\n\" > /etc/mysql/mariadb.conf.d/99-aotv4.cnf' && sudo service mariadb start",
 
     "remoteEnv": {
         "LOCALWSF": "${localWorkspaceFolder}",

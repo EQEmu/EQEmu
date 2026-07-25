@@ -1206,6 +1206,12 @@ void Client::ChannelMessageReceived(uint8 chan_num, uint8 language, uint8 lang_s
 
 	LogDebug("Client::ChannelMessageReceived() Channel:[{}] message:[{}]", chan_num, message);
 
+	// AoTv4 Advanced Loot: the dll issues /say alspick|alslootall|alsrefresh|alsfilters|alsfilterdel.
+	// Handle + swallow them here (before EVENT_SAY / broadcast) so they never spam chat or reach quests.
+	if (chan_num == ChatChannel_Say && HandleAdvLootSay(message)) {
+		return;
+	}
+
 	if (RuleB(Chat, AlwaysCaptureCommandText)) {
 		if (message[0] == COMMAND_CHAR) {
 			if (command_dispatch(this, message, false) == -2) {

@@ -329,6 +329,16 @@ public:
 	void SetItemPrice(uint32 item_id, uint32 price); // AoTv4 price book: persist item_id->price + append change log
 	std::string GetPriceBook();                    // "itemid|name|price^..." your saved prices (persistent)
 	std::string GetPriceLog();                     // "itemid|name|old|new|when^..." recent price changes
+
+	// AoTv4 Advanced Loot window (complement mode; drives the dll AdvLootWnd over chat):
+	void SendAdvLootData();                        // push LOOTDATA: every corpse we hold loot rights to
+	void SendAdvLootFilters();                     // push FILTERDATA (the Never list)
+	void SendAdvLootClose();                       // push LOOTCLOSE (dll clears + hides the window)
+	bool AdvLootSlot(uint16 corpse_id, int slot);  // loot one item via the native Corpse::LootCorpseItem
+	bool AdvLootSell(uint16 corpse_id, int slot, bool quiet = false);  // sell straight to coin at vendor rate
+	LootItem *AdvLootResolve(uint16 corpse_id, int slot, uint32 expect_item);  // verify a stale ref
+	static uint64 AdvLootSellValue(const EQ::ItemData *d, int charges);  // what a vendor would pay
+	bool HandleAdvLootSay(const char *msg);        // handle /say alspick|alslootall|alsrefresh|alsfilters|alsfilterdel
 //	void TraderPriceUpdate(const EQApplicationPacket *app);
 	uint8 WithCustomer(uint16 NewCustomer);
 	std::vector<uint32> GetKeyRing() { return keyring; }

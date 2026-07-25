@@ -15,6 +15,32 @@ rebuild with the volume intact, skip to **step 5** (shared memory) → **step 6*
 
 ---
 
+## ⚠️ STEP 0 — IF `peq` IS MISSING, DO NOT IMPORT A SNAPSHOT YET (added 2026-07-24)
+
+**The previous container still has the database.** This happened on **2026-07-24**: the volume was
+committed Jul 21 02:45, but a mount only takes effect on the *next* rebuild — and none happened until
+Jul 24 22:31. So the DB lived on the **container layer** for 3 days, and the fresh container came up
+with an empty volume. Importing the snapshot here would have silently discarded 3 days of work (the
+entire 1,445-row achievement catalog, the 43xxx spell set, the class auras — the achievement seed
+exists **nowhere on disk**). The old container was still running the whole time.
+
+**Always check the old containers before seeding.** Run on the Windows host — full procedure, the
+`-u root` requirement, and how to pick the right container are in **CLAUDE.md §17**:
+```powershell
+docker ps -a --format "{{.ID}}  {{.CreatedAt}}  {{.Status}}  {{.Image}}"   # incl. stopped; vsc-aotv4-*
+docker exec -u root <ID> sh -c "ls /var/lib/mysql | tr '\n' ' '; echo"     # a `peq` entry = jackpot
+```
+⚠️ **`-u root` is mandatory** — as `vscode` the per-DB dirs are `drwx------ mysql`, so any check
+reports "no DB" on a container that has the full database.
+
+Only if **no** container has a `peq` datadir do you continue below — and then seed from
+**`/src/peq_recovered.sql.gz`** (Jul 24, achievements included), **not** the older `aotv4_current.sql`:
+```bash
+gzip -dc /src/peq_recovered.sql.gz | sudo mariadb     # then the grants in step 3
+```
+
+---
+
 ## What SURVIVES the rebuild (all on the `/src` = `C:\AoTv3\AoTv4` 9p mount)
 - All source + the **built `zone` binary** (`/src/build/bin/zone`, built 06:05 **with the backstab
   rework** — do NOT rebuild it unless it fails to launch).
@@ -22,11 +48,19 @@ rebuild with the volume intact, skip to **step 5** (shared memory) → **step 6*
   correct: `sod_port=5999`).
 - `devcontainer.json` (publishes `5999:5999/udp`; mounts the `aotv4-mysql-data` DB volume).
 - **The `peq` database itself** — now on the persistent named volume, so it survives a rebuild.
-- The DB snapshot **`/src/aotv4_current.sql`** (~404 MB — full `peq` dump *with all migrations
+- The DB snapshot **`/src/peq_recovered.sql.gz`** (36 MB gz / 341 MB SQL, dumped **2026-07-24 23:18**
+  from the recovered container — **233 tables**, includes the `custom_achievement_*` set: 1,445
+  achievements, 2,514 objectives, 54 categories, the 43xxx custom spells + class auras, 8 characters).
+  **This is the canonical recovery point.** Verify any dump with
+  `gzip -dc x.sql.gz | grep -c "^CREATE TABLE"` (expect 233) + a `Dump completed on …` tail marker.
+- ⚠️ The OLDER snapshot **`/src/aotv4_current.sql`** (Jul 21, ~404 MB — full `peq` dump *with all migrations
   already applied*: gear tiers 27k Hallowed + 27k Mythic, spelldmg rule, 7 characters incl. Ashrem,
-  login accounts). Self-creates the DB (`CREATE DATABASE IF NOT EXISTS peq`). **Only needed to seed a
-  fresh/empty volume.** ⚠️ `/src/Deez.sql` has been BOTH the pre-migration dump and (later) a full
-  copy — do not trust its name; **always seed from `aotv4_current.sql`** and verify with step 4.
+  login accounts) **predates the achievement system entirely** — seeding from it costs the achievement
+  catalog, the 43xxx spells and the class auras. Use it only if `peq_recovered.sql.gz` is unavailable.
+  ⚠️ `/src/Deez.sql` has been BOTH the pre-migration dump and (later) a full copy — do not trust its
+  name. Whatever you seed from, verify with step 4.
+- The world pre-migration auto-backups in `/src/build/bin/backups/*.tar.gz` — a useful mid-point
+  fallback (e.g. `peq-2026-07-23.tar.gz`, 223 tables, taken just before the achievement migration).
 - `custom/sql/*` migrations (do NOT need to re-run — they're baked into `aotv4_current.sql`).
 
 ## What is GONE and must be rebuilt (routine rebuild, volume intact)

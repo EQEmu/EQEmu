@@ -3059,6 +3059,20 @@ bool NPC::Death(Mob* killer_mob, int64 damage, uint16 spell, EQ::skills::SkillTy
 			}
 		}
 
+		// AoTv4 Advanced Loot: live's rule is that loot enters your personal list when you get KILL
+		// CREDIT, not when you open the corpse. Every AllowPlayerLoot above just decided exactly who
+		// that is, so push the refreshed list to each of them now (this is what auto-pops the window).
+		// Must run AFTER the rights block -- SendAdvLootData filters on CanPlayerLoot.
+		if (!corpse->IsEmpty()) {
+			for (int i = 0; i < MAX_LOOTERS; i++) {
+				const int cid = corpse->GetAllowedLooter(i);
+				if (!cid) { continue; }
+				if (Client *looter = entity_list.GetClientByCharID(cid)) {
+					looter->SendAdvLootData();
+				}
+			}
+		}
+
 		if (zone && zone->adv_data) {
 			auto sr = (ServerZoneAdventureDataReply_Struct *) zone->adv_data;
 			if (sr->type == Adventure_Kill) {

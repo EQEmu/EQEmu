@@ -16,6 +16,7 @@
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "corpse.h"
+#include "advloot.h"
 
 #include "common/data_verification.h"
 #include "common/eqemu_logsys.h"
@@ -609,6 +610,10 @@ Corpse::Corpse(
 
 Corpse::~Corpse()
 {
+	// AoTv4 Advanced Loot: drop any group Need/Greed or Master Looter decisions attached to this
+	// corpse. Entity ids are reused, so a stale share would otherwise bind to a future corpse's slot.
+	advloot_manager.ForgetCorpse(GetID());
+
 	if (m_is_player_corpse && !(m_player_corpse_depop && m_corpse_db_id == 0)) {
 		Save();
 	}
@@ -1144,6 +1149,97 @@ void Corpse::AllowPlayerLoot(Mob *them, uint8 slot)
 	}
 
 	m_allowed_looters[slot] = them->CastToClient()->CharacterID();
+}
+
+// ==================================================== AoTv4 Advanced Loot: remote loot session
+// Mirrors the rights/session half of MakeLootRequestPackets (below) WITHOUT any of its packet work,
+// so Client::AdvLootSlot can drive the stock Corpse::LootCorpseItem on a corpse the player has not
+// opened. Keep the checks here in step with MakeLootRequestPackets if that function ever changes.
+bool Corpse::ClaimLootSession(Client *c)
+{
+	if (!c || m_player_corpse_depop) {
+		return false;
+	}
+
+	if (m_is_locked && c->Admin() < AccountStatus::GMAdmin) {
+		return false;
+	}
+
+	// drop a stale session whose owner has zoned/disconnected (same normalization as the native path)
+	if (!m_being_looted_by_entity_id ||
+		(m_being_looted_by_entity_id != 0xFFFFFFFF && !entity_list.GetID(m_being_looted_by_entity_id))) {
+		m_being_looted_by_entity_id = 0xFFFFFFFF;
+	}
+
+	// never take a corpse another player is actively looting
+	if (m_being_looted_by_entity_id != 0xFFFFFFFF && m_being_looted_by_entity_id != c->GetID()) {
+		return false;
+	}
+
+	// NO distance check. The native loot window requires you to walk to the corpse; Advanced Loot
+	// deliberately does not -- kill credit is what grants the loot, so anything the window lists is
+	// lootable from wherever you are. Rights are still fully enforced below via CanPlayerLoot.
+	LootRequestType t = LootRequestType::Forbidden;
+
+	if (c->GetGM()) {
+		t = (c->Admin() >= AccountStatus::GMAdmin) ? LootRequestType::GMAllowed : LootRequestType::GMPeek;
+	}
+	else if (IsPlayerCorpse()) {
+		if (m_character_id == c->CharacterID()) {
+			t = LootRequestType::Self;
+		}
+		else if (CanPlayerLoot(c->CharacterID())) {
+			if (GetPlayerKillItem() == -1) {
+				t = LootRequestType::AllowedPVPAll;
+			}
+			else if (GetPlayerKillItem() == 1) {
+				t = LootRequestType::AllowedPVPSingle;
+			}
+			else if (GetPlayerKillItem() > 1) {
+				t = LootRequestType::AllowedPVPDefined;
+			}
+		}
+	}
+	else if ((IsNPCCorpse() || m_become_npc) && CanPlayerLoot(c->CharacterID())) {
+		t = LootRequestType::AllowedPVE;
+	}
+
+	// GMPeek is look-only: LootCorpseItem rejects anything below GMAllowed, so don't claim for it
+	if (t == LootRequestType::Forbidden || t == LootRequestType::GMPeek) {
+		return false;
+	}
+
+	m_loot_request_type         = t;
+	m_being_looted_by_entity_id = c->GetID();
+	return true;
+}
+
+void Corpse::ReleaseLootSession(Client *c)
+{
+	if (c && m_being_looted_by_entity_id == c->GetID()) {
+		m_being_looted_by_entity_id = 0xFFFFFFFF;
+	}
+}
+
+// See the header. LootItem::lootslot has no initialiser and stock EQEmu only fills it in
+// MakeLootRequestPackets, so on a corpse nobody has opened the values are meaningless and usually
+// identical -- which makes Corpse::GetItem(lootslot) return the first item for every handle.
+void Corpse::AssignLootSlots()
+{
+	if (m_loot_slots_assigned) {
+		return;
+	}
+	m_loot_slots_assigned = true;
+
+	int slot = EQ::invslot::CORPSE_BEGIN;
+	for (auto *i : m_item_list) {
+		if (!i) {
+			continue;
+		}
+		// Beyond the client's corpse-slot range there is no valid handle, so mark those unusable
+		// rather than aliasing them onto a slot that already belongs to another item.
+		i->lootslot = (slot <= EQ::invslot::CORPSE_END) ? (uint16) slot++ : 0xFFFF;
+	}
 }
 
 void Corpse::MakeLootRequestPackets(Client *c, const EQApplicationPacket *app)
