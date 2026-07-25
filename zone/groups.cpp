@@ -2220,10 +2220,6 @@ void Group::NotifyMarkNPC(Client *c)
 
 void Group::NotifyMasterLooter(Client *c, bool toggle)
 {
-	// Tracking/notification only — there's no legacy OP_DelegateAbility case for Master
-	// Looter on any client version, so unlike Mark NPC there's no pre-TOB path to preserve;
-	// TOB is the only client that understands RoleNumber 4 on OP_GroupRoles at all.
-
 	if (c != nullptr && c->ClientVersion() >= EQ::versions::ClientVersion::TOB && !MasterLooterName.empty()) {
 		auto outapp = new EQApplicationPacket(OP_GroupRoles, sizeof(GroupRole_Struct));
 		const auto grs = reinterpret_cast<GroupRole_Struct*>(outapp->pBuffer);

@@ -39,7 +39,7 @@ enum {	//raid packet types:
 	raidUnlock = 18,		//len 136 leader?, leader, 0
 	raidRedStringID = 19,
 	raidSetLeader = 20,	//len 388, contains 'details' struct without members; also used for "invite to raid"
-	raidUpdateClassLevel = 24,	// updates a single roster row's class/level (CRaid::HandleRaidMessage case 0x18); raidAdd carries no class field at all
+	raidUpdateClassLevel = 24,	// updates a single roster row's class/level
 	raidMakeLeader = 30,
 	raidSetMotd = 35,
 	raidSetNote = 36,

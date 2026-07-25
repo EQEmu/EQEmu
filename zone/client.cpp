@@ -5316,13 +5316,6 @@ bool Client::IsLeadershipEXPOn() {
 	if(!m_pp.leadAAActive)
 		return false;
 
-	// Raid-subgrouped members must never fall into the plain-Group branch
-	// below: once a raid subgroup is a real, findable Group (see
-	// Raid::VerifyRaid()), g->GroupCount() only reflects locally-resolved
-	// subgroup members, not the full persisted raid roster raid->GroupCount()
-	// uses -- checking raid status first keeps the "raid leaders can only
-	// gain raid AA XP" rule from being bypassed by a raid leader who also
-	// happens to lead their own subgroup.
 	if (IsRaidGrouped()) {
 		Raid *r = GetRaid();
 
