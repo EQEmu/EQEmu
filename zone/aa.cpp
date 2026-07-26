@@ -919,6 +919,10 @@ void Client::SendAlternateAdvancementRank(int aa_id, int level) {
 	auto ability = ability_rank.first;
 	auto rank = ability_rank.second;
 
+	// The 40000-40005 diagnostic that used to sit here is gone: it proved the server sends custom
+	// AAs correctly and the CLIENT discards ids above the native max, which is why custom AAs now
+	// take over native rows instead of claiming new ids (CLAUDE.md §6). Nothing owns those ids now.
+
 	if(!ability) {
 		return;
 	}
@@ -1599,6 +1603,14 @@ bool Mob::CanUseAlternateAdvancementRank(AA::Rank *rank)
 		}
 	}
 
+
+	// AoTv4 TEMP DIAGNOSTIC -- remove once the custom AA visibility issue is solved.
+	if (rank->id >= 50000 && rank->id <= 50029 && IsClient()) {
+		LogError("[AOTV4AA2] rank [{}] expansion [{}] pp.expansions [{}] expansion_pass [{}] category [{}] charges [{}]",
+			rank->id, rank->expansion, CastToClient()->GetPP().expansions,
+			(!rank->expansion || (CastToClient()->GetPP().expansions & (1 << (rank->expansion - 1)))) ? 1 : 0,
+			(int)a->category, (int)a->charges);
+	}
 
 	if (IsClient()) {
 		if (rank->expansion && !(CastToClient()->GetPP().expansions & (1 << (rank->expansion - 1)))) {

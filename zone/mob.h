@@ -1351,6 +1351,24 @@ public:
 	void ShieldAbilityClearVariables();
 	inline uint32 GetShielderID() const { return m_shielder_id; }
 	inline void SetShielderID(uint32 val) { m_shielder_id = val; }
+	// AoTv4 Shield Wall: everyone currently shielding ME. Stock EQ allows exactly one shielder
+	// (m_shielder_id), which is kept in sync with the head of this list so the native teardown
+	// paths keep working. See Mob::ApplyShieldWall in attack.cpp.
+	inline std::vector<uint16> &GetShieldWall() { return m_shield_wall; }
+	void ShieldWallAdd(uint16 entity_id);
+	void ShieldWallRemove(uint16 entity_id);
+	void ShieldWallRefreshBuff();
+	int64 ApplyShieldWall(Mob *attacker, int64 damage, EQ::skills::SkillType skill);
+
+	// AoTv4 Healer AA tree -- implementation in zone/aotv4_healer_aa.cpp.
+	// `this` is the HEALED TARGET for AoTv4HealerPostHeal and AoTv4GraceShieldSpent, and the
+	// HEALER for the other three. Getting that backwards is the easy mistake here.
+	int  AoTv4HealBonus(Mob *target, uint16 spell_id, bool from_buff_tic, int &crit_chance_add);
+	void AoTv4HealCritReward(Mob *target, uint16 spell_id);
+	void AoTv4HealerPostHeal(Mob *caster, uint64 requested, uint64 acthealed, uint16 spell_id, float pre_ratio);
+	void AoTv4CureRenewal(Mob *target);
+	void AoTv4GraceShieldSpent();
+	bool AoTv4TryBorrowedBreath();
 	inline uint32 GetShieldTargetID() const { return m_shield_target_id; }
 	inline void SetShieldTargetID(uint32 val) { m_shield_target_id = val; }
 	inline int GetShieldTargetMitigation() const { return m_shield_target_mitigation; }
@@ -1741,6 +1759,27 @@ protected:
 	Timer shield_timer;
 	uint32 m_shield_target_id;
 	uint32 m_shielder_id;
+	std::vector<uint16> m_shield_wall;   // AoTv4: every entity currently shielding me
+
+	// AoTv4 AA 40005 Aegis Reflex. Deflecting a blow banks a stack; the hit that finally lands
+	// converts the whole stack into a one-shot bonus on your NEXT heal, then it starts over.
+	// Two values because the accumulating phase and the armed-and-waiting phase are different
+	// things: stacks can still grow, a stored bonus is already fixed and awaiting a heal.
+	int m_aegis_stacks = 0;    // deflects banked since the last hit that got through
+	int m_aegis_stored = 0;    // percent bonus armed for the next heal, 0 when spent
+
+	// AoTv4 Healer AA tree (custom/sql/aotv4_aa_healer_hosted.sql, aotv4_healer_aa.cpp).
+	// All five healer AAs are markers, so what little state they need lives here rather than in a
+	// buff. Note m_aotv4_grace_rank sits on the SHIELDED mob, not the healer: when the shield is
+	// finally spent the healer may be dead, gone or out of range, so the rank that built it has to
+	// travel with the shield.
+	uint32 m_aotv4_renewal_target = 0;   // Cleansing Renewal r5: whose next heal from me is boosted
+	uint32 m_aotv4_renewal_expire = 0;   // ...and when that offer lapses (ms)
+	uint32 m_aotv4_breath_ready   = 0;   // Borrowed Breath r5: when I may avoid a death again
+	uint32 m_aotv4_breath_save    = 0;   // ...on the SAVED player, how long their save stays armed
+	uint16 m_aotv4_breath_healer  = 0;   // ...and who armed it, so the cooldown lands on THEM
+	bool   m_aotv4_heal_echoing   = false; // Mender's Echo reentry guard -- an echo is itself a heal
+	uint8  m_aotv4_grace_rank     = 0;   // rank of the Overflowing Grace shield currently on me
 	int m_shield_target_mitigation;
 	int m_shielder_mitigation;
 	int m_shielder_max_distance;

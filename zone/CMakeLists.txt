@@ -7,6 +7,7 @@ set(zone_sources
     aggro.cpp
     aggromanager.cpp
     api_service.cpp
+    aotv4_healer_aa.cpp
     attack.cpp
     aura.cpp
     beacon.cpp

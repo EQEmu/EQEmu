@@ -2087,6 +2087,7 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 								caster->Message(Chat::Spells,"You have cured your target of %s!",spells[buffs[j].spellid].name);
 								caster->CastOnCurer(buffs[j].spellid);
 								CastOnCure(buffs[j].spellid);
+								caster->AoTv4CureRenewal(this);   // AoTv4 Cleansing Renewal
 							}
 							effect_value -= buffs[j].counters;
 							buffs[j].counters = 0;
@@ -2121,6 +2122,7 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 								caster->Message(Chat::Spells,"You have cured your target of %s!",spells[buffs[j].spellid].name);
 								caster->CastOnCurer(buffs[j].spellid);
 								CastOnCure(buffs[j].spellid);
+								caster->AoTv4CureRenewal(this);   // AoTv4 Cleansing Renewal
 							}
 							effect_value -= buffs[j].counters;
 							buffs[j].counters = 0;
@@ -2157,6 +2159,7 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 								caster->Message(Chat::Spells,"You have cured your target of %s!",spells[buffs[j].spellid].name);
 								caster->CastOnCurer(buffs[j].spellid);
 								CastOnCure(buffs[j].spellid);
+								caster->AoTv4CureRenewal(this);   // AoTv4 Cleansing Renewal
 							}
 							effect_value -= buffs[j].counters;
 							buffs[j].counters = 0;
@@ -2192,6 +2195,7 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 								caster->Message(Chat::Spells,"You have cured your target of %s!",spells[buffs[j].spellid].name);
 								caster->CastOnCurer(buffs[j].spellid);
 								CastOnCure(buffs[j].spellid);
+								caster->AoTv4CureRenewal(this);   // AoTv4 Cleansing Renewal
 							}
 							effect_value -= buffs[j].counters;
 							buffs[j].counters = 0;

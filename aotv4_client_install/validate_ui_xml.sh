@@ -31,7 +31,12 @@ for f in "${FILES[@]}"; do
   [ -n "$hits" ] && problems+=$'\n  DOUBLE HYPHEN IN COMMENT (crashes the client at UI load):\n'"$(echo "$hits" | sed 's/^/    /')"
 
   # 2. tag balance (comments stripped)
+  #    Self-closing tags are deleted first: stock files use "<TooltipReference />" and "<Text />",
+  #    which have no closing partner and would otherwise be reported as unbalanced forever. Left in,
+  #    the check cries wolf on every untouched RoF2 file we adopt -- which is worse than not having
+  #    it, because a real failure then looks like the usual noise.
   unb=$(sed 's/<!--/\n\xc2\xab/g; s/-->/\xc2\xbb\n/g' "$f" | grep -v $'^\xc2\xab' \
+        | sed 's|<[A-Za-z_][A-Za-z0-9_]*[^<>]*/>||g' \
         | grep -o '</\?[A-Za-z_][A-Za-z0-9_]*' | sed 's/^<//' \
         | awk '{if(substr($0,1,1)=="/") shut[substr($0,2)]++; else open[$0]++}
                END{for(t in open) if(open[t]!=shut[t] && t!="Schema") printf "    %-16s open=%d close=%d\n",t,open[t],shut[t]}')

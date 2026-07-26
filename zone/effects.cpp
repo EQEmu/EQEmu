@@ -432,6 +432,12 @@ int64 Mob::GetActSpellHealing(uint16 spell_id, int64 value, Mob* target, bool fr
 	int16 critical_chance = 0;
 	int8  critical_modifier = 1;
 
+	// AoTv4 Healer AA: Triage Instinct (bigger, crittier heals on a dying target) and the payoff
+	// from Cleansing Renewal rank 5. Read here because this is the one place the caster, the
+	// target, the amount and the crit chance are all in scope together.
+	int aotv4_heal_crit_add = 0;
+	const int aotv4_heal_bonus = AoTv4HealBonus(target, spell_id, from_buff_tic, aotv4_heal_crit_add);
+
 	if (spells[spell_id].buff_duration < 1) {
 		critical_chance += itembonuses.CriticalHealChance + spellbonuses.CriticalHealChance + aabonuses.CriticalHealChance;
 
@@ -446,6 +452,8 @@ int64 Mob::GetActSpellHealing(uint16 spell_id, int64 value, Mob* target, bool fr
 			critical_chance += GetDecayEffectValue(spell_id, SpellEffect::CriticalRegenDecay);
 		}
 	}
+
+	critical_chance += aotv4_heal_crit_add;   // AoTv4 Triage Instinct rank 3+
 
 	if (critical_chance) {
 
@@ -463,6 +471,12 @@ int64 Mob::GetActSpellHealing(uint16 spell_id, int64 value, Mob* target, bool fr
 	}
 	value += int64(base_value*GetFocusEffect(focusImprovedHeal, spell_id, nullptr, from_buff_tic) / 100);
 	value += int64(base_value*GetFocusEffect(focusFcAmplifyMod, spell_id, nullptr, from_buff_tic) / 100);
+
+	// AoTv4 Triage Instinct / Cleansing Renewal: applied off base_value alongside the focus effects
+	// and before the critical multiplier, so a crit doubles the boosted heal rather than the raw one.
+	if (aotv4_heal_bonus) {
+		value += int64(base_value * aotv4_heal_bonus / 100);
+	}
 
 	// Instant Heals
 	if (spells[spell_id].buff_duration < 1) {
@@ -518,6 +532,9 @@ int64 Mob::GetActSpellHealing(uint16 spell_id, int64 value, Mob* target, bool fr
 			if (IsClient()) {
 				MessageString(Chat::SpellCrit, YOU_CRIT_HEAL, itoa(value));
 			}
+
+			// AoTv4 Triage Instinct rank 5: a critical heal on a dying target refunds mana.
+			AoTv4HealCritReward(target, spell_id);
 		}
 
 		return value;

@@ -20,11 +20,25 @@ use warnings;
 
 my $ROWS = 3;                                     # the server always offers three
 
-# Distinct icons used by the reward pool.  Keep in step with quests/lua_modules/spell_icons.lua
-# and skill_pool.lua:
-#   perl -ne 'print "$1\n" while /=(\d+),/g' spell_icons.lua | sort -nu
-my @ICONS = (4, 6, 16, 21, 41, 42, 44, 46, 47, 49, 51, 56,
-             77, 99, 118, 132, 133, 139, 155, 161, 202, 203);
+# Distinct icons the reward pool can produce, READ from the generated Lua rather than hardcoded --
+# the pool changes (it went from a 113-spell custom set to the ~2600-spell stock set) and a
+# hardcoded list silently drifts into blank icons.  The dll does not carry a matching list either:
+# it looks the button up by name at runtime, so this file is the single source of truth.
+my @ICONS = do {
+    my %seen;
+    for my $f ("/src/.devcontainer/repo/quests/lua_modules/spell_icons.lua",
+               "/src/.devcontainer/repo/quests/lua_modules/skill_pool.lua") {
+        open(my $fh, '<', $f) or die "$f: $!";
+        while (my $l = <$fh>) {
+            $seen{$1} = 1 while $l =~ /(?:^\s*\[\d+\]\s*=\s*|icon\s*=\s*)(\d+)/g;
+        }
+        close $fh;
+    }
+    # The client's EQUI_Animations.xml declares Spells01..Spells07 only, so icon indices above
+    # 7*36-1 = 251 have no texture to point at.  Referencing one is not an error, it just draws an
+    # empty square, so skip those: the row keeps its name and description and simply shows no icon.
+    sort { $a <=> $b } grep { $_ > 0 && $_ <= 251 } keys %seen;
+};
 
 my $CELL = 40;                                    # spell icons are 40x40
 my $COLS = 6;                                     # 6 per row on a 240-wide sheet

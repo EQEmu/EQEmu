@@ -1149,6 +1149,36 @@ void Mob::MeleeMitigation(Mob *attacker, DamageHitInfo &hit, ExtraAttackOptions 
 		rolled_mit = std::max(min_mit, std::min(1.0, rolled_mit));
 	}
 
+	// AoTv4 Aegis Reflex (custom/sql/aotv4_aa_tank_hosted.sql). Deflecting banks a stack; the blow
+	// that finally lands cashes the whole stack into a bonus on the next heal you receive.
+	//
+	// Why banking rather than a streak: at a 40 percent deflect rate a run of five consecutive
+	// deflects happens about 1 percent of the time, so a streak ladder would never reach its top
+	// rung. Banking makes every deflect progress that cannot be taken away, and cashes out on a
+	// rhythm that suits small frequent damage.
+	//
+	// Why it pays out on the NEXT HEAL rather than on the deflect: deflects cluster where you are
+	// already safe (high AC versus weak attackers deflects most swings), so healing per deflect is
+	// worth nothing exactly when it fires most. Paying at the moment a blow lands puts the value
+	// where the danger is.
+	const int aegis = static_cast<int>(GetAA(27));   // host AA 6, ranks 27-31
+	if (aegis > 0) {
+		// per-stack bonus and cap both climb with rank: 2%/5 at rank 1 up to 6%/10 at rank 5
+		const int per_stack = 1 + aegis;
+		const int cap       = 4 + aegis;
+
+		if (rolled_mit >= 1.0) {
+			if (m_aegis_stacks < cap) {
+				++m_aegis_stacks;
+			}
+		}
+		else if (m_aegis_stacks > 0) {
+			// A blow got through: lose the stack, arm the next heal with what it was worth.
+			m_aegis_stored = m_aegis_stacks * per_stack;
+			m_aegis_stacks = 0;
+		}
+	}
+
 	if (rolled_mit >= 1.0) {
 		// Armor fully deflected the blow — zero damage, send flavored message
 		const std::string skill_name = EQ::skills::GetSkillName(hit.skill);
@@ -4457,7 +4487,13 @@ void Mob::CommonDamage(Mob* attacker, int64 &damage, const uint16 spell_id, cons
 		if (HasDied()) {
 			bool IsSaved = false;
 
-			if (TryDivineSave()) {
+			// AoTv4 Borrowed Breath rank 5, tried before the native saves. Deliberately hand-rolled
+			// rather than SPA 232 -- see the comment on AoTv4TryBorrowedBreath for why the native
+			// death saves are both unusable here.
+			if (AoTv4TryBorrowedBreath()) {
+				IsSaved = true;
+			}
+			else if (TryDivineSave()) {
 				IsSaved = true;
 			}
 
@@ -4981,6 +5017,15 @@ void Mob::HealDamage(uint64 amount, Mob* caster, uint16 spell_id)
 		amount = lua_ret;
 	}
 #endif
+	// AoTv4 Aegis Reflex: spend whatever the last broken deflect run banked. One-shot --
+	// cleared here whether or not the heal was needed, so it cannot be hoarded across a fight.
+	// Placed before the overheal clamp below so the bonus can actually close the gap rather than
+	// being trimmed away by it.
+	if (m_aegis_stored > 0) {
+		amount += amount * static_cast<uint64>(m_aegis_stored) / 100;
+		m_aegis_stored = 0;
+	}
+
 	int64 maxhp = GetMaxHP();
 	int64 curhp = GetHP();
 	uint64 acthealed = 0;
@@ -4989,6 +5034,10 @@ void Mob::HealDamage(uint64 amount, Mob* caster, uint16 spell_id)
 		acthealed = (maxhp - curhp);
 	else
 		acthealed = amount;
+
+	// AoTv4 Healer AA: capture the health the target was AT before this heal. Borrowed Breath keys
+	// off it, and curhp is mutated further down, so it has to be taken here.
+	const float aotv4_pre_ratio = GetHPRatio();
 
 	if (acthealed > RuleI(Spells, HealAmountMessageFilterThreshold)) {
 		if (caster) {
@@ -5058,6 +5107,11 @@ void Mob::HealDamage(uint64 amount, Mob* caster, uint16 spell_id)
 
 		SendHPUpdate();
 	}
+
+	// AoTv4 Healer AA: Overflowing Grace, Borrowed Breath and Mender's Echo all key off a heal
+	// having LANDED, so they run last -- after the health is actually applied. See
+	// zone/aotv4_healer_aa.cpp; `amount` is what the heal was worth, `acthealed` what it restored.
+	AoTv4HealerPostHeal(caster, amount, acthealed, spell_id, aotv4_pre_ratio);
 }
 
 //proc chance includes proc bonus
@@ -6506,8 +6560,16 @@ int32 Mob::RuneAbsorb(int64 damage, uint16 type)
 					if (melee_rune_left > 0)
 						damage -= melee_rune_left;
 
+					// AoTv4 Overflowing Grace rank 5: note WHICH rune is about to fade before
+					// fading it, because the slot is reused the moment the buff is gone.
+					const bool aotv4_grace_spent = (buffs[slot].spellid == 43390);
+
 					if (!TryFadeEffect(slot))
 						BuffFadeBySlot(slot);
+
+					if (aotv4_grace_spent) {
+						AoTv4GraceShieldSpent();
+					}
 				}
 			}
 		}
@@ -6667,27 +6729,165 @@ void Mob::CommonOutgoingHitSuccess(Mob* defender, DamageHitInfo &hit, ExtraAttac
 
 	hit.damage_done += (hit.damage_done * pct_damage_reduction / 100) + defender->GetPositionalDmgTakenAmt(this);
 
-	if (defender->GetShielderID() || defender->spellbonuses.ShieldTargetSpa[SBIndex::SHIELD_TARGET_MITIGATION_PERCENT]) {
-		bool use_shield_ability = true;
-		//If defender is being shielded by an ability AND has a shield spell effect buff use highest mitigation value.
-		if ((defender->GetShieldTargetMitigation() && defender->spellbonuses.ShieldTargetSpa[SBIndex::SHIELD_TARGET_MITIGATION_PERCENT]) &&
-			 (defender->spellbonuses.ShieldTargetSpa[SBIndex::SHIELD_TARGET_MITIGATION_PERCENT] >= defender->GetShieldTargetMitigation())){
-				bool use_shield_ability = false;
-		}
-
-		//use targeted /shield ability values
-		if (defender->GetShielderID() && use_shield_ability) {
-			DoShieldDamageOnShielder(defender, hit.damage_done, hit.skill);
-			hit.damage_done -= hit.damage_done * defender->GetShieldTargetMitigation() / 100; //Default shielded takes 50 pct damage
-		}
-		//use spell effect SPA 463 values
-		else if (defender->spellbonuses.ShieldTargetSpa[SBIndex::SHIELD_TARGET_MITIGATION_PERCENT]){
-			DoShieldDamageOnShielderSpellEffect(defender, hit.damage_done, hit.skill);
-			hit.damage_done -= hit.damage_done * defender->spellbonuses.ShieldTargetSpa[SBIndex::SHIELD_TARGET_MITIGATION_PERCENT] / 100;
-		}
+	// AoTv4: the /shield pairing is handled by the Shield Wall (see Mob::ApplyShieldWall), which
+	// supports several sharers and its own split maths, so it replaces the stock single-shielder
+	// branch entirely. SPA 463 spell shielding is untouched and still works below.
+	if (!defender->GetShieldWall().empty()) {
+		hit.damage_done = defender->ApplyShieldWall(this, hit.damage_done, hit.skill);
+	}
+	else if (defender->spellbonuses.ShieldTargetSpa[SBIndex::SHIELD_TARGET_MITIGATION_PERCENT]) {
+		DoShieldDamageOnShielderSpellEffect(defender, hit.damage_done, hit.skill);
+		hit.damage_done -= hit.damage_done * defender->spellbonuses.ShieldTargetSpa[SBIndex::SHIELD_TARGET_MITIGATION_PERCENT] / 100;
 	}
 
 	CheckNumHitsRemaining(NumHit::OutgoingHitSuccess);
+}
+
+// ================================================================ AoTv4 SHIELD WALL
+// Several players share one melee hit, and sharing COSTS more total health than eating it alone.
+//
+// Stock EQ cannot do this at all: only the aggro holder is ever swung at, and /shield allows exactly
+// one shielder for 12 seconds. Here any number (up to AoT:ShieldWallMaxSharers) can /shield the same
+// person, the pairing is permanent, and the damage is divided between all of them:
+//
+//     share = (damage / N) * (100 + penalty * (N - 1)) / 100        penalty = AoT:ShieldWallPenaltyPercent
+//
+// With the default penalty of 20, N=2 gives 60 percent each (120 total) and N=3 gives ~47 percent
+// each (140 total). That is the point of the system: splitting turns one big spike into several
+// smaller hits that are far easier to heal, but you pay for the privilege in total HP. Stacking
+// more bodies is progressively worse value, so it is a real decision rather than a free win.
+//
+// Every participant takes the SAME share, including the aggro holder -- the shielder's own
+// mitigation from stock /shield is deliberately not applied on top, or the person tanking would eat
+// more than the people helping.
+//
+// Returns what the aggro holder should take; the shielders have already been dealt their share.
+// The visible "Shielded" buff (spells_new 43380, custom/sql/aotv4_shield_wall_buff.sql). It is an
+// inert marker -- all the mechanics are in ApplyShieldWall below -- and exists so the shielded
+// player can see at a glance that the pairing is still up.
+//
+// ⚠️ Cast it FROM THE SHIELDER, not with ApplySpellBuff(). ApplySpellBuff calls
+// SpellOnTarget(spell_id, this) on the buff holder, so the buff records the shielded player as its
+// own caster and inspecting it reads "cast by yourself" -- useless. Buffs carry casterid and
+// caster_name (Buffs_Struct, zone/common.h:228), and the client shows them when you inspect the
+// buff, so casting from the shielder is what puts a NAME on it. The buff's own name still comes
+// from the spell row and is the same for everyone; the caster field is the part that identifies who.
+// ONE BUFF PER SHIELDER: three shielders means three "Shielded" buffs, each naming its own caster.
+// That needs three distinct spell ids, because EQ will not stack the same spell id from two
+// different casters -- a second cast of 43380 would overwrite the first and only one name could
+// ever show. 43380/81/82 are identical rows with different spellgroups so they coexist.
+#define AOTV4_SHIELDED_BUFF_FIRST 43380
+#define AOTV4_SHIELDED_BUFF_COUNT 3     // = AoT:ShieldWallMaxSharers 4, minus the aggro holder
+
+// Rebuilt from scratch on every wall change rather than patched incrementally: the buffs must line
+// up with who is ACTUALLY shielding right now, and a stale one names somebody who already walked
+// away. Cheap -- it only runs when the wall membership changes, never per hit.
+void Mob::ShieldWallRefreshBuff()
+{
+	for (int i = 0; i < AOTV4_SHIELDED_BUFF_COUNT; ++i) {
+		BuffFadeBySpellID(AOTV4_SHIELDED_BUFF_FIRST + i);
+	}
+
+	int slot = 0;
+	for (auto id : m_shield_wall) {
+		if (slot >= AOTV4_SHIELDED_BUFF_COUNT) {
+			break;   // more shielders than we have buff rows; the extras just go uncredited
+		}
+		Mob *shielder = entity_list.GetMob(id);
+		if (!shielder) {
+			continue;
+		}
+		// Cast FROM the shielder so the buff's caster_name is theirs (see the note above).
+		shielder->SpellOnTarget(AOTV4_SHIELDED_BUFF_FIRST + slot, this, 0, false, 0, false, -1, PERMANENT_BUFF_DURATION);
+		++slot;
+	}
+}
+
+void Mob::ShieldWallAdd(uint16 entity_id)
+{
+	if (!entity_id) {
+		return;
+	}
+	if (std::find(m_shield_wall.begin(), m_shield_wall.end(), entity_id) == m_shield_wall.end()) {
+		m_shield_wall.push_back(entity_id);
+	}
+	// Keep the stock single-shielder field pointing at the head so native teardown still works.
+	SetShielderID(m_shield_wall.empty() ? 0 : m_shield_wall.front());
+
+	// One buff however many people are shielding you -- it says "protected", not "protected twice".
+	// Refreshed rather than skipped when already present, so the credited caster stays current.
+	ShieldWallRefreshBuff();
+}
+
+void Mob::ShieldWallRemove(uint16 entity_id)
+{
+	m_shield_wall.erase(std::remove(m_shield_wall.begin(), m_shield_wall.end(), entity_id), m_shield_wall.end());
+	SetShielderID(m_shield_wall.empty() ? 0 : m_shield_wall.front());
+
+	// Drops the buff when the last shielder goes, and re-credits the next one when the head leaves.
+	ShieldWallRefreshBuff();
+}
+
+int64 Mob::ApplyShieldWall(Mob *attacker, int64 damage, EQ::skills::SkillType skill)
+{
+	if (m_shield_wall.empty() || damage <= 0 || !attacker) {
+		return damage;
+	}
+
+	const int   max_sharers = std::max(2, RuleI(AoT, ShieldWallMaxSharers));
+	const float max_dist    = static_cast<float>(RuleI(AoT, ShieldDistance));
+
+	// Collect the shielders who still qualify, dropping any who died, zoned or wandered off. The
+	// distance test is what makes the permanent pairing safe: it ends the moment you separate.
+	std::vector<Mob *> sharers;
+	for (auto it = m_shield_wall.begin(); it != m_shield_wall.end();) {
+		Mob *s = entity_list.GetMob(*it);
+		const bool gone = !s || s->GetHP() <= 0 || s == this;
+		const bool away = s && CalculateDistance(s->GetX(), s->GetY(), s->GetZ()) > max_dist;
+
+		if (gone || away) {
+			if (s) {
+				s->SetShieldTargetID(0);
+				s->SetShielderMitigation(0);
+				s->SetShielderMaxDistance(0);
+				s->shield_timer.Disable();
+			}
+			it = m_shield_wall.erase(it);
+			continue;
+		}
+		if (static_cast<int>(sharers.size()) + 1 < max_sharers) {   // +1 for the aggro holder
+			sharers.push_back(s);
+		}
+		++it;
+	}
+	SetShielderID(m_shield_wall.empty() ? 0 : m_shield_wall.front());
+
+	if (sharers.empty()) {
+		// Everyone we had has died or wandered off; the pairing is over, so lose the markers too.
+		ShieldWallRefreshBuff();
+		return damage;
+	}
+
+	const int64 n = static_cast<int64>(sharers.size()) + 1;   // + the aggro holder
+
+	// The surcharge is flat. A "Bulwark" AA used to shave it per rank, but it was cut as redundant
+	// with /shield itself, and the GetAA(50020) it read had already become dead: rank 50020 was part
+	// of the new-id AA attempt the client discards, so it returned 0 for everyone regardless.
+	int penalty = RuleI(AoT, ShieldWallPenaltyPercent);
+	if (penalty < 0) {
+		penalty = 0;   // never make sharing a net GAIN, or stacking bodies becomes free mitigation
+	}
+	// Multiply before dividing: (damage / n) first would truncate the share on every small hit.
+	int64       share   = (damage * (100 + penalty * (n - 1))) / (n * 100);
+	if (share < 1) {
+		share = 1;
+	}
+
+	for (auto *s : sharers) {
+		s->Damage(attacker, share, SPELL_UNKNOWN, skill, true, -1, false, m_specialattacks);
+	}
+
+	return share;
 }
 
 void Mob::DoShieldDamageOnShielder(Mob *shield_target, int64 hit_damage_done, EQ::skills::SkillType skillInUse)

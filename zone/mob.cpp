@@ -7974,10 +7974,22 @@ bool Mob::ShieldAbility(uint32 target_id, int shielder_max_distance, int shield_
 		SetShielderID(0);
 	}
 
-	//You have a shielder, or your 'Shield Target' already has a 'Shielder'
-	if (GetShielderID() || shield_target->GetShielderID()) {
+	// AoTv4: SEVERAL people may shield the same person -- that is the Shield Wall (see
+	// Mob::ApplyShieldWall). Stock rejects a second shielder outright here; instead only the cases
+	// that are still nonsense are rejected: shielding while someone shields YOU (which would chain
+	// damage between walls), and joining a wall that is already full.
+	if (GetShielderID()) {
 		if (IsClient()) {
 			MessageString(Chat::White, ALREADY_SHIELDED);
+		}
+		return false;
+	}
+
+	const int wall_cap = std::max(2, RuleI(AoT, ShieldWallMaxSharers)) - 1;   // -1 for the aggro holder
+	if (static_cast<int>(shield_target->GetShieldWall().size()) >= wall_cap) {
+		if (IsClient()) {
+			Message(Chat::White, "%s already has as many people shielding them as they can.",
+				shield_target->GetCleanName());
 		}
 		return false;
 	}
@@ -8007,7 +8019,7 @@ bool Mob::ShieldAbility(uint32 target_id, int shielder_max_distance, int shield_
 	SetShielderMitigation(shielder_mitigation);
 	SetShielderMaxDistance(shielder_max_distance);
 
-	shield_target->SetShielderID(GetID());
+	shield_target->ShieldWallAdd(GetID());   // AoTv4: join the wall (also keeps SetShielderID in sync)
 	shield_target->SetShieldTargetMitigation(shield_target_mitigation);
 
 	//Calculate AA for adding time SPA 255 extend shield duration (Baseline ability is 12 seconds)
@@ -8026,8 +8038,10 @@ void Mob::ShieldAbilityFinish()
 
 	if (shield_target) {
 		entity_list.MessageCloseString(this, false, 100, 0, END_SHIELDING, GetCleanName(), shield_target->GetCleanName());
-		shield_target->SetShielderID(0);
-		shield_target->SetShieldTargetMitigation(0);
+		shield_target->ShieldWallRemove(GetID());   // AoTv4: leave the wall
+		if (shield_target->GetShieldWall().empty()) {
+			shield_target->SetShieldTargetMitigation(0);
+		}
 	}
 	SetShieldTargetID(0);
 	SetShielderMitigation(0);
@@ -8037,15 +8051,19 @@ void Mob::ShieldAbilityFinish()
 
 void Mob::ShieldAbilityClearVariables()
 {
-	//If 'shield target' dies
-	if (GetShielderID()){
-		Mob* shielder = entity_list.GetMob(GetShielderID());
-		if (shielder) {
-			shielder->SetShieldTargetID(0);
-			shielder->SetShielderMitigation(0);
-			shielder->SetShielderMaxDistance(0);
-			shielder->shield_timer.Disable();
+	//If 'shield target' dies -- AoTv4: release EVERY shielder in the wall, not just the head
+	if (!m_shield_wall.empty()) {
+		for (auto id : m_shield_wall) {
+			Mob* shielder = entity_list.GetMob(id);
+			if (shielder) {
+				shielder->SetShieldTargetID(0);
+				shielder->SetShielderMitigation(0);
+				shielder->SetShielderMaxDistance(0);
+				shielder->shield_timer.Disable();
+			}
 		}
+		m_shield_wall.clear();
+		ShieldWallRefreshBuff();   // AoTv4: the "Shielded" markers go with the wall
 		SetShielderID(0);
 		SetShieldTargetMitigation(0);
 	}
@@ -8054,8 +8072,10 @@ void Mob::ShieldAbilityClearVariables()
 	if (GetShieldTargetID()) {
 		Mob* shield_target = entity_list.GetMob(GetShieldTargetID());
 		if (shield_target) {
-			shield_target->SetShielderID(0);
-			shield_target->SetShieldTargetMitigation(0);
+			shield_target->ShieldWallRemove(GetID());   // AoTv4: just me, others keep shielding
+			if (shield_target->GetShieldWall().empty()) {
+				shield_target->SetShieldTargetMitigation(0);
+			}
 		}
 		SetShieldTargetID(0);
 		SetShielderMitigation(0);

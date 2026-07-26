@@ -14885,16 +14885,35 @@ void Client::Handle_OP_Shielding(const EQApplicationPacket *app)
 		return;
 	}
 
-	if (GetLevel() < 30) { //Client gives message
+	// AoTv4: /shield is the damage-splitting system, not a Warrior perk. Two players who stand
+	// together can share a mob's melee damage, which stock EQ has no way to do -- only the aggro
+	// holder is ever swung at. The native ability already implements everything that matters
+	// (mitigation split, the shield-AC bonus, and dropping when the pair separate), so it is opened
+	// up rather than reimplemented: any class, any level, and it holds until you move apart.
+	if (GetLevel() < RuleI(AoT, ShieldMinLevel)) { //Client gives message
 		return;
 	}
 
-	if (GetClass() != Class::Warrior){
+	if (!RuleB(AoT, ShieldAnyClass) && GetClass() != Class::Warrior) {
 		return;
 	}
 
 	if (!RuleB(Combat, EnableWarriorShielding)) {
 		Message(Chat::White, "/shield is disabled.");
+		return;
+	}
+
+	// AoTv4: /shield is a TOGGLE. Stock relies on the 12 second duration to end the pairing, but
+	// ours is permanent, so without this the only ways to stop shielding someone are to walk out of
+	// range or die. Re-issuing the command drops the current pairing (and costs no recast, so you
+	// can immediately shield someone else).
+	if (GetShieldTargetID()) {
+		Mob *current = entity_list.GetMob(GetShieldTargetID());
+		Message(
+			Chat::White,
+			fmt::format("You stop shielding {}.", current ? current->GetCleanName() : "your target").c_str()
+		);
+		ShieldAbilityFinish();
 		return;
 	}
 
@@ -14911,9 +14930,26 @@ void Client::Handle_OP_Shielding(const EQApplicationPacket *app)
 		return;
 	}
 
+	// AoTv4: "permanent" is a very long timer rather than no timer, because shield_timer is what
+	// ShieldAbilityFinish() keys off to tear the pairing down cleanly. A day is far past any play
+	// session, and the pairing still ends the moment the two separate (DoShieldDamageOnShielder
+	// checks the distance on every hit) or either one dies (ShieldAbilityClearVariables).
+	const int duration = RuleB(AoT, ShieldPermanent) ? 86400000 : 12000;
+
 	auto shield = (Shielding_Struct*) app->pBuffer;
-	if (ShieldAbility(shield->target_id, 15, 12000, 50, 25, true, false)) {
-		p_timers.Start(timer, SHIELD_ABILITY_RECAST_TIME);
+	// The two mitigation arguments are stock plumbing that the Shield Wall does not use -- it does
+	// its own split in Mob::ApplyShieldWall -- so they are left at the native defaults rather than
+	// exposed as rules that would look meaningful but change nothing.
+	if (ShieldAbility(
+			shield->target_id,
+			RuleI(AoT, ShieldDistance),
+			duration,
+			50,
+			25,
+			true,
+			false
+		)) {
+		p_timers.Start(timer, RuleI(AoT, ShieldRecastSeconds));
 	}
 
 	return;
