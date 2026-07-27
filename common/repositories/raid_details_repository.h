@@ -93,4 +93,60 @@ public:
 			)
 		);
 	}
+
+	static int UpdateLocked(Database& db, int32_t raid_id, int8_t locked)
+	{
+		auto results = db.QueryDatabase(
+			fmt::format(
+				"UPDATE `{}` SET `locked` = {} WHERE `raidid` = {};",
+				TableName(),
+				locked,
+				raid_id
+			)
+		);
+
+		return results.Success() ? results.RowsAffected() : 0;
+	}
+
+	static int UpdateGroupOnInvite(Database& db, int32_t raid_id, uint8_t group_on_invite)
+	{
+		auto results = db.QueryDatabase(
+			fmt::format(
+				"UPDATE `{}` SET `group_on_invite` = {} WHERE `raidid` = {};",
+				TableName(),
+				group_on_invite,
+				raid_id
+			)
+		);
+
+		return results.Success() ? results.RowsAffected() : 0;
+	}
+
+	static int UpdateMotd(Database& db, int32_t raid_id, const std::string& motd)
+	{
+		auto results = db.QueryDatabase(
+			fmt::format(
+				"UPDATE `{}` SET `motd` = '{}' WHERE `raidid` = {};",
+				TableName(),
+				Strings::Escape(motd),
+				raid_id
+			)
+		);
+
+		return results.Success() ? results.RowsAffected() : 0;
+	}
+
+	static int UpdateLootType(Database& db, int32_t raid_id, int32_t loottype)
+	{
+		auto results = db.QueryDatabase(
+			fmt::format(
+				"UPDATE `{}` SET `loottype` = {} WHERE `raidid` = {};",
+				TableName(),
+				loottype,
+				raid_id
+			)
+		);
+
+		return results.Success() ? results.RowsAffected() : 0;
+	}
 };

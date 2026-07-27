@@ -1204,6 +1204,7 @@ void Database::SetGroupLeaderName(uint32 group_id, const std::string &name)
 
     e.gid            = group_id;
     e.marknpc        = std::string();
+    e.masterlooter   = std::string();
     e.leadershipaa   = std::string();
     e.maintank       = std::string();
     e.assist         = std::string();
@@ -1241,7 +1242,8 @@ char* Database::GetGroupLeadershipInfo(
 	char* marknpc,
 	char* mentoree,
 	int* mentor_percent,
-	GroupLeadershipAA_Struct* GLAA
+	GroupLeadershipAA_Struct* GLAA,
+	char* masterlooter
 )
 {
 	auto e = GroupLeadersRepository::FindOne(*this, group_id);
@@ -1275,6 +1277,10 @@ char* Database::GetGroupLeadershipInfo(
 			*mentor_percent = 0;
 		}
 
+		if (masterlooter) {
+			masterlooter[0] = '\0';
+		}
+
 		return leaderbuf;
 	}
 
@@ -1305,6 +1311,11 @@ char* Database::GetGroupLeadershipInfo(
 	if (mentor_percent) {
 		*mentor_percent = e.mentor_percent;
 	}
+
+	if (masterlooter) {
+		strcpy(masterlooter, e.masterlooter.c_str());
+	}
+
 	if(GLAA && e.leadershipaa.length() == sizeof(GroupLeadershipAA_Struct)) {
 		Decode(e.leadershipaa);
 		memcpy(GLAA, e.leadershipaa.data(), sizeof(GroupLeadershipAA_Struct));

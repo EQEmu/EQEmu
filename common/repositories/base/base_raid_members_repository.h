@@ -47,6 +47,7 @@ public:
 		int8_t      isgroupleader;
 		int8_t      israidleader;
 		int8_t      islooter;
+		uint8_t     is_master_looter;
 		uint8_t     is_marker;
 		uint8_t     is_assister;
 		std::string note;
@@ -71,6 +72,7 @@ public:
 			"isgroupleader",
 			"israidleader",
 			"islooter",
+			"is_master_looter",
 			"is_marker",
 			"is_assister",
 			"note",
@@ -91,6 +93,7 @@ public:
 			"isgroupleader",
 			"israidleader",
 			"islooter",
+			"is_master_looter",
 			"is_marker",
 			"is_assister",
 			"note",
@@ -134,20 +137,21 @@ public:
 	{
 		RaidMembers e{};
 
-		e.id            = 0;
-		e.raidid        = 0;
-		e.charid        = 0;
-		e.bot_id        = 0;
-		e.groupid       = 0;
-		e._class        = 0;
-		e.level         = 0;
-		e.name          = "";
-		e.isgroupleader = 0;
-		e.israidleader  = 0;
-		e.islooter      = 0;
-		e.is_marker     = 0;
-		e.is_assister   = 0;
-		e.note          = "";
+		e.id               = 0;
+		e.raidid           = 0;
+		e.charid           = 0;
+		e.bot_id           = 0;
+		e.groupid          = 0;
+		e._class           = 0;
+		e.level            = 0;
+		e.name             = "";
+		e.isgroupleader    = 0;
+		e.israidleader     = 0;
+		e.islooter         = 0;
+		e.is_master_looter = 0;
+		e.is_marker        = 0;
+		e.is_assister      = 0;
+		e.note             = "";
 
 		return e;
 	}
@@ -184,20 +188,21 @@ public:
 		if (results.RowCount() == 1) {
 			RaidMembers e{};
 
-			e.id            = row[0] ? strtoull(row[0], nullptr, 10) : 0;
-			e.raidid        = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
-			e.charid        = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
-			e.bot_id        = row[3] ? static_cast<int32_t>(atoi(row[3])) : 0;
-			e.groupid       = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
-			e._class        = row[5] ? static_cast<int8_t>(atoi(row[5])) : 0;
-			e.level         = row[6] ? static_cast<int8_t>(atoi(row[6])) : 0;
-			e.name          = row[7] ? row[7] : "";
-			e.isgroupleader = row[8] ? static_cast<int8_t>(atoi(row[8])) : 0;
-			e.israidleader  = row[9] ? static_cast<int8_t>(atoi(row[9])) : 0;
-			e.islooter      = row[10] ? static_cast<int8_t>(atoi(row[10])) : 0;
-			e.is_marker     = row[11] ? static_cast<uint8_t>(strtoul(row[11], nullptr, 10)) : 0;
-			e.is_assister   = row[12] ? static_cast<uint8_t>(strtoul(row[12], nullptr, 10)) : 0;
-			e.note          = row[13] ? row[13] : "";
+			e.id               = row[0] ? strtoull(row[0], nullptr, 10) : 0;
+			e.raidid           = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
+			e.charid           = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
+			e.bot_id           = row[3] ? static_cast<int32_t>(atoi(row[3])) : 0;
+			e.groupid          = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
+			e._class           = row[5] ? static_cast<int8_t>(atoi(row[5])) : 0;
+			e.level            = row[6] ? static_cast<int8_t>(atoi(row[6])) : 0;
+			e.name             = row[7] ? row[7] : "";
+			e.isgroupleader    = row[8] ? static_cast<int8_t>(atoi(row[8])) : 0;
+			e.israidleader     = row[9] ? static_cast<int8_t>(atoi(row[9])) : 0;
+			e.islooter         = row[10] ? static_cast<int8_t>(atoi(row[10])) : 0;
+			e.is_master_looter = row[11] ? static_cast<uint8_t>(strtoul(row[11], nullptr, 10)) : 0;
+			e.is_marker        = row[12] ? static_cast<uint8_t>(strtoul(row[12], nullptr, 10)) : 0;
+			e.is_assister      = row[13] ? static_cast<uint8_t>(strtoul(row[13], nullptr, 10)) : 0;
+			e.note             = row[14] ? row[14] : "";
 
 			return e;
 		}
@@ -241,9 +246,10 @@ public:
 		v.push_back(columns[8] + " = " + std::to_string(e.isgroupleader));
 		v.push_back(columns[9] + " = " + std::to_string(e.israidleader));
 		v.push_back(columns[10] + " = " + std::to_string(e.islooter));
-		v.push_back(columns[11] + " = " + std::to_string(e.is_marker));
-		v.push_back(columns[12] + " = " + std::to_string(e.is_assister));
-		v.push_back(columns[13] + " = '" + Strings::Escape(e.note) + "'");
+		v.push_back(columns[11] + " = " + std::to_string(e.is_master_looter));
+		v.push_back(columns[12] + " = " + std::to_string(e.is_marker));
+		v.push_back(columns[13] + " = " + std::to_string(e.is_assister));
+		v.push_back(columns[14] + " = '" + Strings::Escape(e.note) + "'");
 
 		auto results = db.QueryDatabase(
 			fmt::format(
@@ -276,6 +282,7 @@ public:
 		v.push_back(std::to_string(e.isgroupleader));
 		v.push_back(std::to_string(e.israidleader));
 		v.push_back(std::to_string(e.islooter));
+		v.push_back(std::to_string(e.is_master_looter));
 		v.push_back(std::to_string(e.is_marker));
 		v.push_back(std::to_string(e.is_assister));
 		v.push_back("'" + Strings::Escape(e.note) + "'");
@@ -319,6 +326,7 @@ public:
 			v.push_back(std::to_string(e.isgroupleader));
 			v.push_back(std::to_string(e.israidleader));
 			v.push_back(std::to_string(e.islooter));
+			v.push_back(std::to_string(e.is_master_looter));
 			v.push_back(std::to_string(e.is_marker));
 			v.push_back(std::to_string(e.is_assister));
 			v.push_back("'" + Strings::Escape(e.note) + "'");
@@ -355,20 +363,21 @@ public:
 		for (auto row = results.begin(); row != results.end(); ++row) {
 			RaidMembers e{};
 
-			e.id            = row[0] ? strtoull(row[0], nullptr, 10) : 0;
-			e.raidid        = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
-			e.charid        = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
-			e.bot_id        = row[3] ? static_cast<int32_t>(atoi(row[3])) : 0;
-			e.groupid       = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
-			e._class        = row[5] ? static_cast<int8_t>(atoi(row[5])) : 0;
-			e.level         = row[6] ? static_cast<int8_t>(atoi(row[6])) : 0;
-			e.name          = row[7] ? row[7] : "";
-			e.isgroupleader = row[8] ? static_cast<int8_t>(atoi(row[8])) : 0;
-			e.israidleader  = row[9] ? static_cast<int8_t>(atoi(row[9])) : 0;
-			e.islooter      = row[10] ? static_cast<int8_t>(atoi(row[10])) : 0;
-			e.is_marker     = row[11] ? static_cast<uint8_t>(strtoul(row[11], nullptr, 10)) : 0;
-			e.is_assister   = row[12] ? static_cast<uint8_t>(strtoul(row[12], nullptr, 10)) : 0;
-			e.note          = row[13] ? row[13] : "";
+			e.id               = row[0] ? strtoull(row[0], nullptr, 10) : 0;
+			e.raidid           = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
+			e.charid           = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
+			e.bot_id           = row[3] ? static_cast<int32_t>(atoi(row[3])) : 0;
+			e.groupid          = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
+			e._class           = row[5] ? static_cast<int8_t>(atoi(row[5])) : 0;
+			e.level            = row[6] ? static_cast<int8_t>(atoi(row[6])) : 0;
+			e.name             = row[7] ? row[7] : "";
+			e.isgroupleader    = row[8] ? static_cast<int8_t>(atoi(row[8])) : 0;
+			e.israidleader     = row[9] ? static_cast<int8_t>(atoi(row[9])) : 0;
+			e.islooter         = row[10] ? static_cast<int8_t>(atoi(row[10])) : 0;
+			e.is_master_looter = row[11] ? static_cast<uint8_t>(strtoul(row[11], nullptr, 10)) : 0;
+			e.is_marker        = row[12] ? static_cast<uint8_t>(strtoul(row[12], nullptr, 10)) : 0;
+			e.is_assister      = row[13] ? static_cast<uint8_t>(strtoul(row[13], nullptr, 10)) : 0;
+			e.note             = row[14] ? row[14] : "";
 
 			all_entries.push_back(e);
 		}
@@ -393,20 +402,21 @@ public:
 		for (auto row = results.begin(); row != results.end(); ++row) {
 			RaidMembers e{};
 
-			e.id            = row[0] ? strtoull(row[0], nullptr, 10) : 0;
-			e.raidid        = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
-			e.charid        = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
-			e.bot_id        = row[3] ? static_cast<int32_t>(atoi(row[3])) : 0;
-			e.groupid       = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
-			e._class        = row[5] ? static_cast<int8_t>(atoi(row[5])) : 0;
-			e.level         = row[6] ? static_cast<int8_t>(atoi(row[6])) : 0;
-			e.name          = row[7] ? row[7] : "";
-			e.isgroupleader = row[8] ? static_cast<int8_t>(atoi(row[8])) : 0;
-			e.israidleader  = row[9] ? static_cast<int8_t>(atoi(row[9])) : 0;
-			e.islooter      = row[10] ? static_cast<int8_t>(atoi(row[10])) : 0;
-			e.is_marker     = row[11] ? static_cast<uint8_t>(strtoul(row[11], nullptr, 10)) : 0;
-			e.is_assister   = row[12] ? static_cast<uint8_t>(strtoul(row[12], nullptr, 10)) : 0;
-			e.note          = row[13] ? row[13] : "";
+			e.id               = row[0] ? strtoull(row[0], nullptr, 10) : 0;
+			e.raidid           = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
+			e.charid           = row[2] ? static_cast<int32_t>(atoi(row[2])) : 0;
+			e.bot_id           = row[3] ? static_cast<int32_t>(atoi(row[3])) : 0;
+			e.groupid          = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
+			e._class           = row[5] ? static_cast<int8_t>(atoi(row[5])) : 0;
+			e.level            = row[6] ? static_cast<int8_t>(atoi(row[6])) : 0;
+			e.name             = row[7] ? row[7] : "";
+			e.isgroupleader    = row[8] ? static_cast<int8_t>(atoi(row[8])) : 0;
+			e.israidleader     = row[9] ? static_cast<int8_t>(atoi(row[9])) : 0;
+			e.islooter         = row[10] ? static_cast<int8_t>(atoi(row[10])) : 0;
+			e.is_master_looter = row[11] ? static_cast<uint8_t>(strtoul(row[11], nullptr, 10)) : 0;
+			e.is_marker        = row[12] ? static_cast<uint8_t>(strtoul(row[12], nullptr, 10)) : 0;
+			e.is_assister      = row[13] ? static_cast<uint8_t>(strtoul(row[13], nullptr, 10)) : 0;
+			e.note             = row[14] ? row[14] : "";
 
 			all_entries.push_back(e);
 		}
@@ -492,6 +502,7 @@ public:
 		v.push_back(std::to_string(e.isgroupleader));
 		v.push_back(std::to_string(e.israidleader));
 		v.push_back(std::to_string(e.islooter));
+		v.push_back(std::to_string(e.is_master_looter));
 		v.push_back(std::to_string(e.is_marker));
 		v.push_back(std::to_string(e.is_assister));
 		v.push_back("'" + Strings::Escape(e.note) + "'");
@@ -528,6 +539,7 @@ public:
 			v.push_back(std::to_string(e.isgroupleader));
 			v.push_back(std::to_string(e.israidleader));
 			v.push_back(std::to_string(e.islooter));
+			v.push_back(std::to_string(e.is_master_looter));
 			v.push_back(std::to_string(e.is_marker));
 			v.push_back(std::to_string(e.is_assister));
 			v.push_back("'" + Strings::Escape(e.note) + "'");

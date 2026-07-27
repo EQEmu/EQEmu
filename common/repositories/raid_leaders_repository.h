@@ -1,29 +1,13 @@
-/*	EQEmu: EQEmulator
-
-	Copyright (C) 2001-2026 EQEmu Development Team
-
-	This program is free software; you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation; either version 3 of the License, or
-	(at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program. If not, see <http://www.gnu.org/licenses/>.
-*/
 #pragma once
 
-#include "common/repositories/base/base_group_leaders_repository.h"
+#include "common/repositories/base/base_raid_leaders_repository.h"
 
 #include "common/database.h"
 #include "common/strings.h"
 
-class GroupLeadersRepository: public BaseGroupLeadersRepository {
+class RaidLeadersRepository: public BaseRaidLeadersRepository {
 public:
+
     /**
      * This file was auto generated and can be modified and extended upon
      *
@@ -48,10 +32,10 @@ public:
      *
      * Example custom methods in a repository
      *
-     * GroupLeadersRepository::GetByZoneAndVersion(int zone_id, int zone_version)
-     * GroupLeadersRepository::GetWhereNeverExpires()
-     * GroupLeadersRepository::GetWhereXAndY()
-     * GroupLeadersRepository::DeleteWhereXAndY()
+     * RaidLeadersRepository::GetByZoneAndVersion(int zone_id, int zone_version)
+     * RaidLeadersRepository::GetWhereNeverExpires()
+     * RaidLeadersRepository::GetWhereXAndY()
+     * RaidLeadersRepository::DeleteWhereXAndY()
      *
      * Most of the above could be covered by base methods, but if you as a developer
      * find yourself re-using logic for other parts of the code, its best to just make a
@@ -60,25 +44,45 @@ public:
      */
 
 	// Custom extended repository methods here
-	static void ClearAllGroupLeaders(Database& db)
-	{
-		db.QueryDatabase(
+	static int UpdateMentor(
+		Database& db,
+		int32_t raid_id,
+		uint32_t group_id,
+		const std::string& mentoree,
+		int32_t mentor_percent
+	) {
+		auto results = db.QueryDatabase(
 			fmt::format(
-				"DELETE FROM `{}`",
-				TableName()
+				"UPDATE `{}` SET `mentoree` = '{}', `mentor_percent` = {} WHERE `rid` = {} AND `gid` = {} LIMIT 1;",
+				TableName(),
+				Strings::Escape(mentoree),
+				mentor_percent,
+				raid_id,
+				group_id
 			)
 		);
+
+		return results.Success() ? results.RowsAffected() : 0;
 	}
 
-	static bool UpsertLeaderWithColumn(Database& db, const std::string& column, std::string& value, uint32 group_id)
+	static int ClearMentor(
+		Database& db,
+		int32_t raid_id,
+		uint32_t group_id
+	) {
+		return UpdateMentor(db, raid_id, group_id, "", 0);
+	}
+
+	static bool UpsertLeaderWithColumn(Database &db, const std::string &column, std::string &value, uint32 group_id, uint32 raid_id)
 	{
 		auto existing = GetWhere(
 			db,
-			fmt::format("gid = {} LIMIT 1", group_id)
+			fmt::format("rid = {} AND gid = {} LIMIT 1", raid_id, group_id)
 		);
 
 		auto e = existing.empty() ? NewEntity() : existing.front();
-		e.gid = static_cast<int32>(group_id);
+		e.rid = raid_id;
+		e.gid = group_id;
 
 		db.Encode(value);
 		if (column == "maintank")
@@ -93,22 +97,8 @@ public:
 			e.masterlooter = value;
 
 		if (existing.empty())
-			return InsertOne(db, e).gid != 0;
+			return InsertOne(db, e).id != 0;
 
 		return UpdateOne(db, e) > 0;
-	}
-
-	static int UpdateLeadershipAA(Database &db, std::string &aa, uint32 group_id)
-	{
-		const auto group_leader = GetWhere(db, fmt::format("gid = '{}' LIMIT 1", group_id));
-		if(group_leader.empty()) {
-			return 0;
-		}
-
-		db.Encode(aa);
-		auto m = group_leader[0];
-		m.leadershipaa = aa;
-
-		return UpdateOne(db, m);
 	}
 };

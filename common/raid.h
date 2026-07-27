@@ -39,6 +39,7 @@ enum {	//raid packet types:
 	raidUnlock = 18,		//len 136 leader?, leader, 0
 	raidRedStringID = 19,
 	raidSetLeader = 20,	//len 388, contains 'details' struct without members; also used for "invite to raid"
+	raidUpdateClassLevel = 24,	// updates a single roster row's class/level
 	raidMakeLeader = 30,
 	raidSetMotd = 35,
 	raidSetNote = 36,
@@ -48,6 +49,7 @@ enum {	//raid packet types:
 enum { //raid command types
 	RaidCommandInviteIntoExisting = 0, //in use
 	RaidCommandAcceptInvite = 1, //in use
+	RaidCommandAcceptInviteIntoExisting = 4, //in use; sent instead of RaidCommandAcceptInvite when accepting an invite to merge into an existing raid
 	RaidCommandInvite = 3, //in use
 	RaidCommandDisband = 5, //in use
 	RaidCommandMoveGroup = 6, //in use
@@ -64,4 +66,5 @@ enum { //raid command types
 	RaidCommandRemoveLooter2 = 34, //in use
 	RaidCommandSetMotd = 35,
 	RaidCommandSetNote = 36,
+	RaidCommandGroupOnInvite = 37, //in use; CRaid::SetGroupOnInvite sends via the same generic 5-field OP_RaidInvite format (parameter = 0/1)
 };

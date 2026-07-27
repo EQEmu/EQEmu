@@ -38,6 +38,7 @@ public:
 	struct RaidDetails {
 		int32_t     raidid;
 		int32_t     loottype;
+		uint8_t     group_on_invite;
 		int8_t      locked;
 		std::string motd;
 		uint32_t    marked_npc_1_entity_id;
@@ -61,6 +62,7 @@ public:
 		return {
 			"raidid",
 			"loottype",
+			"group_on_invite",
 			"locked",
 			"motd",
 			"marked_npc_1_entity_id",
@@ -80,6 +82,7 @@ public:
 		return {
 			"raidid",
 			"loottype",
+			"group_on_invite",
 			"locked",
 			"motd",
 			"marked_npc_1_entity_id",
@@ -133,6 +136,7 @@ public:
 
 		e.raidid                   = 0;
 		e.loottype                 = 0;
+		e.group_on_invite          = 0;
 		e.locked                   = 0;
 		e.motd                     = "";
 		e.marked_npc_1_entity_id   = 0;
@@ -182,17 +186,18 @@ public:
 
 			e.raidid                   = row[0] ? static_cast<int32_t>(atoi(row[0])) : 0;
 			e.loottype                 = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
-			e.locked                   = row[2] ? static_cast<int8_t>(atoi(row[2])) : 0;
-			e.motd                     = row[3] ? row[3] : "";
-			e.marked_npc_1_entity_id   = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
-			e.marked_npc_1_zone_id     = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
-			e.marked_npc_1_instance_id = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
-			e.marked_npc_2_entity_id   = row[7] ? static_cast<uint32_t>(strtoul(row[7], nullptr, 10)) : 0;
-			e.marked_npc_2_zone_id     = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
-			e.marked_npc_2_instance_id = row[9] ? static_cast<uint32_t>(strtoul(row[9], nullptr, 10)) : 0;
-			e.marked_npc_3_entity_id   = row[10] ? static_cast<uint32_t>(strtoul(row[10], nullptr, 10)) : 0;
-			e.marked_npc_3_zone_id     = row[11] ? static_cast<uint32_t>(strtoul(row[11], nullptr, 10)) : 0;
-			e.marked_npc_3_instance_id = row[12] ? static_cast<uint32_t>(strtoul(row[12], nullptr, 10)) : 0;
+			e.group_on_invite          = row[2] ? static_cast<uint8_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.locked                   = row[3] ? static_cast<int8_t>(atoi(row[3])) : 0;
+			e.motd                     = row[4] ? row[4] : "";
+			e.marked_npc_1_entity_id   = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
+			e.marked_npc_1_zone_id     = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
+			e.marked_npc_1_instance_id = row[7] ? static_cast<uint32_t>(strtoul(row[7], nullptr, 10)) : 0;
+			e.marked_npc_2_entity_id   = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
+			e.marked_npc_2_zone_id     = row[9] ? static_cast<uint32_t>(strtoul(row[9], nullptr, 10)) : 0;
+			e.marked_npc_2_instance_id = row[10] ? static_cast<uint32_t>(strtoul(row[10], nullptr, 10)) : 0;
+			e.marked_npc_3_entity_id   = row[11] ? static_cast<uint32_t>(strtoul(row[11], nullptr, 10)) : 0;
+			e.marked_npc_3_zone_id     = row[12] ? static_cast<uint32_t>(strtoul(row[12], nullptr, 10)) : 0;
+			e.marked_npc_3_instance_id = row[13] ? static_cast<uint32_t>(strtoul(row[13], nullptr, 10)) : 0;
 
 			return e;
 		}
@@ -228,17 +233,18 @@ public:
 
 		v.push_back(columns[0] + " = " + std::to_string(e.raidid));
 		v.push_back(columns[1] + " = " + std::to_string(e.loottype));
-		v.push_back(columns[2] + " = " + std::to_string(e.locked));
-		v.push_back(columns[3] + " = '" + Strings::Escape(e.motd) + "'");
-		v.push_back(columns[4] + " = " + std::to_string(e.marked_npc_1_entity_id));
-		v.push_back(columns[5] + " = " + std::to_string(e.marked_npc_1_zone_id));
-		v.push_back(columns[6] + " = " + std::to_string(e.marked_npc_1_instance_id));
-		v.push_back(columns[7] + " = " + std::to_string(e.marked_npc_2_entity_id));
-		v.push_back(columns[8] + " = " + std::to_string(e.marked_npc_2_zone_id));
-		v.push_back(columns[9] + " = " + std::to_string(e.marked_npc_2_instance_id));
-		v.push_back(columns[10] + " = " + std::to_string(e.marked_npc_3_entity_id));
-		v.push_back(columns[11] + " = " + std::to_string(e.marked_npc_3_zone_id));
-		v.push_back(columns[12] + " = " + std::to_string(e.marked_npc_3_instance_id));
+		v.push_back(columns[2] + " = " + std::to_string(e.group_on_invite));
+		v.push_back(columns[3] + " = " + std::to_string(e.locked));
+		v.push_back(columns[4] + " = '" + Strings::Escape(e.motd) + "'");
+		v.push_back(columns[5] + " = " + std::to_string(e.marked_npc_1_entity_id));
+		v.push_back(columns[6] + " = " + std::to_string(e.marked_npc_1_zone_id));
+		v.push_back(columns[7] + " = " + std::to_string(e.marked_npc_1_instance_id));
+		v.push_back(columns[8] + " = " + std::to_string(e.marked_npc_2_entity_id));
+		v.push_back(columns[9] + " = " + std::to_string(e.marked_npc_2_zone_id));
+		v.push_back(columns[10] + " = " + std::to_string(e.marked_npc_2_instance_id));
+		v.push_back(columns[11] + " = " + std::to_string(e.marked_npc_3_entity_id));
+		v.push_back(columns[12] + " = " + std::to_string(e.marked_npc_3_zone_id));
+		v.push_back(columns[13] + " = " + std::to_string(e.marked_npc_3_instance_id));
 
 		auto results = db.QueryDatabase(
 			fmt::format(
@@ -262,6 +268,7 @@ public:
 
 		v.push_back(std::to_string(e.raidid));
 		v.push_back(std::to_string(e.loottype));
+		v.push_back(std::to_string(e.group_on_invite));
 		v.push_back(std::to_string(e.locked));
 		v.push_back("'" + Strings::Escape(e.motd) + "'");
 		v.push_back(std::to_string(e.marked_npc_1_entity_id));
@@ -304,6 +311,7 @@ public:
 
 			v.push_back(std::to_string(e.raidid));
 			v.push_back(std::to_string(e.loottype));
+			v.push_back(std::to_string(e.group_on_invite));
 			v.push_back(std::to_string(e.locked));
 			v.push_back("'" + Strings::Escape(e.motd) + "'");
 			v.push_back(std::to_string(e.marked_npc_1_entity_id));
@@ -350,17 +358,18 @@ public:
 
 			e.raidid                   = row[0] ? static_cast<int32_t>(atoi(row[0])) : 0;
 			e.loottype                 = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
-			e.locked                   = row[2] ? static_cast<int8_t>(atoi(row[2])) : 0;
-			e.motd                     = row[3] ? row[3] : "";
-			e.marked_npc_1_entity_id   = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
-			e.marked_npc_1_zone_id     = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
-			e.marked_npc_1_instance_id = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
-			e.marked_npc_2_entity_id   = row[7] ? static_cast<uint32_t>(strtoul(row[7], nullptr, 10)) : 0;
-			e.marked_npc_2_zone_id     = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
-			e.marked_npc_2_instance_id = row[9] ? static_cast<uint32_t>(strtoul(row[9], nullptr, 10)) : 0;
-			e.marked_npc_3_entity_id   = row[10] ? static_cast<uint32_t>(strtoul(row[10], nullptr, 10)) : 0;
-			e.marked_npc_3_zone_id     = row[11] ? static_cast<uint32_t>(strtoul(row[11], nullptr, 10)) : 0;
-			e.marked_npc_3_instance_id = row[12] ? static_cast<uint32_t>(strtoul(row[12], nullptr, 10)) : 0;
+			e.group_on_invite          = row[2] ? static_cast<uint8_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.locked                   = row[3] ? static_cast<int8_t>(atoi(row[3])) : 0;
+			e.motd                     = row[4] ? row[4] : "";
+			e.marked_npc_1_entity_id   = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
+			e.marked_npc_1_zone_id     = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
+			e.marked_npc_1_instance_id = row[7] ? static_cast<uint32_t>(strtoul(row[7], nullptr, 10)) : 0;
+			e.marked_npc_2_entity_id   = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
+			e.marked_npc_2_zone_id     = row[9] ? static_cast<uint32_t>(strtoul(row[9], nullptr, 10)) : 0;
+			e.marked_npc_2_instance_id = row[10] ? static_cast<uint32_t>(strtoul(row[10], nullptr, 10)) : 0;
+			e.marked_npc_3_entity_id   = row[11] ? static_cast<uint32_t>(strtoul(row[11], nullptr, 10)) : 0;
+			e.marked_npc_3_zone_id     = row[12] ? static_cast<uint32_t>(strtoul(row[12], nullptr, 10)) : 0;
+			e.marked_npc_3_instance_id = row[13] ? static_cast<uint32_t>(strtoul(row[13], nullptr, 10)) : 0;
 
 			all_entries.push_back(e);
 		}
@@ -387,17 +396,18 @@ public:
 
 			e.raidid                   = row[0] ? static_cast<int32_t>(atoi(row[0])) : 0;
 			e.loottype                 = row[1] ? static_cast<int32_t>(atoi(row[1])) : 0;
-			e.locked                   = row[2] ? static_cast<int8_t>(atoi(row[2])) : 0;
-			e.motd                     = row[3] ? row[3] : "";
-			e.marked_npc_1_entity_id   = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0;
-			e.marked_npc_1_zone_id     = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
-			e.marked_npc_1_instance_id = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
-			e.marked_npc_2_entity_id   = row[7] ? static_cast<uint32_t>(strtoul(row[7], nullptr, 10)) : 0;
-			e.marked_npc_2_zone_id     = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
-			e.marked_npc_2_instance_id = row[9] ? static_cast<uint32_t>(strtoul(row[9], nullptr, 10)) : 0;
-			e.marked_npc_3_entity_id   = row[10] ? static_cast<uint32_t>(strtoul(row[10], nullptr, 10)) : 0;
-			e.marked_npc_3_zone_id     = row[11] ? static_cast<uint32_t>(strtoul(row[11], nullptr, 10)) : 0;
-			e.marked_npc_3_instance_id = row[12] ? static_cast<uint32_t>(strtoul(row[12], nullptr, 10)) : 0;
+			e.group_on_invite          = row[2] ? static_cast<uint8_t>(strtoul(row[2], nullptr, 10)) : 0;
+			e.locked                   = row[3] ? static_cast<int8_t>(atoi(row[3])) : 0;
+			e.motd                     = row[4] ? row[4] : "";
+			e.marked_npc_1_entity_id   = row[5] ? static_cast<uint32_t>(strtoul(row[5], nullptr, 10)) : 0;
+			e.marked_npc_1_zone_id     = row[6] ? static_cast<uint32_t>(strtoul(row[6], nullptr, 10)) : 0;
+			e.marked_npc_1_instance_id = row[7] ? static_cast<uint32_t>(strtoul(row[7], nullptr, 10)) : 0;
+			e.marked_npc_2_entity_id   = row[8] ? static_cast<uint32_t>(strtoul(row[8], nullptr, 10)) : 0;
+			e.marked_npc_2_zone_id     = row[9] ? static_cast<uint32_t>(strtoul(row[9], nullptr, 10)) : 0;
+			e.marked_npc_2_instance_id = row[10] ? static_cast<uint32_t>(strtoul(row[10], nullptr, 10)) : 0;
+			e.marked_npc_3_entity_id   = row[11] ? static_cast<uint32_t>(strtoul(row[11], nullptr, 10)) : 0;
+			e.marked_npc_3_zone_id     = row[12] ? static_cast<uint32_t>(strtoul(row[12], nullptr, 10)) : 0;
+			e.marked_npc_3_instance_id = row[13] ? static_cast<uint32_t>(strtoul(row[13], nullptr, 10)) : 0;
 
 			all_entries.push_back(e);
 		}
@@ -474,6 +484,7 @@ public:
 
 		v.push_back(std::to_string(e.raidid));
 		v.push_back(std::to_string(e.loottype));
+		v.push_back(std::to_string(e.group_on_invite));
 		v.push_back(std::to_string(e.locked));
 		v.push_back("'" + Strings::Escape(e.motd) + "'");
 		v.push_back(std::to_string(e.marked_npc_1_entity_id));
@@ -509,6 +520,7 @@ public:
 
 			v.push_back(std::to_string(e.raidid));
 			v.push_back(std::to_string(e.loottype));
+			v.push_back(std::to_string(e.group_on_invite));
 			v.push_back(std::to_string(e.locked));
 			v.push_back("'" + Strings::Escape(e.motd) + "'");
 			v.push_back(std::to_string(e.marked_npc_1_entity_id));

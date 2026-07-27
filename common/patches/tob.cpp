@@ -753,19 +753,112 @@ namespace TOB
 
 	ENCODE(OP_GroupInvite)
 	{
+		// client expects the group request ID here, it's apparently fine if its 0, but it is reading it
 		ENCODE_LENGTH_EXACT(GroupInvite_Struct);
-		SETUP_VAR_ENCODE(GroupInvite_Struct);
-		// Allocate 4 bytes beyond the struct so the client's read of group_request_id
-		// at offset 168 (past the 168-byte struct) lands in valid, zeroed memory.
-		// The server has no equivalent field; the client receives 0.
-		ALLOC_VAR_ENCODE(structs::GroupGeneric_Struct, sizeof(structs::GroupGeneric_Struct) + sizeof(uint32));
+		SETUP_DIRECT_ENCODE(GroupInvite_Struct, structs::GroupFollowGeneric_Struct);
 
-		memcpy(eq->name1, emu->invitee_name, sizeof(eq->name1));
-		memcpy(eq->name2, emu->inviter_name, sizeof(eq->name2));
-		// TODO: determine what the client expects for group_request_id at offset 168 —
-		// it is stored in EverQuest_GroupRequestId and may be used in the accept/decline flow.
+		memcpy(eq->groupGeneric.name1, emu->invitee_name, sizeof(eq->groupGeneric.name1));
+		memcpy(eq->groupGeneric.name2, emu->inviter_name, sizeof(eq->groupGeneric.name2));
 
 		FINISH_ENCODE();
+	}
+
+	// There are no handlers for these opcodes in the TOB client, drop them because the functionality comes
+	// from other packets already sent
+	EAT_ENCODE(OP_GroupFollow);
+	EAT_ENCODE(OP_GroupFollow2);
+
+	ENCODE(OP_GroupRoles) {
+		ENCODE_LENGTH_ATLEAST(GroupRole_Struct);
+		SETUP_DIRECT_ENCODE(GroupRole_Struct, structs::GroupRole_Struct);
+
+		OUT_str(Name1);
+		OUT_str(Name2);
+		OUT(RoleNumber);
+		OUT(Toggle);
+
+		FINISH_ENCODE();
+	}
+
+	// TODO: This needs a refactor in the server to enable the extra struct members (and separate out different
+	//       logic branches). Right now the server has to send extra role update packets that should be embedded
+	//       in this single packet (for OP_GroupUpdateB)
+	ENCODE(OP_GroupUpdate)
+	{
+		EQApplicationPacket *in = *p;
+		const auto gjs = reinterpret_cast<GroupJoin_Struct*>(in->pBuffer);
+
+		if (gjs->action == groupActLeave || gjs->action == groupActDisband) {
+			const EmuOpcode op = (gjs->action == groupActDisband || !strcmp(gjs->yourname, gjs->membername))
+			            ? OP_GroupDisbandYou : OP_GroupDisbandOther;
+
+			auto outapp = new EQApplicationPacket(op, sizeof(structs::GroupGeneric_Struct));
+			auto *ggs = reinterpret_cast<structs::GroupGeneric_Struct*>(outapp->pBuffer);
+			memcpy(ggs->name1, gjs->yourname, sizeof(ggs->name1));
+			memcpy(ggs->name2, gjs->membername, sizeof(ggs->name2));
+			dest->FastQueuePacket(&outapp, ack_req);
+			delete in;
+		} else if (gjs->action == groupActMakeLeader || gjs->action == groupActAAUpdate) {
+			// leader change is handled by SendGroupLeaderChangePacket (OP_GroupLeaderChange)
+			// AA update packet is unused in TOB (OP_GroupLeadershipAAUpdate was removed)
+			delete in;
+		} else if (in->size == sizeof(GroupUpdate2_Struct)) {
+			// Full group snapshot
+			const auto gu2 = reinterpret_cast<GroupUpdate2_Struct*>(in->pBuffer);
+
+			int MemberCount = 1;
+			for (int i = 0; i < 5; ++i) {
+				if (gu2->membername[i][0] != '\0')
+					++MemberCount;
+			}
+
+			uint32 PacketLength = 4 + 4 + strlen(gu2->leadersname) + 1;
+			PacketLength += MemberCount * (4 + 2 + 1 + 4 + 5 + 4 + 8 + 4 + 8);
+			PacketLength += strlen(gu2->yourname) + 1;
+			for (int i = 0; i < 5; ++i) {
+				if (gu2->membername[i][0] != '\0')
+					PacketLength += strlen(gu2->membername[i]) + 1;
+			}
+
+			auto outapp = new EQApplicationPacket(OP_GroupUpdateB, PacketLength);
+			auto Buffer = reinterpret_cast<char*>(outapp->pBuffer);
+
+			VARSTRUCT_ENCODE_TYPE(uint32, Buffer, 0);	// group_id — unused client-side
+			VARSTRUCT_ENCODE_TYPE(uint32, Buffer, MemberCount);
+			VARSTRUCT_ENCODE_STRING(Buffer, gu2->leadersname);
+
+			auto encode_member = [&](uint32 index, const char *name) {
+				VARSTRUCT_ENCODE_TYPE(uint32, Buffer, index);
+				VARSTRUCT_ENCODE_STRING(Buffer, name);
+				VARSTRUCT_ENCODE_TYPE(uint16, Buffer, 0);	// Type (0 = player)
+				VARSTRUCT_ENCODE_STRING(Buffer, "");		// OwnerName (merc owner; N/A)
+				VARSTRUCT_ENCODE_TYPE(uint32, Buffer, 0);	// TODO: Level
+				for (int f = 0; f < 5; ++f)
+					VARSTRUCT_ENCODE_TYPE(uint8, Buffer, 0);	// bRoleStates[1..5] — set via OP_GroupRoles as well
+				VARSTRUCT_ENCODE_TYPE(uint32, Buffer, 0);	// TODO: bIsOffline (grays out the group entry)
+				VARSTRUCT_ENCODE_TYPE(uint64, Buffer, 0);	// TODO: OnlineTimestamp
+				VARSTRUCT_ENCODE_TYPE(uint32, Buffer, 0);	// TODO: UniquePlayerID
+				VARSTRUCT_ENCODE_TYPE(uint64, Buffer, 0);	// Unknown0x30 — unidentified
+			};
+
+			encode_member(0, gu2->yourname);
+			uint32 MemberIndex = 1;
+			for (int i = 0; i < 5; ++i) {
+				if (gu2->membername[i][0] != '\0')
+					encode_member(MemberIndex++, gu2->membername[i]);
+			}
+
+			dest->FastQueuePacket(&outapp, ack_req);
+			delete in;
+		} else {
+			// groupActJoin: notify existing members that a new member joined.
+			ENCODE_LENGTH_EXACT(GroupJoin_Struct);
+			SETUP_DIRECT_ENCODE(GroupJoin_Struct, structs::GroupJoin_Struct);
+
+			memcpy(eq->membername, emu->membername, sizeof(eq->membername));
+
+			FINISH_ENCODE();
+		}
 	}
 
 	ENCODE(OP_HPUpdate)
@@ -823,6 +916,37 @@ namespace TOB
 		else if (emu->cha)  { eq->stat_type = STAT_CHA; eq->value = emu->cha; }
 
 		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_InspectBuffs)
+	{
+		ENCODE_LENGTH_EXACT(InspectBuffs_Struct);
+		EQApplicationPacket* in = *p;
+		*p = nullptr;
+		const auto* emu = reinterpret_cast<const InspectBuffs_Struct*>(in->pBuffer);
+
+		int32 count = 0;
+		for (uint32 i = 0; i < BUFF_COUNT; ++i)
+			if (emu->spell_id[i] > 0)
+				++count;
+
+		SerializeBuffer buffer(9 + count * 16);
+		buffer.WriteInt32(count);
+		buffer.WriteInt32(0);  // target_entity_id (not in InspectBuffs_Struct; client falls back to g_pTargetPlayer)
+		buffer.WriteUInt8(0);  // cast by you flag
+
+		for (uint32 i = 0; i < BUFF_COUNT; ++i) {
+			if (emu->spell_id[i] > 0) {
+				buffer.WriteInt32(emu->spell_id[i]);
+				buffer.WriteInt32(emu->tics_remaining[i]);
+				buffer.WriteInt64(0); // caster_entity_id (not available; client omits caster name)
+			}
+		}
+
+		auto outapp = new EQApplicationPacket(OP_InspectBuffs, buffer.size());
+		outapp->WriteData(buffer.buffer(), buffer.size());
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
 	}
 
 	ENCODE(OP_ItemLinkResponse) { ENCODE_FORWARD(OP_ItemPacket); }
@@ -924,56 +1048,6 @@ namespace TOB
 		FINISH_ENCODE();
 	}
 
-	DECODE(OP_ItemLinkClick)
-	{
-		// TOB sends 84 bytes (InspectItemSafe); first 52 are layout-compatible with ItemViewRequest_Struct.
-		// Extra 32 bytes (offsets 52-83) are uncharted — likely luck
-		DECODE_LENGTH_ATLEAST(ItemViewRequest_Struct);
-		SETUP_DIRECT_DECODE(ItemViewRequest_Struct, ItemViewRequest_Struct);
-		MEMSET_IN(ItemViewRequest_Struct);
-
-		IN(item_id);
-		for (int r = EQ::invaug::SOCKET_BEGIN; r <= EQ::invaug::SOCKET_END; r++) {
-			IN(augments[r]);
-		}
-		IN(link_hash);
-		IN(icon);
-
-		FINISH_DIRECT_DECODE();
-	}
-
-	DECODE(OP_ItemLinkResponse)
-	{
-		// TOB sends 80 bytes; EQEMu LDONItemViewRequest_Struct is 72 bytes.
-		// First 72 bytes are layout-identical — extra 8 bytes (unknown072/076) are ignored.
-		DECODE_LENGTH_ATLEAST(LDONItemViewRequest_Struct);
-		SETUP_DIRECT_DECODE(LDONItemViewRequest_Struct, LDONItemViewRequest_Struct);
-		MEMSET_IN(LDONItemViewRequest_Struct);
-		IN(item_id);
-		memcpy(emu->unknown004, eq->unknown004, sizeof(emu->unknown004));
-		strncpy(emu->item_name, eq->item_name, sizeof(emu->item_name) - 1);
-		FINISH_DIRECT_DECODE();
-	}
-
-	DECODE(OP_ItemPreviewRequest)
-	{
-		DECODE_LENGTH_EXACT(structs::ItemPreviewRequest_Struct);
-		SETUP_DIRECT_DECODE(ItemPreview_Struct, structs::ItemPreviewRequest_Struct);
-		IN(itemid);
-		FINISH_DIRECT_DECODE();
-	}
-
-	DECODE(OP_ItemVerifyRequest)
-	{
-		DECODE_LENGTH_EXACT(structs::ItemVerifyRequest_Struct);
-		SETUP_DIRECT_DECODE(ItemVerifyRequest_Struct, structs::ItemVerifyRequest_Struct);
-
-		emu->slot = TOBToServerSlot(eq->inventory_slot);
-		IN(target);
-
-		FINISH_DIRECT_DECODE();
-	}
-
 	ENCODE(OP_ItemVerifyReply)
 	{
 		ENCODE_LENGTH_EXACT(ItemVerifyReply_Struct);
@@ -990,6 +1064,130 @@ namespace TOB
 		//   +0x10  int32   recast_time (fasttime() timestamp; must be non-zero to enter autobook-scribe
 		//                               path when spell==0x407; zeroed here until server provides it)
 		// unknown0 and recast_time are zeroed by ALLOC_VAR_ENCODE (memset)
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_LFGGetMatchesResponse)
+	{
+		SETUP_VAR_ENCODE(uint8);
+
+		auto InBuffer = reinterpret_cast<char*>(emu);
+		auto End      = reinterpret_cast<char*>(emu) + __packet->size;
+
+		int RecordCount = 0;
+		{
+			char *Scan = InBuffer + 4; // skip 4-byte header (unread by TOB client)
+			while (Scan < End) {
+				Scan += strlen(Scan) + 1; // Comments
+				Scan += strlen(Scan) + 1; // Name
+				Scan += 10;               // Class_/Level/Zone/GuildID/Anon (5 x uint16)
+				++RecordCount;
+			}
+		}
+
+		ALLOC_LEN_ENCODE(__packet->size + (RecordCount * 6));
+
+		auto OutBuffer = reinterpret_cast<char*>(__packet->pBuffer);
+
+		uint32 header;
+		header = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
+		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, header);
+
+		for (int i = 0; i < RecordCount; ++i) {
+			char Comments[64];
+			char Name[64];
+			uint16 Class_, Level, Zone, GuildID, Anon;
+
+			VARSTRUCT_DECODE_STRING(Comments, InBuffer);
+			VARSTRUCT_ENCODE_STRING(OutBuffer, Comments);
+
+			VARSTRUCT_DECODE_STRING(Name, InBuffer);
+			VARSTRUCT_ENCODE_STRING(OutBuffer, Name);
+
+			Class_  = VARSTRUCT_DECODE_TYPE(uint16, InBuffer);
+			Level   = VARSTRUCT_DECODE_TYPE(uint16, InBuffer);
+			Zone    = VARSTRUCT_DECODE_TYPE(uint16, InBuffer);
+			GuildID = VARSTRUCT_DECODE_TYPE(uint16, InBuffer);
+			Anon    = VARSTRUCT_DECODE_TYPE(uint16, InBuffer);
+
+			VARSTRUCT_ENCODE_TYPE(uint16, OutBuffer, Class_);
+			VARSTRUCT_ENCODE_TYPE(uint16, OutBuffer, Level);
+			VARSTRUCT_ENCODE_TYPE(uint16, OutBuffer, Zone);
+			VARSTRUCT_ENCODE_TYPE(uint64, OutBuffer, static_cast<uint64>(GuildID));
+			VARSTRUCT_ENCODE_TYPE(uint16, OutBuffer, Anon);
+		}
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_LFPGetMatchesResponse)
+	{
+		SETUP_VAR_ENCODE(uint8);
+
+		auto InBuffer = reinterpret_cast<char*>(emu);
+		auto End      = reinterpret_cast<char*>(emu) + __packet->size;
+
+		int RecordCount = 0;
+		{
+			char *Scan = InBuffer + 4; // skip 4-byte header (unread by TOB client)
+			while (Scan < End) {
+				Scan += strlen(Scan) + 1; // Comments
+				Scan += 4;                // FromLevel + ToLevel (2 x u16)
+				Scan += 4;                // Classes (u32)
+				uint16 MemberCount = VARSTRUCT_DECODE_TYPE(uint16, Scan);
+				for (int m = 0; m < MemberCount; ++m) {
+					Scan += strlen(Scan) + 1; // Name
+					Scan += 8;                // Class_/Level/Zone/GuildID (4 x uint16)
+					++RecordCount;
+				}
+			}
+		}
+
+		ALLOC_LEN_ENCODE(__packet->size + (RecordCount * 6));
+
+		auto OutBuffer = reinterpret_cast<char*>(__packet->pBuffer);
+
+		uint32 header;
+		header = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
+		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, header);
+
+		while (InBuffer < End) {
+			char Comments[64];
+			uint16 FromLevel, ToLevel, MemberCount;
+			uint32 Classes;
+
+			VARSTRUCT_DECODE_STRING(Comments, InBuffer);
+			VARSTRUCT_ENCODE_STRING(OutBuffer, Comments);
+
+			FromLevel   = VARSTRUCT_DECODE_TYPE(uint16, InBuffer);
+			ToLevel     = VARSTRUCT_DECODE_TYPE(uint16, InBuffer);
+			Classes     = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
+			MemberCount = VARSTRUCT_DECODE_TYPE(uint16, InBuffer);
+
+			VARSTRUCT_ENCODE_TYPE(uint16, OutBuffer, FromLevel);
+			VARSTRUCT_ENCODE_TYPE(uint16, OutBuffer, ToLevel);
+			VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, Classes);
+			VARSTRUCT_ENCODE_TYPE(uint16, OutBuffer, MemberCount);
+
+			for (int m = 0; m < MemberCount; ++m) {
+				char Name[64];
+				uint16 Class_, Level, Zone, GuildID;
+
+				VARSTRUCT_DECODE_STRING(Name, InBuffer);
+				VARSTRUCT_ENCODE_STRING(OutBuffer, Name);
+
+				Class_  = VARSTRUCT_DECODE_TYPE(uint16, InBuffer);
+				Level   = VARSTRUCT_DECODE_TYPE(uint16, InBuffer);
+				Zone    = VARSTRUCT_DECODE_TYPE(uint16, InBuffer);
+				GuildID = VARSTRUCT_DECODE_TYPE(uint16, InBuffer);
+
+				VARSTRUCT_ENCODE_TYPE(uint16, OutBuffer, Class_);
+				VARSTRUCT_ENCODE_TYPE(uint16, OutBuffer, Level);
+				VARSTRUCT_ENCODE_TYPE(uint16, OutBuffer, Zone);
+				VARSTRUCT_ENCODE_TYPE(uint64, OutBuffer, static_cast<uint64>(GuildID));
+			}
+		}
 
 		FINISH_ENCODE();
 	}
@@ -2508,6 +2706,263 @@ namespace TOB
 		CRC32::SetEQChecksum(outapp->pBuffer, outapp->size - 1, 8);
 		dest->FastQueuePacket(&outapp, ack_req);
 		delete in;
+	}
+
+	ENCODE(OP_RaidDelegateAbility)
+	{
+		EQApplicationPacket* inapp = *p;
+		*p = nullptr;
+		unsigned char* __emu_buffer = inapp->pBuffer;
+		const auto emu = reinterpret_cast<DelegateAbility_Struct*>(__emu_buffer);
+
+		uint32 ability_type = 0; // default/MasterLooter
+		if (emu->DelegateAbility == 3) {       // RaidDelegateMainAssist
+			ability_type = 1;
+		} else if (emu->DelegateAbility == 4) {  // RaidDelegateMainMarker
+			ability_type = 2;
+		}
+
+		uint32 slot_index = (emu->MemberNumber > 0) ? (emu->MemberNumber - 1) : 0;
+
+		auto outapp = new EQApplicationPacket(
+			OP_RaidDelegateAbility,
+			(4 * 9) + strlen(emu->Name) + 1
+		);
+
+		outapp->WriteUInt32(0);
+		outapp->WriteUInt32(0);
+		outapp->WriteUInt32(ability_type);
+		outapp->WriteUInt32(slot_index);
+		outapp->WriteUInt32(emu->Action);
+		outapp->WriteUInt32(emu->Unknown012);
+		outapp->WriteUInt32(emu->Unknown016);
+		outapp->WriteUInt32(emu->EntityID);
+		outapp->WriteUInt32(emu->Unknown024);
+		outapp->WriteString(emu->Name);
+
+		dest->FastQueuePacket(&outapp);
+		safe_delete(inapp);
+	}
+
+	ENCODE(OP_RaidJoin)
+	{
+		EQApplicationPacket* inapp = *p;
+		*p = nullptr;
+		unsigned char* __emu_buffer = inapp->pBuffer;
+		const auto emu = reinterpret_cast<RaidCreate_Struct*>(__emu_buffer);
+
+		auto outapp = new EQApplicationPacket(
+			OP_RaidUpdate,
+			4 + strlen(emu->leader_name) + 1 + 4 + strlen(emu->leader_name) + 1 + 4
+		);
+
+		outapp->WriteUInt32(raidCreate);
+		outapp->WriteString(emu->leader_name);
+		outapp->WriteUInt32(0);
+		outapp->WriteString(emu->leader_name);
+		outapp->WriteUInt32(0);
+
+		dest->FastQueuePacket(&outapp);
+
+		safe_delete(inapp);
+	}
+
+	ENCODE(OP_RaidUpdate)
+	{
+		EQApplicationPacket* inapp = *p;
+		*p = nullptr;
+		unsigned char* __emu_buffer = inapp->pBuffer;
+		const auto raid_gen = reinterpret_cast<RaidGeneral_Struct*>(__emu_buffer);
+
+		// TODO: there are a lot more options here that aren't tied into the server yet, check function at
+		//       0x14017B300 to reverse more as the server supports more
+		switch (raid_gen->action)
+		{
+		case raidAdd:
+		{
+			const auto emu = reinterpret_cast<RaidAddMember_Struct*>(__emu_buffer);
+
+			auto outapp = new EQApplicationPacket(
+				OP_RaidUpdate,
+				sizeof(uint32) + // action
+				strlen(emu->raidGen.player_name) + 1 + // account for null terminator
+				sizeof(uint32) + // unknown1
+				strlen(emu->raidGen.leader_name) + 1 + // account for null terminator
+				sizeof(uint32) + // unused
+				sizeof(uint32) + // parameter
+				sizeof(uint32) + // class
+				sizeof(uint8) + // level
+				sizeof(uint8) // isGroupLeader
+			);
+
+			outapp->WriteUInt32(emu->raidGen.action);
+			outapp->WriteString(emu->raidGen.player_name);
+			outapp->WriteUInt32(emu->raidGen.unknown1);
+			outapp->WriteString(emu->raidGen.leader_name);
+			outapp->WriteUInt32(0); // unused in client
+			outapp->WriteUInt32(emu->raidGen.parameter);  // GROUP NUMBER (drives group-box placement/display)
+			outapp->WriteUInt32(emu->_class);
+			outapp->WriteUInt8(emu->level);
+			outapp->WriteUInt8(emu->isGroupLeader);
+
+			dest->FastQueuePacket(&outapp);
+			break;
+		}
+		case raidSetMotd:
+		{
+			const auto emu = reinterpret_cast<RaidMOTD_Struct*>(__emu_buffer);
+
+			auto outapp = new EQApplicationPacket(
+				OP_RaidUpdate,
+				sizeof(uint32) + // action
+				strlen(emu->general.player_name) + 1 + // account for null terminator
+				sizeof(uint32) + // unknown1
+				strlen(emu->general.leader_name) + 1 + // account for null terminator
+				sizeof(uint32) + // parameter
+				sizeof(uint32) + // unk
+				strlen(emu->motd) + 1 // account for null terminator
+			);
+
+			outapp->WriteUInt32(emu->general.action);
+			outapp->WriteString(emu->general.player_name);
+			outapp->WriteUInt32(emu->general.unknown1);
+			outapp->WriteString(emu->general.leader_name);
+			outapp->WriteUInt32(emu->general.parameter);
+			outapp->WriteUInt32(0);
+			outapp->WriteString(emu->motd);
+
+			dest->FastQueuePacket(&outapp);
+			break;
+		}
+		case raidSetLeaderAbilities:
+			break;
+		case raidMakeLeader:
+		{
+			const auto emu = reinterpret_cast<RaidLeadershipUpdate_Struct*>(__emu_buffer);
+
+			auto outapp = new EQApplicationPacket(
+				OP_RaidUpdate,
+				sizeof(uint32) + // action
+				strlen(emu->player_name) + 1 + // account for null terminator
+				sizeof(uint32) + // unk
+				strlen(emu->leader_name) + 1 + // account for null terminator
+				sizeof(uint32) // unk
+			);
+
+			outapp->WriteUInt32(emu->action);
+			outapp->WriteString(emu->player_name);
+			outapp->WriteUInt32(0);
+			outapp->WriteString(emu->leader_name);
+			outapp->WriteUInt32(0);
+
+			dest->FastQueuePacket(&outapp);
+			break;
+		}
+		case raidSetNote:
+		{
+			const auto emu = reinterpret_cast<RaidNote_Struct*>(__emu_buffer);
+
+			auto outapp = new EQApplicationPacket(
+				OP_RaidUpdate,
+				sizeof(uint32) + // action
+				strlen(emu->general.player_name) + 1 + // account for null terminator
+				sizeof(uint32) + // unknown1
+				strlen(emu->general.leader_name) + 1 + // account for null terminator
+				sizeof(uint32) + // parameter
+				sizeof(uint32) + // unk
+				strlen(emu->note) + 1 // account for null terminator
+			);
+
+			outapp->WriteUInt32(emu->general.action);
+			outapp->WriteString(emu->general.player_name);
+			outapp->WriteUInt32(emu->general.unknown1);
+			outapp->WriteString(emu->general.leader_name);
+			outapp->WriteUInt32(emu->general.parameter);
+			outapp->WriteUInt32(0);
+			outapp->WriteString(emu->note);
+
+			dest->FastQueuePacket(&outapp);
+			break;
+		}
+		case raidChangeGroupLeader:
+		{
+			const auto emu = reinterpret_cast<RaidGeneral_Struct*>(__emu_buffer);
+
+			auto outapp = new EQApplicationPacket(
+				OP_RaidUpdate,
+				sizeof(uint32) + // action
+				strlen(emu->player_name) + 1 + // account for null terminator
+				sizeof(uint32) + // unknown1
+				strlen(emu->leader_name) + 1 + // account for null terminator
+				sizeof(uint32) + // unk
+				sizeof(uint32) // parameter
+			);
+
+			outapp->WriteUInt32(emu->action);
+			outapp->WriteString(emu->player_name);
+			outapp->WriteUInt32(emu->unknown1);
+			outapp->WriteString(emu->leader_name);
+			outapp->WriteUInt32(0);
+			outapp->WriteUInt32(emu->parameter); // GROUP NUMBER
+
+			dest->FastQueuePacket(&outapp);
+			break;
+		}
+		case raidUpdateClassLevel:
+		{
+			const auto emu = reinterpret_cast<RaidUpdateClassLevel_Struct*>(__emu_buffer);
+
+			auto outapp = new EQApplicationPacket(
+				OP_RaidUpdate,
+				sizeof(uint32) + // action
+				strlen(emu->general.player_name) + 1 + // account for null terminator
+				sizeof(uint32) + // unknown1
+				sizeof(uint32) + strlen(emu->general.leader_name) + // this is a length string in the client for only this message
+				sizeof(uint32) + // class
+				sizeof(uint32) // level (4  bytes in this message)
+			);
+
+			outapp->WriteUInt32(emu->general.action);
+			outapp->WriteString(emu->general.player_name);
+			outapp->WriteUInt32(emu->general.unknown1);
+			outapp->WriteLengthString(strlen(emu->general.leader_name), emu->general.leader_name);
+			outapp->WriteUInt32(emu->_class);
+			outapp->WriteUInt32(emu->level);
+
+			dest->FastQueuePacket(&outapp);
+			break;
+		}
+		case raidNoRaid:
+		{
+			dest->QueuePacket(inapp);
+			break;
+		}
+		default:
+		{
+			const auto emu = reinterpret_cast<RaidGeneral_Struct*>(__emu_buffer);
+
+			auto outapp = new EQApplicationPacket(
+				OP_RaidUpdate,
+				sizeof(uint32) + // action
+				strlen(emu->player_name) + 1 + // account for null terminator
+				sizeof(uint32) + // unknown1
+				strlen(emu->leader_name) + 1 + // account for null terminator
+				sizeof(uint32) + // parameter
+				sizeof(uint32) // unk
+			);
+
+			outapp->WriteUInt32(emu->action);
+			outapp->WriteString(emu->player_name);
+			outapp->WriteUInt32(emu->unknown1);
+			outapp->WriteString(emu->leader_name);
+			outapp->WriteUInt32(emu->parameter);
+			outapp->WriteUInt32(0);
+
+			dest->FastQueuePacket(&outapp);
+			break;
+		}
+		}
+		safe_delete(inapp);
 	}
 
 	ENCODE(OP_ReadBook)
@@ -4327,6 +4782,8 @@ namespace TOB
 
 	DECODE(OP_BlockedBuffs)
 	{
+		unsigned char* __eq_buffer = __packet->pBuffer;
+
 		uint32 count = __packet->ReadUInt32();
 		std::vector<int32> blocked_spell_ids;
 		blocked_spell_ids.reserve(count);
@@ -4349,6 +4806,8 @@ namespace TOB
 		emu->Count = count;
 		emu->Pet = pet;
 		emu->Initialise = init;
+
+		delete[] __eq_buffer;
 	}
 
 	DECODE(OP_BookButton)
@@ -4582,6 +5041,8 @@ namespace TOB
 
 	DECODE(OP_CorpseDrag)
 	{
+		unsigned char* __eq_buffer = __packet->pBuffer;
+
 		std::string CorpseName;
 		__packet->ReadLengthString(CorpseName);
 
@@ -4595,6 +5056,8 @@ namespace TOB
 
 		strncpy(emu->CorpseName, CorpseName.c_str(), 64);
 		strncpy(emu->DraggerName, DraggerName.c_str(), 64);
+
+		delete[] __eq_buffer;
 	}
 
 	DECODE(OP_Damage)
@@ -4676,6 +5139,18 @@ namespace TOB
 		FINISH_DIRECT_DECODE();
 	}
 
+	DECODE(OP_GroupCancelInvite)
+	{
+		DECODE_LENGTH_EXACT(structs::GroupGeneric_Struct);
+		SETUP_DIRECT_DECODE(GroupCancel_Struct, structs::GroupGeneric_Struct);
+
+		memcpy(emu->name1, eq->name1, sizeof(emu->name1));
+		memcpy(emu->name2, eq->name2, sizeof(emu->name2));
+		emu->toggle = 0;
+
+		FINISH_DIRECT_DECODE();
+	}
+
 	DECODE(OP_GroupDisband)
 	{
 		DECODE_LENGTH_EXACT(structs::GroupGeneric_Struct);
@@ -4703,6 +5178,109 @@ namespace TOB
 		DECODE_FORWARD(OP_GroupInvite);
 	}
 
+	DECODE(OP_GroupFollow)
+	{
+		DECODE_LENGTH_EXACT(structs::GroupFollowGeneric_Struct);
+		SETUP_DIRECT_DECODE(GroupGeneric_Struct, structs::GroupFollowGeneric_Struct);
+
+		memcpy(emu->name1, eq->groupGeneric.name1, sizeof(emu->name1));
+		memcpy(emu->name2, eq->groupGeneric.name2, sizeof(emu->name2));
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_GroupFollow2)
+	{
+		DECODE_FORWARD(OP_GroupFollow);
+	}
+
+	DECODE(OP_GroupMakeLeader)
+	{
+		DECODE_LENGTH_EXACT(structs::GroupMakeLeader_Struct);
+		SETUP_DIRECT_DECODE(GroupMakeLeader_Struct, structs::GroupMakeLeader_Struct);
+
+		IN_str(CurrentLeader);
+		IN_str(NewLeader);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_GroupRoles) {
+		DECODE_LENGTH_ATLEAST(structs::GroupRole_Struct);
+		SETUP_DIRECT_DECODE(GroupRole_Struct, structs::GroupRole_Struct);
+
+		IN_str(Name1);
+		IN_str(Name2);
+		IN(RoleNumber);
+		IN(Toggle);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_InspectBuffs)
+	{
+		// TODO: The "mine" parameter is not used in the server
+		DECODE_LENGTH_EXACT(structs::InspectBuffsRequest_Struct);
+		const auto* eq = reinterpret_cast<const structs::InspectBuffsRequest_Struct*>(__packet->pBuffer);
+
+		unsigned char* __eq_buffer = __packet->pBuffer;
+		__packet->size = sizeof(DoGroupLeadershipAbility_Struct);
+		__packet->pBuffer = new unsigned char[sizeof(DoGroupLeadershipAbility_Struct)]{};
+		const auto dglas = reinterpret_cast<DoGroupLeadershipAbility_Struct*>(__packet->pBuffer);
+		dglas->Ability    = groupAAInspectBuffs;
+		dglas->Parameter  = eq->mine; // reserved: 0 = inspect target, 1 = inspect self (/inspectbuffs mine)
+		__packet->SetOpcode(OP_DoGroupLeadershipAbility);
+		delete[] __eq_buffer;
+	}
+
+	DECODE(OP_ItemLinkClick)
+	{
+		// TOB sends 84 bytes (InspectItemSafe); first 52 are layout-compatible with ItemViewRequest_Struct.
+		// Extra 32 bytes (offsets 52-83) are uncharted — likely luck
+		DECODE_LENGTH_ATLEAST(ItemViewRequest_Struct);
+		SETUP_DIRECT_DECODE(ItemViewRequest_Struct, ItemViewRequest_Struct);
+		MEMSET_IN(ItemViewRequest_Struct);
+
+		IN(item_id);
+		for (int r = EQ::invaug::SOCKET_BEGIN; r <= EQ::invaug::SOCKET_END; r++) {
+			IN(augments[r]);
+		}
+		IN(link_hash);
+		IN(icon);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_ItemLinkResponse)
+	{
+		DECODE_LENGTH_ATLEAST(LDONItemViewRequest_Struct);
+		SETUP_DIRECT_DECODE(LDONItemViewRequest_Struct, LDONItemViewRequest_Struct);
+		MEMSET_IN(LDONItemViewRequest_Struct);
+		IN(item_id);
+		memcpy(emu->unknown004, eq->unknown004, sizeof(emu->unknown004));
+		strncpy(emu->item_name, eq->item_name, sizeof(emu->item_name) - 1);
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_ItemPreviewRequest)
+	{
+		DECODE_LENGTH_EXACT(structs::ItemPreviewRequest_Struct);
+		SETUP_DIRECT_DECODE(ItemPreview_Struct, structs::ItemPreviewRequest_Struct);
+		IN(itemid);
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_ItemVerifyRequest)
+	{
+		DECODE_LENGTH_EXACT(structs::ItemVerifyRequest_Struct);
+		SETUP_DIRECT_DECODE(ItemVerifyRequest_Struct, structs::ItemVerifyRequest_Struct);
+
+		emu->slot = TOBToServerSlot(eq->inventory_slot);
+		IN(target);
+
+		FINISH_DIRECT_DECODE();
+	}
+
 	DECODE(OP_LootItem)
 	{
 		DECODE_LENGTH_EXACT(structs::LootingItem_Struct);
@@ -4716,6 +5294,38 @@ namespace TOB
 		IN(auto_loot);
 
 		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_MarkNPC)
+	{
+		// TODO: This needs to also pass the target up to the server, and the server needs to
+		//       use that target instead of just GetTarget()
+		DECODE_LENGTH_EXACT(MarkNPC_Struct);
+		const auto* mnpcs = reinterpret_cast<const MarkNPC_Struct*>(__packet->pBuffer);
+
+		unsigned char* __eq_buffer = __packet->pBuffer;
+		__packet->size = sizeof(DoGroupLeadershipAbility_Struct);
+		__packet->pBuffer = new unsigned char[sizeof(DoGroupLeadershipAbility_Struct)]{};
+		auto* dglas = reinterpret_cast<DoGroupLeadershipAbility_Struct*>(__packet->pBuffer);
+		dglas->Ability   = GroupLeadershipAbility_MarkNPC;
+		dglas->Parameter = mnpcs->Number;
+		__packet->SetOpcode(OP_DoGroupLeadershipAbility);
+		delete[] __eq_buffer;
+	}
+
+	DECODE(OP_MarkRaidNPC)
+	{
+		DECODE_LENGTH_EXACT(MarkNPC_Struct);
+		const auto* mnpcs = reinterpret_cast<const MarkNPC_Struct*>(__packet->pBuffer);
+
+		unsigned char* __eq_buffer = __packet->pBuffer;
+		__packet->size = sizeof(DoGroupLeadershipAbility_Struct);
+		__packet->pBuffer = new unsigned char[sizeof(DoGroupLeadershipAbility_Struct)]{};
+		auto* dglas = reinterpret_cast<DoGroupLeadershipAbility_Struct*>(__packet->pBuffer);
+		dglas->Ability   = RaidLeadershipAbility_MarkNPC;
+		dglas->Parameter = mnpcs->Number;
+		__packet->SetOpcode(OP_DoGroupLeadershipAbility);
+		delete[] __eq_buffer;
 	}
 
 	DECODE(OP_MemorizeSpell) {
@@ -4773,6 +5383,115 @@ namespace TOB
 		emu->coin    = eq->coin;
 
 		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_RaidDelegateAbility)
+	{
+		unsigned char* __eq_buffer = __packet->pBuffer;
+
+		__packet->ReadUInt32(); // reserved
+		__packet->ReadUInt32(); // reserved
+		uint32 ability_type = __packet->ReadUInt32();
+		__packet->ReadUInt32(); // reserved
+		__packet->ReadUInt32(); // reserved
+		__packet->ReadUInt32(); // reserved
+		__packet->ReadUInt32(); // reserved
+		__packet->ReadUInt32(); // reserved
+		__packet->ReadUInt32(); // reserved
+
+		std::string name;
+		__packet->ReadString(name);
+
+		__packet->size    = sizeof(DelegateAbility_Struct);
+		__packet->pBuffer = new unsigned char[__packet->size]{};
+		auto* emu          = reinterpret_cast<DelegateAbility_Struct*>(__packet->pBuffer);
+
+		if (ability_type == 1) {
+			emu->DelegateAbility = 3; // RaidDelegateMainAssist
+		}
+		else if (ability_type == 2) {
+			emu->DelegateAbility = 4; // RaidDelegateMainMarker
+		}
+		else {
+			emu->DelegateAbility = 5; // RaidDelegateMasterLooter
+		}
+
+		strn0cpy(emu->Name, name.c_str(), sizeof(emu->Name));
+
+		delete[] __eq_buffer;
+	}
+
+	DECODE(OP_RaidInvite)
+	{
+		unsigned char* __eq_buffer = __packet->pBuffer;
+
+		uint32 action = __packet->ReadUInt32();
+
+		std::string player_name;
+		__packet->ReadString(player_name);
+
+		uint32 unknown1 = __packet->ReadUInt32();
+
+		std::string leader_name;
+		__packet->ReadString(leader_name);
+
+		uint32 parameter = __packet->ReadUInt32();
+
+		switch (action)
+		{
+		case raidSetMotd:
+		{
+			std::string motd;
+			__packet->ReadString(motd);
+
+			__packet->size    = sizeof(RaidMOTD_Struct);
+			__packet->pBuffer = new unsigned char[__packet->size]{};
+			auto* emu         = reinterpret_cast<RaidMOTD_Struct*>(__packet->pBuffer);
+
+			emu->general.action    = action;
+			emu->general.unknown1  = unknown1;
+			emu->general.parameter = parameter;
+			strn0cpy(emu->general.player_name, player_name.c_str(), sizeof(emu->general.player_name));
+			strn0cpy(emu->general.leader_name, leader_name.c_str(), sizeof(emu->general.leader_name));
+			strn0cpy(emu->motd, motd.c_str(), sizeof(emu->motd));
+
+			break;
+		}
+		case raidSetNote:
+		{
+			std::string note;
+			__packet->ReadString(note);
+
+			__packet->size    = sizeof(RaidNote_Struct);
+			__packet->pBuffer = new unsigned char[__packet->size]{};
+			auto* emu         = reinterpret_cast<RaidNote_Struct*>(__packet->pBuffer);
+
+			emu->general.action    = action;
+			emu->general.unknown1  = unknown1;
+			emu->general.parameter = parameter;
+			strn0cpy(emu->general.player_name, player_name.c_str(), sizeof(emu->general.player_name));
+			strn0cpy(emu->general.leader_name, leader_name.c_str(), sizeof(emu->general.leader_name));
+			strn0cpy(emu->note, note.c_str(), sizeof(emu->note));
+
+			break;
+		}
+		default:
+		{
+			__packet->size    = sizeof(RaidGeneral_Struct);
+			__packet->pBuffer = new unsigned char[__packet->size]{};
+			auto* emu         = reinterpret_cast<RaidGeneral_Struct*>(__packet->pBuffer);
+
+			emu->action    = action;
+			emu->unknown1  = unknown1;
+			emu->parameter = parameter;
+			strn0cpy(emu->player_name, player_name.c_str(), sizeof(emu->player_name));
+			strn0cpy(emu->leader_name, leader_name.c_str(), sizeof(emu->leader_name));
+
+			break;
+		}
+		}
+
+		delete[] __eq_buffer;
 	}
 
 	DECODE(OP_ReadBook)

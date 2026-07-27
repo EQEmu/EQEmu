@@ -1447,6 +1447,16 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 		if (zone) {
 			if (rga->zoneid == zone->GetZoneID() && rga->instance_id == zone->GetInstanceID())
 				break;
+
+			Raid *r = entity_list.GetRaidByID(rga->rid);
+			if (r) {
+				r->LearnMembers();
+				r->VerifyRaid();
+
+				uint32 group_id = r->GetGroup(rga->playername);
+				if (group_id < MAX_RAID_GROUPS)
+					r->GroupUpdate(group_id);
+			}
 		}
 		break;
 	}

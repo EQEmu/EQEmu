@@ -142,7 +142,6 @@ foreach my $table_to_generate (@tables) {
         # "tradeskill_recipe",     # Manually created
         "guild_bank",
         "inventory_versions",
-        "raid_leaders",
         "trader_audit",
         "eqtime",
         "db_version",
