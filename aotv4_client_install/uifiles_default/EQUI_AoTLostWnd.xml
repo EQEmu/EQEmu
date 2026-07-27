@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<XML ID="EQInterfaceDefinitionLanguage">
+	<Schema xmlns="EverQuestData" xmlns:dt="EverQuestDataTypes" />
+
+	<!-- AoTv4 "You Lost" window (CCustomWnd "AoTLostWnd").
+
+	     Replaces the self-drawn GDI overlay that used to show this list. That overlay painted its
+	     own chrome, could not scale with the UI and only worked in windowed mode; this renders
+	     through the client's own UI engine, so it matches every other window and works fullscreen.
+
+	     Fed by the server's existing "LOSTDATA name^name^..." chat line, so nothing changed
+	     server-side. See core_lostwindow.cpp.
+
+	     Comments must never contain a double hyphen, which is illegal in XML and makes the SIDL
+	     parser abort the WHOLE file, killing the client before character select. Run
+	     aotv4_client_install/validate_ui_xml.sh before copying this anywhere. -->
+
+	<Label item="LST_Hint">
+		<ScreenID>LST_Hint</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>10</X><Y>6</Y></Location>
+		<Size><CX>300</CX><CY>16</CY></Size>
+		<Text>Items lost on death</Text>
+		<NoWrap>true</NoWrap>
+		<AlignCenter>false</AlignCenter>
+		<TextColor><R>240</R><G>200</G><B>120</B></TextColor>
+	</Label>
+
+	<Label item="LST_Count">
+		<ScreenID>LST_Count</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>250</X><Y>6</Y></Location>
+		<Size><CX>90</CX><CY>16</CY></Size>
+		<Text></Text>
+		<NoWrap>true</NoWrap>
+		<AlignRight>true</AlignRight>
+		<TextColor><R>200</R><G>200</G><B>200</B></TextColor>
+	</Label>
+
+	<!-- One column only. CListWnd::SetColumnLabel is not mapped on this build, so the heading here
+	     is the heading forever; it is written to say what the list actually is. -->
+	<Listbox item="LST_ItemList">
+		<ScreenID>LST_ItemList</ScreenID>
+		<DrawTemplate>WDT_Inner</DrawTemplate>
+		<RelativePosition>true</RelativePosition>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorToLeft>true</LeftAnchorToLeft>
+		<LeftAnchorOffset>8</LeftAnchorOffset>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<RightAnchorOffset>8</RightAnchorOffset>
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<TopAnchorOffset>26</TopAnchorOffset>
+		<BottomAnchorToTop>false</BottomAnchorToTop>
+		<BottomAnchorOffset>40</BottomAnchorOffset>
+		<Location><X>8</X><Y>26</Y></Location>
+		<Size><CX>334</CX><CY>206</CY></Size>
+		<TextColor><R>255</R><G>255</G><B>255</B></TextColor>
+		<Style_Border>true</Style_Border>
+		<Style_VScroll>true</Style_VScroll>
+		<Columns><Width>326</Width><Heading>Item</Heading></Columns>
+	</Listbox>
+
+	<Button item="LST_Dismiss">
+		<ScreenID>LST_Dismiss</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorToLeft>false</LeftAnchorToLeft>
+		<LeftAnchorOffset>96</LeftAnchorOffset>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<RightAnchorOffset>8</RightAnchorOffset>
+		<TopAnchorToTop>false</TopAnchorToTop>
+		<TopAnchorOffset>34</TopAnchorOffset>
+		<BottomAnchorToTop>false</BottomAnchorToTop>
+		<BottomAnchorOffset>8</BottomAnchorOffset>
+		<Location><X>254</X><Y>238</Y></Location>
+		<Size><CX>88</CX><CY>26</CY></Size>
+		<Text>Dismiss</Text>
+		<TextColor><R>255</R><G>220</G><B>160</B></TextColor>
+		<!-- The tag is Template, NOT ButtonDrawTemplate, and BDT_Normal is one of the ~34 templates
+		     EQUI_Templates.xml actually defines. A name that is not in that file resolves to nothing
+		     and the button draws as an empty hole with no error anywhere. -->
+		<Template>BDT_Normal</Template>
+	</Button>
+
+	<Screen item="AoTLostWnd">
+		<RelativePosition>false</RelativePosition>
+		<Location><X>240</X><Y>140</Y></Location>
+		<Size><CX>358</CX><CY>296</CY></Size>
+		<Text>You Lost</Text>
+		<Style_Transparent>false</Style_Transparent>
+		<DrawTemplate>WDT_Def</DrawTemplate>
+		<Style_Titlebar>true</Style_Titlebar>
+		<Style_Closebox>true</Style_Closebox>
+		<Style_Border>true</Style_Border>
+		<Style_Sizable>true</Style_Sizable>
+		<Pieces>LST_Hint</Pieces>
+		<Pieces>LST_Count</Pieces>
+		<Pieces>LST_ItemList</Pieces>
+		<Pieces>LST_Dismiss</Pieces>
+	</Screen>
+
+</XML>

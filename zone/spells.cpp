@@ -1523,6 +1523,13 @@ void Mob::CastedSpellFinished(uint16 spell_id, uint32 target_id, CastingSlot slo
 				channelchance = 30 + GetSkill(EQ::skills::SkillChanneling) / 400.0f * 100;
 				channelchance -= attacked_count * 2;
 				channelchance += channelchance * channelbonuses / 100.0f;
+
+				// AoTv4 Unbroken Concentration rank 5 (ranged tree): no roll at all. SPA 235 above can
+				// only multiply a chance that is capped below 100 and falls with every attacker, so
+				// true immunity cannot be expressed as a bonus -- it has to short-circuit the roll.
+				if (AoTv4CannotBeInterrupted()) {
+					channelchance = 100.0f;
+				}
 			} else {
 				// NPCs are just hard to interrupt, otherwise they get pwned
 				channelchance = 85;

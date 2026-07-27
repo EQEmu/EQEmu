@@ -55,6 +55,17 @@ The working approach (`custom/sql/aotv4_aa_tank_hosted.sql`): **take over a nati
 ability id, rank ids, `title_sid` and rank chain; replace only `aa_rank_effects` and the `db_str`
 strings.
 
+### ⚠️ `title_sid` and `desc_sid` are independent — check both
+
+Neither is guaranteed to equal `first_rank_id`. 22 of the 23 hosts have all three the same, which
+makes it look like a rule; **Quick Damage (44) does not** — `title_sid 141`, `desc_sid` **12863**.
+Writing the description to the title sid produced an AA with the correct name and the *host's
+original* description, silently. Confirmed 2026-07-26 and fixed by repointing `desc_sid`.
+
+```sql
+SELECT title_sid, desc_sid FROM aa_ranks WHERE id = <first_rank_id>;   -- before writing db_str
+```
+
 ### ⚠️ Walk the rank chain — never assume contiguous ids
 
 `first_rank_id + 0..4` is NOT the rank list. Natural Durability's chain is
@@ -71,6 +82,18 @@ first. Terminate a chain early with `next_id = -1` to control the rank count.
 | Unyielding | 3 | 12-16 | native SPA 172 evasion |
 | Bloodied Bash | 4 | 17-21 | **marker** → `lua_modules/aotv4_aa_tank.lua` |
 | Aegis Reflex | 6 | 27-31 | **marker** → `Mob::MeleeMitigation` + `Mob::HealDamage` |
+| Sanctified Blow | 73 | 188,**1277,5044,7339,7662** | **ACTIVATED** stun → ward, `zone/aotv4_tank_aa.cpp` |
+| Iron Will | 60 | 167,**5879,7249,8343,12955** | **ACTIVATED** mana+endurance → rune, 30 min recast |
+| Last Stand | 173 | 517,518,519,**1440,1441** | **ACTIVATED** damage floor, 45 min, endurance-gated |
+| Rally | 111 | 260,261,262,**8309,8310** | **ACTIVATED** group fear/root/snare cure, 3 min |
+| Weathered | 142 | 418,419,420,421,422 | native **SPA 161** spell/AE damage reduction |
+
+⚠️⚠️ **`spell_type` IS A TIMER SLOT, NOT A CATEGORY.** The recast is keyed on
+`rank->spell_type + pTimerAAStart`, so two activated AAs sharing a value **share one cooldown**.
+Slots in use: **2** Sanguine Frenzy, **3** Second Wind, **4** Reprieve, **6** Sanctified Blow,
+**8** Fade, **12** Last Stand, **14** Iron Will, **20** Rally, **37** Disengage. War Cry shipped on 3
+and was moved to 20. Sanctified Blow was moved 2 → 6 for exactly this reason — its host
+(Divine Stun) ships on the same slot Cannibalization does. A FIFTH activated AA needs a fifth value.
 
 ### Healer tree (`type = 2`) — built 2026-07-26, **untested**
 
@@ -81,6 +104,50 @@ first. Terminate a chain early with `next_id = -1` to control the rank count.
 | Mender's Echo | 10 | 47-51 | **marker** → `HealDamage` |
 | Cleansing Renewal | 11 | 52-56 | **marker** → the four cure sites |
 | Borrowed Breath | 12 | 57-61 | **marker** → `HealDamage` |
+| Reprieve | 180 | 534,535,536,**715,716** | **ACTIVATED** self-heal + root/snare break, 45 min |
+| Convalesce | 18 | 77,78,79,**434,435** | **marker** → out-of-combat group regen |
+| Communion | 128 | 291,**1123,1124,1125,4969** | **ACTIVATED** group heal, 5 min |
+| Practiced Grace | 154 | 462,463,464,**7994,7995** | native **SPA 132** mana cost reduction |
+| Enduring Grace | 97 | 230,231,232,**539,540** | native **SPA 319** heal-over-time crits |
+
+### Melee tree (`type = 4`) — built 2026-07-26, **untested**
+
+| AA | Host ability | Rank chain | Kind |
+|---|---|---|---|
+| Sunder | 30 | 113,114,115,443,444 | **marker** → `MeleeMitigation` |
+| Killing Rhythm | 19 | 80,81,82,437,438 | **marker** → `CommonOutgoingHitSuccess` |
+| Relentless | 21 | 86,87,88,266,10467 | native **SPA 225** GiveDoubleAttack |
+| Bloodletting | 25 | 98,99,100,4767,4768 | **marker** → DoT on hit |
+| Executioner | 16 | 71,72,73,676,677 | **marker** → wounded-target bonus + overkill cleave |
+| Sanguine Frenzy | 47 | 146,**5069,6102,7466,7691** | **ACTIVATED** — 4 s window, 45 s recast |
+| Disengage | 170 | 510,511,512,**7425,7426** | **ACTIVATED** speed + root/snare break, 45 min |
+| Backs to the Wall | 104 | 247,248,249,**504,505** | **marker** → flat reduction per extra attacker |
+| Bracing | 89 | 210,211,212,**1316,1317** | **marker** → refuses melee push |
+| Run Them Down | 108 | 255,256,257,**542,543** | **marker** → `Mob::CheckFlee`, targets cannot run |
+
+### Ranged tree (`type = 3`) — built 2026-07-26, **untested**
+
+| AA | Host ability | Rank chain | Kind |
+|---|---|---|---|
+| Kindred Bond | 32 | 119,120,121,440,441 | **marker** (r1/2/5) + native SPA 213/218 (r3/4) |
+| Overload | 44 | 141,142,143,**12863,15396** | **marker** → `GetActSpellDamage` |
+| Second Wind | 50 | 153,**1519,5068,6101,7468** | **ACTIVATED** endurance → mana, 5 min |
+| Corrosion | 33 | 122,123,124,454,455 | **marker** → resist debuff on DoT tick |
+| Concussive Burst | 34 | 125,126,127,449,450 | **marker** → PB AoE stun below 30% health |
+| Fade | 52 | 155,**533,1344,5279,5289** | **ACTIVATED** aggro wipe + invis, 45 min |
+| Quickening | 13 | 62,63,64,**672,673** | native **SPA 127** cast time reduction |
+| Far Sight | 144 | 426,427,428,429,430 | native **SPA 129** spell range |
+| Unbroken Concentration | 114 | 267,268,269,640,**641** | native SPA 235 r1-4 + **code** r5 immunity |
+| Mana Shroud | 75 | 190,191,192,**1524,1526** | native **SPA 329** damage off mana |
+
+Full notes and test plan in **`RANGED_AA.md`**. Every pet also carries a family-specific self-buff
+(spells 43420-43429) which Kindred Bond shares — see **`PET_WARDS.md`**. ⚠️ The pet ward is applied
+at **summon time**, so training that AA does nothing until the pet is re-summoned.
+
+Full notes and test plan in **`MELEE_AA.md`**. Three things from this tree worth carrying forward:
+an **activated** AA needs a valid spell, **no** effect rows, and a host that already has hotkey sids;
+`spell_type` is a **timer slot**, so two activated AAs sharing one share a cooldown; and any
+percentage-of-damage effect must be **capped**, because it compounds with the gear tiers.
 
 All behaviour in `zone/aotv4_healer_aa.cpp`. Full design notes, the anti-farm gates and a
 step-by-step test plan are in **`HEALER_AA.md`**. Two ranks were changed from the brief: Mender's
@@ -95,9 +162,9 @@ returns the rank you own. The rank id is the join between SQL and code — **a w
 
 ### Native AAs consumed
 
-**Ten** are in use: Innate Stamina (2), Agility (3), Dexterity (4), Wisdom (6) and Natural
+**Twenty-one** are in use: Innate Stamina (2), Agility (3), Dexterity (4), Wisdom (6) and Natural
 Durability (28) for the Tank tree; Innate Fire (8), Cold (9), Magic (10), Poison (11) and Disease
-Protection (12) for the Healer tree. An eleventh, **Innate Intelligence (5)**, was consumed by
+Protection (12) for the Healer tree; Innate Lung Capacity (16), Healing Gift (19), Spell Casting Reinforcement (21), Spell Casting Subtlety (25), Combat Fury (30) and Cannibalization (47) for the Melee tree; Divine Stun (73) and Frenzied Burnout (60) for the Tank tree; Combat Stability (33), Combat Agility (34), Quick Damage (44), Rabid Bear (50) and Finishing Blow (32) for the Ranged tree. An eighteenth, **Innate Intelligence (5)**, was consumed by
 Bulwark and has been **restored** — name, ranks 22-26, effects and strings all back to pristine,
 left disabled like the rest of the native set.
 
@@ -217,6 +284,9 @@ Melee with the five AAs under Tank. Untested in game.
 |---|---|
 | `CLAUDE.md` | The whole server. §3 picker + You Lost TODO, §5 spell pool, §6 AA, §17b Shield Wall, §17c world boss |
 | `HEALER_AA.md` | Healer AA tree — design decisions, anti-farm gates, test plan |
+| `MELEE_AA.md` | Melee AA tree — activated-AA rules, the lifetap cap, test plan |
+| `PET_WARDS.md` | Pet self-buffs by family + Kindred Bond (Ranged tab) |
+| `RANGED_AA.md` | Ranged AA tree — Overload, Second Wind, Corrosion, Concussive Burst |
 | `SHIELD_WALL.md` | Player-facing `/shield` guide + server rules |
 | `WORLD_BOSS.md` | World boss test plan and failure modes |
 | `aotv4_client_install/README_INSTALL.md` | What to copy to the client, and how each failure looks |

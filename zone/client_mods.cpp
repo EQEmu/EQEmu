@@ -290,6 +290,11 @@ int64 Client::CalcHPRegen(bool bCombat)
 			base = fast_regen;
 	}
 
+	// AoTv4 Convalesce (healer tree): out of combat only, and read from whoever in the group has it.
+	if (!bCombat) {
+		base += AoTv4ConvalesceBonus(false);
+	}
+
 	int64 regen = base + item_regen + spellbonuses.HPRegen; // TODO: client does this in buff tick
 	return (regen * RuleI(Character, HPRegenMultiplier) / 100);
 }
@@ -713,6 +718,11 @@ int64 Client::CalcManaRegen(bool bCombat)
 		int fast_regen = 6 * (max_mana / zone->newzone_data.fast_regen_mana);
 		if (regen < fast_regen) // weird, but what the client is doing
 			regen = fast_regen;
+	}
+
+	// AoTv4 Convalesce (healer tree): out of combat only, shared from the group.
+	if (!bCombat) {
+		regen += AoTv4ConvalesceBonus(true);
 	}
 
 	regen += spellbonuses.ManaRegen; // TODO: live does this in buff tick

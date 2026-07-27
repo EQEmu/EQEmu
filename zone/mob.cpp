@@ -6855,6 +6855,17 @@ void Mob::MeleeLifeTap(int64 damage) {
 	int32 melee_lifetap_mod = spellbonuses.MeleeLifetap + itembonuses.MeleeLifetap + aabonuses.MeleeLifetap
 					+ spellbonuses.Vampirism + itembonuses.Vampirism + aabonuses.Vampirism;
 
+	// AoTv4 Sanguine Frenzy (melee tree). Its window is a timestamp rather than a buff duration --
+	// buff tics are quantised to a free-running 6 second timer, so a "4 second" buff could really
+	// last anything between 0 and 6 -- and its total is capped so it cannot compound with the gear
+	// tiers. See Mob::AoTv4FrenzyLifetap.
+	if (damage > 0) {
+		const int64 frenzy = AoTv4FrenzyLifetap(damage);
+		if (frenzy > 0) {
+			HealDamage(frenzy);
+		}
+	}
+
 	if(melee_lifetap_mod && damage > 0){
 
 		lifetap_amt = damage * (static_cast<float>(melee_lifetap_mod) / 100.0f);

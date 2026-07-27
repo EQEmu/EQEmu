@@ -183,12 +183,23 @@ its own; our `dsp_chat` calls `SpellChoiceParseTransport`. Wire format is **unch
   **Lost** tab — the journal's Spell and AA tabs are dead (this module owns `SPELLCHOICEDATA`, and
   random AA is retired: `areAAChoiceWindowEnabled=false`, the `AACHOICEDATA` line is parsed and
   swallowed but shows nothing).
-- 📌 **TODO — the "You Lost" death window is still a GDI overlay.** With the Reward Journal deleted
-  it is the death-loss display again (`areLostWindowEnabled`, `PaintLostOverlay`/`LostOverlayWndProc`
-  in `core_spellwindow.cpp`, fed by `LOSTDATA`). It should become a **native SIDL `CCustomWnd`** like
-  the picker / AdvLoot / Shop / Achievement windows — self-drawn chrome never matches EQ, it can't
-  scale with the UI, and it only works windowed. The wire format (`LOSTDATA name^name^…`) can stay,
-  so it is a client-side change only. Same for the remaining GDI overlays: **Portal** and **Search**.
+- ✅ **The "You Lost" death window is now a native SIDL window** (2026-07-27) —
+  `core_lostwindow.cpp/.h` + `EQUI_AoTLostWnd.xml`, its OWN translation unit like `core_advloot`.
+  Installs no detours; our `dsp_chat` calls `LostParseTransport` (swallows `LOSTDATA`), Ctrl+Q calls
+  `LostWindowShow`, and the `CleanGameUI`/`ReloadUI` detour that `core_achievements_native.cpp` owns
+  calls `LostWindowOnUiReset`. **Wire format unchanged** (`LOSTDATA name^name^…`) so the server was
+  not touched. Scrolling, dragging and the 45-second idle timeout are all gone — the UI engine does
+  the first two and a real window with a close box does not need the third, so the list now stays
+  until dismissed. The GDI `PaintLostOverlay`/`LostOverlayWndProc`/`LostOverlayThreadProc` remain in
+  `core_spellwindow.cpp` but are **unreachable** (`if (false && …)`); delete once confirmed working.
+  Install: `aotv4_client_install/LOST_WINDOW_INSTALL.md`.
+- 📌 **TODO — Portal and Search are still GDI overlays** and should get the same treatment for the
+  same reasons: self-drawn chrome never matches EQ, it can't scale with the UI, and it only works
+  windowed. Both are client-side-only changes; their wire formats can stay.
+- ⚠️ **A `<Button>` uses `<Template>BDT_Normal</Template>`, NOT `<ButtonDrawTemplate>`.** The tag
+  name differs from the inline form used for icon buttons, and only the ~34 `BDT_*` names actually
+  defined in `EQUI_Templates.xml` resolve — anything else draws an empty hole with no error, the
+  same failure mode as a mis-cased texture name.
 - **Client install:** copy `EQUI_AoTSpellChoiceWnd.xml` to `uifiles/default/` **and**
   `<Include>EQUI_AoTSpellChoiceWnd.xml</Include>` in `EQUI.xml`. Missing either = `CCustomWnd` can't
   find its screen and returns **silently** — no error, no window.
@@ -548,6 +559,13 @@ class, `classes8`, skill caps, expansion). The windows are generic (`SPELLCHOICE
 - **AA names come from `db_str`** (type 1 title, type 4 description) resolved by the CLIENT out of
   its own `dbstr_us.txt`, so a `db_str` change needs `./export_client_files` + reinstalling that
   file. `title_sid = -1` renders **no row at all** — it does not fall back to `aa_ability.name`.
+- ⚠️⚠️ **`title_sid` and `desc_sid` are INDEPENDENT, and neither is guaranteed to equal
+  `first_rank_id`.** 22 of our 23 hosts have `title_sid = desc_sid = first_rank_id`, which makes it
+  look like a rule — **Quick Damage (44) does not**: `title_sid 141`, `desc_sid` **12863**. Writing
+  the description to the title sid gave an AA with the right NAME and the host's ORIGINAL
+  description, with no error anywhere. Always
+  `SELECT title_sid, desc_sid FROM aa_ranks WHERE id = <first_rank_id>` before writing `db_str` for
+  a new host, or repoint `desc_sid` to match the title sid as `aotv4_aa_ranged.sql` now does.
 - **`items` (and `spells_new`) ARE in shared memory** — unlike AAs, item edits need a full rebuild:
   stop world+zones, `cd build/bin && ./shared_memory`, restart world (zones reboot on demand). Do it
   with world DOWN, or world keeps the stale mmap.

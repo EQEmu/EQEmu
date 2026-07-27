@@ -1354,6 +1354,38 @@ void Client::ActivateAlternateAdvancementAbility(int rank_id, int target_id) {
 			}
 		}
 	}
+
+	// AoTv4 Sanguine Frenzy (melee tree). Its window has to be a timestamp rather than the buff's
+	// duration -- buff tics run on a free-running 6 second timer, so a one-tick buff can expire
+	// almost immediately. Opened here, after every check has passed and the recast timer is set, so
+	// a rejected activation cannot open it. The spell the AA casts is only the visual: an activated
+	// AA is required to have a valid spell (see the IsValidSpell guard above) and required to have
+	// NO aa_rank_effects, which is exactly the shape of every marker AA in these trees.
+	if (rank->base_ability && rank->base_ability->id == 47) {
+		AoTv4ActivateFrenzy(static_cast<int>(GetAA(rank->id)));
+	}
+
+	// AoTv4 Iron Will (tank tree): burns the whole mana and endurance pool into absorption. Same
+	// placement and the same reasoning -- opened only once the activation is committed.
+	if (rank->base_ability && rank->base_ability->id == 60) {
+		AoTv4IronWill(static_cast<int>(GetAA(rank->id)));
+	}
+
+	// AoTv4 endurance-funded outs and Rally. Each checks its own rank and pays its own cost.
+	if (rank->base_ability) {
+		const int ab = rank->base_ability->id;
+		const int r  = static_cast<int>(GetAA(rank->id));
+		if (ab == 173) { AoTv4LastStand(r); }
+		else if (ab == 180) { AoTv4Reprieve(r); }
+		else if (ab ==  52) { AoTv4Fade(r); }
+		else if (ab == 170) { AoTv4Disengage(r); }
+		else if (ab == 111) { AoTv4Rally(r); }
+	}
+
+	// AoTv4 Second Wind (ranged tree): the mirror of Iron Will -- burns endurance into mana.
+	if (rank->base_ability && rank->base_ability->id == 50) {
+		AoTv4SecondWind(static_cast<int>(GetAA(rank->id)));
+	}
 }
 
 int Mob::GetAlternateAdvancementCooldownReduction(AA::Rank *rank_in) {

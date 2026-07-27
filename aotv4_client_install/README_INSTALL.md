@@ -3,8 +3,8 @@
 Everything in this folder goes to the EQ client. Source of truth is the dev container; these are
 exported/generated copies. Regenerate rather than hand-editing.
 
-Last regenerated: **2026-07-26 08:06**, after the custom spell lines, the Tank AA tree, the reward-pool
-change to the stock spell set, and the AA tab rename.
+Last regenerated: **2026-07-27**, after the four AA trees (40 AAs), the pet ward rework, and the
+native "You Lost" window.
 
 ---
 
@@ -26,6 +26,7 @@ Back up the originals first — these overwrite stock EQ files.
 | `EQUI_AoTSpellChoiceWnd.xml` | The level-up reward picker. **~8,600 lines** — it predefines one animation and one hidden button per spell icon, which is the only way to show per-row icons on this client. |
 | `EQUI_AdvLootWnd.xml` | Advanced Loot window. |
 | `EQUI_ShopWnd.xml` | Player shop (`/trader`). |
+| `EQUI_AoTLostWnd.xml` | The "You Lost" death window, now a native SIDL window. |
 | `EQUI_AAWindow.xml` | **Overwrites a stock file** — renames the four AA tabs to Tank / Healer / Ranged / Melee. Back up the original. |
 
 Then add the matching lines to `<EQ>\uifiles\default\EQUI.xml` among the other `<Include>` entries:
@@ -34,6 +35,7 @@ Then add the matching lines to `<EQ>\uifiles\default\EQUI.xml` among the other `
 <Include>EQUI_AoTSpellChoiceWnd.xml</Include>
 <Include>EQUI_AdvLootWnd.xml</Include>
 <Include>EQUI_ShopWnd.xml</Include>
+<Include>EQUI_AoTLostWnd.xml</Include>
 ```
 
 `EQUI_AAWindow.xml` needs **no** `<Include>` — it is a stock file EQUI.xml already includes, so
@@ -66,7 +68,8 @@ Built from `.devcontainer/repo/eq-core-dll/` (VS2022, toolset v143), then droppe
 `eqgame.exe`. **Close EQ before copying — it holds the dll open.**
 
 Rebuild needed whenever the dll sources change. Since the last build that includes: the deleted GDI
-reward windows, the native spell picker's icon lookup, and the Advanced Loot module.
+reward windows, the native spell picker's icon lookup, the Advanced Loot module, and the **native
+"You Lost" window** (core_lostwindow.cpp -- see LOST_WINDOW_INSTALL.md).
 
 ---
 

@@ -8,6 +8,11 @@ set(zone_sources
     aggromanager.cpp
     api_service.cpp
     aotv4_healer_aa.cpp
+    aotv4_melee_aa.cpp
+    aotv4_outs_aa.cpp
+    aotv4_pet_aa.cpp
+    aotv4_ranged_aa.cpp
+    aotv4_tank_aa.cpp
     attack.cpp
     aura.cpp
     beacon.cpp

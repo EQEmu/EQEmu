@@ -1161,6 +1161,10 @@ void Mob::MeleeMitigation(Mob *attacker, DamageHitInfo &hit, ExtraAttackOptions 
 	// already safe (high AC versus weak attackers deflects most swings), so healing per deflect is
 	// worth nothing exactly when it fires most. Paying at the moment a blow lands puts the value
 	// where the danger is.
+	// AoTv4 Sunder (melee tree): landed blows erode the target's guard against that attacker, so
+	// deflections get rarer the longer you stay on one thing. Applied before the deflect test below.
+	rolled_mit = AoTv4SunderMitigation(attacker, rolled_mit);
+
 	const int aegis = static_cast<int>(GetAA(27));   // host AA 6, ranks 27-31
 	if (aegis > 0) {
 		// per-stack bonus and cap both climb with rank: 2%/5 at rank 1 up to 6%/10 at rank 5
@@ -1193,6 +1197,10 @@ void Mob::MeleeMitigation(Mob *attacker, DamageHitInfo &hit, ExtraAttackOptions 
 		int dmg_int    = static_cast<int>(dmg_val);
 		hit.damage_done = std::max(1, dmg_int + (dmg_val > static_cast<double>(dmg_int) ? 1 : 0));
 	}
+
+	// AoTv4 Backs to the Wall (melee tree): flat reduction that scales with how many things are on
+	// this defender. Applied after the deflect/mitigation result so it trims the finished figure.
+	hit.damage_done = AoTv4BacksToTheWall(hit.damage_done);
 
 	Log(Logs::Detail, Logs::Attack, "ac %d vs offense %d. base %d max_hit %.1f mit %.3f damage %d",
 		mitigation, offense, hit.base_damage, max_hit, rolled_mit, hit.damage_done);
@@ -2634,6 +2642,15 @@ bool NPC::Death(Mob* killer_mob, int64 damage, uint16 spell, EQ::skills::SkillTy
 	);
 
 	Mob* owner_or_self = killer_mob ? killer_mob->GetOwnerOrSelf() : nullptr;
+
+	// AoTv4: a pet's ward is bound to the pet's life, so when it dies the copy Kindred Bond gave the
+	// owner (and the group) goes with it. The rows carry an effectively permanent duration on
+	// purpose -- without this the owner would simply keep it.
+	if (IsPet()) {
+		if (Mob *pet_owner = GetOwner()) {
+			pet_owner->AoTv4PetWardEnded();
+		}
+	}
 
 	auto exports = [&]() {
 		return fmt::format(
@@ -4482,6 +4499,14 @@ void Mob::CommonDamage(Mob* attacker, int64 &damage, const uint16 spell_id, cons
 			damage = 0;
 		}
 
+		// AoTv4 Last Stand: trim the blow so it cannot take this character past the floor. Placed
+		// before the health is applied, so nothing downstream ever sees the untrimmed figure.
+		damage = AoTv4LastStandFloor(damage);
+
+		// AoTv4 Executioner rank 5 needs the health the victim had BEFORE this blow, so it can work
+		// out how much of it was wasted on a corpse.
+		const int64 aotv4_hp_before = GetHP();
+
 		SetHP(int64(GetHP() - damage));
 
 		if (HasDied()) {
@@ -4504,6 +4529,13 @@ void Mob::CommonDamage(Mob* attacker, int64 &damage, const uint16 spell_id, cons
 					died = CastToClient()->CheckIfAlreadyDead();
 				}
 
+				// AoTv4 Executioner rank 5: whatever this blow spent on an already dead target
+				// carries to something else that is fighting us. Done before SetHP(-500) blows the
+				// health away, and only when the kill actually stands.
+				if (died && attacker && damage > aotv4_hp_before) {
+					attacker->AoTv4ExecutionerCleave(this, damage - aotv4_hp_before);
+				}
+
 				if (died) {
 					SetHP(-500);
 				}
@@ -4517,6 +4549,13 @@ void Mob::CommonDamage(Mob* attacker, int64 &damage, const uint16 spell_id, cons
 		else {
 			if (GetHPRatio() < 16 && previous_hp_ratio >= 16) {
 				TryDeathSave();
+			}
+
+			// AoTv4 Concussive Burst (Ranged tree): crossing below 30 percent cracks the air open
+			// and stuns everything nearby. Same crossing test as the death save above, so it fires
+			// once on the way down rather than on every hit while low.
+			if (GetHPRatio() < 30.0f && previous_hp_ratio >= 30) {
+				AoTv4ConcussiveBurst();
 			}
 		}
 
@@ -4750,7 +4789,8 @@ void Mob::CommonDamage(Mob* attacker, int64 &damage, const uint16 spell_id, cons
 		}
 
 		a->hit_heading = attacker ? attacker->GetHeading() : 0.0f;
-		if (RuleB(Combat, MeleePush) && damage > 0 && !IsRooted() &&
+		// AoTv4 Bracing (melee tree) joins the existing guards -- a braced character is not shoved.
+		if (RuleB(Combat, MeleePush) && damage > 0 && !IsRooted() && !AoTv4Braced() &&
 			(IsClient() || zone->random.Roll(RuleI(Combat, MeleePushChance)))) {
 			a->force = EQ::skills::GetSkillMeleePushForce(skill_used);
 
@@ -6725,6 +6765,13 @@ void Mob::CommonOutgoingHitSuccess(Mob* defender, DamageHitInfo &hit, ExtraAttac
 	if (spec_mod > 0)
 		hit.damage_done = (hit.damage_done * spec_mod) / 100;
 
+	// AoTv4 Melee AA tree: Killing Rhythm's flat damage, Executioner's bonus against a wounded
+	// target, and Bloodletting's bleed. Placed AFTER the critical multiplier on purpose -- these are
+	// meant to be flat and predictable, and letting a crit double them would compound with the gear
+	// tiers the same way an uncapped lifetap would. Still ahead of the damage-taken modifiers and
+	// the shield wall below, so every later mechanic sees the real number.
+	AoTv4MeleeOnHit(defender, hit);
+
 	int pct_damage_reduction = defender->GetSkillDmgTaken(hit.skill, opts) + defender->GetPositionalDmgTaken(this);
 
 	hit.damage_done += (hit.damage_done * pct_damage_reduction / 100) + defender->GetPositionalDmgTakenAmt(this);
@@ -7186,6 +7233,14 @@ void Client::DoAttackRounds(Mob *target, int hand, bool IsFromSpell)
 		CheckIncreaseSkill(EQ::skills::SkillDoubleAttack, target, -10);
 		if (CheckDoubleAttack()) {
 			Attack(target, hand, false, false, IsFromSpell);
+
+			// AoTv4 Relentless rank 5: a double that connects can carry into a third swing. Ranks
+			// 1-4 are native SPA 225 GiveDoubleAttack and need no code -- 225 rather than SPA 177
+			// because only 8 of the 16 classes have a Double Attack skill cap, and 177 does nothing
+			// without the skill while 225 explicitly bypasses that check (Client::CheckDoubleAttack).
+			if (AoTv4RelentlessExtraSwing()) {
+				Attack(target, hand, false, false, IsFromSpell);
+			}
 
 			if (hand == EQ::invslot::slotPrimary) {
 

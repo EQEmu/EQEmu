@@ -1369,6 +1369,43 @@ public:
 	void AoTv4CureRenewal(Mob *target);
 	void AoTv4GraceShieldSpent();
 	bool AoTv4TryBorrowedBreath();
+
+	// AoTv4 Tank AA tree -- implementation in zone/aotv4_tank_aa.cpp. `this` is the STUNNER.
+	void AoTv4WardOnStun(uint16 spell_id);
+	void AoTv4IronWill(int rank);
+
+	// AoTv4 pet wards + the Ranged AA that shares one. zone/aotv4_pet_aa.cpp. `this` is the OWNER.
+	// AoTv4 Ranged AA tree -- zone/aotv4_ranged_aa.cpp. `this` is the CASTER throughout.
+	int64 AoTv4OverloadDamage(uint16 spell_id, int64 value);
+	void  AoTv4CorrodeResists(Mob *target, uint16 spell_id);
+	void  AoTv4SecondWind(int rank);
+	void  AoTv4ConcussiveBurst();
+	bool  AoTv4CannotBeInterrupted();
+
+	// AoTv4 endurance-funded outs + utility -- zone/aotv4_outs_aa.cpp.
+	bool  AoTv4SpendOutEndurance();
+	void  AoTv4LastStand(int rank);
+	int64 AoTv4LastStandFloor(int64 damage);
+	void  AoTv4Reprieve(int rank);
+	void  AoTv4Fade(int rank);
+	void  AoTv4Disengage(int rank);
+	void  AoTv4Rally(int rank);
+	int64 AoTv4ConvalesceBonus(bool mana);
+
+	void AoTv4ApplyPetWard(Mob *pet, const char *pet_type);
+	void AoTv4PetWardEnded();
+
+	// AoTv4 Melee AA tree -- implementation in zone/aotv4_melee_aa.cpp.
+	// `this` is the DEFENDER for AoTv4SunderMitigation and the ATTACKER for all the others.
+	double AoTv4SunderMitigation(Mob *attacker, double rolled_mit);
+	void   AoTv4MeleeOnHit(Mob *defender, DamageHitInfo &hit);
+	void   AoTv4ExecutionerCleave(Mob *victim, int64 overkill);
+	int64  AoTv4FrenzyLifetap(int64 damage);
+	void   AoTv4ActivateFrenzy(int rank);
+	int64  AoTv4BacksToTheWall(int64 damage);
+	bool   AoTv4Braced();
+	bool   AoTv4HeldInPlace();
+	bool   AoTv4RelentlessExtraSwing();
 	inline uint32 GetShieldTargetID() const { return m_shield_target_id; }
 	inline void SetShieldTargetID(uint32 val) { m_shield_target_id = val; }
 	inline int GetShieldTargetMitigation() const { return m_shield_target_mitigation; }
@@ -1778,6 +1815,33 @@ protected:
 	uint32 m_aotv4_breath_ready   = 0;   // Borrowed Breath r5: when I may avoid a death again
 	uint32 m_aotv4_breath_save    = 0;   // ...on the SAVED player, how long their save stays armed
 	uint16 m_aotv4_breath_healer  = 0;   // ...and who armed it, so the cooldown lands on THEM
+
+	// AoTv4 Melee AA tree (custom/sql/aotv4_aa_melee_hosted.sql, aotv4_melee_aa.cpp).
+	// Sunder and Killing Rhythm both track a run against ONE target and reset when you switch, so
+	// each needs the target it was counting plus a lapse time -- a stack count alone would carry
+	// over to the next thing you hit.
+	uint16 m_aotv4_sunder_target  = 0;
+	int    m_aotv4_sunder_stacks  = 0;
+	uint32 m_aotv4_sunder_expire  = 0;
+	uint16 m_aotv4_rhythm_target  = 0;
+	int    m_aotv4_rhythm_stacks  = 0;
+	uint32 m_aotv4_rhythm_expire  = 0;
+	// Sanguine Frenzy. The window is a timestamp, not a buff duration: buff ticks are quantised to
+	// a free-running 6 second timer, so a "4 second" buff can really last anything from 0 to 6.
+	uint32 m_aotv4_frenzy_until   = 0;
+	int    m_aotv4_frenzy_pct     = 0;
+	int64  m_aotv4_frenzy_cap     = 0;   // most health one activation may return, absolute
+	int64  m_aotv4_frenzy_healed  = 0;   // ...and how much of it has been spent
+
+	// Which pet ward this owner is currently sharing (Kindred Bond). Remembered because by the time
+	// the pet dies it is gone, and the family it belonged to can no longer be looked up.
+	uint16 m_aotv4_petward_spell  = 0;
+
+	// Concussive Burst (Ranged tree): when this character may next crack the air open.
+	uint32 m_aotv4_burst_ready    = 0;
+
+	// Last Stand: while this is in the future, damage cannot take you past the floor.
+	uint32 m_aotv4_laststand_until = 0;
 	bool   m_aotv4_heal_echoing   = false; // Mender's Echo reentry guard -- an echo is itself a heal
 	uint8  m_aotv4_grace_rank     = 0;   // rank of the Overflowing Grace shield currently on me
 	int m_shield_target_mitigation;

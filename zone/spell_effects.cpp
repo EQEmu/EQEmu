@@ -791,6 +791,13 @@ bool Mob::SpellEffect(Mob* caster, uint16 spell_id, float partial, int level_ove
 						}
 
 						Stun(effect_value);
+
+						// AoTv4 Sanctified Blow (tank tree): a stun that LANDS can leave a ward on
+						// the one who struck. Here rather than at activation, so a stun that was
+						// resisted or shrugged off by an immune target pays nothing.
+						if (caster) {
+							caster->AoTv4WardOnStun(spell_id);
+						}
 					} else {
 						if (IsClient())
 							MessageString(Chat::Stun, SHAKE_OFF_STUN);
@@ -4021,6 +4028,10 @@ void Mob::DoBuffTic(const Buffs_Struct &buff, int slot, Mob *caster)
 				}
 
 				effect_value = caster->GetActDoTDamage(buff.spellid, effect_value, this);
+
+				// AoTv4 Corrosion (Ranged tree): a chance for the tick to erode whichever resist
+				// this damage-over-time is checked against, so a fire line wears down fire.
+				caster->AoTv4CorrodeResists(this, buff.spellid);
 
 				caster->ResourceTap(-effect_value, buff.spellid);
 				effect_value = -effect_value;

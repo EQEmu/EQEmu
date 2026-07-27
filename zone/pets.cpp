@@ -282,6 +282,12 @@ void Mob::MakePoweredPet(uint16 spell_id, const char* pettype, int16 petpower,
 
 	entity_list.AddNPC(npc, true, true);
 	SetPetID(npc->GetID());
+
+	// AoTv4: every pet carries a standing ward suited to its family, and the Ranged AA Kindred Bond
+	// hands a copy to the owner. Applied here rather than through npc_spells so it covers quest and
+	// swarm pets too -- see zone/aotv4_pet_aa.cpp. `pettype` is the pets.type string, which is what
+	// distinguishes a fire pet from a water pet; the owner's class cannot.
+	AoTv4ApplyPetWard(npc, pettype);
 	// We need to handle PetType 5 (petHatelist), add the current target to the hatelist of the pet
 
 	if (record.petcontrol == PetType::TargetLock)

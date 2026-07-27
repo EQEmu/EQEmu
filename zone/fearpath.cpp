@@ -79,6 +79,14 @@ void Mob::CheckFlee()
 		return;
 	}
 
+	// AoTv4 Run Them Down (melee tree): somebody fighting this thing is holding it in place.
+	// Checked here rather than in the movement code so it never starts fleeing at all -- a mob that
+	// begins to run and is then stopped still drags aggro around for a moment.
+	if (AoTv4HeldInPlace()) {
+		LogFlee("Mob [{}] is being held in place by Run Them Down", GetCleanName());
+		return;
+	}
+
 	int hp_ratio   = GetIntHPRatio();
 	int flee_ratio = GetFleeRatio();
 	Mob *hate_top  = GetHateTop();

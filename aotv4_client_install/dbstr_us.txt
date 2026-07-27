@@ -511,8 +511,8 @@
 61^11^Shark^0
 61^12^Sharks^0
 61^15^The home of the High Elves, or Koada'Dal, is within the magnificent and pristine architecture of the city of Felwithe. The structures crafted behind the walls make the beauty of the surrounding forests pale. The city lies within the Greater Faydark on the continent of Faydwer.^0
-62^1^Innate Run Speed^0
-62^4^This ability will slightly modify your base run speed. This modification does NOT stack with movement rate spell effects.^0
+62^1^Quickening^0
+62^4^Your casting quickens. Reduces the casting time of your spells by 2, 4, 6, 9 and 12 percent.^0
 62^5^Melee Guard^0
 62^6^Surrounds your target with an aura of protection, warding away poison for %z.^0
 62^11^Tunare^0
@@ -557,8 +557,8 @@
 70^12^Zombies^0
 70^34^has earned the EverQuest achievement "Level 70" (Become a level 70 Adventurer.)^0
 70^35^has earned the EverQuest achievement "Level 70" (Become a level 70 Adventurer.)^0
-71^1^Innate Lung Capacity^0
-71^4^This ability increases the amount of air you can hold in your lungs 10, 25, 50, 75, and 100% percent.  Rank 6 grants you the permanent ability to breathe underwater and in airless environment.^0
+71^1^Executioner^0
+71^4^You finish what you start. Blows against a target below 25 percent health strike for 3, 5, 5, 8 and 8 additional points, and the third rank widens that to 35 percent. At the fifth rank damage spent on an already dying foe carries to another enemy fighting you.^0
 71^5^Pet Misc Buffs^0
 71^6^Strikes your target with a chaotic burst of mental energy, causing between #1 and @1 damage.^0
 71^11^Human^0
@@ -588,8 +588,8 @@
 76^6^Commands roots to take hold of your target, doing between #1 and @1 damage, and preventing their movement for %z.^0
 76^11^Puma^0
 76^12^Pumas^0
-77^1^Healing Adept^0
-77^4^The first three ranks of this ability increase the maximum effectiveness of your healing spells by 2, 5, and 10 percent.  Additional ranks increase the maximum effectiveness of your healing by an additional 3 percent per rank.^0
+77^1^Convalesce^0
+77^4^Rest is worth more in company. While out of combat, you and your group recover an additional 4, 8, 12, 16 and 20 health and 3, 6, 9, 12 and 15 mana each tick.^0
 77^5^Quick Heal^0
 77^6^Commands roots to take hold of your target, doing between #1 and @1 damage, and preventing their movement for %z.^0
 77^11^Dark Elf^0
@@ -602,8 +602,8 @@
 79^6^Allows your target to perceive the spirit realm, causing normally invisible creatures to become visible to their eyes.^0
 79^11^Bixie^0
 79^12^Bixies^0
-80^1^Healing Gift^0
-80^4^The first three ranks of this ability grant you a chance to score an exceptional heal at 3, 6, and 10 percent. Additional ranks up to rank 15 further increase the chance by 2 percent per rank. Rank 16+ increase this chance by 1 percent per rank. An exceptional heal doubles the healing value of the spell.^0
+80^1^Killing Rhythm^0
+80^4^Violence rewards a steady hand. Every melee blow you land strikes for 2, 4, 4, 6 and 6 additional points. From the third rank, staying on one target adds a further point for each blow in a row, and the fifth rank doubles how far that can climb.^0
 80^5^Resist Buff^0
 80^6^Places a magical enchantment upon your target's eyes, allowing them to see otherwise invisible creatures for %z.^0
 80^11^Reanimated Hand^0
@@ -635,8 +635,8 @@
 85^12^Spectres^0
 85^34^has earned the EverQuest achievement "Level 85" (Become a level 85 Adventurer.)^0
 85^35^has earned the EverQuest achievement "Level 85" (Become a level 85 Adventurer.)^0
-86^1^Spell Casting Reinforcement^0
-86^4^This ability increases the duration of beneficial spells that you cast. Ranks 1, 2, and 3 increase the duration by 5, 15, and 30 percent respectively. Each additional rank increases this duration by 20 percent.^0
+86^1^Relentless^0
+86^4^You do not stop. Increases your chance to attack twice by 3, 6, 9, 12 and 15 percent, whether or not your class was ever taught how. At the fifth rank a double strike can carry into a third.^0
 86^5^Shadowstep^0
 86^6^Magically fills your lungs with air, removing your need to breathe for %z.  Consumes a handful of fish scales to cast.^0
 86^11^Sphinx^0
@@ -695,8 +695,8 @@
 97^6^Removes toxin from your target's system, curing them of major poisons.^0
 97^11^Daisy Man^0
 97^12^Daisy Men^0
-98^1^Spell Casting Subtlety^0
-98^4^The first three ranks of this ability make NPCs notice your magical activities 5, 10, and 20 percent less.  Additional ranks further enhance this effect.^0
+98^1^Bloodletting^0
+98^4^Your blows leave wounds that keep working after you have moved on. Melee hits cause bleeding. The third rank makes it last longer and the fifth rank doubles its severity. Bleeding ignores armour entirely.^0
 98^5^Sum: Air^0
 98^6^Destroys infection in your target's system, potentially curing many diseases.^0
 98^11^Vampire^0
@@ -768,8 +768,8 @@
 112^6^Decreases your target's resistance to cold, fire, magic, and poison.^0
 112^11^Guard^0
 112^12^Guards^0
-113^1^Combat Fury^0
-113^4^This ability increases your chance to land a critical hit.  Non-Warriors will nearly match the original critical hit abilities of Warriors, while Warriors will remain significantly ahead of other classes.^0
+113^1^Sunder^0
+113^4^Armour gives, if you keep hitting it. Each blow you land wears down your target guard against you, making your attacks less likely to be turned aside. From the third rank even a deflected swing wears it down. At the fifth rank a full set of marks guarantees your next blow lands. Wearing down a new target starts over.^0
 113^5^Taelosia^0
 113^6^Conjures a shock of spikes that assaults your target, causing between #1 and @1 damage.^0
 113^11^Drixie^0
@@ -796,8 +796,8 @@
 118^6^A burst of holy power that inflicts between #1 and @1 damage to an undead target.^0
 118^11^Ghost^0
 118^12^Ghosts^0
-119^1^Finishing Blow^0
-119^4^This ability gives you a chance to finish off an NPC that is below 10 percent health and fleeing with a single blow.  Additional ranks increase the maximum level of affected NPC.  Rank 1: level 50, Rank 2: level 52, Rank 3: level 54, Rank 4: level 56, Rank 5: level 58, Rank 6: level 60, Rank 7: level 61, Rank 8: level 63, Rank 9: Level 65, Rank 10: level 66, Rank 11: level 68, Rank 12: level 70, Rank 13: Level 71, Rank 14: Level 73, Rank 15: Level 75. Rank 16: Level 76. Rank 17: 78. Rank 18: 80. Rank 19: 82. Rank 20: 84. Rank 21: 86. Additional ranks increase this limit by 1 level per rank. (Non-Warriors must first train one level of Combat Fury to use this ability.)^0
+119^1^Kindred Bond^0
+119^4^What your companion is, you become a little of yourself. While your pet lives you carry its ward as well, whether that is the fire elemental burning aura, the air elemental swiftness, or the quiet clarity of a familiar. The second rank extends the ward to your group. The third and fourth make your companion hardier and surer of its blows, and at the fifth rank the ward outlives the pet by a minute. The ward is granted when the pet is summoned, so summon again after training this.^0
 119^5^Timer 3^0
 119^6^Causes a shower of sparks and magical color to erupt around you.^0
 119^11^Saber-toothed Cat^0
@@ -810,8 +810,8 @@
 121^6^Conjures a rain of lava that assaults all creatures in the vicinity of your target, causing three waves of between #1 and @1 damage.^0
 121^11^Gorgon^0
 121^12^Gorgons^0
-122^1^Combat Stability^0
-122^4^The first three ranks of this ability increase melee damage mitigation by 2, 5, and 10 percent.  Additional ranks further increase this effect.^0
+122^1^Corrosion^0
+122^4^What you inflict makes the next thing easier. Each tick of your damage over time has a 10, 15, 20, 25 and 30 percent chance to erode whichever resistance that spell is checked against, so fire wears down fire and poison wears down poison.^0
 122^5^Timer 6^0
 122^6^Creates a circle of fire around you, causing between #1 and @1 damage to all nearby creatures.^0
 122^11^Dragon^0
@@ -824,8 +824,8 @@
 124^6^Strikes an enemy with holy might, briefly stunning them and causing between #2 and @2 damage. This spell works on creatures up to level @1.^0
 124^11^Unicorn^0
 124^12^Unicorns^0
-125^1^Combat Agility^0
-125^4^The first three ranks of this ability increase your melee damage avoidance by 2, 5 and 10 percent.  Additional ranks further increase this effect.^0
+125^1^Concussive Burst^0
+125^4^When you are hurt badly the air cracks outward from you, stunning everything nearby. Triggers when you fall below 30 percent health, once every 5, 4, 3, 2 and a half, and 2 minutes. It will not hold the largest creatures.^0
 125^5^Utility Beneficial^0
 125^6^Strikes an enemy with holy might, briefly stunning them and causing #2 hit points of damage. This spell works on creatures up to level @1.^0
 125^11^Pegasus^0
@@ -924,8 +924,8 @@
 140^6^Fills your pet with a savage spirit, increasing their attack speed, strength, and armor class.^0
 140^11^Giant^0
 140^12^Giants^0
-141^1^Quick Damage^0
-141^4^This ability reduces the casting time on your damage spells that have a casting time greater than three seconds by 2, 5 and 10 percent.^0
+141^1^Overload^0
+141^4^Now and then the magic gets away from you. Direct damage spells have a 5, 10, 15, 20 and 25 percent chance to land for half as much again. This is its own roll and stacks with a critical rather than replacing one.^0
 141^5^Temporary^0
 141^6^Beckons to the animals of the wild, allowing you to control them.^0
 141^11^Boat^0
@@ -952,10 +952,10 @@
 145^6^Hastens your target's natural healing, regenerating #1 hit points every 6 seconds.^0
 145^11^Goo^0
 145^12^Goos^0
-146^1^Cannibalization^0
+146^1^Sanguine Frenzy^0
 146^2^Canni^0
 146^3^V^0
-146^4^This ability will give the caster a new, massive Cannibalize spell.  Further ranks increase both the mana that can be harvested by using the ability as well as the amount of hit points consumed by the cannibalization.^0
+146^4^For 4 seconds, the damage your weapons deal is returned to you as health, three times over. The healing is capped at 8, 11, 14, 17 and 20 percent of your maximum health each time you use it, so no weapon is too fine and none too crude. Reusable every 45 seconds.^0
 146^5^Timer 7^0
 146^6^Fills your target with the spirit of the monkey, increasing their dexterity for %z.^0
 146^11^Sarnak Spirit^0
@@ -988,10 +988,10 @@
 152^6^Fills your target with a sense of deftness, increasing their dexterity for %z.^0
 152^11^Bertoxxulous^0
 152^12^Bertoxxulouses^0
-153^1^Rabid Bear^0
+153^1^Second Wind^0
 153^2^Rabid^0
 153^3^Bear^0
-153^4^This ability turns you into a Rabid Bear, boosting all of your offensive capabilities.  Additional ranks increase the effect.^0
+153^4^Spend the last of your stamina and turn it into will. Consumes all of your endurance and returns 40, 55, 70, 85 and 100 percent of it as mana. Mana over your maximum is lost, so do not use it while full. Usable once every 5 minutes.^0
 153^5^Fast^0
 153^6^Fills your target's body with furious power, increases their strength for %z.^0
 153^11^Bristlebane^0
@@ -1004,10 +1004,10 @@
 154^6^Fills your target with a sense of nimbleness, increasing their agility for %z.^0
 154^11^Fay Drake^0
 154^12^Fay Drakes^0
-155^1^Improved Familiar^0
+155^1^Fade^0
 155^2^Impr.^0
 155^3^Fam.^0
-155^4^This ability will summon an improved familiar that is an upgrade from the greater familiar. This improved familiar is higher in level, has more hit points, and is very resistant to all spells.  Additional ranks will call forth a familiar that provides even greater benefits to its owner than its predecessor.^0
+155^4^Slip out of the world attention. Everything currently angry at you forgets, and you are briefly unseen. In a group this hands whatever was hitting you to somebody else. Requires and consumes at least half your endurance. Usable once every 45 minutes.^0
 155^5^Timer 13^0
 155^6^Fills your target with glamour, increasing their charisma for %z.^0
 155^11^Undead Sarnak^0
@@ -1072,10 +1072,10 @@
 166^6^Summons a companion from the spirit world in the form of a great wolf.^0
 166^11^Animated Hand^0
 166^12^Animated Hands^0
-167^1^Frenzied Burnout^0
+167^1^Iron Will^0
 167^2^Frenzied^0
 167^3^Burnout^0
-167^4^This ability allows you to cast a buff on your pet that will cause it to go berserk, doing increased damage. Additional ranks improve your pet's ability to take and dispense damage.^0
+167^4^Spend everything at once and wear it. Your entire pool of mana is consumed and returned to you as absorption, at half its worth for the first two ranks and in full from the third. From the second rank your endurance is spent alongside it. The fourth rank turns aside spell damage as well as blows, and the fifth makes it last twice as long. Usable once every 30 minutes.^0
 167^6^Imbues your target with the talisman of Tnarg, providing increased hit points for %z.^0
 167^11^Succulent^0
 167^12^Succulents^0
@@ -1183,10 +1183,10 @@
 187^6^Causes your opponent to fall into an enchanted sleep for up to %z.  This spell works on creatures up to level @1.^0
 187^11^Siren^0
 187^12^Sirens^0
-188^1^Divine Stun^0
+188^1^Sanctified Blow^0
 188^2^Divine^0
 188^3^Stun^0
-188^4^Training in this ability gives you a new, fast-casting spell that has the chance to interrupt NPCs up to level 68 for rank 1, level 73 for rank 2, level 78 for rank 3, level 83 for rank 4, level 88 for rank 5, level 93 for rank 6, level 95 for rank 7, level 98 for rank 8, level 101 for rank 9, and level 103 for rank 10.^0
+188^4^Strike your target senseless for a moment. Each blow that lands has a 20, 30, 30, 40 and 100 percent chance to leave a ward about you, absorbing melee damage equal to 2, 4, 6, 8 and 10 percent of your maximum health until it is spent. The third rank stuns for longer and holds tougher opponents, and at the fifth rank the ward is certain. Reusable every 30 seconds.^0
 188^6^Causes your opponent to fall into an enchanted sleep for up to %z.  This spell works on creatures up to level @1.^0
 188^11^Giant^0
 188^12^Giants^0
@@ -1195,8 +1195,8 @@
 189^6^Creates a circle of fire around you, causing between #1 and @1 damage to all nearby creatures.^0
 189^11^Giant^0
 189^12^Giants^0
-190^1^Slay Undead^0
-190^4^This ability will cause your critical hits to inflict greatly improved damage versus the undead.  Additional ranks increase both the damage you cause and the chance for it to occur.^0
+190^1^Mana Shroud^0
+190^4^Let the magic take the blow instead. 4, 8, 12, 16 and 20 percent of the damage you take is drawn from your mana rather than your health.^0
 190^6^Causes your opponent to fall into an enchanted sleep for up to %z.  This spell works on creatures up to level @1.^0
 190^11^Othmir^0
 190^12^Othmirs^0
@@ -1306,8 +1306,8 @@
 209^11^Earth Elemental^0
 209^12^Earth Elementals^0
 209^14^PREXUS - THE OCEANLORD<BR><BR>Followers of the Oceanlord believe true power lies in the vast depths of Norrath's oceans.  They believe that eons ago, life first formed in the murky depths and that one day, the oceans shall rise again to embrace the faithful and consume those who are unworthy.  The Oceanlord's servants tend to live and work near, on, or beneath large bodies of water.  They seek to spread the word of Prexus to all who will hear and defend the oceans and seas of Norrath against any who would cause them harm. Many sailors and fisherman are followers of Prexus.^0
-210^1^Soul Abrasion^0
-210^4^Each rank in this ability gives you increased damage off of the lifetap procs that result from your self buffs.^0
+210^1^Bracing^0
+210^4^You are not easily moved. Blows can no longer shove you out of position. This holds against being pushed by weapons; it does not stop magic that hurls you.^0
 210^6^Focuses your spiritual energy into a great battle cry, increasing your strength and armor class for %z.^0
 210^11^Air Elemental^0
 210^12^Air Elementals^0
@@ -1387,8 +1387,8 @@
 229^6^A booming voice fills your target's ears, causing them to flee in terror.^0
 229^11^Netherbian^0
 229^12^Netherbians^0
-230^1^Critical Mend^0
-230^4^Each rank of this ability increases the chance to perform a superior mend.^0
+230^1^Enduring Grace^0
+230^4^Even slow mercy can be sudden. Your healing over time gains a 10, 18, 26, 34 and 42 percent chance to critically heal, which no other ability of yours affects.^0
 230^6^Causes the earth to adhere to your target's feet, preventing them from moving for up to %z.^0
 230^11^Akheva^0
 230^12^Akhevans^0
@@ -1455,8 +1455,8 @@
 246^6^Surrounds your body in a magical shield, increasing your hit points, armor class, and magic resistance.^0
 246^11^Tarew Marr^0
 246^12^Tarew Marrs^0
-247^1^Double Riposte^0
-247^4^The first three ranks of this ability will give you an increased chance to execute a double riposte 15, 35, and 50 percent of the time.  Additional ranks further increase this effect.^0
+247^1^Backs to the Wall^0
+247^4^The more of them there are, the harder you are to put down. Every enemy fighting you beyond the first reduces each melee blow against you by 1, 2, 2, 3 and 3 points, counting up to four of them. It does nothing at all when only one thing is attacking you.^0
 247^6^Covers your body in a mystic shield, allowing you to blend in with your outdoor surroundings. ^0
 247^11^Solusek Ro^0
 247^12^Solusek Ros^0
@@ -1489,8 +1489,8 @@
 254^6^Fills your hands with the force of flame, increasing your attack rating for %z.^0
 254^11^Solusek Ro Guard^0
 254^12^Solusek Ro Guards^0
-255^1^Flurry^0
-255^4^This ability will allow you to perform up to 2 additional attacks from your primary hand. Each rank increases the chance to flurry.^0
+255^1^Run Them Down^0
+255^4^Nothing you have your hands on gets to leave. Enemies fighting you will not turn and run, however badly the fight is going for them.^0
 255^6^Covers your skin in a light veil that renders you invisible to most animals.^0
 255^11^Bertoxxulous^0
 255^12^Bertoxxulouses^0
@@ -1513,9 +1513,9 @@
 259^6^Commands a swarm of insects to attack your target relentlessly, causing between #1 and @1 damage every six seconds for %z.^0
 259^11^Crocodile^0
 259^12^Crocodiles^0
-260^1^War Cry^0
+260^1^Rally^0
 260^2^War Cry^0
-260^4^This ability will allow you to make your entire group immune to fear for 10 seconds per level of the ability.^0
+260^4^Cut through the panic. Frees you and your whole group of fear, root and snare. Usable once every 3 minutes.^0
 260^6^Beckons to the animals of the wild, allowing you to control them.^0
 260^11^Bat^0
 260^12^Bats^0
@@ -1541,8 +1541,8 @@
 266^6^Increases your target's dexterity for %z.^0
 266^11^Knight of Pestilence^0
 266^12^Knights of Pestilence^0
-267^1^Spell Casting Fury Mastery^0
-267^4^Each rank of this ability gives you an increased chance to score a critical hit with your direct damage spells. Starting with rank 15, you will receive an increase in critical damage as well.^0
+267^1^Unbroken Concentration^0
+267^4^Hold the thought whatever happens to the body. Greatly improves your chance to keep casting when struck, and at the fifth rank you cannot be interrupted at all.^0
 267^6^Increases your target's inner strength, providing increased hit points and armor class for %z.^0
 267^11^Lepertoloth^0
 267^12^Lepertoloths^0
@@ -1649,10 +1649,10 @@
 290^6^Creates a wave of intense color around you that assaults your opponent's senses, briefly stunning all nearby creatures.^0
 290^11^Tallon Zek^0
 290^12^Tallon Zeks^0
-291^1^Paragon of Spirit^0
+291^1^Communion^0
 291^2^Paragon^0
 291^3^of Spirit^0
-291^4^This ability allows the Beastlord to share some of his natural attunement with his party in the form of health and mana.  Additional ranks increase the amount of health and mana that is shared with party.^0
+291^4^Pour out your strength for everyone standing with you. Heals your entire group at once, for an amount that grows with your level. Usable once every 5 minutes.^0
 291^6^Weakens your opponent, lowering their strength and armor class.^0
 291^11^Air Mephit^0
 291^12^Air Mephits^0
@@ -2041,8 +2041,8 @@
 417^6^This spell is ineffective and can no longer function.^0
 417^11^Gelidran^0
 417^12^Gelidrans^0
-418^1^Planar Power^0
-418^4^This ability raises the maximum that your statistics can be raised to, with items or spells, by 5 points per rank.^0
+418^1^Weathered^0
+418^4^Armour is no help against fire. Reduces the damage you take from spells and from anything that strikes an area by 2, 4, 6, 8 and 11 percent.^0
 418^6^Calls down lightning from the sky, causing between #1 and @1 damage to all those in the vicinity of your target. This spell can only be cast outdoors.^0
 418^11^Discordling^0
 418^12^Discordlings^0
@@ -2069,8 +2069,8 @@
 425^6^Fills you with the spirit of the wild, allowing you to take the form of a wolf for %z, increasing your movement speed, and attack rating.^0
 425^11^Crystal Shard^0
 425^12^Crystal Shards^0
-426^1^Innate Enlightenment^0
-426^4^Those who have meditated on the Plane of Tranquility find themselves able to expand their capacity of both Insight and Intellect.  Each rank of this ability raises the maximum that you may raise your Intelligence and Wisdom by ten points.  You may train in this ability once each level, beginning at level 61.^0
+426^1^Far Sight^0
+426^4^Distance is its own armour. Increases the range of your spells by 5, 10, 15, 20 and 25 percent.^0
 426^6^Fills you with the spirit of the wild, allowing you to take the form a wolf for %z, increasing your movement rate, and attack rating.^0
 426^11^Portal^0
 426^12^Portals^0
@@ -2188,8 +2188,8 @@
 461^6^Creates an aura of force around you, causing between #1 and @1 damage to all nearby creatures.^0
 461^11^Drachnid^0
 461^12^Drachnids^0
-462^1^Hastened Divinity^0
-462^4^This ability decreases the amount of time required between uses of Bestow Divine Aura by ten percent per rank. You may train in this ability once each level, upon reaching level 63.^0
+462^1^Practiced Grace^0
+462^4^Practice tells. Your spells cost 3, 5, 7, 9 and 11 percent less mana.^0
 462^6^Creates a column of lightning, causing between #1 and @1 damage to several creatures in the vicinity of your target.^0
 462^11^Drachnid Cocoon^0
 462^12^Drachnid Cocoons^0
@@ -2360,10 +2360,10 @@
 509^6^Creates a rift of bitter cold, causing between #1 and @1 damage to your target.^0
 509^11^Root Tentacle^0
 509^12^Root Tentacles^0
-510^1^Wrath of the Wild^0
+510^1^Disengage^0
 510^2^Wrath^0
 510^3^of Wild^0
-510^4^Developed by the denizens of Tranquility as a deterrent to potential attackers, this ability will shield you with a single-hit, large damage barrier of thorns.  Additional ranks of this ability increase the amount of damage that is inflicted.^0
+510^4^Break contact and run. Frees you of root and snare and greatly increases your movement for a few seconds. It turns aside no damage whatsoever, so you must actually leave. Requires and consumes at least half your endurance. Usable once every 45 minutes.^0
 510^6^Creates a rift of bitter cold, causing between #1 and @1 damage to your target.^0
 510^11^Runic Symbol^0
 510^12^Runic Symbols^0
@@ -2393,10 +2393,10 @@
 516^6^Surrounds your body in a coat of barbs that increases your armor class, as well as harming those that strike you for %z.^0
 516^11^Wicker Basket^0
 516^12^Wicker Baskets^0
-517^1^Eldritch Rune^0
+517^1^Last Stand^0
 517^2^Eldritch^0
 517^3^Rune^0
-517^4^This ability provides Enchanters with an additional line of defense in the form of an added self-only rune.  Each rank of this ability provides a stronger rune than the previous.^0
+517^4^Set your feet and refuse to fall. For 8, 10, 12, 14 and 15 seconds nothing can reduce you below a fifth of your maximum health. Requires and consumes at least half your endurance, so spending that endurance elsewhere leaves you without it. Usable once every 45 minutes.^0
 517^6^Surrounds your body in a coat of brambles that increases your armor class, as well as harming those that strike you for %z.^0
 517^11^Nightmare/Unicorn^0
 517^12^Nightmare/Unicorn^0
@@ -2464,10 +2464,10 @@
 533^6^Opens a mystical portal that transports you to the Toxxulia Forest.^0
 533^11^Boat^0
 533^12^Boats^0
-534^1^Hand of Piety^0
+534^1^Reprieve^0
 534^2^Hand of^0
 534^3^Piety^0
-534^4^This ability invokes the direct blessing of your deity upon all of those nearby.  All group members in range are healed 750 hit points. Additional ranks increase the healing power of this ability. Beginning with rank 22, the healing energy lingers healing your party members over time.^0
+534^4^Find a second breath. Restores 20, 27, 34, 42 and 50 percent of your maximum health and frees you of root and snare. It turns aside no damage at all, so it buys you an escape rather than a stand. Requires and consumes at least half your endurance. Usable once every 45 minutes.^0
 534^6^Opens a mystical portal that transports you to the Lavastorm Mountains.^0
 534^11^Weapon Rack^0
 534^12^Weapon Racks^0
@@ -36766,6 +36766,48 @@
 43395^6^Borrowed strength steadies you. Reduces the damage of each melee hit against you, and a blow that would kill you leaves you standing instead.^0
 43396^6^The cure lingers, knitting what the affliction tore.^0
 43397^6^The shield gave everything it had, and what remained returns to you.^0
+43400^6^A wound that will not close.^0
+43401^6^A wound that will not close.^0
+43402^6^A wound that will not close.^0
+43403^6^A wound that will not close.^0
+43404^6^A wound that will not close.^0
+43405^6^Your weapons thirst, and what they take, they give back to you.^0
+43406^6^A blow struck with conviction, and the sense to stop what it hits.^0
+43407^6^A blow struck with conviction, and the sense to stop what it hits.^0
+43408^6^A blow struck with conviction, and the sense to stop what it hits.^0
+43409^6^A blow struck with conviction, and the sense to stop what it hits.^0
+43410^6^A blow struck with conviction, and the sense to stop what it hits.^0
+43411^6^Faith answered in kind. Absorbs damage until it is spent.^0
+43412^6^Everything you had, spent at once and set between you and the next blow.^0
+43413^6^Everything you had, spent at once and set between you and whatever comes next.^0
+43420^6^Heat rolls off it in waves, and whatever strikes it is burned for the trouble.^0
+43421^6^What is wounded closes over, the way water closes over a stone.^0
+43422^6^Its hide is not hide at all, and blows land on it like blows land on a wall.^0
+43423^6^It moves the way weather moves, and strikes far more often than its size suggests.^0
+43424^6^It takes what it kills, and is a little less dead for every wound it opens.^0
+43425^6^There is nothing tame in it. Its blows land with a hunter conviction.^0
+43426^6^Threads of the spell that made it hang about it still, and turn aside what would unmake it.^0
+43427^6^It is only half here. Blows meant for it find rather less than they expected.^0
+43428^6^Its attention is your attention, and what it notices returns to you as clarity.^0
+43429^6^Bound in service, and bound a little against harm.^0
+43430^6^Its defences against magic are eaten away.^0
+43431^6^Its defences against fire are eaten away.^0
+43432^6^Its defences against cold are eaten away.^0
+43433^6^Its defences against poison are eaten away.^0
+43434^6^Its defences against disease are eaten away.^0
+43435^6^Its defences are eaten away.^0
+43436^6^The air cracks outward, and everything near you reels.^0
+43437^6^Weariness spent, and turned into will.^0
+43440^6^Your feet are set. This is far enough.^0
+43441^6^A second breath, and your footing with it.^0
+43442^6^The world has lost interest in you.^0
+43443^6^Nothing can hold you.^0
+43444^6^A voice cutting through the panic.^0
+43450^6^Strength shared out among those standing with you.^0
+43451^6^Strength shared out among those standing with you.^0
+43452^6^Strength shared out among those standing with you.^0
+43453^6^Strength shared out among those standing with you.^0
+43454^6^Strength shared out among those standing with you.^0
 43496^6^Reach into the pack to retrieve your potion.^0
 43500^6^Surrounds your group with a protective ward, reducing the melee damage each member takes by 1 per hit.^0
 43501^6^Blesses your group; when a member is struck they have a chance to be instantly healed for 10.^0

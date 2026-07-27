@@ -200,6 +200,13 @@ int64 Mob::GetActSpellDamage(uint16 spell_id, int64 value, Mob* target) {
 			value = -legacy_manaburn_cap;
 		}
 	}
+
+	// AoTv4 Overload (Ranged tree): a chance for a direct spell to land for half as much again.
+	// Applied last so it is a share of the finished figure, and it is a SEPARATE roll from the
+	// critical above rather than a modifier to it. Damage over time never reaches here -- that has
+	// its own funnel in GetActDoTDamage -- so this cannot fire once per tick.
+	value += AoTv4OverloadDamage(spell_id, value);
+
 	// STATBUFFS resist is now eHP boost vs its type
 	SpellScalingModifiers modifiers;
 
