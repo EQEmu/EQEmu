@@ -436,20 +436,13 @@ bool Group::RemoveRaidMember(Mob* m)
 	if (GetLeader() != m)
 		return GroupCount() == 0;
 
-	// Leader departed -- promote the first remaining member so the group is
-	// never left leaderless (Group::ChangeLeader dereferences the leader
-	// unconditionally, and it should never be reachable on a raid subgroup,
-	// but this keeps that invariant true regardless of caller).
-	for (int i = 0; i < MAX_GROUP_MEMBERS; ++i) {
-		if (members[i] != nullptr) {
-			SetLeader(members[i]);
+	for (const auto & member : members) {
+		if (member != nullptr) {
+			SetLeader(member);
 			return false;
 		}
 	}
 
-	// No members left at all -- the caller (Raid::VerifyRaid) owns tearing
-	// this subgroup down; it can't be safely self-deleted from here since the
-	// caller still holds and uses this pointer for the rest of its own pass.
 	SetLeader(nullptr);
 	return true;
 }
