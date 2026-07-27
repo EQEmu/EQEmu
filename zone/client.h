@@ -1249,6 +1249,11 @@ public:
 	void SetAutoSkillStatus(EQ::skills::SkillType skill_id, bool enabled);
 	const std::vector<EQ::skills::SkillType> GetAutoSkillsList() const;
 	const std::vector<EQ::skills::SkillType> GetAvailableAutoSkills() const;
+	// AoTv4 autoskill WINDOW transport (the system itself is the three above + Client::Process).
+	void   SendAutoSkillData();                                    // push ASKILLDATA to the dll
+	bool   HandleAutoSkillSay(const char *msg);                    // /say askset | askrefresh
+	uint32 GetAutoSkillCooldown(EQ::skills::SkillType skill);      // seconds remaining, 0 = ready
+	uint32 GetAutoSkillReuse(EQ::skills::SkillType skill);         // nominal reuse, seconds
 
 	void ClearZoneFlag(uint32 zone_id);
 	inline std::set<uint32> GetZoneFlags() { return zone_flags; } ;

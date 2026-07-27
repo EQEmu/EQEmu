@@ -339,19 +339,46 @@ zone rebuild** (§8).
 > `spells_new` **is in shared memory**: world down → `./shared_memory` → restart, then rerun both
 > generators.
 >
-> ⚠️ **The generator writes `spell_blacklist.lua` too — it MUST be regenerated with the pool.** When
+> ⚠️⚠️ **THE BARD PIVOT SILENTLY BROKE ALL-CLASS SPELL ACCESS (fixed 2026-07-27).** While every
+character was forced to Bard, "any class can use anything" was free -- the pool only had to be legal
+for Bard. Opening the server to 16 classes removed that and the STOCK set was never reopened: of
+2,707 pool spells, **ZERO** were castable by all classes, and **bard songs carry a real level only
+in `classes8`** so 15 of 16 classes could be offered a song and then simply never use it. Three gates
+all had to be reopened, and any one left shut makes the reward useless:
+1. `spells_new.classes1..16` -- can the class scribe/cast it
+2. `skill_caps` **Singing 12, Percussion 41, Stringed 49, Wind 54, Brass 70** -- only Bard had ANY
+3. `skill_caps` for the twelve activated combat specials -- without a cap `CanHaveSkill` refuses and
+   a picked reward silently does nothing
+All three are in `custom/sql/aotv4_open_spells_and_skills.sql`. ⚠️ Running step 3 DESTROYS the record
+of which classes had a special natively -- the only surviving copy is `skill_pool.NATIVE`.
+
+⚠️ **The generator writes `spell_blacklist.lua` too — it MUST be regenerated with the pool.** When
 > the custom set took over, the blacklist was emptied ("empty by design: the pool is hand-authored"),
 > so re-pointing at the stock set without rebuilding it silently reopens every port, rez and
-> Enchant-material spell. Current prune = **310** (travel 247 / enchant 20 / rez 15 / cure-curse 7 /
-> LDoN 18 / summon-corpse 3), leaving **2295 offerable**. Travel is pruned partly because ports
-> **defeat region locking**.
+> Enchant-material spell. Current prune = **473** (travel 169 / summon-item 199 / illusion 23 /
+> vision 19 / enchant 20 / rez 15 / cure-curse 7 / LDoN 18 / summon-corpse 3), leaving **2174
+> offerable**. Travel is pruned partly because ports **defeat region locking**.
 >
 > ⚠️⚠️ **`teleport_zone` is NOT "destination zone" — it is "names an NPC *or* a zone".** Every
 > pet/familiar/warder/Eye-of-Zomm spell stores its **summon type** there (SPA 33/71/152 pets, 106
 > warders, 108 familiars, 67 eye). Keying the travel filter off `teleport_zone <> ''` pruned **95
 > stock pet spells** — every Magician elemental, Necro pet, Shaman/Beastlord warder and Enchanter
 > animation. Detect travel by **SPA** instead: 25 Bind Affinity, 26 Gate, 83 Teleport, 88 Evacuate,
-> 104 Translocate, plus `targettype = 3` (group teleport). No travel spell lacks one.
+> 104 Translocate. No travel spell lacks one.
+>
+> ⚠️ **`targettype = 3` was ALSO in the travel rule and is now REMOVED — do not add it back.**
+> ST_Group is 3, which is *every* group-target spell, not a group teleport: it was pruning **78
+> ordinary group buffs** (Elixir of Divinity, Wave of Marr, Eriki's Psalm of Power, the group heal
+> lines) as if they were ports. Of the 150 `targettype=3` spells in the pool, the **72 that really
+> are travel all carry one of the SPAs above** and are caught anyway — the clause bought nothing.
+>
+> ⚠️ **The junk rules must test PURITY, not presence** (2026-07-27). `illusion` (SPA 58) and `vision`
+> (SPA 13/65/66/87) prune only when **every populated slot** is that effect or 254 — a spell is kept
+> if the cosmetic bit rides along with something real. Written as "has the SPA" they took **31
+> illusions that carry procs/stats/haste** (Boon of the Garou, Night's Dark Terror, Illusion:
+> Werewolf) and, once illusion was narrowed, the vision rule inherited the same failure and swallowed
+> the wolf/hunter forms (427, 1562, 1563, 3579, 4107) purely for their ultravision. Any new rule here
+> gets the same treatment: prune the spell that does *only* the junk thing.
 
 `spell_pool.lua` is generated from `spells_new`, indexed by learn level. The reward is
 **expansion-capped by level**: a char is only offered spells at/below its level, and a spell's
@@ -460,6 +487,16 @@ GM `#resetaa aa` only *refunds* spent → unspent (doesn't zero the pool). The m
   force is removed and `char_create_combinations` restored to all classes. Existing chars stay Bard.
 - **`spells_new.classes8`** = the spell's min learnable level (= the reward-pool index). It's now also
   opened across every class column (`classes1..16`) so all classes can scribe/cast the reward spells.
+- ⚠️ **Combat specials: NATIVE ones are auto-granted, the rest are picker rewards.** Every class now
+  has a `skill_caps` entry for all twelve (it must, or a picked reward cannot be granted), so
+  `CanHaveSkill` is no longer a useful filter and the DB can no longer say what was native.
+  `skill_pool.NATIVE` is the only record. `global_player.grant_native_combat_skills` grants a class
+  its own on connect AND on level up (some cap curves only open above level 1);
+  `spell_choice.gather_skill_candidates` offers only `skill_pool.rotatable_for(class)`.
+- ⚠️ **`skill_pool.lua` is now a MODULE, not a bare table.** It exposes `.SKILLS`, `.NATIVE`,
+  `.is_native()` and `.rotatable_for()`. `pairs(skills)` no longer yields skill ids -- use
+  `pairs(skills.SKILLS)`. A `__index` metatable keeps `skills[id]` working for existing callers, but
+  `pairs` does NOT follow it.
 - **Bard `skill_caps`** (`class_id=8`) raised so skills scale; client also needs the exported
   `SkillCaps.txt` (`export_client_files`) installed in the EQ root.
 - **Expansion lock:** `rule_values Expansion:CurrentExpansion = 0` (Classic).
@@ -527,6 +564,9 @@ class, `classes8`, skill caps, expansion). The windows are generic (`SPELLCHOICE
   rank ids above **65535** both fail this way, no error anywhere. Take over an existing ability
   instead: keep its id, rank ids, `title_sid` and rank chain, replace only `aa_rank_effects` and the
   `db_str` strings (`custom/sql/aotv4_aa_tank_hosted.sql`).
+- ⚠️⚠️ **`aa_rank_prereqs` IS A SEPARATE TABLE AND MUST BE CLEARED TOO.** A hosted AA inherits its
+  host's prerequisites, so it appears in the window but **refuses to train with no message**.
+  Clearing `aa_rank_effects` does nothing to it. Eight AAs were untrainable this way.
 - ⚠️ **Walk the rank chain via `next_id` — rank ids are NOT contiguous.** Natural Durability's chain
   is **107 → 108 → 109 → 7541 → 7542 → 7543**; assuming `first_rank_id + 0..4` wrote costs and levels
   onto ranks 110/111, which belong to a different ability. Terminate a chain early with
@@ -1101,9 +1141,16 @@ the corpse. **No raid** — loot rights are granted directly, which disturbs nob
 latecomers. Pure Lua + SQL, no C++. **Test plan + known failure points: `WORLD_BOSS.md`.**
 
 - **Files**: `lua_modules/aotv4_worldboss.lua` (core), `lua_modules/commands/worldboss.lua` (`#worldboss`
-  / `status` / `clear`, access **200** via `command_settings`), `custom/sql/aotv4_worldboss.sql`
+  / `status` / `clear`, access **200**), `custom/sql/aotv4_worldboss.sql`
   (npc **2000200 `#The_Nameless`**, loottable 200020). Hooks: `global_player.event_enter_zone` →
   `on_enter_zone`, `global_npc.event_death_complete` → `on_death`.
+- ⚠️⚠️ **A LUA COMMAND IS REGISTERED IN `lua_modules/command.lua`, NOT in `command_settings`.** That
+  table is for **C++ commands only** — the zone deletes any row whose command has no C++ handler,
+  logging *"Command [x] no longer exists. Deleting orphaned entry from `command_settings`"*. A file
+  in `lua_modules/commands/` that is not listed in `command.lua`'s `commands` table is simply never
+  reachable. **`#worldboss` was unregistered and therefore did nothing from the day it was written
+  until 2026-07-27**, which is also why it was never caught: it was only ever going to fail the
+  moment somebody typed it. `commands["name"] = { access, require("commands/file") }`.
 - ⚠️ **ARMING AND SPAWNING ARE SEPARATE, and must be.** You cannot spawn into a zone nobody occupies:
   zones are dynamic (idle ones self-terminate) and `eq.spawn2` is zone-local. So the command records
   `aotv4_worldboss = "zone|npcid|expiry"` in a GLOBAL bucket + announces, and the **first player to
@@ -1224,3 +1271,69 @@ docker cp <ID>:/tmp/peq_recovered.sql.gz C:\AoTv3\AoTv4\peq_recovered.sql.gz
   pre-achievements) and a `Dump completed on …` marker at the tail. **36 MB gzipped ≈ 341 MB SQL is normal.**
 - **Canonical recovery point is now `/src/peq_recovered.sql.gz`** (Jul 24 23:18, full `peq`, achievements
   included), NOT the stale `/src/aotv4_current.sql` (Jul 21) that `POST_REBUILD_RECOVERY.md` used to point at.
+
+## 18. Server-wide buffs — `#worldbuff` — 2026-07-27
+
+`#worldbuff <spellid> [minutes]` puts any spell on everybody, everywhere. Also `status` and `clear`.
+Access **200**. Pure Lua, no C++.
+
+- **Files**: `lua_modules/aotv4_worldbuff.lua` (core), `lua_modules/commands/worldbuff.lua` (the
+  command), registered in `lua_modules/command.lua`. Hooks: `global_player.event_connect` and
+  `event_enter_zone` → `on_player`, `event_timer "worldbuff"` → `on_sweep`.
+- ⚠️ **THERE IS NO SINGLE CALL THAT REACHES THE WHOLE SERVER.** Lua can only enumerate clients in its
+  OWN zone (`eq.get_entity_list():GetClientList()`), and every zone is a separate process. The
+  cross-zone bindings are all targeted — `cross_zone_cast_spell_by_char_id` / `_client_name` /
+  `_group_id` / `_guild_id` / `_raid_id` / `_expedition_id` — there is no "by everyone". So coverage
+  is assembled from four places: the command buffs its own zone at once, `event_connect` catches
+  logins, `event_enter_zone` catches zoning, and a per-client repeating timer catches the player who
+  is parked somewhere and does neither.
+- State is ONE global bucket, `aotv4_worldbuff = "spellid|expiry_epoch"`, so every zone reads the
+  same thing and it survives restarts. Same shape as `aotv4_worldboss`.
+- ⚠️ **`ApplySpellBuff`, not `SpellFinished`.** `SpellFinished` runs a real cast: it can be resisted
+  and it honours target type, so a beneficial spell with the wrong `targettype` will not land on an
+  arbitrary player. `ApplySpellBuff` puts the buff straight on, which is what "the GM said everyone
+  gets this" has to mean — and it is why **any** spell id works rather than only self/single-target.
+- ⚠️ The sweep re-checks with `FindBuff` before applying, so it does not reset the duration every
+  tick; a 10-minute buff lasts 10 minutes, not as long as the window.
+- ⚠️ **The timer is PER CLIENT**, so `on_sweep` does per-client work. Calling `apply_zone()` from it
+  would walk the whole client list once per player per sweep.
+- `clear` stops new grants; buffs already handed out run out on their own.
+
+## 19. Autoskill window — `/autoskill` — 2026-07-27
+
+⚠️ **The autoskill SYSTEM predates this and was NOT changed.** It was already: `GetAvailableAutoSkills`
+(the ten activated specials), `GetAutoSkillsList` (those you have), `Get/SetAutoSkillStatus`
+(per-skill on/off in `autoskill.<id>` data buckets), and the auto-fire loop in `Client::Process` that
+runs enabled specials while auto-attacking a **non-client** target. `#autoskill [skill]
+[enable|disable|status]` / `#autoskill list` still work untouched. Section 19 is only the **window**.
+
+- **Server**: `Client::SendAutoSkillData` / `HandleAutoSkillSay` / `GetAutoSkillCooldown` /
+  `GetAutoSkillReuse`, all in `zone/special_attacks.cpp`; say intercept in
+  `Client::ChannelMessageReceived` beside the AdvLoot one. **Needs a zone rebuild.**
+- **Client**: `core_autoskill.cpp/.h` (own TU, no detours) + `EQUI_AoTAutoSkillWnd.xml`, flag
+  `areAutoSkillWindowEnabled`. `/autoskill` from `core_bazaar.h`. Install:
+  `aotv4_client_install/AUTOSKILL_WINDOW_INSTALL.md`.
+- **Protocol**: `ASKILLDATA <n>^skillid|name|enabled|cooldown_secs|reuse_secs^…` out;
+  `/say askset <skillid> <0|1>` and `/say askrefresh` in.
+- ⚠️ **`GetAutoSkillCooldown` lives in `special_attacks.cpp` on purpose** — `AOTV4_SKILL_TIMER_BASE`
+  is file-scope there, and duplicating it elsewhere is how the two silently drift apart.
+- ⚠️⚠️ **TAUNT USES A DIFFERENT TIMER.** Every other special uses `AOTV4_SKILL_TIMER_BASE + skill`;
+  Taunt runs on the stock `pTimerTaunt` (the auto-fire loop special-cases it for the same reason).
+  Reading the wrong one reports a permanently-ready Taunt.
+- ⚠️⚠️ **`PersistentTimer::GetRemainingTime` returns `0xFFFFFFFF` when the timer exists but is
+  DISABLED**, not 0. Unguarded, a ready skill displays a 49-day cooldown. (`PTimerList` returns a
+  plain 0 for a timer that was never created at all, which is fine.) Reuse times are **seconds**
+  (`BashReuseTime = 5`, `common/features.h`).
+- ⚠️ **The countdown runs CLIENT-side.** The server sends remaining seconds; the dll ticks them down
+  per frame and resyncs every 2.5 s **only while the window is on screen**. Streaming a line per
+  second per player is exactly the chat burst RoF2 drops (§15). Closed window, zero traffic.
+- **Two native tabs** (`TabBox`/`Page`/`TabText`): **Abilities** (on/off, plus All On / All Off) and
+  **Timers** (only the skills actually firing, with Ready In and Reuse). Real tabs, not a toggle
+  button -- all six tags are in the parser and both `FT_Def*Border` templates exist. §16 corrected
+  the old belief that they did not work; this is the first window to use them.
+- ⚠️ **The Timers page skips disabled skills**, so its row N is NOT skill N -- it keeps an
+  `m_torder` row-to-skill map and the countdown walks that. `SelRow`'s direct row-is-index mapping
+  is true of the ABILITIES list only; do not copy it to anything reading the timer page.
+- ⚠️ **The list is rebuilt only when the rows change** (skill gained, or one toggled) — `Refresh()`
+  calls `DeleteAll`, which clears the selection, so rebuilding on every resync would yank it out
+  from under the player. Otherwise only the timer column is rewritten.

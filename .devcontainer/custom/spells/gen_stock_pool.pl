@@ -103,8 +103,12 @@ my @RULES = (
     # spells -- every Magician elemental, Necromancer pet, Shaman/Beastlord warder and Enchanter
     # animation -- out of the reward pool. The travel SPAs below are the reliable signal, and no
     # travel spell lacks one.
-    ["travel",  q{targettype = 3
-                  OR 25  IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6)   /* Bind Affinity */
+    # ⚠️ DO NOT ADD `targettype = 3` BACK. ST_Group is 3, and that is EVERY group-target spell, not
+    # just a group teleport -- it was pruning 78 ordinary group buffs (Elixir of Divinity, Wave of
+    # Marr, Eriki's Psalm of Power, the group heal lines) as if they were ports. Of the 150 pool
+    # spells with targettype 3, the 72 that really are travel all carry one of the SPAs below and
+    # are caught by them regardless, so the clause bought nothing and cost 78 legitimate rewards.
+    ["travel",  q{25  IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6)   /* Bind Affinity */
                   OR 26  IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6)   /* Gate          */
                   OR 83  IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6)   /* Teleport      */
                   OR 88  IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6)   /* Evacuate      */
@@ -122,6 +126,42 @@ my @RULES = (
                 "LDoN dungeon-object appraise/disarm/unlock"],
     ["corpse",  q{91 IN (effectid1,effectid2,effectid3)},
                 "summon corpse"],
+    # SPA 32 SummonItem conjures an ITEM. That is one rule covering three things the reward picker
+    # should never offer: Magician summons (weapons, bags, jewellery), the Enchanter "Enchant <metal>"
+    # and "Mass Enchant <metal>" tradeskill lines, and the focus-essence junk. The older name-based
+    # enchant rule above still runs first so those keep their own label in the counts.
+    ["summonitem", q{32 IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6)},
+                "conjures an item -- mage summons, enchant-metal, focus essences"],
+    # ⚠️ ONLY PURELY COSMETIC illusions. Many SPA 58 spells carry something genuinely worth having
+    # alongside the model change -- Boon of the Garou and Night's Dark Terror add a weapon proc
+    # (SPA 85), the wolf/bear forms add stats and ultravision, Illusion: Fire Elemental is a damage
+    # shield, Illusion: Air Elemental is levitate plus a stat. Pruning on "has SPA 58" threw all 31
+    # of those away with the 23 that really are just a costume. So the test is that EVERY populated
+    # slot is either the illusion itself or empty; anything with a second real effect stays.
+    # All TWELVE slots are checked -- spells_new has effectid1..12, and the older rules above only
+    # look at the first six.
+    ["illusion", q{58 IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6)
+                   AND effectid1  IN (58,254) AND effectid2  IN (58,254) AND effectid3  IN (58,254)
+                   AND effectid4  IN (58,254) AND effectid5  IN (58,254) AND effectid6  IN (58,254)
+                   AND effectid7  IN (58,254) AND effectid8  IN (58,254) AND effectid9  IN (58,254)
+                   AND effectid10 IN (58,254) AND effectid11 IN (58,254) AND effectid12 IN (58,254)},
+                "illusions with no other effect -- pure costume"],
+    # SeeInvis 13, InfraVision 65, UltraVision 66, MagnifyVision 87 (the "Glimpse" telescope line).
+    # Same purity test as illusions, and for the same reason: the wolf and hunter forms carry
+    # ultravision (SPA 66) ALONGSIDE their stats, so a bare "has a vision SPA" test caught every one
+    # of them the moment the illusion rule stopped doing it first. Only prune a spell whose every
+    # populated slot is a vision effect or empty.
+    ["vision",  q{(13 IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6)
+                   OR 65 IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6)
+                   OR 66 IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6)
+                   OR 87 IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6))
+                  AND effectid1  IN (13,65,66,87,254) AND effectid2  IN (13,65,66,87,254)
+                  AND effectid3  IN (13,65,66,87,254) AND effectid4  IN (13,65,66,87,254)
+                  AND effectid5  IN (13,65,66,87,254) AND effectid6  IN (13,65,66,87,254)
+                  AND effectid7  IN (13,65,66,87,254) AND effectid8  IN (13,65,66,87,254)
+                  AND effectid9  IN (13,65,66,87,254) AND effectid10 IN (13,65,66,87,254)
+                  AND effectid11 IN (13,65,66,87,254) AND effectid12 IN (13,65,66,87,254)},
+                "sight only -- see invis, infra, ultra, telescope, with nothing else attached"],
 );
 
 my (%black, %black_why, %cat_n);

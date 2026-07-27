@@ -66,6 +66,18 @@ original* description, silently. Confirmed 2026-07-26 and fixed by repointing `d
 SELECT title_sid, desc_sid FROM aa_ranks WHERE id = <first_rank_id>;   -- before writing db_str
 ```
 
+### ⚠️⚠️ Clear `aa_rank_prereqs` as well — a separate table
+
+A hosted AA inherits whatever its host REQUIRED. The ability then shows in the window and simply
+**refuses to train**, with no message explaining why. `aa_rank_prereqs` is not `aa_rank_effects`;
+clearing one does nothing to the other. This made **eight AAs untrainable** (Run Them Down, Sanguine
+Frenzy, Mana Shroud, Overload, Unbroken Concentration, Practiced Grace, Reprieve, Rally) until
+2026-07-27. Every hosted-AA SQL file now deletes them; 40 rows were removed across our 200 ranks.
+
+```sql
+DELETE FROM aa_rank_prereqs WHERE rank_id IN (...);   -- alongside the aa_rank_effects delete
+```
+
 ### ⚠️ Walk the rank chain — never assume contiguous ids
 
 `first_rank_id + 0..4` is NOT the rank list. Natural Durability's chain is

@@ -56,6 +56,13 @@ UPDATE aa_ranks SET level_req=45, cost=8 WHERE id IN (7542, 11, 16, 21, 31);
 UPDATE aa_ranks SET next_id=-1 WHERE id IN (7542, 11, 16, 21, 31);
 
 -- ---------------------------------------------------------------------------------- the payloads
+-- ⚠️ CLEAR THE INHERITED PREREQUISITES TOO. aa_rank_prereqs is a SEPARATE table from
+-- aa_rank_effects, and a hosted AA inherits whatever its host required -- so the ability shows in
+-- the window but refuses to train, with no explanation. Missing this made eight AAs untrainable
+-- until 2026-07-27.
+DELETE FROM aa_rank_prereqs WHERE rank_id IN
+ (107,108,109,7541,7542, 7,8,9,10,11, 12,13,14,15,16, 17,18,19,20,21, 27,28,29,30,31);
+
 DELETE FROM aa_rank_effects WHERE rank_id IN
  (107,108,109,7541,7542, 7,8,9,10,11, 12,13,14,15,16, 17,18,19,20,21, 27,28,29,30,31);
 
@@ -66,13 +73,24 @@ INSERT INTO aa_rank_effects (rank_id,slot,effect_id,base1,base2) VALUES
  (109, 1,192,16,0),(109, 2,185,10,0),
  (7541,1,192,20,0),(7541,2,185,13,0),
  (7542,1,192,25,0),(7542,2,185,15,0),
--- Stonestride : SPA 162 flat damage reduction per hit (base 100 + limit N). FLAT, not percent --
--- percentage mitigation is invisible against this server's small numbers (CLAUDE.md section 14).
- (7,1,162,100,2),(8,1,162,100,4),(9,1,162,100,7),(10,1,162,100,10),(11,1,162,100,14),
 -- Unyielding  : SPA 172 evasion, feeds the defence roll directly
  (12,1,172,2,0),(13,1,172,4,0),(14,1,172,6,0),(15,1,172,8,0),(16,1,172,11,0);
 
--- Hosts 4 and 6 are MARKERS: no effect rows at all, read at runtime by code off the FIRST rank id.
+-- ⚠️⚠️ STONESTRIDE HAS NO EFFECT ROWS -- IT IS A MARKER. Do NOT restore the SPA 162 rows that used
+-- to sit here:
+--     (7,1,162,100,2),(8,1,162,100,4),(9,1,162,100,7),(10,1,162,100,10),(11,1,162,100,14)
+-- MitigateMeleeDamage with base 100 + limit N really is the documented way to get a flat per-hit
+-- reduction, but only from a SPELL. On an AA it is inert twice over: Mob::ApplyAABonuses has no
+-- case for it, so aabonuses.MitigateMeleeRune is never filled; and the consumer (attack.cpp:3880)
+-- reads spellbonuses only, paying out of buffs[slot].melee_rune -- a buff slot an AA does not have.
+-- It was live and doing nothing from the day it was written until 2026-07-27, which is invisible in
+-- game because a passive that quietly reduces damage looks exactly like one that does not.
+-- Contrast Weathered (SPA 161): ApplyAABonuses DOES handle that one (bonuses.cpp:1754) and the
+-- consumer sums aabonuses (attack.cpp:3980), so it works. Do not assume the two behave alike.
+-- The reduction now lives in Mob::AoTv4Stonestride, read off rank id 7.
+
+-- Hosts 2, 4 and 6 are MARKERS: no effect rows at all, read at runtime by code off the FIRST rank id.
+--   Stonestride    rank  7 -> Mob::AoTv4Stonestride, called from Mob::MeleeMitigation (GetAA(7))
 --   Bloodied Bash  rank 17 -> quests/lua_modules/aotv4_aa_tank.lua  (client:GetAA(17))
 --   Aegis Reflex   rank 27 -> Mob::MeleeMitigation + Mob::HealDamage (GetAA(27))
 -- That rank id is the only join between SQL and code and nothing checks it: a wrong id reads 0

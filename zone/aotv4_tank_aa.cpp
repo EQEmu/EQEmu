@@ -2,11 +2,13 @@
 
 	AoTv4 Tank AA tree -- behaviour that does not fit inside an existing function.
 
-	Most of the tank tree lives elsewhere: Shield Oath, Stonestride and Unyielding are native SPAs
-	with no code at all, Bloodied Bash is in quests/lua_modules/aotv4_aa_tank.lua, and Aegis Reflex
-	is inline in Mob::MeleeMitigation because that is the only place a deflection is visible.
+	Most of the tank tree lives elsewhere: Shield Oath and Unyielding are native SPAs with no code at
+	all, Bloodied Bash is in quests/lua_modules/aotv4_aa_tank.lua, and Aegis Reflex is inline in
+	Mob::MeleeMitigation because that is the only place a deflection is visible.
 
-	This file holds Sanctified Blow's ward and Iron Will. See custom/sql/aotv4_tank_stun.sql.
+	This file holds Sanctified Blow's ward, Iron Will, and Stonestride -- which WAS a native SPA with
+	no code, and was inert for exactly that reason. See its comment below before touching it.
+	See custom/sql/aotv4_tank_stun.sql.
 
 	⚠️ THE RANK IDS BELOW ARE THE ONLY JOIN TO THE SQL AND NOTHING CHECKS THEM. A wrong id reads 0
 	forever, which in game looks exactly like an AA you bought that quietly does nothing.
@@ -22,8 +24,9 @@ extern Zone *zone;
 
 namespace
 {
-	constexpr int AA_SANCTIFIED = 188;   // host 73 Divine Stun, ranks 188,1277,5044,7339,7662
-	constexpr int AA_IRONWILL   = 167;   // host 60 Frenzied Burnout, ranks 167,5879,7249,8343,12955
+	constexpr int AA_SANCTIFIED  = 188;   // host 73 Divine Stun, ranks 188,1277,5044,7339,7662
+	constexpr int AA_IRONWILL    = 167;   // host 60 Frenzied Burnout, ranks 167,5879,7249,8343,12955
+	constexpr int AA_STONESTRIDE = 7;     // host  2 Innate Stamina, ranks 7,8,9,10,11
 
 	constexpr uint16 SPELL_STUN_RANK1 = 43406;   // 43406..43410, one per rank
 	constexpr uint16 SPELL_WARD       = 43411;
@@ -59,6 +62,11 @@ namespace
 	constexpr int WARD_CHANCE[RANKS]      = { 20, 30, 30, 40, 100 };
 	constexpr int WARD_PCT_OF_MAXHP[RANKS]= {  2,  4,  6,  8,  10 };
 
+	// ---------------------------------------------------------------- Stonestride
+	// Flat points shaved off every melee hit that lands. The figures are the ones the AA has always
+	// advertised in its description; only the delivery changed.
+	constexpr int STONESTRIDE_FLAT[RANKS] = { 2, 4, 7, 10, 14 };
+
 	inline int RankIndex(int rank)
 	{
 		if (rank > RANKS) {
@@ -66,6 +74,44 @@ namespace
 		}
 		return rank - 1;
 	}
+}
+
+// =================================================================================================
+// Stonestride. Called from Mob::MeleeMitigation once the mitigation roll has produced a figure;
+// `this` is the DEFENDER.
+//
+// ⚠️⚠️ THIS USED TO BE SPA 162 AND IT DID NOTHING AT ALL. The rank rows carried
+// MitigateMeleeDamage (base 100, limit N), which is the documented trick for a flat per-hit
+// reduction -- and it genuinely works, but ONLY FOR A SPELL. It is dead twice over on an AA:
+//
+//   1. Mob::ApplyAABonuses (bonuses.cpp:612-1854) has NO case for MitigateMeleeDamage, so
+//      aabonuses.MitigateMeleeRune is never populated. Compare MitigateSpellDamage at
+//      bonuses.cpp:1754, which IS handled -- which is why Weathered works and this did not.
+//   2. Even populated it would not be read: the consumer at attack.cpp:3880 tests
+//      spellbonuses.MitigateMeleeRune only, and pays out of buffs[slot].melee_rune -- a BUFF SLOT,
+//      which an AA structurally does not have.
+//
+// So this is not a case of a missing switch arm; the whole SPA is buff-shaped. Hence a marker AA
+// with the reduction applied here in code, exactly like the melee tree's Backs to the Wall, which
+// trims the finished figure three lines further down for the same reason.
+//
+// ⚠️ NEVER TO ZERO. Reaching zero is deflection's job -- it prints its own message and feeds Aegis
+// Reflex's stack counter. A flat reduction that silently zeroed a hit would fake a deflection
+// without either of those, so it floors at 1 the same way Backs to the Wall does.
+// =================================================================================================
+int64 Mob::AoTv4Stonestride(int64 damage)
+{
+	if (damage <= 1) {
+		return damage;
+	}
+
+	const int rank = static_cast<int>(GetAA(AA_STONESTRIDE));
+	if (rank < 1) {
+		return damage;
+	}
+
+	damage -= STONESTRIDE_FLAT[RankIndex(rank)];
+	return damage < 1 ? 1 : damage;
 }
 
 // =================================================================================================

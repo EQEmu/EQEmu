@@ -52,6 +52,13 @@ UPDATE aa_ranks SET level_req=45, cost=8 WHERE id IN (41,46,51,56,61);
 UPDATE aa_ranks SET next_id=-1 WHERE id IN (41,46,51,56,61);
 
 -- No effect rows: every one of these is a marker read from code.
+-- ⚠️ CLEAR THE INHERITED PREREQUISITES TOO. aa_rank_prereqs is a SEPARATE table from
+-- aa_rank_effects, and a hosted AA inherits whatever its host required -- so the ability shows in
+-- the window but refuses to train, with no explanation. Missing this made eight AAs untrainable
+-- until 2026-07-27.
+DELETE FROM aa_rank_prereqs WHERE rank_id IN
+ (37,38,39,40,41, 42,43,44,45,46, 47,48,49,50,51, 52,53,54,55,56, 57,58,59,60,61);
+
 DELETE FROM aa_rank_effects WHERE rank_id IN
  (37,38,39,40,41, 42,43,44,45,46, 47,48,49,50,51, 52,53,54,55,56, 57,58,59,60,61);
 

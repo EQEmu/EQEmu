@@ -2626,3 +2626,123 @@ bool Mob::CanDoSpecialAttack(Mob *other) {
 
 	return true;
 }
+
+// AoTv4 autoskill window: how long until this skill can be used again, in milliseconds.
+//
+// Lives here rather than in client.cpp because AOTV4_SKILL_TIMER_BASE is file-scope in this
+// translation unit, and duplicating it elsewhere is exactly how the two would silently drift apart.
+//
+// ⚠️ TAUNT IS THE EXCEPTION. Every other combat special uses the per-skill base timer, but Taunt
+// runs on the stock pTimerTaunt -- see the auto-fire loop in Client::Process, which special-cases it
+// for the same reason. Reading the wrong timer would report a permanently-ready Taunt.
+uint32 Client::GetAutoSkillCooldown(EQ::skills::SkillType skill)
+{
+	const pTimerType t = (skill == EQ::skills::SkillTaunt)
+		? pTimerTaunt
+		: (pTimerType)(AOTV4_SKILL_TIMER_BASE + static_cast<int>(skill));
+
+	const uint32 remaining = p_timers.GetRemainingTime(t);
+
+	// ⚠️ A timer that EXISTS but is DISABLED returns 0xFFFFFFFF, not 0 (PersistentTimer::
+	// GetRemainingTime). A skill that has been used once and has since been reset lands here, so
+	// without this guard the window would show a ready skill as having a 49-day cooldown.
+	// (PTimerList returns a plain 0 for a timer that was never created at all, which is fine.)
+	if (remaining == 0xFFFFFFFF) {
+		return 0;
+	}
+
+	return remaining;   // SECONDS -- reuse times are seconds (BashReuseTime = 5, common/features.h)
+}
+
+// =================================================================================================
+// AoTv4 autoskill window transport.
+//
+// The autoskill SYSTEM already existed (#autoskill, the per-skill on/off buckets and the auto-fire
+// loop in Client::Process). This is only the window's plumbing: push the list, accept toggles.
+//
+// Carried on chat like every other AoTv4 window, and intercepted in Client::ChannelMessageReceived
+// before EVENT_SAY so the commands never reach chat or quests.
+//
+//   server -> dll : "ASKILLDATA <n>^skillid|name|enabled|cooldown_secs|reuse_secs^..."
+//   dll -> server : "/say askset <skillid> <0|1>" , "/say askrefresh"
+// =================================================================================================
+void Client::SendAutoSkillData()
+{
+	std::string csv;
+	int         n = 0;
+
+	// GetAutoSkillsList is already "the activated specials this character actually has", which is
+	// the same gate #autoskill and the auto-fire loop use. Nothing here re-derives it.
+	for (const auto skill : GetAutoSkillsList()) {
+		if (n) { csv += "^"; }
+		csv += fmt::format(
+			"{}|{}|{}|{}|{}",
+			static_cast<int>(skill),
+			EQ::skills::GetSkillName(skill),
+			GetAutoSkillStatus(skill) ? 1 : 0,
+			GetAutoSkillCooldown(skill),
+			GetAutoSkillReuse(skill)
+		);
+		n++;
+	}
+
+	Message(Chat::NPCQuestSay, fmt::format("ASKILLDATA {}^{}", n, csv).c_str());
+}
+
+// The nominal reuse time in seconds, so the window can draw a proportion rather than a bare number.
+// Haste and skill reductions shorten the real timer, so this is the CEILING -- a bar drawn from it
+// is honest about "how much of the wait is left" and never exceeds full.
+uint32 Client::GetAutoSkillReuse(EQ::skills::SkillType skill)
+{
+	switch (skill) {
+		case EQ::skills::SkillBash:        return BashReuseTime;
+		case EQ::skills::SkillKick:        return KickReuseTime;
+		case EQ::skills::SkillFrenzy:      return FrenzyReuseTime;
+		case EQ::skills::SkillBackstab:    return BackstabReuseTime;
+		case EQ::skills::SkillTaunt:       return TauntReuseTime;
+		case EQ::skills::SkillTigerClaw:   return TigerClawReuseTime;
+		case EQ::skills::SkillEagleStrike: return EagleStrikeReuseTime;
+		case EQ::skills::SkillFlyingKick:  return FlyingKickReuseTime;
+		case EQ::skills::SkillRoundKick:   return RoundKickReuseTime;
+		// Dragon Punch and Tail Rake are the same skill id under two names (race dependent), and
+		// share TailRakeReuseTime.
+		case EQ::skills::SkillDragonPunch: return TailRakeReuseTime;
+		default:                           return 10;
+	}
+}
+
+// "/say askset <skillid> <0|1>" and "/say askrefresh". Returns true if the line was ours, so the
+// caller swallows it.
+bool Client::HandleAutoSkillSay(const char *msg)
+{
+	if (!msg) { return false; }
+
+	if (!strncasecmp(msg, "askrefresh", 10)) {
+		SendAutoSkillData();
+		return true;
+	}
+
+	if (!strncasecmp(msg, "askset ", 7)) {
+		int id = 0, on = 0;
+		if (sscanf(msg + 7, "%d %d", &id, &on) != 2) {
+			return true;   // ours but malformed: swallow rather than let it reach chat
+		}
+
+		// Only ever accept a skill this character actually has. The window is built from the same
+		// list, so a mismatch means a stale window or a hand-typed command -- either way, ignore it
+		// rather than writing an on/off bucket for a skill that can never fire.
+		const auto skill = static_cast<EQ::skills::SkillType>(id);
+		bool       ok    = false;
+		for (const auto s : GetAutoSkillsList()) {
+			if (s == skill) { ok = true; break; }
+		}
+		if (ok) {
+			SetAutoSkillStatus(skill, on != 0);
+		}
+
+		SendAutoSkillData();   // echo the new state back so the window never guesses
+		return true;
+	}
+
+	return false;
+}

@@ -1212,6 +1212,11 @@ void Client::ChannelMessageReceived(uint8 chan_num, uint8 language, uint8 lang_s
 		return;
 	}
 
+	// AoTv4 autoskill window: the dll issues /say askset|askrefresh. Same treatment.
+	if (chan_num == ChatChannel_Say && HandleAutoSkillSay(message)) {
+		return;
+	}
+
 	if (RuleB(Chat, AlwaysCaptureCommandText)) {
 		if (message[0] == COMMAND_CHAR) {
 			if (command_dispatch(this, message, false) == -2) {

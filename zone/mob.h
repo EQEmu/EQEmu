@@ -1403,6 +1403,7 @@ public:
 	int64  AoTv4FrenzyLifetap(int64 damage);
 	void   AoTv4ActivateFrenzy(int rank);
 	int64  AoTv4BacksToTheWall(int64 damage);
+	int64  AoTv4Stonestride(int64 damage);   // tank tree; `this` is the DEFENDER
 	bool   AoTv4Braced();
 	bool   AoTv4HeldInPlace();
 	bool   AoTv4RelentlessExtraSwing();

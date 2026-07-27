@@ -27,6 +27,7 @@ Back up the originals first — these overwrite stock EQ files.
 | `EQUI_AdvLootWnd.xml` | Advanced Loot window. |
 | `EQUI_ShopWnd.xml` | Player shop (`/trader`). |
 | `EQUI_AoTLostWnd.xml` | The "You Lost" death window, now a native SIDL window. |
+| `EQUI_AoTAutoSkillWnd.xml` | Autoskill window (`/autoskill`) -- on/off per combat skill plus reuse timers. |
 | `EQUI_AAWindow.xml` | **Overwrites a stock file** — renames the four AA tabs to Tank / Healer / Ranged / Melee. Back up the original. |
 
 Then add the matching lines to `<EQ>\uifiles\default\EQUI.xml` among the other `<Include>` entries:
@@ -36,6 +37,7 @@ Then add the matching lines to `<EQ>\uifiles\default\EQUI.xml` among the other `
 <Include>EQUI_AdvLootWnd.xml</Include>
 <Include>EQUI_ShopWnd.xml</Include>
 <Include>EQUI_AoTLostWnd.xml</Include>
+<Include>EQUI_AoTAutoSkillWnd.xml</Include>
 ```
 
 `EQUI_AAWindow.xml` needs **no** `<Include>` — it is a stock file EQUI.xml already includes, so
@@ -69,7 +71,8 @@ Built from `.devcontainer/repo/eq-core-dll/` (VS2022, toolset v143), then droppe
 
 Rebuild needed whenever the dll sources change. Since the last build that includes: the deleted GDI
 reward windows, the native spell picker's icon lookup, the Advanced Loot module, and the **native
-"You Lost" window** (core_lostwindow.cpp -- see LOST_WINDOW_INSTALL.md).
+"You Lost" window** (core_lostwindow.cpp) and the **Autoskill window** (core_autoskill.cpp).
+See LOST_WINDOW_INSTALL.md and AUTOSKILL_WINDOW_INSTALL.md.
 
 ---
 

@@ -58,6 +58,13 @@ UPDATE aa_ranks SET next_id=-1 WHERE id IN (444, 438, 10467, 4768, 677, 7691);
 
 -- Clear every effect row first. Five of the six are markers, and Sanguine Frenzy MUST have none or
 -- it cannot be activated at all.
+-- ⚠️ CLEAR THE INHERITED PREREQUISITES TOO. aa_rank_prereqs is a SEPARATE table from
+-- aa_rank_effects, and a hosted AA inherits whatever its host required -- so the ability shows in
+-- the window but refuses to train, with no explanation. Missing this made eight AAs untrainable
+-- until 2026-07-27.
+DELETE FROM aa_rank_prereqs WHERE rank_id IN
+ (113,114,115,443,444, 80,81,82,437,438, 86,87,88,266,10467, 98,99,100,4767,4768, 71,72,73,676,677, 146,5069,6102,7466,7691);
+
 DELETE FROM aa_rank_effects WHERE rank_id IN
  (113,114,115,443,444, 80,81,82,437,438, 86,87,88,266,10467,
   98,99,100,4767,4768, 71,72,73,676,677, 146,5069,6102,7466,7691);

@@ -1198,6 +1198,10 @@ void Mob::MeleeMitigation(Mob *attacker, DamageHitInfo &hit, ExtraAttackOptions 
 		hit.damage_done = std::max(1, dmg_int + (dmg_val > static_cast<double>(dmg_int) ? 1 : 0));
 	}
 
+	// AoTv4 Stonestride (tank tree): flat points off every hit that lands. Applied here rather than
+	// through SPA 162, which is inert on an AA -- see Mob::AoTv4Stonestride for why.
+	hit.damage_done = AoTv4Stonestride(hit.damage_done);
+
 	// AoTv4 Backs to the Wall (melee tree): flat reduction that scales with how many things are on
 	// this defender. Applied after the deflect/mitigation result so it trims the finished figure.
 	hit.damage_done = AoTv4BacksToTheWall(hit.damage_done);

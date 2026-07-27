@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<XML ID="EQInterfaceDefinitionLanguage">
+	<Schema xmlns="EverQuestData" xmlns:dt="EverQuestDataTypes" />
+
+	<!-- AoTv4 Autoskill window (CCustomWnd "AoTAutoSkillWnd"), two tabs:
+	       Abilities  turn each combat special on or off
+	       Timers     what autoskill has fired, and how long until it can again
+
+	     These are REAL native tabs (TabBox / Page / TabText), not a hand-rolled toggle button.
+	     TabBox, Page, Pages, TabText, TabBorderTemplate and PageBorderTemplate are all in this
+	     client's SIDL parser, and FT_DefTabBorder / FT_DefPageBorder are both defined in
+	     EQUI_Templates.xml. The Advanced Loot window fakes its tabs with a button only because that
+	     was not known at the time. Multiple Listboxes per window are likewise fine, so each page
+	     gets its own.
+
+	     Comments must never contain a double hyphen, which is illegal in XML and makes the SIDL
+	     parser abort the WHOLE file, killing the client before character select. Run
+	     aotv4_client_install/validate_ui_xml.sh before copying this anywhere. -->
+
+	<!-- ================================================================ page 1: Abilities -->
+	<Label item="ASK_Hint">
+		<ScreenID>ASK_Hint</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>8</X><Y>4</Y></Location>
+		<Size><CX>330</CX><CY>16</CY></Size>
+		<Text>Select a skill, then Enable or Disable</Text>
+		<NoWrap>true</NoWrap>
+		<TextColor><R>240</R><G>200</G><B>120</B></TextColor>
+	</Label>
+
+	<Listbox item="ASK_SkillList">
+		<ScreenID>ASK_SkillList</ScreenID>
+		<DrawTemplate>WDT_Inner</DrawTemplate>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>8</X><Y>22</Y></Location>
+		<Size><CX>344</CX><CY>172</CY></Size>
+		<TextColor><R>255</R><G>255</G><B>255</B></TextColor>
+		<Style_Border>true</Style_Border>
+		<Style_VScroll>true</Style_VScroll>
+		<Columns><Width>250</Width><Heading>Skill</Heading></Columns>
+		<Columns><Width>86</Width><Heading>Auto</Heading></Columns>
+	</Listbox>
+
+	<Button item="ASK_Enable">
+		<ScreenID>ASK_Enable</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>8</X><Y>200</Y></Location>
+		<Size><CX>84</CX><CY>24</CY></Size>
+		<Text>Enable</Text>
+		<TextColor><R>140</R><G>255</G><B>140</B></TextColor>
+		<Template>BDT_Normal</Template>
+	</Button>
+
+	<Button item="ASK_Disable">
+		<ScreenID>ASK_Disable</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>98</X><Y>200</Y></Location>
+		<Size><CX>84</CX><CY>24</CY></Size>
+		<Text>Disable</Text>
+		<TextColor><R>255</R><G>150</G><B>150</B></TextColor>
+		<Template>BDT_Normal</Template>
+	</Button>
+
+	<Button item="ASK_AllOn">
+		<ScreenID>ASK_AllOn</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>188</X><Y>200</Y></Location>
+		<Size><CX>76</CX><CY>24</CY></Size>
+		<Text>All On</Text>
+		<Template>BDT_Normal</Template>
+	</Button>
+
+	<Button item="ASK_AllOff">
+		<ScreenID>ASK_AllOff</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>270</X><Y>200</Y></Location>
+		<Size><CX>76</CX><CY>24</CY></Size>
+		<Text>All Off</Text>
+		<Template>BDT_Normal</Template>
+	</Button>
+
+	<Page item="ASK_AbilityPage">
+		<ScreenID>ASK_AbilityPage</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Style_VScroll>false</Style_VScroll>
+		<Style_HScroll>false</Style_HScroll>
+		<Style_Transparent>false</Style_Transparent>
+		<TooltipReference />
+		<DrawTemplate>WDT_Def</DrawTemplate>
+		<TabText>Abilities</TabText>
+		<TabTextColor><R>255</R><G>255</G><B>255</B></TabTextColor>
+		<TabTextActiveColor><R>255</R><G>255</G><B>0</B></TabTextActiveColor>
+		<Style_Sizable>true</Style_Sizable>
+		<Location><X>0</X><Y>22</Y></Location>
+		<Size><CX>360</CX><CY>232</CY></Size>
+		<Pieces>ASK_Hint</Pieces>
+		<Pieces>ASK_SkillList</Pieces>
+		<Pieces>ASK_Enable</Pieces>
+		<Pieces>ASK_Disable</Pieces>
+		<Pieces>ASK_AllOn</Pieces>
+		<Pieces>ASK_AllOff</Pieces>
+	</Page>
+
+	<!-- ================================================================ page 2: Timers -->
+	<Label item="ASK_TimerHint">
+		<ScreenID>ASK_TimerHint</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>8</X><Y>4</Y></Location>
+		<Size><CX>330</CX><CY>16</CY></Size>
+		<Text>Reuse timers for skills autoskill is firing</Text>
+		<NoWrap>true</NoWrap>
+		<TextColor><R>240</R><G>200</G><B>120</B></TextColor>
+	</Label>
+
+	<Listbox item="ASK_TimerList">
+		<ScreenID>ASK_TimerList</ScreenID>
+		<DrawTemplate>WDT_Inner</DrawTemplate>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>8</X><Y>22</Y></Location>
+		<Size><CX>344</CX><CY>172</CY></Size>
+		<TextColor><R>255</R><G>255</G><B>255</B></TextColor>
+		<Style_Border>true</Style_Border>
+		<Style_VScroll>true</Style_VScroll>
+		<Columns><Width>170</Width><Heading>Skill</Heading></Columns>
+		<Columns><Width>82</Width><Heading>Ready In</Heading></Columns>
+		<Columns><Width>84</Width><Heading>Reuse</Heading></Columns>
+	</Listbox>
+
+	<Button item="ASK_Refresh">
+		<ScreenID>ASK_Refresh</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>270</X><Y>200</Y></Location>
+		<Size><CX>76</CX><CY>24</CY></Size>
+		<Text>Refresh</Text>
+		<Template>BDT_Normal</Template>
+	</Button>
+
+	<Page item="ASK_TimerPage">
+		<ScreenID>ASK_TimerPage</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Style_VScroll>false</Style_VScroll>
+		<Style_HScroll>false</Style_HScroll>
+		<Style_Transparent>false</Style_Transparent>
+		<TooltipReference />
+		<DrawTemplate>WDT_Def</DrawTemplate>
+		<TabText>Timers</TabText>
+		<TabTextColor><R>255</R><G>255</G><B>255</B></TabTextColor>
+		<TabTextActiveColor><R>255</R><G>255</G><B>0</B></TabTextActiveColor>
+		<Style_Sizable>true</Style_Sizable>
+		<Location><X>0</X><Y>22</Y></Location>
+		<Size><CX>360</CX><CY>232</CY></Size>
+		<Pieces>ASK_TimerHint</Pieces>
+		<Pieces>ASK_TimerList</Pieces>
+		<Pieces>ASK_Refresh</Pieces>
+	</Page>
+
+	<TabBox item="ASK_Tabs">
+		<ScreenID>ASK_Tabs</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>4</X><Y>0</Y></Location>
+		<Size><CX>362</CX><CY>256</CY></Size>
+		<TabBorderTemplate>FT_DefTabBorder</TabBorderTemplate>
+		<PageBorderTemplate>FT_DefPageBorder</PageBorderTemplate>
+		<Pages>ASK_AbilityPage</Pages>
+		<Pages>ASK_TimerPage</Pages>
+	</TabBox>
+
+	<Screen item="AoTAutoSkillWnd">
+		<RelativePosition>false</RelativePosition>
+		<Location><X>220</X><Y>130</Y></Location>
+		<Size><CX>378</CX><CY>300</CY></Size>
+		<Text>Autoskill</Text>
+		<Style_Transparent>false</Style_Transparent>
+		<DrawTemplate>WDT_Def</DrawTemplate>
+		<Style_Titlebar>true</Style_Titlebar>
+		<Style_Closebox>true</Style_Closebox>
+		<Style_Border>true</Style_Border>
+		<Style_Sizable>true</Style_Sizable>
+		<Pieces>ASK_Tabs</Pieces>
+	</Screen>
+
+</XML>
