@@ -2784,7 +2784,15 @@ namespace TOB
 
 			auto outapp = new EQApplicationPacket(
 				OP_RaidUpdate,
-				4 + strlen(emu->raidGen.player_name) + 1 + 4 + strlen(emu->raidGen.leader_name) + 1 + 4 + 4 + 4 + 1 + 1
+				sizeof(uint32) + // action
+				strlen(emu->raidGen.player_name) + 1 + // account for null terminator
+				sizeof(uint32) + // unknown1
+				strlen(emu->raidGen.leader_name) + 1 + // account for null terminator
+				sizeof(uint32) + // unused
+				sizeof(uint32) + // parameter
+				sizeof(uint32) + // class
+				sizeof(uint8) + // level
+				sizeof(uint8) // isGroupLeader
 			);
 
 			outapp->WriteUInt32(emu->raidGen.action);
@@ -2806,7 +2814,13 @@ namespace TOB
 
 			auto outapp = new EQApplicationPacket(
 				OP_RaidUpdate,
-				4 + strlen(emu->general.player_name) + 1 + 4 + strlen(emu->general.leader_name) + 1 + 4 + 4 + strlen(emu->motd) + 1
+				sizeof(uint32) + // action
+				strlen(emu->general.player_name) + 1 + // account for null terminator
+				sizeof(uint32) + // unknown1
+				strlen(emu->general.leader_name) + 1 + // account for null terminator
+				sizeof(uint32) + // parameter
+				sizeof(uint32) + // unk
+				strlen(emu->motd) + 1 // account for null terminator
 			);
 
 			outapp->WriteUInt32(emu->general.action);
@@ -2828,7 +2842,11 @@ namespace TOB
 
 			auto outapp = new EQApplicationPacket(
 				OP_RaidUpdate,
-				4 + strlen(emu->player_name) + 1 + 4 + strlen(emu->leader_name) + 1 + 4
+				sizeof(uint32) + // action
+				strlen(emu->player_name) + 1 + // account for null terminator
+				sizeof(uint32) + // unk
+				strlen(emu->leader_name) + 1 + // account for null terminator
+				sizeof(uint32) // unk
 			);
 
 			outapp->WriteUInt32(emu->action);
@@ -2846,7 +2864,13 @@ namespace TOB
 
 			auto outapp = new EQApplicationPacket(
 				OP_RaidUpdate,
-				4 + strlen(emu->general.player_name) + 1 + 4 + strlen(emu->general.leader_name) + 1 + 4 + 4 + strlen(emu->note) + 1
+				sizeof(uint32) + // action
+				strlen(emu->general.player_name) + 1 + // account for null terminator
+				sizeof(uint32) + // unknown1
+				strlen(emu->general.leader_name) + 1 + // account for null terminator
+				sizeof(uint32) + // parameter
+				sizeof(uint32) + // unk
+				strlen(emu->note) + 1 // account for null terminator
 			);
 
 			outapp->WriteUInt32(emu->general.action);
@@ -2866,7 +2890,12 @@ namespace TOB
 
 			auto outapp = new EQApplicationPacket(
 				OP_RaidUpdate,
-				4 + strlen(emu->player_name) + 1 + 4 + strlen(emu->leader_name) + 1 + 4 + 4
+				sizeof(uint32) + // action
+				strlen(emu->player_name) + 1 + // account for null terminator
+				sizeof(uint32) + // unknown1
+				strlen(emu->leader_name) + 1 + // account for null terminator
+				sizeof(uint32) + // unk
+				sizeof(uint32) // parameter
 			);
 
 			outapp->WriteUInt32(emu->action);
@@ -2885,7 +2914,12 @@ namespace TOB
 
 			auto outapp = new EQApplicationPacket(
 				OP_RaidUpdate,
-				4 + strlen(emu->general.player_name) + 1 + 4 + 4 + strlen(emu->general.leader_name) + 1 + 4 + 4
+				sizeof(uint32) + // action
+				strlen(emu->general.player_name) + 1 + // account for null terminator
+				sizeof(uint32) + // unknown1
+				sizeof(uint32) + strlen(emu->general.leader_name) + // this is a length string in the client for only this message
+				sizeof(uint32) + // class
+				sizeof(uint32) // level (4  bytes in this message)
 			);
 
 			outapp->WriteUInt32(emu->general.action);
@@ -2909,7 +2943,12 @@ namespace TOB
 
 			auto outapp = new EQApplicationPacket(
 				OP_RaidUpdate,
-				4 + strlen(emu->player_name) + 1 + 4 + strlen(emu->leader_name) + 1 + 4 + 4
+				sizeof(uint32) + // action
+				strlen(emu->player_name) + 1 + // account for null terminator
+				sizeof(uint32) + // unknown1
+				strlen(emu->leader_name) + 1 + // account for null terminator
+				sizeof(uint32) + // parameter
+				sizeof(uint32) // unk
 			);
 
 			outapp->WriteUInt32(emu->action);

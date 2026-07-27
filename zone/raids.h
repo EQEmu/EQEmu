@@ -169,6 +169,7 @@ public:
 	uint32	GetPlayerIndex(Client *c);
 	//for perl interface
 	Client *GetClientByIndex(uint16 index);
+	Client* GetClientByName(const char* name);
 	const char *GetClientNameByIndex(uint8 index);
 
 	void	LockRaid(bool lockFlag);
@@ -302,7 +303,7 @@ public:
 	char main_marker_pcs[MAX_NO_RAID_MAIN_MARKERS][64];
 	Raid_Marked_NPC	marked_npcs[MAX_MARKED_NPCS];
 
-	void	SetRaidLeadersColumn(uint32 gid, const std::string &column, const std::string &value) const;
+	void	SetRaidLeadersColumn(uint32 gid, const std::string &column, std::string value) const;
 protected:
 
 	Client *leader;

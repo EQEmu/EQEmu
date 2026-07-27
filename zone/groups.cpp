@@ -433,10 +433,25 @@ bool Group::RemoveRaidMember(Mob* m)
 		}
 	}
 
-	if (GetLeader() == m)
-		SetLeader(nullptr);
+	if (GetLeader() != m)
+		return GroupCount() == 0;
 
-	return GroupCount() == 0;
+	// Leader departed -- promote the first remaining member so the group is
+	// never left leaderless (Group::ChangeLeader dereferences the leader
+	// unconditionally, and it should never be reachable on a raid subgroup,
+	// but this keeps that invariant true regardless of caller).
+	for (int i = 0; i < MAX_GROUP_MEMBERS; ++i) {
+		if (members[i] != nullptr) {
+			SetLeader(members[i]);
+			return false;
+		}
+	}
+
+	// No members left at all -- the caller (Raid::VerifyRaid) owns tearing
+	// this subgroup down; it can't be safely self-deleted from here since the
+	// caller still holds and uses this pointer for the rest of its own pass.
+	SetLeader(nullptr);
+	return true;
 }
 
 void Group::QueuePacket(const EQApplicationPacket *app, bool ack_req)
@@ -1612,6 +1627,28 @@ void Group::MarkNPC(Mob* Target, int Number)
 	UpdateXTargetMarkedNPC(Number, m);
 }
 
+void Group::SetGroupLeadersColumn(const char *column, std::string value) const
+{
+	if (raid)
+		raid->SetRaidLeadersColumn(raid_group_slot, column, value);
+	else if (!GroupLeadersRepository::UpsertLeaderWithColumn(database, column, value, GetID()))
+		LogError("Unable to set group_leaders.{} to {}: gid [{}]\n", column, value, GetID());
+}
+
+void Group::SendGroupRolePacket(Client *c, const char *name, uint8 role_number, uint8 toggle)
+{
+	auto outapp = new EQApplicationPacket(OP_GroupRoles, sizeof(GroupRole_Struct));
+	const auto grs = reinterpret_cast<GroupRole_Struct*>(outapp->pBuffer);
+
+	strn0cpy(grs->Name1, name, sizeof(grs->Name1));
+	strn0cpy(grs->Name2, GetLeaderName().c_str(), sizeof(grs->Name2));
+	grs->RoleNumber = role_number;
+	grs->Toggle = toggle;
+
+	c->QueuePacket(outapp);
+	safe_delete(outapp);
+}
+
 void Group::DelegateMainTank(const char *NewMainTankName, uint8 toggle)
 {
 	// This method is called when the group leader Delegates the Main Tank role to a member of the group
@@ -1651,17 +1688,8 @@ void Group::DelegateMainTank(const char *NewMainTankName, uint8 toggle)
 		}
 	}
 
-	if(updateDB) {
-		if (raid) {
-			raid->SetRaidLeadersColumn(raid_group_slot, "maintank", MainTankName);
-		} else {
-			std::string query = StringFormat("UPDATE group_leaders SET maintank = '%s' WHERE gid = %i LIMIT 1",
-                                        MainTankName.c_str(), GetID());
-	        auto results = database.QueryDatabase(query);
-			if (!results.Success())
-				LogError("Unable to set group main tank: [{}]\n", results.ErrorMessage().c_str());
-		}
-	}
+	if(updateDB)
+		SetGroupLeadersColumn("maintank", MainTankName);
 }
 
 void Group::DelegateMainAssist(const char *NewMainAssistName, uint8 toggle)
@@ -1700,17 +1728,8 @@ void Group::DelegateMainAssist(const char *NewMainAssistName, uint8 toggle)
 		}
 	}
 
-	if(updateDB) {
-		if (raid) {
-			raid->SetRaidLeadersColumn(raid_group_slot, "assist", MainAssistName);
-		} else {
-			std::string query = StringFormat("UPDATE group_leaders SET assist = '%s' WHERE gid = %i LIMIT 1",
-                                        MainAssistName.c_str(), GetID());
-	        auto results = database.QueryDatabase(query);
-			if (!results.Success())
-				LogError("Unable to set group main assist: [{}]\n", results.ErrorMessage().c_str());
-		}
-	}
+	if(updateDB)
+		SetGroupLeadersColumn("assist", MainAssistName);
 }
 
 void Group::DelegatePuller(const char *NewPullerName, uint8 toggle)
@@ -1749,18 +1768,8 @@ void Group::DelegatePuller(const char *NewPullerName, uint8 toggle)
 		}
 	}
 
-	if(updateDB) {
-		if (raid) {
-			raid->SetRaidLeadersColumn(raid_group_slot, "puller", PullerName);
-		} else {
-			std::string query = StringFormat("UPDATE group_leaders SET puller = '%s' WHERE gid = %i LIMIT 1",
-                                        PullerName.c_str(), GetID());
-	        auto results = database.QueryDatabase(query);
-			if (!results.Success())
-				LogError("Unable to set group main puller: [{}]\n", results.ErrorMessage().c_str());
-		}
-	}
-
+	if(updateDB)
+		SetGroupLeadersColumn("puller", PullerName);
 }
 
 void Group::NotifyMainTank(Client *c, uint8 toggle)
@@ -1905,14 +1914,7 @@ void Group::UnDelegateMainTank(const char *OldMainTankName, uint8 toggle)
 	//
 	if(OldMainTankName == MainTankName) {
 
-		if (raid) {
-			raid->SetRaidLeadersColumn(raid_group_slot, "maintank", "");
-		} else {
-			std::string query = StringFormat("UPDATE group_leaders SET maintank = '' WHERE gid = %i LIMIT 1", GetID());
-			auto results = database.QueryDatabase(query);
-			if (!results.Success())
-				LogError("Unable to clear group main tank: [{}]\n", results.ErrorMessage().c_str());
-		}
+		SetGroupLeadersColumn("maintank", "");
 
 		if(!toggle) {
 			for(uint32 i = 0; i < MAX_GROUP_MEMBERS; ++i) {
@@ -1958,14 +1960,7 @@ void Group::UnDelegateMainAssist(const char *OldMainAssistName, uint8 toggle)
 
 		safe_delete(outapp);
 
-		if (raid) {
-			raid->SetRaidLeadersColumn(raid_group_slot, "assist", "");
-		} else {
-			std::string query = StringFormat("UPDATE group_leaders SET assist = '' WHERE gid = %i LIMIT 1", GetID());
-	        auto results = database.QueryDatabase(query);
-			if (!results.Success())
-				LogError("Unable to clear group main assist: [{}]\n", results.ErrorMessage().c_str());
-		}
+		SetGroupLeadersColumn("assist", "");
 
 		if(!toggle)
 		{
@@ -1990,14 +1985,7 @@ void Group::UnDelegatePuller(const char *OldPullerName, uint8 toggle)
 	//
 	if(OldPullerName == PullerName) {
 
-		if (raid) {
-			raid->SetRaidLeadersColumn(raid_group_slot, "puller", "");
-		} else {
-			std::string query = StringFormat("UPDATE group_leaders SET puller = '' WHERE gid = %i LIMIT 1", GetID());
-	        auto results = database.QueryDatabase(query);
-			if (!results.Success())
-				LogError("Unable to clear group main puller: [{}]\n", results.ErrorMessage().c_str());
-		}
+		SetGroupLeadersColumn("puller", "");
 
 		if(!toggle) {
 			for(uint32 i = 0; i < MAX_GROUP_MEMBERS; ++i) {
@@ -2169,15 +2157,7 @@ void Group::DelegateMarkNPC(const char *NewNPCMarkerName)
 		if(members[i] && members[i]->IsClient())
 			NotifyMarkNPC(members[i]->CastToClient());
 
-	if (raid) {
-		raid->SetRaidLeadersColumn(raid_group_slot, "marknpc", NewNPCMarkerName);
-	} else {
-		std::string query = StringFormat("UPDATE group_leaders SET marknpc = '%s' WHERE gid = %i LIMIT 1",
-                                    NewNPCMarkerName, GetID());
-	    auto results = database.QueryDatabase(query);
-		if (!results.Success())
-			LogError("Unable to set group mark npc: [{}]\n", results.ErrorMessage().c_str());
-	}
+	SetGroupLeadersColumn("marknpc", NewNPCMarkerName);
 }
 
 void Group::NotifyMarkNPC(Client *c)
@@ -2205,33 +2185,14 @@ void Group::NotifyMarkNPC(Client *c)
 		safe_delete(outapp);
 	} else {
 		// TOB rolled OP_DelegateAbility into OP_GroupRoles, need more information sent from here
-		auto outapp = new EQApplicationPacket(OP_GroupRoles, sizeof(GroupRole_Struct));
-		const auto grs = reinterpret_cast<GroupRole_Struct*>(outapp->pBuffer);
-
-		strn0cpy(grs->Name1, NPCMarkerName.c_str(), sizeof(grs->Name1));
-		strn0cpy(grs->Name2, GetLeaderName().c_str(), sizeof(grs->Name2));
-		grs->RoleNumber = 5;
-		grs->Toggle = 1;
-
-		c->QueuePacket(outapp);
-		safe_delete(outapp);
+		SendGroupRolePacket(c, NPCMarkerName.c_str(), 5, 1);
 	}
 }
 
 void Group::NotifyMasterLooter(Client *c, bool toggle)
 {
-	if (c != nullptr && c->ClientVersion() >= EQ::versions::ClientVersion::TOB && !MasterLooterName.empty()) {
-		auto outapp = new EQApplicationPacket(OP_GroupRoles, sizeof(GroupRole_Struct));
-		const auto grs = reinterpret_cast<GroupRole_Struct*>(outapp->pBuffer);
-
-		strn0cpy(grs->Name1, MasterLooterName.c_str(), sizeof(grs->Name1));
-		strn0cpy(grs->Name2, GetLeaderName().c_str(), sizeof(grs->Name2));
-		grs->RoleNumber = 4;
-		grs->Toggle = toggle ? 1 : 0;
-
-		c->QueuePacket(outapp);
-		safe_delete(outapp);
-	}
+	if (c != nullptr && c->ClientVersion() >= EQ::versions::ClientVersion::TOB && !MasterLooterName.empty())
+		SendGroupRolePacket(c, MasterLooterName.c_str(), 4, toggle ? 1 : 0);
 }
 
 void Group::SetNPCMarker(const char *NewNPCMarkerName)
@@ -2276,30 +2237,14 @@ void Group::UnDelegateMarkNPC(const char *OldNPCMarkerName)
 				c->QueuePacket(outapp);
 				safe_delete(outapp);
 			} else {
-				auto outapp = new EQApplicationPacket(OP_GroupRoles, sizeof(GroupRole_Struct));
-				const auto grs = reinterpret_cast<GroupRole_Struct*>(outapp->pBuffer);
-
-				strn0cpy(grs->Name1, OldNPCMarkerName, sizeof(grs->Name1));
-				strn0cpy(grs->Name2, GetLeaderName().c_str(), sizeof(grs->Name2));
-				grs->RoleNumber = 5;
-				grs->Toggle = 0;
-
-				c->QueuePacket(outapp);
-				safe_delete(outapp);
+				SendGroupRolePacket(c, OldNPCMarkerName, 5, 0);
 			}
 		}
 	}
 
 	NPCMarkerName.clear();
 
-	if (raid) {
-		raid->SetRaidLeadersColumn(raid_group_slot, "marknpc", "");
-	} else {
-		std::string query = StringFormat("UPDATE group_leaders SET marknpc = '' WHERE gid = %i LIMIT 1", GetID());
-	    auto results = database.QueryDatabase(query);
-		if (!results.Success())
-			LogError("Unable to clear group marknpc: [{}]\n", results.ErrorMessage().c_str());
-	}
+	SetGroupLeadersColumn("marknpc", "");
 }
 
 void Group::DelegateMasterLooter(const char *NewMasterLooterName)
@@ -2321,15 +2266,7 @@ void Group::DelegateMasterLooter(const char *NewMasterLooterName)
 		if(member && member->IsClient())
 			NotifyMasterLooter(member->CastToClient(), 1);
 
-	if (raid) {
-		raid->SetRaidLeadersColumn(raid_group_slot, "masterlooter", NewMasterLooterName);
-	} else {
-		std::string query = StringFormat("UPDATE group_leaders SET masterlooter = '%s' WHERE gid = %i LIMIT 1",
-		                                    NewMasterLooterName, GetID());
-		auto results = database.QueryDatabase(query);
-		if (!results.Success())
-			LogError("Unable to set group master looter: [{}]\n", results.ErrorMessage().c_str());
-	}
+	SetGroupLeadersColumn("masterlooter", NewMasterLooterName);
 }
 
 void Group::UnDelegateMasterLooter(const char *OldMasterLooterName)
@@ -2341,14 +2278,7 @@ void Group::UnDelegateMasterLooter(const char *OldMasterLooterName)
 
 		MasterLooterName.clear();
 
-		if (raid) {
-			raid->SetRaidLeadersColumn(raid_group_slot, "masterlooter", "");
-		} else {
-			std::string query = StringFormat("UPDATE group_leaders SET masterlooter = '' WHERE gid = %i LIMIT 1", GetID());
-			auto results = database.QueryDatabase(query);
-			if (!results.Success())
-				LogError("Unable to clear group master looter: [{}]\n", results.ErrorMessage().c_str());
-		}
+		SetGroupLeadersColumn("masterlooter", "");
 	}
 }
 

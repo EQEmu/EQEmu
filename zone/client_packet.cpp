@@ -13067,7 +13067,7 @@ void Client::Handle_OP_RaidCommand(const EQApplicationPacket* app)
 				}
 
 				raid->GroupUpdate(oldgrp);
-}
+			}
 		}
 
 		Client* client_moved = entity_list.GetClientByName(raid_command_packet->leader_name);
@@ -13087,7 +13087,7 @@ void Client::Handle_OP_RaidCommand(const EQApplicationPacket* app)
 	case RaidCommandRemoveGroupLeader:
 	{
 		Raid* raid = entity_list.GetRaidByClient(this);
-		if (raid) {
+		if (raid && raid->IsLeader(this)) {
 			uint32 group_id = raid->GetGroup(raid_command_packet->leader_name);
 			raid->SetGroupLeader(raid_command_packet->leader_name, false);
 			if (group_id < MAX_RAID_GROUPS) {

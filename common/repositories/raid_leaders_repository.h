@@ -72,4 +72,33 @@ public:
 	) {
 		return UpdateMentor(db, raid_id, group_id, "", 0);
 	}
+
+	static bool UpsertLeaderWithColumn(Database &db, const std::string &column, std::string &value, uint32 group_id, uint32 raid_id)
+	{
+		auto existing = GetWhere(
+			db,
+			fmt::format("rid = {} AND gid = {} LIMIT 1", raid_id, group_id)
+		);
+
+		auto e = existing.empty() ? NewEntity() : existing.front();
+		e.rid = raid_id;
+		e.gid = group_id;
+
+		db.Encode(value);
+		if (column == "maintank")
+			e.maintank = value;
+		else if (column == "assist")
+			e.assist = value;
+		else if (column == "puller")
+			e.puller = value;
+		else if (column == "marknpc")
+			e.marknpc = value;
+		else if (column == "masterlooter")
+			e.masterlooter = value;
+
+		if (existing.empty())
+			return InsertOne(db, e).id != 0;
+
+		return UpdateOne(db, e) > 0;
+	}
 };

@@ -70,6 +70,34 @@ public:
 		);
 	}
 
+	static bool UpsertLeaderWithColumn(Database& db, const std::string& column, std::string& value, uint32 group_id)
+	{
+		auto existing = GetWhere(
+			db,
+			fmt::format("gid = {} LIMIT 1", group_id)
+		);
+
+		auto e = existing.empty() ? NewEntity() : existing.front();
+		e.gid = static_cast<int32>(group_id);
+
+		db.Encode(value);
+		if (column == "maintank")
+			e.maintank = value;
+		else if (column == "assist")
+			e.assist = value;
+		else if (column == "puller")
+			e.puller = value;
+		else if (column == "marknpc")
+			e.marknpc = value;
+		else if (column == "masterlooter")
+			e.masterlooter = value;
+
+		if (existing.empty())
+			return InsertOne(db, e).gid != 0;
+
+		return UpdateOne(db, e) > 0;
+	}
+
 	static int UpdateLeadershipAA(Database &db, std::string &aa, uint32 group_id)
 	{
 		const auto group_leader = GetWhere(db, fmt::format("gid = '{}' LIMIT 1", group_id));

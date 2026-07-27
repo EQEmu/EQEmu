@@ -479,34 +479,10 @@ void Raid::UpdateRaidAAs()
 	SaveRaidLeaderAA();
 }
 
-void Raid::SetRaidLeadersColumn(uint32 gid, const std::string &column, const std::string &value) const
+void Raid::SetRaidLeadersColumn(uint32 gid, const std::string &column, std::string value) const
 {
-	auto existing = RaidLeadersRepository::GetWhere(
-		database,
-		fmt::format("rid = {} AND gid = {} LIMIT 1", GetID(), gid)
-	);
-
-	auto e = existing.empty() ? RaidLeadersRepository::NewEntity() : existing.front();
-	e.rid = GetID();
-	e.gid = gid;
-
-	if (column == "maintank")
-		e.maintank = value;
-	else if (column == "assist")
-		e.assist = value;
-	else if (column == "puller")
-		e.puller = value;
-	else if (column == "marknpc")
-		e.marknpc = value;
-	else if (column == "masterlooter")
-		e.masterlooter = value;
-
-	if (existing.empty()) {
-		if (!RaidLeadersRepository::InsertOne(database, e).id)
-			LogError("Unable to insert raid_leaders.{}: rid [{}] gid [{}]\n", column, GetID(), gid);
-	} else if (!RaidLeadersRepository::UpdateOne(database, e)) {
-		LogError("Unable to set raid_leaders.{}: rid [{}] gid [{}]\n", column, GetID(), gid);
-	}
+	if (!RaidLeadersRepository::UpsertLeaderWithColumn(database, column, value, gid, GetID()))
+		LogError("Unable to set raid_leaders.{} to {}: rid [{}] gid [{}]\n", column, value, GetID(), gid);
 }
 
 void Raid::LoadGroupLeaders(uint32 gid, Group *g)
@@ -715,6 +691,16 @@ Client *Raid::GetClientByIndex(uint16 index)
 	}
 
 	return members[index].member;
+}
+
+Client* Raid::GetClientByName(const char* name)
+{
+	for (const auto& m : members) {
+		if (strcmp(m.member_name, name) == 0)
+			return m.member;
+	}
+
+	return nullptr;
 }
 
 void Raid::CastGroupSpell(Mob* caster, int32 spellid, uint32 gid)
@@ -2724,13 +2710,15 @@ void Raid::DelegateAbilityMasterLooter(Mob* delegator, const char* delegatee)
 		return;
 	}
 
-	const auto rm = &members[GetPlayerIndex(delegatee)];
-	if (rm == nullptr)
-		return;
-
-	const auto c = rm->member;
+	auto* c = GetClientByName(delegatee);
 	if (c == nullptr)
 		return;
+
+	auto rm_index = GetPlayerIndex(c);
+	if (rm_index >= MAX_RAID_MEMBERS)
+		return;
+
+	auto rm = &members[rm_index];
 
 	if (rm->is_master_looter) {
 		auto outapp = new EQApplicationPacket(OP_RaidDelegateAbility, sizeof(DelegateAbility_Struct));

@@ -185,6 +185,9 @@ public:
 	bool	castspell {false};
 
 private:
+	void	SetGroupLeadersColumn(const char *column, std::string value) const;
+	void	SendGroupRolePacket(Client *c, const char *name, uint8 role_number, uint8 toggle);
+
 	Mob*	leader;
 	GroupLeadershipAA_Struct LeaderAbilities;
 	std::string	MainTankName;
