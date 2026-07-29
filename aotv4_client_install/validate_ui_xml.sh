@@ -46,7 +46,17 @@ for f in "${FILES[@]}"; do
   #    SIDL also accepts a type-qualified form, "<Pieces>Screen:NAW_SummaryPanel</Pieces>", so strip
   #    any leading "Type:" before looking the item up (EQUI_NativeAchievementWnd.xml uses that form).
   for p in $(grep -oE "<Pieces>[^<]+</Pieces>" "$f" | sed 's/<[^>]*>//g;s/^[A-Za-z]*://'); do
-    grep -q "item=\"$p\"" "$f" || problems+=$'\n  UNDEFINED PIECE: '"$p"
+    # ⚠️ Whitespace around the "=" is legal and STOCK RoF2 FILES USE IT ("item = \"X\""), while ours
+    # do not. A tightened `item="$p"` match reports every piece in a stock file as undefined, which
+    # is exactly the cry-wolf failure the tag-balance check above was loosened to avoid. It first
+    # showed up when EQUI_EQMainWnd.xml was adopted to add the AoT button.
+    grep -qE "item[[:space:]]*=[[:space:]]*\"$p\"" "$f" || problems+=$'\n  UNDEFINED PIECE: '"$p"
+  done
+
+  # 3b. <Pages> targets, same rule. A TabBox names its pages this way and the check above never
+  #     looked at them, so a mistyped page name would have sailed through silently.
+  for p in $(grep -oE "<Pages>[^<]+</Pages>" "$f" | sed 's/<[^>]*>//g;s/^[A-Za-z]*://'); do
+    grep -qE "item[[:space:]]*=[[:space:]]*\"$p\"" "$f" || problems+=$'\n  UNDEFINED PAGE: '"$p"
   done
 
   # 4. tags no RoF2-shipped UI file uses

@@ -43,7 +43,17 @@ my @ICONS = do {
 my $CELL = 40;                                    # spell icons are 40x40
 my $COLS = 6;                                     # 6 per row on a 240-wide sheet
 
-my ($WIN_CX, $WIN_CY) = (430, 450);
+# The window carries THREE tabs now: Choose (the reward cards), Known and Pool. The card layout
+# below is unchanged -- it just lives on a page instead of directly on the screen.
+#
+# ⚠️ TAB_Y is the height of the tab strip. Every page sits at Y=TAB_Y inside the screen, and each
+# page's own pieces are positioned relative to THAT, so the card coordinates did not have to move.
+my ($WIN_CX, $WIN_CY) = (430, 500);
+my $TAB_Y             = 22;
+# ⚠️ Subtract the FRAME too, not just the tab strip. The window frame eats roughly 20px at the top
+# (title bar) and 8 at the bottom, so a page of (WIN_CY - TAB_Y - 4) placed at Y=TAB_Y ended 24px
+# BELOW what the window can show and the detail pane hung out of the bottom of the frame.
+my $PAGE_CY           = $WIN_CY - $TAB_Y - 32;
 my ($ROW_Y0, $ROW_H)  = (34, 58);
 my $ICON_X            = 14;
 my ($NAME_X, $NAME_W) = (64, 236);
@@ -199,18 +209,143 @@ w("\t</STMLbox>");
 w('');
 push @pieces, 'ASC_Detail';
 
+# =================================================================================================
+# Known and Pool tabs.
+#
+# These were originally a separate window (EQUI_AoTSpellJournalWnd.xml). They are folded in here so
+# there is ONE spell window: the reward cards stay exactly as they were and simply become the first
+# tab. The standalone Journal XML is kept as a backup but is no longer used.
+#
+# Both lists are plain Listboxes with a detail Listbox underneath, and BOTH are driven by
+# core_spelljournal.cpp -- which builds its description text from the client's own spell record
+# rather than from anything the server sends.
+# =================================================================================================
+my @known_pieces;
+my @pool_pieces;
+
+# ---- helpers so the two tabs cannot drift apart
+sub listbox {
+    my ($item, $y, $h, $cols, $vscroll) = @_;
+    w("\t<Listbox item=\"$item\">");
+    w("\t\t<ScreenID>$item</ScreenID>");
+    w("\t\t<DrawTemplate>WDT_Inner</DrawTemplate>");
+    w("\t\t<RelativePosition>true</RelativePosition>");
+    w("\t\t<Location><X>$DET_X</X><Y>$y</Y></Location>");
+    w("\t\t<Size><CX>$DET_W</CX><CY>$h</CY></Size>");
+    w("\t\t<Style_Border>true</Style_Border>");
+    w("\t\t<Style_VScroll>" . ($vscroll ? 'true' : 'false') . "</Style_VScroll>");
+    for my $c (@$cols) {
+        w("\t\t<Columns>");
+        w("\t\t\t<Width>$c->[0]</Width>");
+        w("\t\t\t<Heading>$c->[1]</Heading>") if defined $c->[1];
+        w("\t\t</Columns>");
+    }
+    w("\t</Listbox>");
+    w('');
+}
+
+my $LIST_Y = 8;
+my $LIST_H = 240;
+my $LDET_Y = $LIST_Y + $LIST_H + 8;
+my $LDET_H = $PAGE_CY - $LDET_Y - 12;
+
+# ---- Known tab
+listbox('ASC_KnownList', $LIST_Y, $LIST_H,
+        [[46, 'Lvl'], [252, 'Spell'], [94, 'Type']], 1);
+listbox('ASC_KnownDetail', $LDET_Y, $LDET_H, [[$DET_W - 12, undef]], 1);
+push @known_pieces, 'ASC_KnownList', 'ASC_KnownDetail';
+
+# ---- Pool tab: a level stepper above the list
+w("\t<Button item=\"ASC_PoolPrev\">");
+w("\t\t<ScreenID>ASC_PoolPrev</ScreenID>");
+w("\t\t<RelativePosition>true</RelativePosition>");
+w("\t\t<Location><X>$DET_X</X><Y>6</Y></Location>");
+w("\t\t<Size><CX>60</CX><CY>24</CY></Size>");
+w("\t\t<Text>&lt;&lt;</Text>");
+w("\t\t<TextColor><R>255</R><G>255</G><B>255</B></TextColor>");
+w("\t\t<Template>BDT_Normal</Template>");
+w("\t</Button>");
+w('');
+w("\t<Label item=\"ASC_PoolLevel\">");
+w("\t\t<ScreenID>ASC_PoolLevel</ScreenID>");
+w("\t\t<RelativePosition>true</RelativePosition>");
+w("\t\t<Location><X>" . ($DET_X + 66) . "</X><Y>10</Y></Location>");
+w("\t\t<Size><CX>" . ($DET_W - 132) . "</CX><CY>20</CY></Size>");
+w("\t\t<Text>Level</Text>");
+w("\t\t<Font>$NAME_FONT</Font>");
+w("\t\t<TextColor><R>245</R><G>235</G><B>190</B></TextColor>");
+w("\t\t<AlignCenter>true</AlignCenter>");
+w("\t\t<NoWrap>true</NoWrap>");
+w("\t</Label>");
+w('');
+w("\t<Button item=\"ASC_PoolNext\">");
+w("\t\t<ScreenID>ASC_PoolNext</ScreenID>");
+w("\t\t<RelativePosition>true</RelativePosition>");
+w("\t\t<Location><X>" . ($DET_X + $DET_W - 60) . "</X><Y>6</Y></Location>");
+w("\t\t<Size><CX>60</CX><CY>24</CY></Size>");
+w("\t\t<Text>&gt;&gt;</Text>");
+w("\t\t<TextColor><R>255</R><G>255</G><B>255</B></TextColor>");
+w("\t\t<Template>BDT_Normal</Template>");
+w("\t</Button>");
+w('');
+listbox('ASC_PoolList', 36, $LIST_H - 28,
+        [[298, 'Spell'], [94, 'Status']], 1);
+listbox('ASC_PoolDetail', $LDET_Y, $LDET_H, [[$DET_W - 12, undef]], 1);
+push @pool_pieces, 'ASC_PoolPrev', 'ASC_PoolLevel', 'ASC_PoolNext',
+                   'ASC_PoolList', 'ASC_PoolDetail';
+
+# ---- the three pages
+sub page {
+    my ($item, $tabtext, $pieces) = @_;
+    w("\t<Page item=\"$item\">");
+    w("\t\t<ScreenID>$item</ScreenID>");
+    w("\t\t<RelativePosition>false</RelativePosition>");
+    w("\t\t<Location><X>0</X><Y>$TAB_Y</Y></Location>");
+    w("\t\t<Size><CX>$WIN_CX</CX><CY>$PAGE_CY</CY></Size>");
+    w("\t\t<Style_VScroll>false</Style_VScroll>");
+    w("\t\t<Style_HScroll>false</Style_HScroll>");
+    w("\t\t<Style_Transparent>false</Style_Transparent>");
+    w("\t\t<DrawTemplate>WDT_Def</DrawTemplate>");
+    w("\t\t<TabText>$tabtext</TabText>");
+    w("\t\t<TabTextColor><R>255</R><G>255</G><B>255</B></TabTextColor>");
+    w("\t\t<TabTextActiveColor><R>255</R><G>255</G><B>0</B></TabTextActiveColor>");
+    w("\t\t<Pieces>$_</Pieces>") for @$pieces;
+    w("\t</Page>");
+    w('');
+}
+
+page('ASC_ChoosePage', 'Choose', \@pieces);
+page('ASC_KnownPage',  'Known',  \@known_pieces);
+page('ASC_PoolPage',   'Pool',   \@pool_pieces);
+
+w("\t<TabBox item=\"ASC_Tabs\">");
+w("\t\t<ScreenID>ASC_Tabs</ScreenID>");
+w("\t\t<RelativePosition>true</RelativePosition>");
+w("\t\t<Location><X>0</X><Y>0</Y></Location>");
+w("\t\t<Size><CX>$WIN_CX</CX><CY>$WIN_CY</CY></Size>");
+w("\t\t<TabBorderTemplate>FT_DefTabBorder</TabBorderTemplate>");
+w("\t\t<PageBorderTemplate>FT_DefPageBorder</PageBorderTemplate>");
+w("\t\t<Pages>ASC_ChoosePage</Pages>");
+w("\t\t<Pages>ASC_KnownPage</Pages>");
+w("\t\t<Pages>ASC_PoolPage</Pages>");
+w("\t</TabBox>");
+w('');
+
 w("\t<Screen item=\"AoTSpellChoiceWnd\">");
 w("\t\t<RelativePosition>false</RelativePosition>");
 w("\t\t<Location><X>300</X><Y>150</Y></Location>");
 w("\t\t<Size><CX>$WIN_CX</CX><CY>$WIN_CY</CY></Size>");
-w("\t\t<Text>Level Up Reward</Text>");
+w("\t\t<Text>Spells</Text>");
 w("\t\t<Style_Transparent>false</Style_Transparent>");
 w("\t\t<DrawTemplate>WDT_Def</DrawTemplate>");
 w("\t\t<Style_Titlebar>true</Style_Titlebar>");
 w("\t\t<Style_Closebox>true</Style_Closebox>");
 w("\t\t<Style_Border>true</Style_Border>");
 w("\t\t<Style_Sizable>false</Style_Sizable>");
-w("\t\t<Pieces>$_</Pieces>") for @pieces;
+w("\t\t<Escapable>true</Escapable>");
+# ⚠️ The screen now holds ONLY the TabBox. Every other piece belongs to a page; listing one here as
+# well would place it twice and it would draw outside the tab it belongs to.
+w("\t\t<Pieces>ASC_Tabs</Pieces>");
 w("\t</Screen>");
 w('</XML>');
 

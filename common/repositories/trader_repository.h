@@ -87,11 +87,20 @@ public:
 			);
 		}
 		else {
+			// ⚠️⚠️ GROUP BY char_id. "SELECT DISTINCT(t.char_id), ..." does NOT mean one row per
+			// character: the parentheses are cosmetic and MySQL applies DISTINCT to the WHOLE select
+			// list, which includes char_entity_id and char_zone_id. Both change every session, and
+			// AoTv4's trader rows are PERMANENT escrow that outlive a logout -- so a seller who
+			// relogged had rows under two different (zone, entity) pairs and appeared TWICE in the
+			// /bazaar trader list, gaining another copy for every session they had listed from.
+			// MAX() only picks a representative for the volatile columns; char_id identifies a trader.
 			results = db.QueryDatabase(fmt::format(
-				"SELECT DISTINCT(t.char_id), t.char_zone_id, t.char_zone_instance_id, t.char_entity_id, c.name "
+				"SELECT t.char_id, MAX(t.char_zone_id), MAX(t.char_zone_instance_id), "
+				"MAX(t.char_entity_id), c.name "
 				"FROM trader AS t "
 				"JOIN character_data AS c ON t.char_id = c.id "
-				"ORDER BY t.char_zone_instance_id ASC "
+				"GROUP BY t.char_id, c.name "
+				"ORDER BY c.name ASC "
 				"LIMIT {}",
 				max_results)
 			);

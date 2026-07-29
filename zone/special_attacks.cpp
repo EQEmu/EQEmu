@@ -37,6 +37,11 @@ extern double frame_time;
 // peqzone 900). Used by both Client::OPCombatAbility (manual) and Client::DoClassAttacks (#autoskill/AI).
 static const uint16 AOTV4_SKILL_TIMER_BASE = 300;
 
+// ⚠️ Balance lever: how many abilities autoskill may run at once. Without a cap the right play is
+// to enable everything, and choosing which specials to run stops being a choice. Enforced in
+// Client::HandleAutoSkillSay, which is the only path that turns one on.
+static const int AOTV4_AUTOSKILL_MAX = 4;
+
 int Mob::GetBaseSkillDamage(EQ::skills::SkillType skill, Mob *target)
 {
 	int base = EQ::skills::GetBaseDamage(skill);
@@ -2736,6 +2741,26 @@ bool Client::HandleAutoSkillSay(const char *msg)
 		for (const auto s : GetAutoSkillsList()) {
 			if (s == skill) { ok = true; break; }
 		}
+		// ⚠️ AT MOST AOTV4_AUTOSKILL_MAX ABILITIES MAY BE ENABLED AT ONCE. This is a balance lever,
+		// not a UI limit: autoskill fires everything you have turned on, so without a cap the correct
+		// play is simply to enable all of them and the choice of which specials to run stops being a
+		// choice. Enforced HERE because the server is what actually fires them -- a client-side cap
+		// alone would be bypassed by the /say the window sends, or by typing #autoskill.
+		//
+		// Turning one OFF is always allowed; only the enable side is capped.
+		if (ok && on != 0) {
+			int enabled = 0;
+			for (const auto s : GetAutoSkillsList()) {
+				if (s != skill && GetAutoSkillStatus(s)) { ++enabled; }
+			}
+			if (enabled >= AOTV4_AUTOSKILL_MAX) {
+				Message(Chat::Red,
+				        "You can have at most %d abilities on autoskill. Turn one off first.",
+				        AOTV4_AUTOSKILL_MAX);
+				ok = false;
+			}
+		}
+
 		if (ok) {
 			SetAutoSkillStatus(skill, on != 0);
 		}

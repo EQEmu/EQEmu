@@ -20,7 +20,7 @@
 		<RelativePosition>true</RelativePosition>
 		<Location><X>10</X><Y>6</Y></Location>
 		<Size><CX>300</CX><CY>16</CY></Size>
-		<Text>Items lost on death</Text>
+		<Text>Click a date to see what that death cost you</Text>
 		<NoWrap>true</NoWrap>
 		<AlignCenter>false</AlignCenter>
 		<TextColor><R>240</R><G>200</G><B>120</B></TextColor>
@@ -57,7 +57,7 @@
 		<TextColor><R>255</R><G>255</G><B>255</B></TextColor>
 		<Style_Border>true</Style_Border>
 		<Style_VScroll>true</Style_VScroll>
-		<Columns><Width>326</Width><Heading>Item</Heading></Columns>
+		<Columns><Width>326</Width><Heading>Death</Heading></Columns>
 	</Listbox>
 
 	<Button item="LST_Dismiss">
@@ -74,7 +74,7 @@
 		<BottomAnchorOffset>8</BottomAnchorOffset>
 		<Location><X>254</X><Y>238</Y></Location>
 		<Size><CX>88</CX><CY>26</CY></Size>
-		<Text>Dismiss</Text>
+		<Text>Close</Text>
 		<TextColor><R>255</R><G>220</G><B>160</B></TextColor>
 		<!-- The tag is Template, NOT ButtonDrawTemplate, and BDT_Normal is one of the ~34 templates
 		     EQUI_Templates.xml actually defines. A name that is not in that file resolves to nothing
@@ -86,7 +86,7 @@
 		<RelativePosition>false</RelativePosition>
 		<Location><X>240</X><Y>140</Y></Location>
 		<Size><CX>358</CX><CY>296</CY></Size>
-		<Text>You Lost</Text>
+		<Text>Death Book</Text>
 		<Style_Transparent>false</Style_Transparent>
 		<DrawTemplate>WDT_Def</DrawTemplate>
 		<Style_Titlebar>true</Style_Titlebar>

@@ -378,6 +378,8 @@ public:
 	int  GetRegionMaxLevel();
 	std::string GetPriceBook();
 	std::string GetPriceLog();
+	std::string GetShopListingLog();
+	std::string GetShopSoldLog();
 	bool IsTrader();
 	void ResetAlternateAdvancementRank(int aa_id);
 	void MarkSingleCompassLoc(float in_x, float in_y, float in_z);

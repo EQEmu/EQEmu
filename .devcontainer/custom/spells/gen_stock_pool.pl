@@ -76,26 +76,45 @@ my @stock = mysql(q{
       AND s.classes8 BETWEEN 1 AND 100
     ORDER BY s.classes8, s.id});
 
-# Kept customs, two bands:
-#   43000-43149 with every effect slot empty -- the Lua-driven abilities. Their effect-slot
-#                siblings in the same range are the redundant ones and stay unoffered.
-#   43300-43349 -- NEW custom spells written to fill gaps in native lines (e.g. the low-level
-#                Skin of the Reptile tiers, custom/sql/aotv4_reptile_line.sql). These DO use effect
-#                slots, so they need their own band rather than the empty-slot test. Put helper /
-#                trigger spells at 43350+ so they are never offered.
+# Kept customs, ONE band: 43300-43349 -- custom spells written to fill gaps in native lines (e.g.
+# the low-level Skin of the Reptile tiers, custom/sql/aotv4_reptile_line.sql). These DO use effect
+# slots. Put helper / trigger spells at 43350+ so they are never offered.
+#
+# ⚠️⚠️ 43000-43149 IS DELIBERATELY EXCLUDED (2026-07-27) -- DO NOT ADD IT BACK. That band is the
+# retired 113-spell custom reward set (Ember, Zap, Kick, Strike, Counterattack, Moonfire...). Twenty
+# of them -- the ones whose every effect slot is 254, with the behaviour in quests/global/spells/
+# 43xxx.lua -- were still being offered by an earlier clause here:
+#     (s.id BETWEEN 43000 AND 43149 AND s.effectid1 = 254 AND s.effectid2 = 254 AND s.effectid3 = 254)
+# They are retired for good: mostly redundant with native spells, and being inert markers they
+# render as "no effects" in any client-side spell description, including the Spell Journal window.
+# The ROWS remain in spells_new (dormant, referenced by their Lua scripts and by the 43150-43199
+# helpers); this only stops them being offered. Full restore of all 202 custom rows, if it is ever
+# wanted, is custom/sql/aotv4_custom_spells_backup.sql.
+#
+# ⚠️ Everything from 43300 up is LIVE and unrelated: 43300-43349 the custom lines below, 43350-43399
+# their triggers plus the Shield Wall buffs, 43400-43454 the AA tree buffs and pet wards, 43500-43565
+# the class auras. "Get rid of the 43xxx spells" must never be read as this whole range.
 my @custom = mysql(q{
     SELECT s.id, s.name, s.classes8, s.new_icon, IFNULL(d.value,'')
     FROM spells_new s LEFT JOIN db_str d ON d.id = s.descnum AND d.type = 6
     WHERE s.classes8 BETWEEN 1 AND 100
-      AND ( (s.id BETWEEN 43000 AND 43149
-             AND s.effectid1 = 254 AND s.effectid2 = 254 AND s.effectid3 = 254)
-         OR  s.id BETWEEN 43300 AND 43349 )
+      AND s.id BETWEEN 43300 AND 43349
     ORDER BY s.classes8, s.id});
 
 # ---------------------------------------------------------------- blacklist
 # Categories of native spell that must never be offered as a level-up reward. Every SPA number
 # below was read out of THIS database rather than from memory (e.g. SELECT effectid1 FROM
 # spells_new WHERE name='Gate') so the constants match what the server actually runs.
+# "does this spell carry SPA n in ANY of its twelve effect slots".
+#
+# ⚠️ Written once and shared, because the hand-rolled versions of this test drifted: travel checked
+# slots 1-6, rez and summon-corpse checked only 1-3, so an effect sitting in a later slot slipped
+# through whichever rule happened to be narrow. Nothing here should spell the list out by hand.
+sub spa_in {
+    my $spa = shift;
+    return "$spa IN (" . join(',', map { "effectid$_" } 1 .. 12) . ")";
+}
+
 my @RULES = (
     # ⚠️ Do NOT key travel off `teleport_zone <> ''`. That column is not "destination zone", it is
     # "names an NPC or a zone": every pet/familiar/warder/Eye-of-Zomm spell puts its SUMMON TYPE
@@ -108,23 +127,68 @@ my @RULES = (
     # Marr, Eriki's Psalm of Power, the group heal lines) as if they were ports. Of the 150 pool
     # spells with targettype 3, the 72 that really are travel all carry one of the SPAs below and
     # are caught by them regardless, so the clause bought nothing and cost 78 legitimate rewards.
-    ["travel",  q{25  IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6)   /* Bind Affinity */
-                  OR 26  IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6)   /* Gate          */
-                  OR 83  IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6)   /* Teleport      */
-                  OR 88  IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6)   /* Evacuate      */
-                  OR 104 IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6)}, # Translocate
-                "ports, gates, binds, evacs -- they also defeat region locking"],
+    # ⚠️ ALL TWELVE SLOTS, not the first three or six. The effect that makes a spell a port is not
+    # required to sit in an early slot, and the narrower lists here previously let travel through.
+    # $ALL12 is built once below so no rule can be widened and leave another behind.
+    #
+    # ⚠️ The SPA list is the WHOLE travel family, verified against common/spdat.h:
+    #   25 BindAffinity   26 Gate      82 SummonPC   83 Teleport
+    #   88 Succor         104 Translocate           145 Teleport2
+    # 82 SummonPC relocates ANOTHER player and 145 Teleport2 is the Banishment of the Pantheon /
+    # Dimensional Rift / Portal to Butcher family; both were missing and both are unambiguously travel.
+    ["travel",  join(' OR ', map { spa_in($_) } (25, 26, 82, 83, 88, 104, 145)),
+                "ports, gates, binds, evacs, summons -- they also defeat region locking"],
     ["enchant", q{name LIKE 'Enchant %' OR name LIKE 'Mass Enchant %'},
                 "tradeskill material conversion, useless as a reward"],
-    ["rez",     q{81 IN (effectid1,effectid2,effectid3)},
+    # ⚠️ Was slots 1-3 only. A resurrect in slot 4+ was offerable.
+    ["rez",     spa_in(81),
                 "resurrection"],
+    # True North and anything else whose only trick is pointing you north. Purity tested like the
+    # illusion and vision rules, so a spell that happens to carry a compass alongside something real
+    # is kept -- see the note on testing purity rather than presence.
+    # Sense the Dead / Sense Summoned / Sense Animals: a detector, no combat value. Purity tested
+    # like the rest -- a spell that senses something AND does something real is kept.
+    # Disciplines. ⚠️ MIRRORS common/spdat.cpp IsDiscipline EXACTLY -- mana 0 AND some endurance
+    # cost -- so the rule cannot drift from what the engine actually treats as a discipline. Keying it
+    # off "has an endurance cost" alone would be wrong the moment a spell has both.
+    #
+    # They are excluded because they are NOT spells and do not behave like one: a picked discipline is
+    # trained into the Combat Abilities window, not the spellbook, and autoskill cannot fire it either
+    # (that only handles the ten activated specials, Client::GetAvailableAutoSkills). A reward that
+    # lands somewhere the player is not looking, and that none of our systems drive, is not a reward.
+    ["discipline", q{mana = 0 AND (EndurCost > 0 OR EndurUpkeep > 0)},
+                "disciplines -- they train to Combat Abilities, not the spellbook"],
+    ["sense",   q{(52 IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6)
+                   OR 53 IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6)
+                   OR 54 IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6))
+                  AND effectid1  IN (52,53,54,254) AND effectid2  IN (52,53,54,254)
+                  AND effectid3  IN (52,53,54,254) AND effectid4  IN (52,53,54,254)
+                  AND effectid5  IN (52,53,54,254) AND effectid6  IN (52,53,54,254)
+                  AND effectid7  IN (52,53,54,254) AND effectid8  IN (52,53,54,254)
+                  AND effectid9  IN (52,53,54,254) AND effectid10 IN (52,53,54,254)
+                  AND effectid11 IN (52,53,54,254) AND effectid12 IN (52,53,54,254)},
+                "sense dead, summoned, animals -- a detector and nothing else"],
+    ["truenorth", q{56 IN (effectid1,effectid2,effectid3,effectid4,effectid5,effectid6,
+                           effectid7,effectid8,effectid9,effectid10,effectid11,effectid12)
+                    AND effectid1  IN (56,254) AND effectid2  IN (56,254)
+                    AND effectid3  IN (56,254) AND effectid4  IN (56,254)
+                    AND effectid5  IN (56,254) AND effectid6  IN (56,254)
+                    AND effectid7  IN (56,254) AND effectid8  IN (56,254)
+                    AND effectid9  IN (56,254) AND effectid10 IN (56,254)
+                    AND effectid11 IN (56,254) AND effectid12 IN (56,254)},
+                "True North and friends -- a compass, nothing else"],
     ["curecurse", q{(effectid1 = 116 AND effect_base_value1 < 0)
                     OR (effectid2 = 116 AND effect_base_value2 < 0)
                     OR (effectid3 = 116 AND effect_base_value3 < 0)},
                 "curse-counter cures"],
-    ["ldon",    q{targettype = 34},
+    # ⚠️ targettype 34 ALONE MISSES HALF THE FAMILY. It catches the Iony's and Reebo's lines, which
+    # target a dungeon object, but the Wuggan's and Xalirilan's lines are cast on a PLAYER
+    # (targettype 5) and sailed straight through -- 18 of the 36 were still offerable. Key off the
+    # SPAs instead: 164 AppraiseLDonChest, 165 DisarmLDoNTrap, 166 UnlockLDoNChest. Every member of
+    # the family carries one, whatever it targets.
+    ["ldon",    join(' OR ', 'targettype = 34', map { spa_in($_) } (164, 165, 166)),
                 "LDoN dungeon-object appraise/disarm/unlock"],
-    ["corpse",  q{91 IN (effectid1,effectid2,effectid3)},
+    ["corpse",  spa_in(91),
                 "summon corpse"],
     # SPA 32 SummonItem conjures an ITEM. That is one rule covering three things the reward picker
     # should never offer: Magician summons (weapons, bags, jewellery), the Enchanter "Enchant <metal>"

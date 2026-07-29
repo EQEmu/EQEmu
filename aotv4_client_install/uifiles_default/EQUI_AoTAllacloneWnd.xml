@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<XML ID="EQInterfaceDefinitionLanguage">
+	<Schema xmlns="EverQuestData" xmlns:dt="EverQuestDataTypes" />
+
+	<!-- AoTv4 Allaclone window (CCustomWnd "AoTAllacloneWnd"): an in game item, NPC, spell and
+	     recipe lookup. Replaces the self drawn GDI "Search" overlay.
+
+	     There is deliberately NO TabBox. Native tabs work on this client and are the right widget
+	     when each page owns its contents, but all four kinds here share ONE search box, ONE result
+	     list and ONE detail pane, so tabs would mean four copies of each. The four buttons across
+	     the top are mode selectors: they change what the single search searches. The dll marks the
+	     active one by rewriting its label, because no latched button state can be set reliably from
+	     code on this build.
+
+	     Comments must never contain a double hyphen, which is illegal in XML and makes the SIDL
+	     parser abort the WHOLE file, killing the client before character select. Run
+	     aotv4_client_install/validate_ui_xml.sh before copying this anywhere. -->
+
+	<!-- ================================================================ kind selectors -->
+	<Button item="ACW_KindItem">
+		<ScreenID>ACW_KindItem</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>8</X><Y>4</Y></Location>
+		<Size><CX>112</CX><CY>24</CY></Size>
+		<Text>Items</Text>
+		<TextColor><R>255</R><G>230</G><B>140</B></TextColor>
+		<Template>BDT_Normal</Template>
+	</Button>
+
+	<Button item="ACW_KindNpc">
+		<ScreenID>ACW_KindNpc</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>124</X><Y>4</Y></Location>
+		<Size><CX>112</CX><CY>24</CY></Size>
+		<Text>NPCs</Text>
+		<TextColor><R>255</R><G>230</G><B>140</B></TextColor>
+		<Template>BDT_Normal</Template>
+	</Button>
+
+	<Button item="ACW_KindSpell">
+		<ScreenID>ACW_KindSpell</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>240</X><Y>4</Y></Location>
+		<Size><CX>112</CX><CY>24</CY></Size>
+		<Text>Spells</Text>
+		<TextColor><R>255</R><G>230</G><B>140</B></TextColor>
+		<Template>BDT_Normal</Template>
+	</Button>
+
+	<Button item="ACW_KindRecipe">
+		<ScreenID>ACW_KindRecipe</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>356</X><Y>4</Y></Location>
+		<Size><CX>112</CX><CY>24</CY></Size>
+		<Text>Tradeskills</Text>
+		<TextColor><R>255</R><G>230</G><B>140</B></TextColor>
+		<Template>BDT_Normal</Template>
+	</Button>
+
+	<!-- ================================================================ search row -->
+	<Editbox item="ACW_Term">
+		<ScreenID>ACW_Term</ScreenID>
+		<DrawTemplate>WDT_Inner</DrawTemplate>
+		<RelativePosition>true</RelativePosition>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorToLeft>true</LeftAnchorToLeft>
+		<LeftAnchorOffset>8</LeftAnchorOffset>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<RightAnchorOffset>106</RightAnchorOffset>
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<TopAnchorOffset>34</TopAnchorOffset>
+		<BottomAnchorToTop>true</BottomAnchorToTop>
+		<BottomAnchorOffset>58</BottomAnchorOffset>
+		<Location><X>8</X><Y>34</Y></Location>
+		<Size><CX>362</CX><CY>24</CY></Size>
+		<Style_Border>true</Style_Border>
+		<TextColor><R>255</R><G>255</G><B>255</B></TextColor>
+	</Editbox>
+
+	<Button item="ACW_Go">
+		<ScreenID>ACW_Go</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorToLeft>false</LeftAnchorToLeft>
+		<LeftAnchorOffset>98</LeftAnchorOffset>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<RightAnchorOffset>8</RightAnchorOffset>
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<TopAnchorOffset>34</TopAnchorOffset>
+		<BottomAnchorToTop>true</BottomAnchorToTop>
+		<BottomAnchorOffset>58</BottomAnchorOffset>
+		<Location><X>378</X><Y>34</Y></Location>
+		<Size><CX>90</CX><CY>24</CY></Size>
+		<Text>Search</Text>
+		<TextColor><R>140</R><G>255</G><B>140</B></TextColor>
+		<Template>BDT_Normal</Template>
+	</Button>
+
+	<Label item="ACW_Hint">
+		<ScreenID>ACW_Hint</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorToLeft>true</LeftAnchorToLeft>
+		<LeftAnchorOffset>10</LeftAnchorOffset>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<RightAnchorOffset>8</RightAnchorOffset>
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<TopAnchorOffset>62</TopAnchorOffset>
+		<BottomAnchorToTop>true</BottomAnchorToTop>
+		<BottomAnchorOffset>78</BottomAnchorOffset>
+		<Location><X>10</X><Y>62</Y></Location>
+		<Size><CX>458</CX><CY>16</CY></Size>
+		<Text>Type a name and press Search.</Text>
+		<NoWrap>true</NoWrap>
+		<TextColor><R>240</R><G>200</G><B>120</B></TextColor>
+	</Label>
+
+	<!-- ================================================================ results + detail -->
+	<Listbox item="ACW_List">
+		<ScreenID>ACW_List</ScreenID>
+		<DrawTemplate>WDT_Inner</DrawTemplate>
+		<RelativePosition>true</RelativePosition>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorToLeft>true</LeftAnchorToLeft>
+		<LeftAnchorOffset>8</LeftAnchorOffset>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<RightAnchorOffset>8</RightAnchorOffset>
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<TopAnchorOffset>82</TopAnchorOffset>
+		<BottomAnchorToTop>true</BottomAnchorToTop>
+		<BottomAnchorOffset>282</BottomAnchorOffset>
+		<Location><X>8</X><Y>82</Y></Location>
+		<Size><CX>458</CX><CY>200</CY></Size>
+		<TextColor><R>255</R><G>255</G><B>255</B></TextColor>
+		<Style_Border>true</Style_Border>
+		<Style_VScroll>true</Style_VScroll>
+		<Columns><Width>388</Width><Heading>Name</Heading></Columns>
+		<Columns><Width>62</Width><Heading>ID</Heading></Columns>
+	</Listbox>
+
+	<STMLbox item="ACW_Detail">
+		<ScreenID>ACW_Detail</ScreenID>
+		<DrawTemplate>WDT_Inner</DrawTemplate>
+		<RelativePosition>true</RelativePosition>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorToLeft>true</LeftAnchorToLeft>
+		<LeftAnchorOffset>8</LeftAnchorOffset>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<RightAnchorOffset>8</RightAnchorOffset>
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<TopAnchorOffset>288</TopAnchorOffset>
+		<BottomAnchorToTop>false</BottomAnchorToTop>
+		<BottomAnchorOffset>8</BottomAnchorOffset>
+		<Location><X>8</X><Y>288</Y></Location>
+		<Size><CX>458</CX><CY>184</CY></Size>
+		<Style_Border>true</Style_Border>
+		<Style_VScroll>true</Style_VScroll>
+		<TextColor><R>240</R><G>240</G><B>240</B></TextColor>
+	</STMLbox>
+
+	<Screen item="AoTAllacloneWnd">
+		<RelativePosition>false</RelativePosition>
+		<Location><X>200</X><Y>90</Y></Location>
+		<Size><CX>490</CX><CY>512</CY></Size>
+		<Text>Allaclone</Text>
+		<Style_Transparent>false</Style_Transparent>
+		<DrawTemplate>WDT_Def</DrawTemplate>
+		<Style_Titlebar>true</Style_Titlebar>
+		<Style_Closebox>true</Style_Closebox>
+		<Style_Border>true</Style_Border>
+		<Style_Sizable>true</Style_Sizable>
+		<Pieces>ACW_KindItem</Pieces>
+		<Pieces>ACW_KindNpc</Pieces>
+		<Pieces>ACW_KindSpell</Pieces>
+		<Pieces>ACW_KindRecipe</Pieces>
+		<Pieces>ACW_Term</Pieces>
+		<Pieces>ACW_Go</Pieces>
+		<Pieces>ACW_Hint</Pieces>
+		<Pieces>ACW_List</Pieces>
+		<Pieces>ACW_Detail</Pieces>
+	</Screen>
+
+</XML>

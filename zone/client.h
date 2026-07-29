@@ -316,10 +316,14 @@ public:
 	void TraderStartTrader(const EQApplicationPacket *app);
 	int  StartPlayerTrader(uint32 default_mult);   // AoTv4: server-side trader start from satchel (Bazaar Broker NPC)
 	std::string GetTraderSatchelItemIDs();         // AoTv4: CSV of item ids in the Trader's Satchel (for the Broker popup)
+	void RefreshShopSession();   // point surviving trader rows at the current zone/entity (see trading.cpp)
 	void ReclaimOfflineShop();                     // AoTv4: on login, clear any listings left running while offline
 	// AoTv4 in-game search ("allaclone") -- backs the /search overlay. kind = "item"|"npc"|"spell":
 	std::string SearchList(std::string kind, std::string term);   // "id|name^id|name^..." name matches
-	std::string SearchDetail(std::string kind, uint32 id);        // one row's info, lines split by '~'
+	// One row's info, lines split by '~'.
+	// include_sources=false omits the "Dropped by" reverse loot lookup -- the LOOT window wants the
+	// item's own facts, not where else it drops, and that section is a three table join per inspect.
+	std::string SearchDetail(std::string kind, uint32 id, bool include_sources = true);
 
 	// AoTv4 permanent escrow shop (add-from-any-bag; managed via the dll "My Shop" tab):
 	std::string GetSellableInventory();            // "slot|itemid|name|vendor|stackqty|bookprice^..." items to add
@@ -328,7 +332,12 @@ public:
 	int  PullShopItem(uint32 serial);              // unlist one row -> item back to cursor
 	void SetItemPrice(uint32 item_id, uint32 price); // AoTv4 price book: persist item_id->price + append change log
 	std::string GetPriceBook();                    // "itemid|name|price^..." your saved prices (persistent)
-	std::string GetPriceLog();                     // "itemid|name|old|new|when^..." recent price changes
+	std::string GetPriceLog();
+	// AoTv4 shop history: what you listed, and what sold. See trading.cpp.
+	void        RecordShopListing(uint32 item_id, int32 qty, uint32 price);
+	void        RecordShopSale(uint32 item_id, int32 qty, uint32 price, const std::string &buyer);
+	std::string GetShopListingLog();
+	std::string GetShopSoldLog();                     // "itemid|name|old|new|when^..." recent price changes
 
 	// AoTv4 Advanced Loot window (complement mode; drives the dll AdvLootWnd over chat):
 	void SendAdvLootData();                        // push LOOTDATA: every corpse we hold loot rights to

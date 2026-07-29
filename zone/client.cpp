@@ -8300,17 +8300,6 @@ FACTION_VALUE Client::GetFactionLevel(uint32 char_id, uint32 npc_id, uint32 p_ra
 		return(FACTION_INDIFFERENTLY);
 	}
 
-	// AoTv4: all races are faction-agnostic in CITIES. A city guard/citizen (IsGuard) or a merchant never
-	// treats a player as KOS for race/class/deity faction, so every race can freely enter, shop in, and
-	// quest in every city. Dungeon/wild NPCs are NOT guards, so they keep their faction and still aggro on
-	// sight -- the kill-to-level loop is untouched. Active retaliation is preserved below via CheckAggro:
-	// a guard the player ATTACKS still flips to THREATENINGLY and fights back.
-	if (tnpc && tnpc->IsNPC() &&
-		(tnpc->CastToNPC()->IsGuard() || tnpc->CastToNPC()->MerchantType) &&
-		(fac == FACTION_SCOWLS || fac == FACTION_THREATENINGLY)) {
-		fac = FACTION_INDIFFERENTLY;
-	}
-
 	// merchant fix
 	if (tnpc && tnpc->IsNPC() && tnpc->CastToNPC()->MerchantType && (fac == FACTION_THREATENINGLY || fac == FACTION_SCOWLS))
 		fac = FACTION_DUBIOUSLY;

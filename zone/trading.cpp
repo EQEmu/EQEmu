@@ -959,6 +959,30 @@ void Client::TraderEndTrader(bool persist_listings)
 // item); if a row survives and the item is stackable, remove just the quantity that sold; a surviving
 // row for a non-stackable means it's unsold (leave it). Coin from offline sales is paid separately via
 // the shop_escrow_<charid> bucket (bazaar_broker.pay_escrow).
+// Point this character's surviving trader rows at the CURRENT session.
+//
+// ⚠️ The rows are permanent escrow -- they outlive a logout on purpose -- but char_zone_id and
+// char_entity_id were written when the item was listed and are stale the moment you relog. Two things
+// break as a result:
+//   * the /bazaar trader list grouped on those columns, so a seller appeared once PER SESSION they had
+//     ever listed from (see TraderRepository::GetDistinctTraders);
+//   * a purchase routes the payout to the seller's zone using char_zone_id, and a stale zone sends it
+//     somewhere they are not.
+//
+// ⚠️ UPDATE, never DELETE. Client::ReclaimOfflineShop below ends in a blanket DeleteWhere on char_id,
+// which predates the escrow rework: with items living ONLY as trader rows, that would destroy them.
+// It is not called anywhere, and it should not be wired up without being rewritten first.
+void Client::RefreshShopSession()
+{
+	// TraderRepository has DeleteWhere but no UpdateWhere, so this is a direct query -- the same thing
+	// the rest of the trading code does for one-off updates.
+	database.QueryDatabase(fmt::format(
+		"UPDATE `trader` SET `char_zone_id` = '{}', `char_zone_instance_id` = '{}', "
+		"`char_entity_id` = '{}' WHERE `char_id` = '{}'",
+		GetZoneID(), GetInstanceID(), GetID(), CharacterID()
+	));
+}
+
 void Client::ReclaimOfflineShop()
 {
 	std::string listed_key = fmt::format("shop_listed_{}", CharacterID());
@@ -1158,6 +1182,45 @@ std::string Client::SearchList(std::string kind, std::string term)
 // Readable spell description (db_str type 6) with #N / @N placeholders filled from the spell's effect
 // base/max values. Returned cleaned of | ^ ~ so it can be embedded in a SearchDetail line. Used by both
 // the spell detail and (to explain an item's clicky/focus/proc) the item detail.
+// Tidy a "between X and Y" phrase once the placeholders are filled. Two things go wrong on real data:
+// the two numbers can be EQUAL (a spell that does not scale, so the "range" is one value), and they
+// can arrive HIGH FIRST (the template assumes base is the smaller magnitude and that is not always
+// true). Both read as a bug to a player. Only the numeric span is rewritten; the surrounding wording
+// is left exactly as the db_str author wrote it.
+static void AoTv4FixRangePhrases(std::string &s)
+{
+	const std::string kBet = "between ", kAnd = " and ";
+	size_t at = 0;
+	while ((at = s.find(kBet, at)) != std::string::npos) {
+		const size_t n1 = at + kBet.size();
+		size_t e1 = n1;
+		while (e1 < s.size() && isdigit((unsigned char)s[e1])) { ++e1; }
+		if (e1 == n1 || s.compare(e1, kAnd.size(), kAnd) != 0) { at = n1; continue; }
+
+		const size_t n2 = e1 + kAnd.size();
+		size_t e2 = n2;
+		while (e2 < s.size() && isdigit((unsigned char)s[e2])) { ++e2; }
+		if (e2 == n2) { at = n1; continue; }
+
+		const int a = Strings::ToInt(s.substr(n1, e1 - n1));
+		const int b = Strings::ToInt(s.substr(n2, e2 - n2));
+
+		// "between 2 and 2" -> "2": drop the whole span including the "between " lead-in.
+		if (a == b) {
+			s.replace(at, e2 - at, std::to_string(a));
+			at += std::to_string(a).size();
+			continue;
+		}
+		if (a > b) {   // "between 20 and 2" -> "between 2 and 20"
+			const std::string rebuilt = std::to_string(b) + kAnd + std::to_string(a);
+			s.replace(n1, e2 - n1, rebuilt);
+			at = n1 + rebuilt.size();
+			continue;
+		}
+		at = e2;
+	}
+}
+
 static std::string AoTv4SpellDesc(uint32 sid)
 {
 	if (sid == 0) return "";
@@ -1176,7 +1239,16 @@ static std::string AoTv4SpellDesc(uint32 sid)
 		std::string vs = std::to_string(v < 0 ? -v : v); size_t p;
 		while ((p = desc.find(tok)) != std::string::npos) desc.replace(p, tok.size(), vs);
 	};
-	for (int n = 4; n >= 1; --n) { rep(fmt::format("#{}", n), base[n]); rep(fmt::format("@{}", n), mx[n]); }
+	// ⚠️⚠️ maxN == 0 MEANS "NO CAP", NOT "up to zero". CalcSpellEffectValue only clamps when max is
+	// non-zero, so a spell that does not scale with level leaves it at 0 -- and the stock db_str
+	// template "between #1 and @1 damage" then rendered as "between 2 and 0 damage", which reads
+	// backwards and looks like a data error. Fall back to the base so the range is real. 52 of the
+	// 568 pool spells carrying that phrase are in this state.
+	for (int n = 4; n >= 1; --n) {
+		rep(fmt::format("#{}", n), base[n]);
+		rep(fmt::format("@{}", n), mx[n] != 0 ? mx[n] : base[n]);
+	}
+	AoTv4FixRangePhrases(desc);
 	for (auto &c : desc) { if (c == '|' || c == '^' || c == '~') c = ' '; }
 	return desc;
 }
@@ -1194,7 +1266,7 @@ static void AoTv4WrapInto(std::string &out, const std::string &text, const char 
 }
 
 // DETAIL: one row's full info, lines separated by '~' (the dll splits into display lines).
-std::string Client::SearchDetail(std::string kind, uint32 id)
+std::string Client::SearchDetail(std::string kind, uint32 id, bool include_sources)
 {
 	auto clean = [](std::string s) { for (auto &c : s) { if (c == '|' || c == '^' || c == '~') c = ' '; } return s; };
 
@@ -1290,10 +1362,47 @@ std::string Client::SearchDetail(std::string kind, uint32 id)
 		effLine(d->Proc.Effect,  "Combat Proc");
 		effLine(d->Focus.Effect, "Focus");
 		effLine(d->Worn.Effect,  "Worn");
+		// ⚠️ WHAT THE ITEM IS, for everything that is not equipment. Every line above this point is gated
+		// on a weapon/armour stat -- damage, AC, HP, resists, effects -- so a rogue poison, a tradeskill
+		// component or a piece of trash produced a name and then NOTHING, which reads as a broken panel
+		// rather than an item with no stats. Type, stack size, value and the tradeskill flag are the
+		// facts that actually describe those.
+		{
+			static const std::map<int, const char *> TYPES = {
+				{  0, "1H Slashing" }, {  1, "2H Slashing" }, {  2, "Piercing"    }, {  3, "1H Blunt"  },
+				{  4, "2H Blunt"    }, {  5, "Bow"         }, {  8, "Shield"      }, {  9, "Scroll"    },
+				{ 10, "Armor"       }, { 11, "Misc"        }, { 12, "Lockpick"    }, { 14, "Food"      },
+				{ 15, "Drink"       }, { 16, "Light"       }, { 17, "Tradeskill"  }, { 18, "Bandage"   },
+				{ 19, "Throwing"    }, { 20, "Spell"       }, { 21, "Potion"      }, { 23, "Wind Instrument" },
+				{ 24, "Stringed Instrument" }, { 25, "Brass Instrument" }, { 26, "Percussion Instrument" },
+				{ 27, "Arrow"       }, { 29, "Jewelry"     }, { 31, "Book"        }, { 32, "Note"      },
+				{ 33, "Key"         }, { 34, "Coin"        }, { 36, "Fishing Pole"}, { 37, "Fishing Bait" },
+				{ 38, "Alcohol"     }, { 39, "Key"         }, { 40, "Compass"     }, { 42, "Poison"    },
+				{ 45, "Martial"     }, { 52, "Charm"       }, { 53, "Dye"         }, { 54, "Augmentation" },
+				{ 60, "Recipe"      }, { 61, "Recipe"      }, { 63, "Alt Currency"}, { 66, "Collectible" },
+				{ 67, "Container"   }
+			};
+			const auto ti = TYPES.find((int) d->ItemType);
+			std::string tl = fmt::format("Type: {}", ti != TYPES.end() ? ti->second : "Misc");
+			if (d->Tradeskills)            tl += "  (tradeskill)";
+			if (d->Stackable && d->StackSize > 1) tl += fmt::format("   Stacks to {}", d->StackSize);
+			if (d->MaxCharges > 0)         tl += fmt::format("   Charges: {}", d->MaxCharges);
+			s += "~" + tl;
+
+			// Value, in the coin the player actually sees.
+			if (d->Price > 0) {
+				const uint32 p = d->Price;
+				s += fmt::format("~Value: {}p {}g {}s {}c", p / 1000, (p / 100) % 10, (p / 10) % 10, p % 10);
+			}
+		}
+
 		if (d->ReqLevel) s += fmt::format("~Required Level: {}", d->ReqLevel);
 		if (d->RecLevel) s += fmt::format("~Recommended Level: {}", d->RecLevel);
 
-		// "Dropped by" -- reverse loot lookup (use the native base id; tiers roll off the same tables)
+		// "Dropped by" -- reverse loot lookup (use the native base id; tiers roll off the same tables).
+		// Skipped for the loot window: standing over a corpse, where else the thing drops is noise, and
+		// this is a three table join run on every inspect.
+		if (!include_sources) { return s; }
 		auto dropr = database.QueryDatabase(fmt::format(
 			"SELECT DISTINCT REPLACE(n.name,'_',' ') FROM npc_types n "
 			"JOIN loottable_entries lte ON lte.loottable_id = n.loottable_id "
@@ -1347,7 +1456,11 @@ std::string Client::SearchDetail(std::string kind, uint32 id)
 		std::string s = clean(row[0] ? row[0] : "");
 
 		// line: mana / cast / recast / range / learn level
-		std::string l = fmt::format("Mana {}  Cast {}ms", I(1), I(2));
+		// ⚠️ Cast time in SECONDS, not the raw milliseconds the column holds. "Cast 2500ms" is the DB's
+		// unit, not a player's -- and this string is now also the level-up picker's description, where the
+		// cast time is one of the few things worth comparing between three choices at a glance.
+		const double cast_s = I(2) / 1000.0;
+		std::string l = fmt::format("Mana {}  Cast {:.1f}s", I(1), cast_s);
 		if (I(5) > 0) l += fmt::format("  Recast {}s", I(5) / 1000);
 		if (I(6) > 0) l += fmt::format("  Range {}", I(6));
 		l += fmt::format("  Learn L{}", I(3));
@@ -1373,6 +1486,17 @@ std::string Client::SearchDetail(std::string kind, uint32 id)
 				while ((p = desc.find(tok)) != std::string::npos) desc.replace(p, tok.size(), vs);
 			};
 			for (int n = 4; n >= 1; --n) { rep(fmt::format("#{}", n), base[n]); rep(fmt::format("@{}", n), mx[n]); }
+
+			// ⚠️ "%z" IS THE DURATION TOKEN, not a percent sign. Only #N and  were being filled, so a
+			// description like "increasing their hit points and armor class for %z." rendered as a bare
+			// "for %." and looked like a formatting bug. EQ descriptions use %z for the buff duration.
+			{
+				const std::string dur = (bd > 0) ? fmt::format("{} ticks", bd) : "the duration";
+				size_t p;
+				while ((p = desc.find("%z")) != std::string::npos) { desc.replace(p, 2, dur); }
+				while ((p = desc.find("%Z")) != std::string::npos) { desc.replace(p, 2, dur); }
+			}
+
 			desc = clean(desc);
 			s += "~";                                            // blank separator line
 			const size_t W = 52; size_t pos = 0;
@@ -1512,6 +1636,90 @@ std::string Client::GetPriceLog()
 	return csv;
 }
 
+
+// ---------------------------------------------------------------------------------------------
+// AoTv4 shop history: what you have LISTED, and what has SOLD.
+//
+// Both follow the price log above exactly: a newest-first, capped, comma-separated data bucket, with
+// a reader that resolves item names at display time. Kept as buckets rather than a table because the
+// price log already proved the shape and a table would need a migration for two panels.
+//
+// ⚠️ CAPPED. A bucket is one string; without a cap these grow for the life of the character.
+// ---------------------------------------------------------------------------------------------
+static const int AOTV4_SHOP_LOG_MAX = 60;
+
+// Append to a capped newest-first bucket.
+//
+// ⚠️ Uses the zone-global `database` directly rather than taking one: DataBucket wants a
+// SharedDatabase*, and passing `Database&` does not convert.
+static void AoTv4PushShopLog(const std::string &key, const std::string &entry)
+{
+	std::string out  = entry;
+	int         kept = 1;
+	for (const auto &e : Strings::Split(DataBucket::GetData(&database, key), ",")) {
+		if (e.empty() || kept >= AOTV4_SHOP_LOG_MAX) { continue; }
+		out += "," + e;
+		++kept;
+	}
+	DataBucket::SetData(&database, key, out);
+}
+
+// Record a listing.  item:qty:price:unixtime
+void Client::RecordShopListing(uint32 item_id, int32 qty, uint32 price)
+{
+	if (item_id == 0) { return; }
+	AoTv4PushShopLog(
+		fmt::format("shoplist_{}", CharacterID()),
+		fmt::format("{}:{}:{}:{}", item_id, qty, price, (long) time(nullptr))
+	);
+}
+
+// Record a sale.  item:qty:price:buyer:unixtime
+//
+// ⚠️ The buyer name is stored, not looked up later: by the time anyone opens the panel the buyer may
+// be offline, in another zone, or renamed. Delimiters are stripped so a name cannot split the entry.
+void Client::RecordShopSale(uint32 item_id, int32 qty, uint32 price, const std::string &buyer)
+{
+	if (item_id == 0) { return; }
+	std::string who = buyer.empty() ? "someone" : buyer;
+	for (auto &ch : who) { if (ch == ':' || ch == ',' || ch == '|' || ch == '^') { ch = ' '; } }
+	AoTv4PushShopLog(
+		fmt::format("shopsold_{}", CharacterID()),
+		fmt::format("{}:{}:{}:{}:{}", item_id, qty, price, who, (long) time(nullptr))
+	);
+}
+
+// Listings you have made, "itemid|name|qty|price|unixtime^..." (newest first).
+std::string Client::GetShopListingLog()
+{
+	std::string csv;
+	for (const auto &tok : Strings::Split(DataBucket::GetData(&database, fmt::format("shoplist_{}", CharacterID())), ",")) {
+		auto kv = Strings::Split(tok, ":");
+		if (kv.size() < 4) { continue; }
+		uint32              iid  = Strings::ToUnsignedInt(kv[0]);
+		const EQ::ItemData *d    = database.GetItem(iid);
+		std::string         name = d ? d->Name : fmt::format("item {}", iid);
+		for (auto &ch : name) { if (ch == '|' || ch == '^') { ch = ' '; } }
+		csv += fmt::format("{}|{}|{}|{}|{}^", iid, name, kv[1], kv[2], kv[3]);
+	}
+	return csv;
+}
+
+// Sales you have made, "itemid|name|qty|price|buyer|unixtime^..." (newest first).
+std::string Client::GetShopSoldLog()
+{
+	std::string csv;
+	for (const auto &tok : Strings::Split(DataBucket::GetData(&database, fmt::format("shopsold_{}", CharacterID())), ",")) {
+		auto kv = Strings::Split(tok, ":");
+		if (kv.size() < 5) { continue; }
+		uint32              iid  = Strings::ToUnsignedInt(kv[0]);
+		const EQ::ItemData *d    = database.GetItem(iid);
+		std::string         name = d ? d->Name : fmt::format("item {}", iid);
+		for (auto &ch : name) { if (ch == '|' || ch == '^') { ch = ' '; } }
+		csv += fmt::format("{}|{}|{}|{}|{}|{}^", iid, name, kv[1], kv[2], kv[3], kv[4]);
+	}
+	return csv;
+}
 // Add inventory items to the shop. `csv` = "slot:price,slot:price,..." (price is absolute copper). Each
 // item is escrowed OUT of the player's bags into a `trader` row with a unique per-character item_sn.
 // Returns the number added.
@@ -1620,6 +1828,12 @@ int Client::AddItemsToShop(std::string csv)
 		DeleteItemInInventory(s.first, s.second, true, true);   // ESCROW: del_qty 0 = whole stack, else partial
 	}
 	DataBucket::SetData(&database, sn_key, std::to_string(next_sn));
+
+	// History for the List Item tab. Recorded HERE, after the rows are committed and the items taken,
+	// so the log can never claim a listing that did not happen.
+	for (const auto &r : rows) {
+		RecordShopListing(r.item_id, r.item_charges, r.item_cost);
+	}
 
 	// register as a trader so the shop shows in Bazaar search (rows alone are DB-searchable, but this
 	// keeps the world's trader view consistent). Buys route through the DB/parcel path.

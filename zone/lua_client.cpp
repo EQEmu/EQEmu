@@ -1441,6 +1441,16 @@ std::string Lua_Client::GetPriceLog() {
 	return self->GetPriceLog();
 }
 
+std::string Lua_Client::GetShopListingLog() {
+	Lua_Safe_Call_String();
+	return self->GetShopListingLog();
+}
+
+std::string Lua_Client::GetShopSoldLog() {
+	Lua_Safe_Call_String();
+	return self->GetShopSoldLog();
+}
+
 bool Lua_Client::IsTrader() {
 	Lua_Safe_Call_Bool();
 	return self->IsTrader();
@@ -4061,6 +4071,8 @@ luabind::scope lua_register_client() {
 	.def("GetRegionMaxLevel", &Lua_Client::GetRegionMaxLevel)
 	.def("GetPriceBook", &Lua_Client::GetPriceBook)
 	.def("GetPriceLog", &Lua_Client::GetPriceLog)
+	.def("GetShopListingLog", &Lua_Client::GetShopListingLog)
+	.def("GetShopSoldLog", &Lua_Client::GetShopSoldLog)
 	.def("IsTrader", &Lua_Client::IsTrader)
 	.def("GrantNameChange", &Lua_Client::GrantNameChange)
 	.def("GuildID", (uint32(Lua_Client::*)(void))&Lua_Client::GuildID)

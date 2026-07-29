@@ -540,6 +540,12 @@ void Client::CompleteConnect()
 	achievement_manager.ProcessLevel(this);
 	achievement_manager.ProcessZoneVisit(this);
 
+	// AoTv4: point any surviving shop listings at THIS session. The rows are permanent escrow and
+	// outlive a logout, but their char_zone_id / char_entity_id were written when the item was listed
+	// and are stale now -- which duplicated the seller in the /bazaar trader list and would route a
+	// sale payout to a zone they are no longer in.
+	RefreshShopSession();
+
 	// moved to dbload and translators since we iterate there also .. keep m_pp values whatever they are when they get here
 	/*const auto sbs = EQ::spells::DynamicLookup(ClientVersion(), GetGM())->SpellbookSize;
 	for (uint32 spellInt = 0; spellInt < sbs; ++spellInt) {
@@ -10470,16 +10476,27 @@ void Client::SendAdvLootData()
 		}
 		for (auto &ch : npc) { if (ch == '|' || ch == '^') { ch = ' '; } }
 
+		// ⚠️ EVERY `continue` BELOW HIDES A REAL ITEM, and until now all four looked identical from in
+		// game: the row is simply absent. Items were reported missing (rogue poisons, tradeskill and
+		// trash) with no way to tell WHICH gate dropped them, so each one is counted and the totals are
+		// logged. Enable with #logs (Loot category) and open a corpse.
+		int skip_noslot = 0, skip_never = 0, skip_nodata = 0, skip_cap = 0;
+
 		for (auto *it : corpse->GetLootItems()) {
-			if (!it || it->lootslot == 0xFFFF) { continue; }          // not a client-visible loot slot
+			if (!it) { continue; }
+			// No client-addressable corpse slot. Corpse::MakeLootRequestPackets re-stamps every
+			// lootslot from the client's CorpseBitmask each loot session, so this can change under us.
+			if (it->lootslot == 0xFFFF) { skip_noslot++; continue; }
 			const auto ri   = rules.find(it->item_id);
 			const int  rule = (ri == rules.end()) ? ADVLOOT_RULE_NONE : ri->second;
 			// NV only hides while "Apply Filters" is checked -- live's exact wording. The item is never
 			// destroyed either way: it stays on the corpse and the stock loot window still shows it.
-			if (rule == ADVLOOT_RULE_NV && filter) { continue; }
+			if (rule == ADVLOOT_RULE_NV && filter) { skip_never++; continue; }
+			// Item id not in SHARED MEMORY. An item added to the DB without ./shared_memory rebuilt
+			// resolves to nothing here and vanishes from the list with no other symptom.
 			const EQ::ItemData *d = database.GetItem(it->item_id);
-			if (!d) { continue; }
-			if (n >= ADVLOOT_MAX_ROWS) { break; }                     // keep the chat line bounded
+			if (!d) { skip_nodata++; continue; }
+			if (n >= ADVLOOT_MAX_ROWS) { skip_cap++; break; }         // keep the chat line bounded
 			std::string name = d->Name;
 			for (auto &ch : name) { if (ch == '|' || ch == '^') { ch = ' '; } }
 			// charges is the stack size for stackables; for everything else it's item charges (often 0/-1),
@@ -10504,6 +10521,19 @@ void Client::SendAdvLootData()
 			);
 			++n;
 		}
+
+		// One line per corpse, and only when something was actually dropped, so a healthy corpse is
+		// silent. This is the diagnostic for "item X is not in my loot window".
+		if (skip_noslot || skip_never || skip_nodata || skip_cap) {
+			LogLoot(
+				"AdvLoot [{}] corpse [{}] showed [{}] hid [{}]: no_corpse_slot [{}] never_rule [{}] "
+				"not_in_shared_memory [{}] row_cap [{}]",
+				GetCleanName(), corpse->GetID(), n,
+				skip_noslot + skip_never + skip_nodata + skip_cap,
+				skip_noslot, skip_never, skip_nodata, skip_cap
+			);
+		}
+
 		if (n >= ADVLOOT_MAX_ROWS) { break; }
 	}
 
@@ -10608,83 +10638,33 @@ bool Client::AdvLootSlot(uint16 corpse_id, int slot)
 	return true;
 }
 
-// Render an item as STML for the Advanced Loot detail panel, laid out like the client's own item
-// display. STML is the same markup CStmlWnd renders everywhere else, so this reads as a real inspect
-// rather than a text dump. Kept on ONE chat line (no newlines) -- <br> does the line breaks.
-static std::string AdvLootItemStml(const EQ::ItemData *d, int charges)
+// The loot window's detail panel, built from the SAME source as the SEARCH window.
+//
+// ⚠️ Client::SearchDetail is far richer than the loot-local builder below (stats, resists, skill mods,
+// spell effects with duration, size, class and race masks) -- that builder only ever showed AC, DMG,
+// HP, Mana, weight and level. Using one source means an item reads identically in both windows and
+// there is a single place to change the format.
+//
+// ⚠️ THE TWO FORMATS ARE NOT INTERCHANGEABLE. SearchDetail separates lines with "~" because the search
+// overlay is self drawn; this panel is an STML widget and wants "<br>". Converting here rather than
+// changing SearchDetail keeps the search window working unchanged.
+static std::string AdvLootDetailStml(uint32 item_id, Client *c)
 {
-	if (!d) { return ""; }
+	if (!c || !item_id) { return ""; }
+	// include_sources = false: no "Dropped by" here. Standing over a corpse, where else the item drops
+	// is noise -- that belongs to the SEARCH window, which is what it is for.
+	std::string s = c->SearchDetail("item", item_id, false);
+	if (s.empty()) { return ""; }
 
-	auto stat = [](const char *label, int v) {
-		return v ? fmt::format("{} {}{}  ", label, v > 0 ? "+" : "", v) : std::string();
-	};
-
-	std::string s;
-	s += fmt::format("<c \"#F0E68C\">{}</c><br>", d->Name);
-
-	// weapons lead with damage/delay, the way the item window does
-	if (d->Damage && d->Delay) {
-		const double ratio = (double) d->Damage / ((double) d->Delay / 10.0);
-		s += fmt::format("DMG: {}  Dly: {}  (ratio {:.2f})<br>", d->Damage, d->Delay, ratio);
+	std::string out;
+	out.reserve(s.size() + 64);
+	for (char ch : s) {
+		if (ch == '~') { out += "<br>"; }
+		else             { out += ch; }
 	}
-
-	if (d->AC)   { s += fmt::format("AC: {}  ", d->AC); }
-	if (d->HP)   { s += fmt::format("HP: {}  ", d->HP); }
-	if (d->Mana) { s += fmt::format("Mana: {}  ", d->Mana); }
-	if (d->AC || d->HP || d->Mana) { s += "<br>"; }
-
-	const std::string attrs =
-		stat("STR", d->AStr) + stat("STA", d->ASta) + stat("AGI", d->AAgi) + stat("DEX", d->ADex) +
-		stat("WIS", d->AWis) + stat("INT", d->AInt) + stat("CHA", d->ACha);
-	if (!attrs.empty()) { s += attrs + "<br>"; }
-
-	const std::string saves =
-		stat("SvMagic", d->MR) + stat("SvFire", d->FR) + stat("SvCold", d->CR) +
-		stat("SvDisease", d->DR) + stat("SvPoison", d->PR);
-	if (!saves.empty()) { s += saves + "<br>"; }
-
-	s += fmt::format("WT: {:.1f}  Size: {}<br>", (double) d->Weight / 10.0,
-	                 d->Size == 0 ? "TINY" : d->Size == 1 ? "SMALL" : d->Size == 2 ? "MEDIUM"
-	                              : d->Size == 3 ? "LARGE" : "GIANT");
-
-	// Spell effects, in the order the item window lists them. A proc is often the whole reason a
-	// weapon is worth keeping, so leaving it out made the panel misleading rather than merely sparse.
-	auto effect = [](const char *label, const EQ::item::ItemEffect_Struct &e) {
-		if (e.Effect <= 0 || !IsValidSpell(e.Effect)) { return std::string(); }
-		std::string line = fmt::format("<c \"#9CCFFF\">{}: {}</c>", label, GetSpellName(e.Effect));
-		if (e.Level) { line += fmt::format(" (level {})", e.Level); }
-		return line + "<br>";
-	};
-	s += effect("Combat Effect", d->Proc);    // the proc
-	s += effect("Effect",        d->Click);   // clicky
-	s += effect("Worn",          d->Worn);
-	s += effect("Focus",         d->Focus);
-	s += effect("Scroll",        d->Scroll);
-	s += effect("Bard",          d->Bard);
-
-	if (d->ReqLevel) { s += fmt::format("Required level: {}<br>", d->ReqLevel); }
-	if (d->RecLevel) { s += fmt::format("Recommended level: {}<br>", d->RecLevel); }
-
-	if (!d->NoDrop) { s += "<c \"#FF8080\">NO DROP</c><br>"; }
-	if (!d->NoRent) { s += "<c \"#FF8080\">TEMPORARY</c><br>"; }
-
-	// Compact coin, matching the list's Value column. Strings::Money spells it out in full
-	// ("2 platinum, 5 gold, 6 silver, and 4 copper"), which reads as a sentence in a stat block.
-	const uint64 value = Client::AdvLootSellValue(d, charges);
-	std::string  coin  = "none";
-	if (value) {
-		coin.clear();
-		if (value / 1000)       { coin += fmt::format("{}p ", value / 1000); }
-		if ((value / 100) % 10) { coin += fmt::format("{}g ", (value / 100) % 10); }
-		if ((value / 10)  % 10) { coin += fmt::format("{}s ", (value / 10) % 10); }
-		if (value % 10)         { coin += fmt::format("{}c",  value % 10); }
-	}
-	s += fmt::format("<c \"#E0C86E\">Vendor value: {}</c>", coin);
-
-	// the transport is a single chat line; strip anything that would break it apart
-	for (auto &ch : s) { if (ch == '\n' || ch == '\r' || ch == '^') { ch = ' '; } }
-	return s;
+	return out;
 }
+
 
 // What a vendor would pay for this item, using the same basis as Handle_OP_ShopPlayerSell:
 // item->Price scaled by Merchant:BuyCostMod. There is no vendor involved here, so the CHA/faction
@@ -10945,7 +10925,7 @@ bool Client::HandleAdvLootSay(const char *msg)
 			LootItem *li = AdvLootResolve(corpse_id, slot, want);
 			const EQ::ItemData *d = li ? database.GetItem(li->item_id) : nullptr;
 			if (d) {
-				Message(Chat::White, "%s", fmt::format("LOOTINFO {}", AdvLootItemStml(d, li->charges)).c_str());
+				Message(Chat::White, "%s", fmt::format("LOOTINFO {}", AdvLootDetailStml(li->item_id, this)).c_str());
 			}
 			else {
 				Message(Chat::White, "LOOTINFO ");   // clears the panel
@@ -10982,12 +10962,13 @@ bool Client::HandleAdvLootSay(const char *msg)
 		const EQ::ItemData *d   = iid ? database.GetItem(iid) : nullptr;
 		Message(
 			Chat::White, "%s",
-			d ? fmt::format("LOOTINFO {}", AdvLootItemStml(d, 1)).c_str() : "LOOTINFO "
+			d ? fmt::format("LOOTINFO {}", AdvLootDetailStml(iid, this)).c_str() : "LOOTINFO "
 		);
 		return true;
 	}
 	if (strcmp(msg, "alsrefresh") == 0) { SendAdvLootData();    return true; }
 	if (strcmp(msg, "alsfilters") == 0) { SendAdvLootFilters(); return true; }
+
 	// "/say alsfilterset <itemid> <rule>" -- change an existing rule from the Edit Filters view
 	if (strncmp(msg, "alsfilterset ", 13) == 0) {
 		unsigned int iid  = 0;

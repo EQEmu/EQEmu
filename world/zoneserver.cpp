@@ -1684,6 +1684,33 @@ void ZoneServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p) {
 				return;
 			}
 
+			// AoTv4: record the sale in the seller's shop history (the My Shop tab's sold panel).
+			//
+			// ⚠️ WRITTEN HERE, IN WORLD, and BEFORE the online/offline split -- deliberately. The seller may
+			// be offline, in which case no zone-side Client object exists to call Client::RecordShopSale on,
+			// and the whole point of the panel is seeing what sold WHILE you were away. World already writes
+			// the escrow bucket the same way, so the bucket format is shared with GetShopSoldLog.
+			{
+				const uint32 sold_qty   = in->trader_buy_struct.quantity ? in->trader_buy_struct.quantity : 1;
+				std::string  buyer_name = in->trader_buy_struct.buyer_name[0]
+				                          ? in->trader_buy_struct.buyer_name : "someone";
+				for (auto &ch : buyer_name) {
+					if (ch == ':' || ch == ',' || ch == '|' || ch == '^') { ch = ' '; }
+				}
+				std::string sold_key = fmt::format("shopsold_{}", in->trader_buy_struct.trader_id);
+				std::string entry    = fmt::format(
+					"{}:{}:{}:{}:{}",
+					in->trader_buy_struct.item_id, sold_qty, in->trader_buy_struct.price,
+					buyer_name, (long) time(nullptr));
+				int kept = 1;
+				for (const auto &e : Strings::Split(DataBucket::GetData(&database, sold_key), ",")) {
+					if (e.empty() || kept >= 60) { continue; }
+					entry += "," + e;
+					++kept;
+				}
+				DataBucket::SetData(&database, sold_key, entry);
+			}
+
 			auto trader = ClientList::Instance()->FindCLEByCharacterID(in->trader_buy_struct.trader_id);
 			if (trader) {
 				ZSList::Instance()->SendPacket(trader->zone(), trader->instance(), pack);

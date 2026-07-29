@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<XML ID="EQInterfaceDefinitionLanguage">
+	<Schema xmlns="EverQuestData" xmlns:dt="EverQuestDataTypes"/>
+
+	<!--
+		AoTv4 Spell Journal. Two native tabs, four listboxes, adapted from the earlier AoT generation's
+		EQUI_AoTSpellBook.xml (New folder (2)) which proved both work on this client.
+
+		Known : the spells this character has scribed, grouped under level band headers.
+		Pool  : what can still be offered at a chosen level, so progression is legible. 2,154 spells
+		        across 78 levels are otherwise completely invisible until one happens to come up.
+
+		Each tab is a list over a detail pane. The detail text is built CLIENT SIDE from the client's
+		own spell record, so it needs no dbstr_us.txt round trip, cannot drift from the real spell,
+		and costs no chat traffic.
+
+		⚠️ Comments here must never contain a double hyphen. It is illegal in XML and the SIDL parser
+		aborts the WHOLE file, killing the client before char select with only a UIErrorLog.txt line to
+		show for it. Run aotv4_client_install/validate_ui_xml.sh before copying this anywhere.
+	-->
+
+	<!-- Known tab: scribed spell list, 3 columns -->
+	<Listbox item="ASJ_KnownList">
+		<ScreenID>ASJ_KnownList</ScreenID>
+		<DrawTemplate>WDT_Inner</DrawTemplate>
+		<AutoStretch>true</AutoStretch>
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<BottomAnchorToTop>false</BottomAnchorToTop>
+		<LeftAnchorToLeft>true</LeftAnchorToLeft>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<LeftAnchorOffset>4</LeftAnchorOffset>
+		<TopAnchorOffset>4</TopAnchorOffset>
+		<RightAnchorOffset>4</RightAnchorOffset>
+		<BottomAnchorOffset>200</BottomAnchorOffset>
+		<Style_Border>true</Style_Border>
+		<Style_VScroll>true</Style_VScroll>
+		<Columns>
+			<Width>50</Width>
+			<Heading>Lvl</Heading>
+		</Columns>
+		<Columns>
+			<Width>250</Width>
+			<Heading>Spell</Heading>
+		</Columns>
+		<Columns>
+			<Width>92</Width>
+			<Heading>Type</Heading>
+		</Columns>
+	</Listbox>
+
+	<!-- Known tab: detail pane -->
+	<Listbox item="ASJ_KnownDetail">
+		<ScreenID>ASJ_KnownDetail</ScreenID>
+		<DrawTemplate>WDT_Inner</DrawTemplate>
+		<AutoStretch>true</AutoStretch>
+		<TopAnchorToTop>false</TopAnchorToTop>
+		<BottomAnchorToTop>false</BottomAnchorToTop>
+		<LeftAnchorToLeft>true</LeftAnchorToLeft>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<LeftAnchorOffset>4</LeftAnchorOffset>
+		<TopAnchorOffset>196</TopAnchorOffset>
+		<RightAnchorOffset>4</RightAnchorOffset>
+		<BottomAnchorOffset>4</BottomAnchorOffset>
+		<Style_Border>true</Style_Border>
+		<Style_VScroll>true</Style_VScroll>
+		<Columns>
+			<Width>396</Width>
+		</Columns>
+	</Listbox>
+
+	<Page item="ASJ_KnownPage">
+		<ScreenID>ASJ_KnownPage</ScreenID>
+		<RelativePosition>false</RelativePosition>
+		<Location>
+			<X>0</X>
+			<Y>22</Y>
+		</Location>
+		<Size>
+			<CX>420</CX>
+			<CY>534</CY>
+		</Size>
+		<Style_VScroll>false</Style_VScroll>
+		<Style_HScroll>false</Style_HScroll>
+		<Style_Transparent>false</Style_Transparent>
+		<TooltipReference/>
+		<DrawTemplate>WDT_Def</DrawTemplate>
+		<TabText>Known</TabText>
+		<TabTextColor>
+			<R>255</R>
+			<G>255</G>
+			<B>255</B>
+		</TabTextColor>
+		<TabTextActiveColor>
+			<R>255</R>
+			<G>255</G>
+			<B>0</B>
+		</TabTextActiveColor>
+		<Style_Sizable>true</Style_Sizable>
+		<Pieces>ASJ_KnownList</Pieces>
+		<Pieces>ASJ_KnownDetail</Pieces>
+	</Page>
+
+	<!-- Pool tab: level stepper -->
+	<Button item="ASJ_PrevBtn">
+		<ScreenID>ASJ_PrevBtn</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorToLeft>true</LeftAnchorToLeft>
+		<LeftAnchorOffset>4</LeftAnchorOffset>
+		<RightAnchorToLeft>true</RightAnchorToLeft>
+		<RightAnchorOffset>64</RightAnchorOffset>
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<TopAnchorOffset>4</TopAnchorOffset>
+		<BottomAnchorToTop>true</BottomAnchorToTop>
+		<BottomAnchorOffset>28</BottomAnchorOffset>
+		<Text>&lt;&lt;</Text>
+		<TextColor>
+			<R>255</R>
+			<G>255</G>
+			<B>255</B>
+		</TextColor>
+		<Template>BDT_Square</Template>
+		<TooltipReference>Show the pool one level lower</TooltipReference>
+		<Style_Checkbox>false</Style_Checkbox>
+	</Button>
+
+	<Label item="ASJ_LevelLabel">
+		<ScreenID>ASJ_LevelLabel</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorToLeft>true</LeftAnchorToLeft>
+		<LeftAnchorOffset>68</LeftAnchorOffset>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<RightAnchorOffset>68</RightAnchorOffset>
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<TopAnchorOffset>8</TopAnchorOffset>
+		<BottomAnchorToTop>true</BottomAnchorToTop>
+		<BottomAnchorOffset>26</BottomAnchorOffset>
+		<Text>Level</Text>
+		<TextColor>
+			<R>255</R>
+			<G>255</G>
+			<B>255</B>
+		</TextColor>
+		<AlignCenter>true</AlignCenter>
+		<NoWrap>true</NoWrap>
+	</Label>
+
+	<Button item="ASJ_NextBtn">
+		<ScreenID>ASJ_NextBtn</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorToLeft>false</LeftAnchorToLeft>
+		<LeftAnchorOffset>64</LeftAnchorOffset>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<RightAnchorOffset>4</RightAnchorOffset>
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<TopAnchorOffset>4</TopAnchorOffset>
+		<BottomAnchorToTop>true</BottomAnchorToTop>
+		<BottomAnchorOffset>28</BottomAnchorOffset>
+		<Text>&gt;&gt;</Text>
+		<TextColor>
+			<R>255</R>
+			<G>255</G>
+			<B>255</B>
+		</TextColor>
+		<Template>BDT_Square</Template>
+		<TooltipReference>Show the pool one level higher</TooltipReference>
+		<Style_Checkbox>false</Style_Checkbox>
+	</Button>
+
+	<!-- Pool tab: offerable list -->
+	<Listbox item="ASJ_PoolList">
+		<ScreenID>ASJ_PoolList</ScreenID>
+		<DrawTemplate>WDT_Inner</DrawTemplate>
+		<AutoStretch>true</AutoStretch>
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<BottomAnchorToTop>false</BottomAnchorToTop>
+		<LeftAnchorToLeft>true</LeftAnchorToLeft>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<LeftAnchorOffset>4</LeftAnchorOffset>
+		<TopAnchorOffset>32</TopAnchorOffset>
+		<RightAnchorOffset>4</RightAnchorOffset>
+		<BottomAnchorOffset>200</BottomAnchorOffset>
+		<Style_Border>true</Style_Border>
+		<Style_VScroll>true</Style_VScroll>
+		<Columns>
+			<Width>300</Width>
+			<Heading>Spell</Heading>
+		</Columns>
+		<Columns>
+			<Width>92</Width>
+			<Heading>Status</Heading>
+		</Columns>
+	</Listbox>
+
+	<!-- Pool tab: detail pane -->
+	<Listbox item="ASJ_PoolDetail">
+		<ScreenID>ASJ_PoolDetail</ScreenID>
+		<DrawTemplate>WDT_Inner</DrawTemplate>
+		<AutoStretch>true</AutoStretch>
+		<TopAnchorToTop>false</TopAnchorToTop>
+		<BottomAnchorToTop>false</BottomAnchorToTop>
+		<LeftAnchorToLeft>true</LeftAnchorToLeft>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<LeftAnchorOffset>4</LeftAnchorOffset>
+		<TopAnchorOffset>196</TopAnchorOffset>
+		<RightAnchorOffset>4</RightAnchorOffset>
+		<BottomAnchorOffset>4</BottomAnchorOffset>
+		<Style_Border>true</Style_Border>
+		<Style_VScroll>true</Style_VScroll>
+		<Columns>
+			<Width>396</Width>
+		</Columns>
+	</Listbox>
+
+	<Page item="ASJ_PoolPage">
+		<ScreenID>ASJ_PoolPage</ScreenID>
+		<RelativePosition>false</RelativePosition>
+		<Location>
+			<X>0</X>
+			<Y>22</Y>
+		</Location>
+		<Size>
+			<CX>420</CX>
+			<CY>534</CY>
+		</Size>
+		<Style_VScroll>false</Style_VScroll>
+		<Style_HScroll>false</Style_HScroll>
+		<Style_Transparent>false</Style_Transparent>
+		<TooltipReference/>
+		<DrawTemplate>WDT_Def</DrawTemplate>
+		<TabText>Pool</TabText>
+		<TabTextColor>
+			<R>255</R>
+			<G>255</G>
+			<B>255</B>
+		</TabTextColor>
+		<TabTextActiveColor>
+			<R>255</R>
+			<G>255</G>
+			<B>0</B>
+		</TabTextActiveColor>
+		<Style_Sizable>true</Style_Sizable>
+		<Pieces>ASJ_PrevBtn</Pieces>
+		<Pieces>ASJ_LevelLabel</Pieces>
+		<Pieces>ASJ_NextBtn</Pieces>
+		<Pieces>ASJ_PoolList</Pieces>
+		<Pieces>ASJ_PoolDetail</Pieces>
+	</Page>
+
+	<TabBox item="ASJ_Tabs">
+		<ScreenID>ASJ_Tabs</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorOffset>0</LeftAnchorOffset>
+		<TopAnchorOffset>0</TopAnchorOffset>
+		<RightAnchorOffset>0</RightAnchorOffset>
+		<BottomAnchorOffset>0</BottomAnchorOffset>
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<BottomAnchorToTop>false</BottomAnchorToTop>
+		<LeftAnchorToLeft>true</LeftAnchorToLeft>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<TabBorderTemplate>FT_DefTabBorder</TabBorderTemplate>
+		<PageBorderTemplate>FT_DefPageBorder</PageBorderTemplate>
+		<Pages>ASJ_KnownPage</Pages>
+		<Pages>ASJ_PoolPage</Pages>
+	</TabBox>
+
+	<Screen item="AoTSpellJournalWnd">
+		<RelativePosition>false</RelativePosition>
+		<Location>
+			<X>300</X>
+			<Y>150</Y>
+		</Location>
+		<Size>
+			<CX>420</CX>
+			<CY>560</CY>
+		</Size>
+		<Style_VScroll>false</Style_VScroll>
+		<Style_HScroll>false</Style_HScroll>
+		<Style_Transparent>false</Style_Transparent>
+		<Text>Spell Journal</Text>
+		<DrawTemplate>WDT_Rounded</DrawTemplate>
+		<Style_Titlebar>true</Style_Titlebar>
+		<Style_Closebox>true</Style_Closebox>
+		<Style_Minimizebox>true</Style_Minimizebox>
+		<Style_Border>true</Style_Border>
+		<Style_Sizable>true</Style_Sizable>
+		<Escapable>true</Escapable>
+		<Pieces>ASJ_Tabs</Pieces>
+	</Screen>
+
+</XML>

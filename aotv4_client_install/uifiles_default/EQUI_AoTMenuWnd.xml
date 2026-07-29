@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<XML ID="EQInterfaceDefinitionLanguage">
+	<Schema xmlns="EverQuestData" xmlns:dt="EverQuestDataTypes"/>
+
+	<!--
+		AoTv4 menu. A plain list of buttons, one per custom window.
+
+		Styled exactly like the Advanced Loot window's buttons: BDT_Normal, coloured text. Same look as
+		"Always Need" and "Always Greed" there.
+
+		⚠️⚠️ THE BUTTONS ARE ANCHORED, NOT PLACED. Do not go back to fixed Location plus Size. A fixed
+		position has to be computed against the window frame inset, and that inset is not something we can
+		read: several rounds of hand tuning went left heavy, then right heavy, then clipped the buttons
+		under the right frame, because every correction to one side moved the other. With
+		LeftAnchorOffset and RightAnchorOffset kept EQUAL, the UI ENGINE measures each edge from the matching
+		side of the client area, so the margins are even by construction at ANY window width and the
+		window can be resized without touching the buttons at all. The offset VALUE sets the
+		button width (width = window CX minus the two offsets); keep the two equal and it stays centred.
+
+		⚠️ Nothing in a comment here may look like a tag either: the validator only strips the FIRST line
+		of a multi line comment, so angle bracketed words further down are counted as real tags and it
+		reports the file as unbalanced.
+
+		⚠️⚠️ THIS IS OUR OWN WINDOW ON PURPOSE. An earlier version put an AoT button INTO the stock
+		SC / EQ bar (EQUI_EQMainWnd.xml) and caught its click by patching EQMainWnd's vtable. It
+		CRASHED. Nothing stock is touched now: this window gets its notifications the ordinary way,
+		like every other window this dll owns. Do not reintroduce the bar patch.
+
+		⚠️ VERTICAL FLOOR: the last button ends at 212, but CY 226 CLIPPED it and 232 did not, so the
+		title bar plus lower border eat about 20px. Do not drop CY below 232 without checking in game.
+
+		⚠️ Comments here must never contain a double hyphen. It is illegal in XML and the SIDL parser
+		aborts the WHOLE file, killing the client before char select with only a UIErrorLog.txt line
+		to show for it. Run aotv4_client_install/validate_ui_xml.sh before copying this anywhere.
+	-->
+
+	<Button item="AMW_Spells"><ScreenID>AMW_Spells</ScreenID><RelativePosition>true</RelativePosition><AutoStretch>true</AutoStretch><LeftAnchorToLeft>true</LeftAnchorToLeft><LeftAnchorOffset>6</LeftAnchorOffset><RightAnchorToLeft>false</RightAnchorToLeft><RightAnchorOffset>6</RightAnchorOffset><TopAnchorToTop>true</TopAnchorToTop><TopAnchorOffset>6</TopAnchorOffset><BottomAnchorToTop>true</BottomAnchorToTop><BottomAnchorOffset>32</BottomAnchorOffset><Text>Spells</Text><TextColor><R>140</R><G>200</G><B>255</B></TextColor><Template>BDT_Normal</Template><TooltipReference>Level up rewards, what you know, and the reward pool</TooltipReference></Button>
+
+	<Button item="AMW_AutoSkill"><ScreenID>AMW_AutoSkill</ScreenID><RelativePosition>true</RelativePosition><AutoStretch>true</AutoStretch><LeftAnchorToLeft>true</LeftAnchorToLeft><LeftAnchorOffset>6</LeftAnchorOffset><RightAnchorToLeft>false</RightAnchorToLeft><RightAnchorOffset>6</RightAnchorOffset><TopAnchorToTop>true</TopAnchorToTop><TopAnchorOffset>36</TopAnchorOffset><BottomAnchorToTop>true</BottomAnchorToTop><BottomAnchorOffset>62</BottomAnchorOffset><Text>Autoskill</Text><TextColor><R>140</R><G>255</G><B>140</B></TextColor><Template>BDT_Normal</Template><TooltipReference>Turn combat abilities on or off and watch their reuse timers</TooltipReference></Button>
+
+	<Button item="AMW_Loot"><ScreenID>AMW_Loot</ScreenID><RelativePosition>true</RelativePosition><AutoStretch>true</AutoStretch><LeftAnchorToLeft>true</LeftAnchorToLeft><LeftAnchorOffset>6</LeftAnchorOffset><RightAnchorToLeft>false</RightAnchorToLeft><RightAnchorOffset>6</RightAnchorOffset><TopAnchorToTop>true</TopAnchorToTop><TopAnchorOffset>66</TopAnchorOffset><BottomAnchorToTop>true</BottomAnchorToTop><BottomAnchorOffset>92</BottomAnchorOffset><Text>Adv Loot</Text><TextColor><R>140</R><G>255</G><B>140</B></TextColor><Template>BDT_Normal</Template><TooltipReference>Advanced loot: Loot, Leave, Never, Loot All</TooltipReference></Button>
+
+	<Button item="AMW_Trader"><ScreenID>AMW_Trader</ScreenID><RelativePosition>true</RelativePosition><AutoStretch>true</AutoStretch><LeftAnchorToLeft>true</LeftAnchorToLeft><LeftAnchorOffset>6</LeftAnchorOffset><RightAnchorToLeft>false</RightAnchorToLeft><RightAnchorOffset>6</RightAnchorOffset><TopAnchorToTop>true</TopAnchorToTop><TopAnchorOffset>96</TopAnchorOffset><BottomAnchorToTop>true</BottomAnchorToTop><BottomAnchorOffset>122</BottomAnchorOffset><Text>Trader</Text><TextColor><R>255</R><G>230</G><B>140</B></TextColor><Template>BDT_Normal</Template><TooltipReference>Your shop: set prices, list items, pull listings back</TooltipReference></Button>
+
+	<Button item="AMW_Achievements"><ScreenID>AMW_Achievements</ScreenID><RelativePosition>true</RelativePosition><AutoStretch>true</AutoStretch><LeftAnchorToLeft>true</LeftAnchorToLeft><LeftAnchorOffset>6</LeftAnchorOffset><RightAnchorToLeft>false</RightAnchorToLeft><RightAnchorOffset>6</RightAnchorOffset><TopAnchorToTop>true</TopAnchorToTop><TopAnchorOffset>126</TopAnchorOffset><BottomAnchorToTop>true</BottomAnchorToTop><BottomAnchorOffset>152</BottomAnchorOffset><Text>Achievements</Text><TextColor><R>200</R><G>200</G><B>255</B></TextColor><Template>BDT_Normal</Template><TooltipReference>Categories, progress and rewards</TooltipReference></Button>
+
+	<Button item="AMW_Search"><ScreenID>AMW_Search</ScreenID><RelativePosition>true</RelativePosition><AutoStretch>true</AutoStretch><LeftAnchorToLeft>true</LeftAnchorToLeft><LeftAnchorOffset>6</LeftAnchorOffset><RightAnchorToLeft>false</RightAnchorToLeft><RightAnchorOffset>6</RightAnchorOffset><TopAnchorToTop>true</TopAnchorToTop><TopAnchorOffset>156</TopAnchorOffset><BottomAnchorToTop>true</BottomAnchorToTop><BottomAnchorOffset>182</BottomAnchorOffset><Text>Allaclone</Text><TextColor><R>200</R><G>200</G><B>255</B></TextColor><Template>BDT_Normal</Template><TooltipReference>In game item, NPC, spell and recipe lookup</TooltipReference></Button>
+
+	<Button item="AMW_Lost"><ScreenID>AMW_Lost</ScreenID><RelativePosition>true</RelativePosition><AutoStretch>true</AutoStretch><LeftAnchorToLeft>true</LeftAnchorToLeft><LeftAnchorOffset>6</LeftAnchorOffset><RightAnchorToLeft>false</RightAnchorToLeft><RightAnchorOffset>6</RightAnchorOffset><TopAnchorToTop>true</TopAnchorToTop><TopAnchorOffset>186</TopAnchorOffset><BottomAnchorToTop>true</BottomAnchorToTop><BottomAnchorOffset>212</BottomAnchorOffset><Text>Death Book</Text><TextColor><R>255</R><G>150</G><B>150</B></TextColor><Template>BDT_Normal</Template><TooltipReference>Everything you have ever lost, and what killed you</TooltipReference></Button>
+
+	<Screen item="AoTMenuWnd">
+		<RelativePosition>false</RelativePosition>
+		<!-- STANDALONE. The dll does not reposition this window at all: it opens here the first time
+		     and the client remembers wherever it is dragged to after that. Left edge, mid height, so it
+		     is clear of the chat window and the hotbars at any common resolution. -->
+		<Location><X>12</X><Y>240</Y></Location>
+		<Size><CX>132</CX><CY>232</CY></Size>
+		<Style_VScroll>false</Style_VScroll>
+		<Style_HScroll>false</Style_HScroll>
+		<Style_Transparent>false</Style_Transparent>
+		<Text>Age of Titans</Text>
+		<!-- WDT_Def, not WDT_Rounded. The title text position comes from the DrawTemplate and there is
+		     no alignment tag for it, so the only lever is which frame is used. WDT_Rounded is an ornate
+		     frame whose title sat visibly off centre on a window this narrow; WDT_Def is what the stock
+		     windows and our own Advanced Loot window use. -->
+		<DrawTemplate>WDT_Def</DrawTemplate>
+		<Style_Titlebar>true</Style_Titlebar>
+		<!-- Close box IS enabled, and it is there for SYMMETRY as much as function: with a minimize
+		     box on the left and nothing on the right, the client centres the title in the space after
+		     the minimize box, so it sat visibly right of centre. A box on each side balances it.
+		     Closing costs little now, because the server re-sends AOTMENUSHOW on login AND on every
+		     zone, and Ctrl+Q reopens it.
+		     ⚠️ Escapable stays FALSE. Escape is the key players press most and it was dismissing the
+		     menu constantly; a deliberate click on the close box is fine, Escape was not. -->
+		<Style_Closebox>true</Style_Closebox>
+		<Style_Minimizebox>true</Style_Minimizebox>
+		<Style_Border>true</Style_Border>
+		<Style_Sizable>false</Style_Sizable>
+		<Escapable>false</Escapable>
+		<Pieces>AMW_Spells</Pieces>
+		<Pieces>AMW_AutoSkill</Pieces>
+		<Pieces>AMW_Loot</Pieces>
+		<Pieces>AMW_Trader</Pieces>
+		<Pieces>AMW_Achievements</Pieces>
+		<Pieces>AMW_Search</Pieces>
+		<Pieces>AMW_Lost</Pieces>
+	</Screen>
+
+</XML>
