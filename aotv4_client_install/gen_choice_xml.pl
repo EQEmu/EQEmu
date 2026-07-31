@@ -62,7 +62,17 @@ my ($NAME_X, $NAME_W) = (64, 236);
 my $NAME_FONT = 4;
 my ($BTN_X, $BTN_W, $BTN_H) = (310, 102, 26);
 my ($DET_X, $DET_W) = (10, 406);
-my ($DETNAME_Y, $DET_Y, $DET_H) = (212, 238, 174);
+# ⚠️ DET_H was 174 (detail box ending at 412). It is 140 now to make room for the Reroll button
+# underneath. The box could NOT simply move up instead: the three reward cards occupy 34..208
+# (ROW_Y0 + 3*ROW_H) and DETNAME_Y sits directly below them, so the only spare space on the page is
+# at the bottom. Page height is PAGE_CY (446), so the button at 384..410 still clears the frame.
+my ($DETNAME_Y, $DET_Y, $DET_H) = (212, 238, 140);
+my ($REROLL_W, $REROLL_H) = (170, 26);
+my ($COST_W, $COST_GAP)   = (150, 10);
+my $REROLL_Y = $DET_Y + $DET_H + 6;
+# Cost box and button sit side by side, the pair centred under the description.
+my $COST_X   = $DET_X + int(($DET_W - ($COST_W + $COST_GAP + $REROLL_W)) / 2);
+my $REROLL_X = $COST_X + $COST_W + $COST_GAP;
 
 my @out;
 sub w { push @out, $_[0]; }
@@ -208,6 +218,39 @@ w("\t\t<TextColor><R>240</R><G>240</G><B>240</B></TextColor>");
 w("\t</STMLbox>");
 w('');
 push @pieces, 'ASC_Detail';
+
+w("\t" . '<!-- What the next reroll costs.  An STMLbox rather than a Label purely because it draws a');
+w("\t" . '     real bordered panel: Label has no confirmed border on this build, and an unbordered');
+w("\t" . '     number floating beside the button does not read as a price field.  The dll fills it from');
+w("\t" . '     the SPELLREROLLCOST line, because the price is per character and escalates, so the client');
+w("\t" . '     cannot work it out and any hardcoded figure would be wrong after the first reroll. -->');
+w("\t<STMLbox item=\"ASC_RerollCost\">");
+w("\t\t<ScreenID>ASC_RerollCost</ScreenID>");
+w("\t\t<DrawTemplate>WDT_Inner</DrawTemplate>");
+w("\t\t<RelativePosition>true</RelativePosition>");
+w("\t\t<Location><X>$COST_X</X><Y>$REROLL_Y</Y></Location>");
+w("\t\t<Size><CX>$COST_W</CX><CY>$REROLL_H</CY></Size>");
+w("\t\t<Style_Border>true</Style_Border>");
+w("\t\t<TextColor><R>255</R><G>220</G><B>150</B></TextColor>");
+w("\t</STMLbox>");
+w('');
+push @pieces, 'ASC_RerollCost';
+
+w("\t" . '<!-- Replace these three rewards with three new ones, for coin.  The dll sends');
+w("\t" . '     "/say spellreroll"; the SERVER prices it, checks the player can afford it and takes the');
+w("\t" . '     money, so a modified client pressing this gets nothing but a refusal. -->');
+w("\t<Button item=\"ASC_Reroll\">");
+w("\t\t<ScreenID>ASC_Reroll</ScreenID>");
+w("\t\t<RelativePosition>true</RelativePosition>");
+w("\t\t<Location><X>$REROLL_X</X><Y>$REROLL_Y</Y></Location>");
+w("\t\t<Size><CX>$REROLL_W</CX><CY>$REROLL_H</CY></Size>");
+w("\t\t<Text>Reroll</Text>");
+w("\t\t<TextColor><R>255</R><G>200</G><B>140</B></TextColor>");
+w("\t\t<Template>BDT_Normal</Template>");
+w("\t\t<TooltipReference>Pay the shown price for three different rewards</TooltipReference>");
+w("\t</Button>");
+w('');
+push @pieces, 'ASC_Reroll';
 
 # =================================================================================================
 # Known and Pool tabs.

@@ -46,6 +46,7 @@
 #include <iostream>
 #include <list>
 #include <numbers>
+#include "aotv4_tiers.h"     // AoTv4: quest item checks span every quality tier
 
 extern QueryServ* QServ;
 extern Zone* zone;
@@ -3287,7 +3288,12 @@ uint32 QuestManager::countitem(uint32 item_id) {
 		return 0;
 	}
 
-	return initiator->CountItem(item_id);
+	// AoTv4: every quality tier counts. Same rule as Lua_Client::CountItem / Perl_Client_CountItem --
+	// quest::countitem is a third door into the same question and must not answer it differently.
+	const uint32 base = AoTv4TierBaseId(item_id);
+	return initiator->CountItem(base)
+	     + initiator->CountItem(base + AOTV4_TIER_STEP)
+	     + initiator->CountItem(base + 2 * AOTV4_TIER_STEP);
 }
 
 void QuestManager::removeitem(uint32 item_id, uint32 quantity) {

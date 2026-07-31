@@ -207,7 +207,9 @@ public:
 	void AddLootDropTable(uint32 lootdrop_id, uint8 drop_limit, uint8 min_drop);
 	// AoTv4: when a base item drops, independently roll its Hallowed (+1,000,000, 25%) and
 	// Mythic (+2,000,000, 5%) tiers and add them if those item rows exist.
-	void AddTierUpgrades(const EQ::ItemData *base_item, const LootdropEntriesRepository::LootdropEntries &loot_drop);
+	// AoTv4 gear tiers: returns which TIER of a rolled item should drop (Mythic / Hallowed / base).
+	// Replaces the drop rather than adding one -- see the comment on the definition in loot.cpp.
+	const EQ::ItemData *ResolveTierDrop(const EQ::ItemData *base_item);
 	void CheckGlobalLootTables();
 	void RemoveItem(uint32 item_id, uint16 quantity = 0, uint16 slot = 0);
 	void CheckTrivialMinMaxLevelDrop(Mob *killer);

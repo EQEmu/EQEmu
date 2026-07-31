@@ -19,6 +19,7 @@
 
 #include "common/events/player_event_logs.h"
 #include "common/item_instance.h"
+#include "common/random.h"                  // AoTv4: branching evolve chains pick a variant at random
 #include "common/repositories/character_evolving_items_repository.h"
 
 EvolvingItemsManager::EvolvingItemsManager()
@@ -111,9 +112,39 @@ void EvolvingItemsManager::DoLootChecks(const uint32 char_id, const uint16 slot_
 	CharacterEvolvingItemsRepository::SetEquipped(*m_db, inst.GetEvolveUniqueID(), inst.GetEvolveEquipped());
 }
 
+// AoTv4: a BRANCHING chain has no single final item, and says so by returning 0.
+//
+// ⚠️⚠️ THIS IS WHAT HIDES THE "FINAL RESULT" SPOILER, and it is a correctness fix rather than a
+// cosmetic one. The client offers a Final Result view driven by this id; on a chain where each level
+// picks at random among many variants (the Delve augments, evo ids 2001-2003) the stock walk-to-the
+// -highest-level answer is ONE ARBITRARY ROW OUT OF FORTY, so the client was confidently showing a
+// result the item will almost certainly never become. Zero is the honest answer, and it also
+// suppresses the view: Client::DoEvolveItemDisplayFinalResult returns early on a blank item id
+// (zone/client_evolving_items.cpp:305), and the serialised evotop.final_item_id goes out as 0.
+// ⚠️ A LINEAR chain is unaffected and still reports its real final -- the Delver's Sigil (evo id
+// 2000) has exactly one row per level, so its Final Result stays meaningful and visible.
 uint32 EvolvingItemsManager::GetFinalItemID(const EQ::ItemInstance &inst) const
 {
 	if (!inst) {
+		return 0;
+	}
+
+	// Branch test: more than one row sharing this chain's TOP level means the outcome is a roll.
+	int8 top_level = 0;
+	for (const auto &[item_id, details]: EvolvingItemsManager::Instance()->GetEvolvingItemsCache()) {
+		if (details.item_evo_id == inst.GetEvolveLoreID() && details.item_evolve_level > top_level) {
+			top_level = details.item_evolve_level;
+		}
+	}
+
+	int variants_at_top = 0;
+	for (const auto &[item_id, details]: EvolvingItemsManager::Instance()->GetEvolvingItemsCache()) {
+		if (details.item_evo_id == inst.GetEvolveLoreID() && details.item_evolve_level == top_level) {
+			++variants_at_top;
+		}
+	}
+
+	if (variants_at_top > 1) {
 		return 0;
 	}
 
@@ -144,6 +175,18 @@ uint32 EvolvingItemsManager::GetFinalItemID(const EQ::ItemInstance &inst) const
 	return final_id->first;
 }
 
+// AoTv4: an evolve chain may BRANCH -- when several rows share (evo_id, level) one is chosen at
+// random, so an item rolls a different result each time it evolves.
+//
+// ⚠️⚠️ STOCK TOOK THE FIRST MATCH, which silently assumes exactly one item per (evo_id, level).
+// That assumption is what made a "Diablo style" random roll look like it needed a unique item row
+// per possible outcome -- i.e. a combinatorial explosion in `items`. It does not: put N variants at
+// a level, pick among them here, and the table stays a few hundred rows. The Delve augment set
+// (custom/sql/aotv4_delve_augs.sql, evo ids 2001-2003) is built on exactly this.
+// ⚠️ A chain with ONE row per level is unaffected -- it collects a single candidate and returns it,
+// which is the stock behaviour. The Delver's Sigil (evo id 2000) is such a chain.
+// ⚠️ The cache is a std::map keyed by unique id, so "first match" was deterministic but arbitrary;
+// nothing depended on WHICH row it was, only that it existed.
 uint32 EvolvingItemsManager::GetNextEvolveItemID(const EQ::ItemInstance &inst) const
 {
 	if (!inst) {
@@ -152,20 +195,28 @@ uint32 EvolvingItemsManager::GetNextEvolveItemID(const EQ::ItemInstance &inst) c
 
 	int8 const current_level = inst.GetEvolveLvl();
 
-	const auto iterator = std::ranges::find_if(
-		EvolvingItemsManager::Instance()->GetEvolvingItemsCache().cbegin(),
-		EvolvingItemsManager::Instance()->GetEvolvingItemsCache().cend(),
-		[&](const std::pair<uint32, ItemsEvolvingDetailsRepository::ItemsEvolvingDetails> &a) {
-			return a.second.item_evo_id == inst.GetEvolveLoreID() &&
-			       a.second.item_evolve_level == current_level + 1;
+	std::vector<uint32> candidates;
+	for (const auto &[item_id, details]: EvolvingItemsManager::Instance()->GetEvolvingItemsCache()) {
+		if (details.item_evo_id == inst.GetEvolveLoreID() &&
+		    details.item_evolve_level == current_level + 1) {
+			candidates.push_back(item_id);
 		}
-	);
+	}
 
-	if (iterator == std::end(EvolvingItemsManager::Instance()->GetEvolvingItemsCache())) {
+	if (candidates.empty()) {
 		return 0;
 	}
 
-	return iterator->first;
+	if (candidates.size() == 1) {
+		return candidates.front();
+	}
+
+	// ⚠️ A function-local static, because libcommon has no shared EQ::Random instance (the zone's
+	// `random` lives in zone/). EQ::Random seeds an mt19937 from std::random_device in its
+	// constructor, so constructing one PER CALL would both waste the seeding and risk correlated
+	// draws; the static is seeded once on first use.
+	static EQ::Random evolve_random;
+	return candidates[evolve_random.Int(0, static_cast<int>(candidates.size()) - 1)];
 }
 
 ItemsEvolvingDetailsRepository::ItemsEvolvingDetails EvolvingItemsManager::GetEvolveItemDetails(const uint64 unique_id)

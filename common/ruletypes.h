@@ -1223,6 +1223,8 @@ RULE_INT(AoT, ShieldRecastSeconds,      	6,	"Recast on /shield in seconds (stock
 RULE_INT(AoT, ShieldDistance,           	25,	"How far apart the shielder and shield target may drift before the shield drops (stock is 15).")
 RULE_INT(AoT, ShieldWallPenaltyPercent, 	20,	"Extra damage per ADDITIONAL person sharing a hit. Share = (damage/N) * (100 + penalty*(N-1))/100, so 2 sharers take 60 percent each (120 total) and 3 take ~47 percent each (140 total). Splitting smooths spikes but costs total HP.")
 RULE_INT(AoT, ShieldWallMaxSharers,     	4,	"Maximum people sharing one hit, including the aggro holder.")
+RULE_INT(AoT, SpecialEndurancePct,      	50,	"Endurance a damaging combat special costs, as a percent of the damage it actually dealt. 50 = a 200 damage Backstab costs 100 endurance. 0 disables the cost entirely. Charged AFTER the hit, because the cost depends on the damage rolled.")
+RULE_INT(AoT, SpecialEnduranceMinToUse, 	1,	"Endurance you must have BEFORE a damaging special will fire. Deliberately low: the real brake is the post-hit cost draining you, not a per-use gate. 0 lets specials fire at zero endurance, which makes the cost meaningless.")
 RULE_CATEGORY_END()
 
 #undef RULE_CATEGORY

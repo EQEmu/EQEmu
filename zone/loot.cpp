@@ -27,6 +27,7 @@
 #include "zone/mob.h"
 #include "zone/quest_parser_collection.h"
 #include "zone/zonedb.h"
+#include "zone/aotv4_tiers.h"   // AOTV4_TIER_STEP / AoTv4IsTierId -- migrated off the local literals
 
 void NPC::AddLootTable(uint32 loottable_id, bool is_global)
 {
@@ -135,8 +136,9 @@ void NPC::AddLootTable(uint32 loottable_id, bool is_global)
 	// detected by a capitalized clean name (EQ trash is lowercase "a bat" / "an orc pawn"; named mobs are
 	// proper nouns like "Lord Nagafen" / "Ancient Cyclops"). We roll one guaranteed item from the mob's
 	// primary pool (the loottable entry with the highest droplimit == its main equipment pool). Only for
-	// the NPC's own table (not global loot). The rolled item still flows through AddTierUpgrades, so the
-	// bonus item can itself upgrade to Hallowed/Mythic.
+	// the NPC's own table (not global loot). The rolled item still flows through ResolveTierDrop, so the
+	// bonus item can itself come out as Hallowed/Mythic -- it is one extra item whose tier is rolled,
+	// not an extra item plus its tier copies.
 	if (!is_global) {
 		const char *cn = GetCleanName();
 		if (cn && cn[0] >= 'A' && cn[0] <= 'Z') {
@@ -163,28 +165,53 @@ void NPC::AddLootTable(uint32 loottable_id, bool is_global)
 	);
 }
 
-// AoTv4 gear tiers: whenever a base item is rolled into loot, give it an independent 25% chance to
-// also drop its Hallowed copy (base id + 300,000) and a 5% chance for its Mythic copy
-// (base id + 600,000). Only fires when those tier rows actually exist (see custom/sql/
-// aotv4_gear_tiers.sql), so it's a no-op for items without tiers. Mode-independent: rolled here
-// rather than via lootdrop_entries.chance, which is a weight (not a %) for most loottables.
-void NPC::AddTierUpgrades(const EQ::ItemData *base_item, const LootdropEntriesRepository::LootdropEntries &loot_drop)
+// AoTv4 gear tiers: decide WHICH tier of a rolled item actually drops. One item in, one item out --
+// 5% Mythic (base + 2 steps), 25% Hallowed (base + 1 step), otherwise the base item unchanged.
+//
+// ⚠️⚠️ THIS REPLACES THE DROP, IT DOES NOT ADD ONE. The original rolled the two tiers INDEPENDENTLY
+// and called AddLootDrop for each, so one base item could put THREE items on the corpse at once
+// (base + Hallowed + Mythic). A lucky roll therefore meant MORE loot rather than BETTER loot, and
+// every upgrade dragged the inferior copies onto the corpse with it. A tier is a quality upgrade of
+// a single drop; it was never meant to be an extra drop.
+//
+// ⚠️ The two rates are unchanged (5 and 25) but are now MUTUALLY EXCLUSIVE bands of ONE roll, which
+// is why Mythic must be tested first -- it is the rarer band and testing Hallowed first would
+// swallow it entirely. Expect slightly FEWER Hallowed than before: 25% of drops rather than 25% of
+// drops plus the 5% that also rolled Mythic.
+//
+// ⚠️ Falls back to the base item whenever the tier row does not exist, so untiered items (quest
+// paper, anything aotv4_gear_tiers.sql skipped) still drop exactly as they always did. The Mythic
+// branch deliberately falls THROUGH to the Hallowed test rather than returning, so an item with a
+// Hallowed row but no Mythic row still upgrades instead of silently dropping base.
+//
+// Mode-independent: rolled here rather than through lootdrop_entries.chance, which is a weight and
+// not a percentage in the dominant weighted loot mode.
+const EQ::ItemData *NPC::ResolveTierDrop(const EQ::ItemData *base_item)
 {
-	if (!base_item || base_item->ID >= 300000) {
-		return;  // null, or already a tier item -> don't recurse/stack
+	if (!base_item || AoTv4IsTierId(base_item->ID)) {
+		return base_item;  // null, or already a tier item -> never upgrade twice
 	}
-	if (zone->random.Real(0.0, 100.0) <= 25.0) {
-		const EQ::ItemData *hallowed = database.GetItem(base_item->ID + 300000);
-		if (hallowed) {
-			AddLootDrop(hallowed, loot_drop);
-		}
-	}
-	if (zone->random.Real(0.0, 100.0) <= 5.0) {
-		const EQ::ItemData *mythic = database.GetItem(base_item->ID + 600000);
+
+	constexpr double mythic_pct   = 5.0;
+	constexpr double hallowed_pct = 25.0;
+
+	const double roll = zone->random.Real(0.0, 100.0);
+
+	if (roll < mythic_pct) {
+		const EQ::ItemData *mythic = database.GetItem(base_item->ID + 2 * AOTV4_TIER_STEP);
 		if (mythic) {
-			AddLootDrop(mythic, loot_drop);
+			return mythic;
 		}
 	}
+
+	if (roll < mythic_pct + hallowed_pct) {
+		const EQ::ItemData *hallowed = database.GetItem(base_item->ID + AOTV4_TIER_STEP);
+		if (hallowed) {
+			return hallowed;
+		}
+	}
+
+	return base_item;
 }
 
 void NPC::AddLootDropTable(uint32 lootdrop_id, uint8 drop_limit, uint8 min_drop)
@@ -200,9 +227,9 @@ void NPC::AddLootDropTable(uint32 lootdrop_id, uint8 drop_limit, uint8 min_drop)
 		for (const auto &e: le) {
 			for (int j = 0; j < e.multiplier; ++j) {
 				if (zone->random.Real(0.0, 100.0) <= e.chance && MeetsLootDropLevelRequirements(e, true)) {
-					const EQ::ItemData *database_item = database.GetItem(e.item_id);
+					// AoTv4: roll which TIER of this item drops. Replaces the drop, never adds one.
+					const EQ::ItemData *database_item = ResolveTierDrop(database.GetItem(e.item_id));
 					AddLootDrop(database_item, e);
-					AddTierUpgrades(database_item, e);   // AoTv4: roll Hallowed/Mythic tiers
 					LogLootDetail(
 						"---- NPC (Rolled) [{}] Lootdrop [{}] Item [{}] ({}) Chance [{}] Multiplier [{}]",
 						GetCleanName(),
@@ -272,8 +299,8 @@ void NPC::AddLootDropTable(uint32 lootdrop_id, uint8 drop_limit, uint8 min_drop)
 					}
 
 					if (roll < e.chance) {
-						AddLootDrop(db_item, e);
-						AddTierUpgrades(db_item, e);   // AoTv4: roll Hallowed/Mythic tiers
+						// AoTv4: roll which TIER drops. Replaces the drop, never adds one.
+						AddLootDrop(ResolveTierDrop(db_item), e);
 						drops++;
 
 						uint8 charges = e.multiplier;
@@ -282,7 +309,9 @@ void NPC::AddLootDropTable(uint32 lootdrop_id, uint8 drop_limit, uint8 min_drop)
 						for (int k = 1; k < charges; ++k) {
 							float c_roll = static_cast<float>(zone->random.Real(0.0, 100.0));
 							if (c_roll <= e.chance) {
-								AddLootDrop(db_item, e);
+								// ⚠️ Each extra copy rolls its OWN tier -- otherwise a multi-drop
+								// entry would hand out one upgraded item and N base duplicates.
+								AddLootDrop(ResolveTierDrop(db_item), e);
 							}
 						}
 

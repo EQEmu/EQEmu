@@ -18,6 +18,8 @@
 #ifdef LUA_EQEMU
 
 #include "lua_client.h"
+#include "aotv4_tiers.h"     // AoTv4: quest item checks span every quality tier
+#include "common/evolving_items.h"   // AoTv4: EvolvingItems::Actions for AddEvolveProgress
 
 #include "zone/client.h"
 #include "zone/dialogue_window.h"
@@ -945,6 +947,249 @@ void Lua_Client::DeleteItemInInventory(int slot_id, int quantity, bool update_cl
 
 // AoTv4: Lua quest grants are upgraded to the Mythic tier too (see QuestManager::summonitem).
 uint32 AoTv4MythicReward(uint32 item_id);
+
+// AoTv4: our evolving rewards ACTIVATE THEMSELVES rather than being gated on the activated flag.
+//
+// ⚠️⚠️ GATING ON `activated` LOOKS CORRECT AND IS A TRAP. It mirrors the native accrual test
+// (Client::ProcessEvolvingItem, client_evolving_items.cpp:94), but every row this system creates
+// starts INACTIVE and there is no reliable way for the player to turn one on:
+//   - CharacterEvolvingItemsRepository::NewEntity() defaults activated = 0;
+//   - the NATIVE evolve makes a brand new row for the replacement item, so an item that was active
+//     comes back INACTIVE after every single evolve and silently stops progressing;
+//   - an AUGMENT never appears in the client's evolving-item window at all (it is invisible to that
+//     system for the three reasons documented on AddEvolveProgressAug), so it cannot be enabled by
+//     hand even if the player goes looking for the toggle.
+// The native flag exists to choose which item soaks a SHARED experience pool. Our score is split
+// explicitly across everything worn (aotv4_dungeon.M.award_evolving), so it buys nothing here and
+// costs the whole feature. Activate and carry on.
+static void AoTv4EnsureEvolveActivated(uint64 unique_id, const EQ::ItemInstance *inst)
+{
+	if (!unique_id) {
+		return;
+	}
+
+	auto e = CharacterEvolvingItemsRepository::FindOne(database, unique_id);
+	if (!e.id || e.activated) {
+		return;
+	}
+
+	e.activated  = 1;
+	e.deleted_at = 0;
+	CharacterEvolvingItemsRepository::UpdateOne(database, e);
+
+	if (inst) {
+		inst->SetEvolveActivated(true);
+	}
+}
+
+// AoTv4: add progress to an EQUIPPED evolving item and make it stick.
+//
+// ⚠️⚠️ `Lua_ItemInst::AddEvolveAmount` ALONE DOES NOTHING PERMANENT. It calls
+// SetEvolveAddToCurrentAmount, which only bumps the in-memory counter -- it does not recompute the
+// progression, does not write character_evolving_items, and does not tell the client. The native
+// path (Client::ProcessEvolvingItem, client_evolving_items.cpp:156) always does all four:
+//     inst->SetEvolveAddToCurrentAmount(amount);
+//     inst->CalculateEvolveProgression();
+//     CharacterEvolvingItemsRepository::SetCurrentAmountAndProgression(...);
+//     SendEvolvingPacket(UPDATE_ITEMS, e);
+// and there is NO save-on-zone or save-on-logout for evolving progress anywhere in the codebase --
+// the only writers are ProcessEvolvingItem, the activate/deactivate toggle, the item-move handler
+// (client_packet.cpp:11702) and a soft delete. So a Lua-only award is silently discarded the moment
+// the player zones, which is exactly what happened: the delve added the score, the player left the
+// instance, and character_evolving_items still read current_amount 0.
+//
+// ⚠️ DoEvolveCheckProgression is called at the end so the item evolves IMMEDIATELY at 100 percent.
+// Without it the swap waits for the next experience tick, which is the wrong moment for a reward
+// that is explicitly granted for finishing something.
+// ⚠️ Returns the new progression percent so Lua can report it without a second call.
+//
+// ⚠️⚠️ AFTER A SUCCESSFUL EVOLVE THE CALLER'S ItemInst IS NO LONGER IN THE INVENTORY.
+// DoEvolveCheckProgression ends in RemoveItemBySerialNumber -> DeleteItemInInventory, and the new
+// item goes on the CURSOR, not back into the slot. The old instance is only MarkDirty'd (a deferred
+// free drained by InventoryProfile::CleanDirty from Zone::Process, zone.cpp:1533), so reading it
+// straight after is safe -- but it is the OLD item, unlinked, holding the OLD evolve level. A Lua
+// caller must therefore read anything it needs off the instance BEFORE calling this, never after.
+double Lua_Client::AddEvolveProgress(int slot_id, uint64 amount) {
+	Lua_Safe_Call_Real();
+
+	auto inst = self->GetInv().GetItem(slot_id);
+	if (!inst || !inst->IsEvolving() || !amount) {
+		return 0.0;
+	}
+
+	// ⚠️ NOT gated on activated -- see AoTv4EnsureEvolveActivated. A charm that has just evolved
+	// comes back with a fresh, INACTIVE row, so gating here stalls the sigil permanently after its
+	// first evolve.
+	AoTv4EnsureEvolveActivated(inst->GetEvolveUniqueID(), inst);
+
+	inst->SetEvolveAddToCurrentAmount(amount);
+	inst->CalculateEvolveProgression();
+
+	auto e = CharacterEvolvingItemsRepository::SetCurrentAmountAndProgression(
+		database, inst->GetEvolveUniqueID(), inst->GetEvolveCurrentAmount(), inst->GetEvolveProgression()
+	);
+	if (!e.id) {
+		return 0.0;
+	}
+
+	self->SendEvolvingPacket(EvolvingItems::Actions::UPDATE_ITEMS, e);
+
+	const double progression = inst->GetEvolveProgression();
+	self->DoEvolveCheckProgression(*inst);
+	return progression;
+}
+
+// AoTv4: add progress to an evolving AUGMENT sitting in an equipped item, and swap it IN PLACE when
+// it fills. The Delve augment set (custom/sql/aotv4_delve_augs.sql) is driven entirely from here.
+//
+// ⚠️⚠️ AUGMENTS DO NOT EVOLVE NATIVELY AT ALL, AND NOT FOR ONE REASON BUT THREE. None of them is
+// visible from reading the evolving-item code alone, so do not assume a native call can replace any
+// of this:
+//   1. THEY NEVER ACCRUE. Client::ProcessEvolvingItem walks GetInv().GetWorn(), which is top level
+//      worn items; an augment lives INSIDE one and is never visited.
+//   2. THEY ARE NEVER REGISTERED. EvolvingItemsManager::DoLootChecks is the only thing that inserts
+//      a character_evolving_items row, and it is called with a top level slot id and gated on
+//      EQUIPMENT_BEGIN..EQUIPMENT_END (common/evolving_items.cpp:80). Nothing ever calls it for an
+//      augment, so an augment has no row and no unique id.
+//   3. THEIR IN-MEMORY EVOLVE STATE IS NEVER LOADED. SharedDatabase::GetInventory rebuilds each
+//      augment with PutAugment -> CreateItem (shareddb.cpp:751), a FRESH instance, and then attaches
+//      evolve state only to the HOST (`if (item->EvolvingItem)`, :756). So on every login an
+//      augment's GetEvolveUniqueID/GetEvolveCurrentAmount read 0 no matter what the database holds.
+//
+// ⚠️⚠️ BECAUSE OF (3) THIS FUNCTION WORKS OFF THE REPOSITORY ROW, NOT THE ItemInst. Writing it the
+// obvious way -- inst->SetEvolveAddToCurrentAmount then persist by unique id, the way
+// AddEvolveProgress does for the charm -- looks right and silently starts from 0 after every relog,
+// because the instance's counter was never loaded. The row is keyed by (character_id, item_id),
+// which is exactly the key shareddb.cpp:765 matches on when it loads a host item.
+// ⚠️ A consequence of that key: two IDENTICAL augments on one character share ONE row. The caller
+// (aotv4_dungeon.lua) therefore awards each distinct item id once; feeding it per socket would
+// double-credit a player wearing two of the same roll.
+double Lua_Client::AddEvolveProgressAug(int slot_id, int aug_index, uint64 amount) {
+	Lua_Safe_Call_Real();
+
+	if (!amount) {
+		return 0.0;
+	}
+
+	auto host = self->GetInv().GetItem(slot_id);
+	if (!host) {
+		return 0.0;
+	}
+
+	auto aug = host->GetAugment(static_cast<uint8>(aug_index));
+	if (!aug || !aug->IsEvolving()) {
+		return 0.0;
+	}
+
+	const uint32 item_id = aug->GetID();
+	const uint32 char_id = self->CharacterID();
+
+	// find the row, or make one -- see (2) above for why it will not already exist the first time
+	auto rows = CharacterEvolvingItemsRepository::GetWhere(
+		database,
+		fmt::format("`character_id` = {} AND `item_id` = {} AND `deleted_at` IS NULL", char_id, item_id)
+	);
+
+	CharacterEvolvingItemsRepository::CharacterEvolvingItems row;
+	if (rows.empty()) {
+		row               = CharacterEvolvingItemsRepository::NewEntity();
+		row.character_id  = char_id;
+		row.item_id       = item_id;
+		// ⚠️ NewEntity defaults activated to 0, and an inactive row is refused below (and by the
+		// native XP path). A row we create ourselves must opt in explicitly or the augment silently
+		// never progresses.
+		row.activated     = 1;
+		row.equipped      = 1;
+		row.final_item_id = EvolvingItemsManager::Instance()->GetFinalItemID(*aug);
+
+		auto inserted = CharacterEvolvingItemsRepository::InsertOne(database, row);
+		if (!inserted.id) {
+			return 0.0;
+		}
+		row.id = inserted.id;
+	}
+	else {
+		row = rows.front();
+		// ⚠️⚠️ THE ROW USUALLY ALREADY EXISTS, AND IT IS INACTIVE. Looting the augment puts it in the
+		// inventory as a top level item, so the NATIVE DoLootChecks registers it there -- with
+		// activated = 0 -- long before it is ever socketed. So the "create it ourselves with
+		// activated = 1" branch above is the RARE path, and refusing an inactive row here meant a
+		// freshly looted augment could never progress at all. Activate it; the player has no window
+		// in which to do it themselves.
+		if (!row.activated) {
+			AoTv4EnsureEvolveActivated(row.id, aug);
+			row.activated = 1;
+		}
+	}
+
+	row.current_amount += amount;
+	row.progression = EvolvingItemsManager::CalculateProgression(row.current_amount, item_id);
+
+	CharacterEvolvingItemsRepository::SetCurrentAmountAndProgression(
+		database, row.id, row.current_amount, row.progression
+	);
+	self->SendEvolvingPacket(EvolvingItems::Actions::UPDATE_ITEMS, row);
+
+	const double progression = row.progression;
+	if (progression < 100.0 || aug->GetEvolveLvl() >= aug->GetMaxEvolveLvl()) {
+		return progression;
+	}
+
+	// ---- it filled: roll the next form and swap it into the same socket
+	// ⚠️ Client::DoEvolveCheckProgression CANNOT be used here. It swaps with
+	// RemoveItemBySerialNumber (which walks inventory SLOTS, and an augment is not in one) and then
+	// PushItemOnCursor -- so the old augment would stay welded in the socket and the new one would
+	// land on the cursor for the player to re-augment by hand every single time.
+	const uint32 new_id = EvolvingItemsManager::Instance()->GetNextEvolveItemID(*aug);
+	if (!new_id) {
+		return progression;
+	}
+
+	// The progress row belongs to the OLD item id; retire it and let the new form start clean --
+	// this mirrors what the native evolve does (soft delete via DeleteItemInInventory, fresh row for
+	// the replacement), which is why required_amount is a per level cost rather than a total.
+	CharacterEvolvingItemsRepository::SoftDelete(database, row.id);
+
+	host->DeleteAugment(static_cast<uint8>(aug_index));
+	host->PutAugment(&database, static_cast<uint8>(aug_index), new_id);
+	host->UpdateOrnamentationInfo();
+
+	// ⚠️⚠️ THE CLONE / DELETE / RE-PUT DANCE IS HOW THE CLIENT IS TOLD, and it is not optional.
+	// Mutating the worn item's augment in memory changes nothing on screen: the client keeps showing
+	// the old augment and the old stats until something replaces the whole item. This is the same
+	// sequence Handle_OP_AugmentItem uses (zone/client_packet.cpp ~3337) for exactly that reason.
+	std::unique_ptr<EQ::ItemInstance> refreshed(host->Clone());
+	if (refreshed) {
+		self->DeleteItemInInventory(slot_id, 0, true);
+		if (!self->PutItemInInventory(slot_id, *refreshed, true)) {
+			LogError(
+				"AoTv4: failed to restore item to slot [{}] for character [{}] after augment evolve",
+				slot_id, char_id
+			);
+			return progression;
+		}
+		self->CalcBonuses();
+	}
+
+	auto fresh = self->GetInv().GetItem(slot_id);
+	auto fresh_aug = fresh ? fresh->GetAugment(static_cast<uint8>(aug_index)) : nullptr;
+	if (fresh_aug) {
+		auto n           = CharacterEvolvingItemsRepository::NewEntity();
+		n.character_id   = char_id;
+		n.item_id        = new_id;
+		n.activated      = 1;
+		n.equipped       = 1;
+		n.final_item_id  = EvolvingItemsManager::Instance()->GetFinalItemID(*fresh_aug);
+
+		auto inserted = CharacterEvolvingItemsRepository::InsertOne(database, n);
+		if (inserted.id) {
+			n.id = inserted.id;
+			self->SendEvolvingPacket(EvolvingItems::Actions::UPDATE_ITEMS, n);
+		}
+	}
+
+	return progression;
+}
 
 void Lua_Client::SummonItem(uint32 item_id) {
 	Lua_Safe_Call_Void();
@@ -2417,9 +2662,22 @@ void Lua_Client::SendToInstance(std::string instance_type, std::string zone_shor
 	self->SendToInstance(instance_type, zone_short_name, instance_version, x, y, z, heading, instance_identifier, duration);
 }
 
+// AoTv4: a quest asking "how many of item X do you have" counts EVERY quality tier of X.
+//
+// ⚠️ This is the possession half of "quests accept Hallowed and Mythic". The TURN-IN half was already
+// solved in NPC::CheckHandin, which normalizes ids for both Lua check_turn_in and Perl
+// plugin::check_handin -- but a script that gates on CountItem never reaches that code, and would tell
+// a player holding the Mythic version that they do not have the item at all.
+//
+// ⚠️ Deliberately scoped to the QUEST binding, not Client::CountItem itself. The engine calls that for
+// merchants, corpses and NPC inventories where "a Mythic Rusty Dagger is a Rusty Dagger" is NOT the
+// wanted answer; widening it there would change behaviour nobody asked about.
 uint32 Lua_Client::CountItem(uint32 item_id) {
 	Lua_Safe_Call_Int();
-	return self->CountItem(item_id);
+	const uint32 base = AoTv4TierBaseId(item_id);
+	return self->CountItem(base)
+	     + self->CountItem(base + AOTV4_TIER_STEP)
+	     + self->CountItem(base + 2 * AOTV4_TIER_STEP);
 }
 
 void Lua_Client::RemoveItem(uint32 item_id) {
@@ -3405,10 +3663,16 @@ void Lua_Client::SummonItemIntoInventory(luabind::object item_table) {
 	);
 }
 
+// AoTv4: every quality tier counts, same rule as CountItem. Client:HasItem (client_ext.lua) falls
+// through to this for the corpse check, so without it the one place a quest could still answer "you
+// do not have that" would be a player whose only copy is the Mythic one, sitting on their corpse.
 bool Lua_Client::HasItemOnCorpse(uint32 item_id)
 {
 	Lua_Safe_Call_Bool();
-	return self->HasItemOnCorpse(item_id);
+	const uint32 base = AoTv4TierBaseId(item_id);
+	return self->HasItemOnCorpse(base)
+	    || self->HasItemOnCorpse(base + AOTV4_TIER_STEP)
+	    || self->HasItemOnCorpse(base + 2 * AOTV4_TIER_STEP);
 }
 
 void Lua_Client::ClearXTargets()
@@ -4335,6 +4599,8 @@ luabind::scope lua_register_client() {
 	.def("Sit", (void(Lua_Client::*)(void))&Lua_Client::Sit)
 	.def("Stand", (void(Lua_Client::*)(void))&Lua_Client::Stand)
 	.def("SummonBaggedItems", (void(Lua_Client::*)(uint32,luabind::adl::object))&Lua_Client::SummonBaggedItems)
+	.def("AddEvolveProgress", (double(Lua_Client::*)(int,uint64))&Lua_Client::AddEvolveProgress)
+	.def("AddEvolveProgressAug", (double(Lua_Client::*)(int,int,uint64))&Lua_Client::AddEvolveProgressAug)
 	.def("SummonItem", (void(Lua_Client::*)(uint32))&Lua_Client::SummonItem)
 	.def("SummonItem", (void(Lua_Client::*)(uint32,int))&Lua_Client::SummonItem)
 	.def("SummonItem", (void(Lua_Client::*)(uint32,int,uint32))&Lua_Client::SummonItem)

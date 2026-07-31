@@ -36707,6 +36707,12 @@
 43315^6^Draws the life from your target for 100 damage, knitting 300 points of your own wounds closed.^0
 43316^6^Draws the life from your target for 125 damage, knitting 375 points of your own wounds closed.^0
 43317^6^Draws the life from your target for 300 damage, knitting 900 points of your own wounds closed.^0
+43318^6^Tears the sinew from your target for 27 damage, drawing 9 endurance into your own limbs.^0
+43319^6^Tears the sinew from your target for 90 damage, drawing 30 endurance into your own limbs.^0
+43320^6^Tears the sinew from your target for 120 damage, drawing 40 endurance into your own limbs.^0
+43321^6^Tears the sinew from your target for 225 damage, drawing 75 endurance into your own limbs.^0
+43322^6^Tears the sinew from your target for 360 damage, drawing 120 endurance into your own limbs.^0
+43323^6^Tears the sinew from your target for 525 damage, drawing 175 endurance into your own limbs.^0
 43324^6^Promises aid to your target. After 18 seconds the promise blooms, healing 110 points.^0
 43325^6^Promises aid to your target. After 18 seconds the promise blooms, healing 200 points.^0
 43326^6^Promises aid to your target. After 18 seconds the promise blooms, healing 300 points.^0

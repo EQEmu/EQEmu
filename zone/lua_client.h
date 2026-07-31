@@ -262,6 +262,8 @@ public:
 	int GetAugmentIDAt(int slot_id, int aug_slot);
 	void DeleteItemInInventory(int slot_id, int quantity);
 	void DeleteItemInInventory(int slot_id, int quantity, bool update_client);
+	double AddEvolveProgress(int slot_id, uint64 amount);   // AoTv4: delve score -> evolving charm
+	double AddEvolveProgressAug(int slot_id, int aug_index, uint64 amount); // AoTv4: -> evolving augment
 	void SummonItem(uint32 item_id);
 	void SummonItem(uint32 item_id, int charges);
 	void SummonItem(uint32 item_id, int charges, uint32 aug1);

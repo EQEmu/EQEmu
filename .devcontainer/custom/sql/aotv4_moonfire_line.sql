@@ -41,10 +41,16 @@
 -- Then: perl .devcontainer/custom/spells/gen_stock_pool.pl && perl aotv4_client_install/gen_choice_xml.pl
 -- =============================================================================================
 
--- Idempotent. 43318-43323 were the separate castable heals and 43362-43367 the trigger spells,
--- both from earlier passes at this line; drop them, nothing points at them any more.
-DELETE FROM spells_new WHERE id BETWEEN 43312 AND 43323 OR id BETWEEN 43362 AND 43367;
-DELETE FROM db_str    WHERE (id BETWEEN 43312 AND 43323 OR id BETWEEN 43362 AND 43367) AND type = 6;
+-- Idempotent. 43362-43367 were the trigger spells from an earlier pass at this line; drop them,
+-- nothing points at them any more.
+--
+-- ⚠️⚠️ THE RANGE STOPS AT 43317 AND MUST NOT BE WIDENED AGAIN. It used to read 43312 AND 43323,
+-- sweeping up the separate castable heals from an even earlier pass -- but 43318-43323 is now the
+-- live Sinew line (custom/sql/aotv4_sinew_line.sql), so the old range would silently delete six
+-- spells belonging to another script every time this one was re-run. A cleanup DELETE in a
+-- re-runnable script must only ever name the ids that script itself creates.
+DELETE FROM spells_new WHERE id BETWEEN 43312 AND 43317 OR id BETWEEN 43362 AND 43367;
+DELETE FROM db_str    WHERE (id BETWEEN 43312 AND 43317 OR id BETWEEN 43362 AND 43367) AND type = 6;
 
 DROP TEMPORARY TABLE IF EXISTS aotv4_tmpl;
 CREATE TEMPORARY TABLE aotv4_tmpl LIKE spells_new;

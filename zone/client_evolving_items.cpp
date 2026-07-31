@@ -45,8 +45,20 @@ void Client::DoEvolveItemToggle(const EQApplicationPacket *app)
 	}
 
 	item.activated  = in->activated;
-	const auto inst = GetInv().GetItem(GetInv().HasItem(item.item_id));
-	inst->SetEvolveActivated(item.activated ? true : false);
+
+	// AoTv4: null guard.
+	// ⚠️⚠️ THIS DEREFERENCE CRASHES THE ZONE FOR AN AUGMENT. InventoryProfile::_HasItem does search
+	// augment sockets, but on a hit it returns the SENTINEL invslot::SLOT_AUGMENT_GENERIC_RETURN
+	// rather than a real slot id (common/inventory_profile.cpp), and GetItem() on that sentinel
+	// returns nullptr. Stock never noticed because nothing could put an evolving item in a socket;
+	// the Delve augments can, so any client that manages to send an augment's unique id here would
+	// take the zone down. The row is still updated below -- only the in-memory instance is skipped,
+	// and that instance is reloaded from the row anyway.
+	const auto slot = GetInv().HasItem(item.item_id);
+	const auto inst = GetInv().GetItem(slot);
+	if (inst) {
+		inst->SetEvolveActivated(item.activated ? true : false);
+	}
 
 	CharacterEvolvingItemsRepository::ReplaceOne(database, item);
 

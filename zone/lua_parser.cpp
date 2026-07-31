@@ -403,6 +403,21 @@ LuaParser::LuaParser() {
 	SpellArgumentDispatch[EVENT_SPELL_EFFECT_BUFF_TIC_CLIENT]      = handle_spell_event;
 	SpellArgumentDispatch[EVENT_SPELL_FADE]                        = handle_spell_event;
 	SpellArgumentDispatch[EVENT_SPELL_EFFECT_TRANSLOCATE_COMPLETE] = handle_translocate_finish;
+	// AoTv4: the four NPC/bot-target spell events were never registered here, so they fell through
+	// to the default handle_spell_null (an EMPTY function, lua_parser_events.cpp:2182) and the Lua
+	// event table arrived with NO FIELDS AT ALL -- no caster_id, no target, no spell_id.
+	//
+	// ⚠️⚠️ THE SCRIPT STILL RUNS, WHICH IS WHY THIS HIDES SO WELL. event_spell_effect fires exactly
+	// as expected when you nuke a monster; every field on `e` is simply nil, so any script that
+	// reads e.caster_id silently does nothing and looks like a spell that "did not fire". It only
+	// ever worked when the target happened to be a PLAYER.
+	//
+	// handle_spell_event was already written to cover this -- its first branch is `if (mob)`, the
+	// NPC case -- it was just never wired to these four events. Nothing else was needed.
+	SpellArgumentDispatch[EVENT_SPELL_EFFECT_NPC]                  = handle_spell_event;
+	SpellArgumentDispatch[EVENT_SPELL_EFFECT_BUFF_TIC_NPC]         = handle_spell_event;
+	SpellArgumentDispatch[EVENT_SPELL_EFFECT_BOT]                  = handle_spell_event;
+	SpellArgumentDispatch[EVENT_SPELL_EFFECT_BUFF_TIC_BOT]         = handle_spell_event;
 
 	EncounterArgumentDispatch[EVENT_TIMER]            = handle_encounter_timer;
 	EncounterArgumentDispatch[EVENT_ENCOUNTER_LOAD]   = handle_encounter_load;

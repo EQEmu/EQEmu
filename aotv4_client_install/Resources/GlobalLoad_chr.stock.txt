@@ -1,0 +1,14 @@
+13
+liz,liz_chr
+skn,skn_chr
+mos,mos_chr
+kgo,kgo_chr
+ise,ise_chr
+tac,tac_chr
+cub,cub_chr
+com,com_chr
+cof,cof_chr
+rif,rif_chr
+sdf,sdf_chr
+hss,hss_chr
+rea,rea_chr

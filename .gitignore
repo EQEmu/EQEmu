@@ -107,3 +107,4 @@ utils/EQUI_*.xml
 # spell_icons.lua + skill_pool.lua. ~8600 lines that change wholesale on every pool regen; rerun the
 # generator rather than diffing it.
 aotv4_client_install/uifiles_default/EQUI_AoTSpellChoiceWnd.xml
+race_scaling.csv

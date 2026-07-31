@@ -17,6 +17,13 @@ rebuild with the volume intact, skip to **step 5** (shared memory) → **step 6*
 
 ## ⚠️ STEP 0 — IF `peq` IS MISSING, DO NOT IMPORT A SNAPSHOT YET (added 2026-07-24)
 
+> ⚠️⚠️ **UPDATED 2026-07-30 — "MISSING" IS THE EASY CASE. THE DANGEROUS ONE IS `peq` BEING PRESENT
+> AND STALE**, which is what happened tonight: the volume held the Jul 24 import while six days of
+> work sat on another container's layer, so every check below passed and the database was still
+> wrong. **Run `bash .devcontainer/custom/tools/db_sanity.sh` first** — it dates the datadir against
+> the shared-memory blobs and server logs on `/src` and exits 1 if they disagree. Full write-up,
+> including the two-Docker-daemons trap, is **CLAUDE.md §25**.
+
 **The previous container still has the database.** This happened on **2026-07-24**: the volume was
 committed Jul 21 02:45, but a mount only takes effect on the *next* rebuild — and none happened until
 Jul 24 22:31. So the DB lived on the **container layer** for 3 days, and the fresh container came up

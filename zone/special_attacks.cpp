@@ -232,6 +232,23 @@ void Mob::DoSpecialAttackDamage(Mob *who, EQ::skills::SkillType skill, int32 bas
 	     (!IsAttackAllowed(who))))
 		return;
 
+	// AoTv4: too winded to put anything behind it. See the endurance charge further down for why the
+	// gate is a flat "have you got anything left" rather than a real affordability check.
+	//
+	// ⚠️ THE COOLDOWN STILL STARTS. The reuse timer is begun by the CALLER after this function returns
+	// (p_timers.Start, e.g. special_attacks.cpp:490 for Bash), and there are six-plus call sites --
+	// gating in each would be six copies that drift, so the gate lives here and the swing is spent.
+	// That is deliberate rather than merely convenient: whiffing on an empty bar is what stops a
+	// player mashing specials at zero endurance, which is the whole point of the cost.
+	// Set AoT:SpecialEnduranceMinToUse to 0 to remove the gate.
+	if (IsClient() && RuleI(AoT, SpecialEndurancePct) > 0) {
+		const int min_end = RuleI(AoT, SpecialEnduranceMinToUse);
+		if (min_end > 0 && CastToClient()->GetEndurance() < min_end) {
+			CastToClient()->Message(Chat::Yellow, "You are too winded to manage that.");
+			return;
+		}
+	}
+
 	DamageHitInfo my_hit;
 	my_hit.damage_done = 1; // min 1 dmg
 	my_hit.base_damage = base_damage;
@@ -312,6 +329,36 @@ void Mob::DoSpecialAttackDamage(Mob *who, EQ::skills::SkillType skill, int32 bas
 
 	who->AddToHateList(this, hate, 0);
 	who->Damage(this, my_hit.damage_done, SPELL_UNKNOWN, skill, false);
+
+	// AoTv4: a damaging combat special COSTS ENDURANCE in proportion to what it actually hit for
+	// (AoT:SpecialEndurancePct, default 50 -- a 200 damage Backstab costs 100 endurance).
+	//
+	// ⚠️ CHARGED AFTER THE HIT, and it has to be: the cost is a share of the damage, and the damage is
+	// not known until DoAttack has rolled it. That means the gate on USING a special is a separate,
+	// cheap "do you have any endurance left" test (AoT:SpecialEnduranceMinToUse) rather than a real
+	// affordability check -- you cannot price something before you know what it costs.
+	//
+	// ⚠️ THIS IS THE ONLY PLACE IT NEEDS TO GO. Bash, Kick, Frenzy, Backstab and every monk strike
+	// (via MonkSpecialAttack) all funnel through DoSpecialAttackDamage, so charging here covers the
+	// player-pressed path AND the autoskill auto-fire loop with one edit. Adding it per ability would
+	// be five copies that drift.
+	//
+	// ⚠️ CLIENTS ONLY. Mob::GetEndurance is a virtual returning 0 for NPCs and SetEndurance a no-op,
+	// so an NPC would silently "pay" nothing -- but calling it is still wrong and would mislead anyone
+	// reading this later into thinking NPCs are costed.
+	// ⚠️ A miss costs nothing, by construction: 50% of zero damage is zero.
+	if (IsClient() && my_hit.damage_done > 0) {
+		const int pct = RuleI(AoT, SpecialEndurancePct);
+		if (pct > 0) {
+			Client *c = CastToClient();
+			// int64 damage, int arithmetic: multiply before dividing or a small hit truncates to 0.
+			const int64 cost = (my_hit.damage_done * pct) / 100;
+			if (cost > 0) {
+				const int64 have = c->GetEndurance();
+				c->SetEndurance((int32) (cost >= have ? 0 : have - cost));
+			}
+		}
+	}
 
 	// Make sure 'this' has not killed the target and 'this' is not dead (Damage shield ect).
 	if (!GetTarget()) {

@@ -6,16 +6,13 @@
     "appPort": [
         "5998:5998/udp",
         "5999:5999/udp",
-        "7000:7000/udp",
-        "7001:7001/udp",
-        "7002:7002/udp",
-        "7003:7003/udp",
-        "7004:7004/udp",
-        "7005:7005/udp",
+        "7000-7029:7000-7029/udp",
         "9000:9000/udp",
         "9001:9001/udp",
         "127.0.0.1:3307:3306"
     ],
+
+    "// zone ports": "7000-7029 (30 zones), widened from 7000-7005 on 2026-07-30. SIX was not enough: every booted zone holds one for its lifetime, and with the tutorial plus a few dynamics already up, asking world for one more zone got 'World did not have a port to assign from this server, the port range was not large enough' and the client was told 'That zone is unavailable' and bounced to character select. Instanced content makes that routine -- every delve run is another zone. THIS RANGE AND server.zones.ports IN eqemu_config.json MUST MATCH: widening only the config boots zones on ports the Windows client cannot reach, which turns a clear error into a silent timeout on zone-in.",
 
     "// db port": "MariaDB is published as a REAL Docker port (host 127.0.0.1:3307 -> container 3306) like the EQ ports, NOT via VS Code's forwardPorts tunnel. The tunnel breaks MySQL because MySQL is server-speaks-first: HeidiSQL opens TCP, waits for the server greeting, and dies with 'Lost connection at handshake: reading initial communication packet'. Bound to 127.0.0.1 on the host so the DB is reachable from Windows only, never the LAN. Needs bind-address=0.0.0.0 in the container (postStartCommand) + a peq@'%' grant, because a published port arrives from the docker gateway (172.17.0.1), not loopback.",
 
@@ -62,6 +59,8 @@
     "workspaceMount": "source=${localWorkspaceFolder},target=/src,type=bind,consistency=cached",
 
     "// mounts": "Persist the MariaDB datadir on a named volume so a container rebuild does NOT wipe the peq DB (see POST_REBUILD_RECOVERY.md). First rebuild after adding this: the empty volume is populated from the image's initialized datadir (peq-less) -> import the snapshot ONCE. Every rebuild after that keeps the DB.",
+
+    "// ⚠️⚠️ BUILD THIS ON DOCKER DESKTOP'S ENGINE, ALWAYS": "A named volume is scoped to its DOCKER ENGINE, and this machine has TWO -- so `aotv4-mysql-data` EXISTS TWICE, two separate volumes sharing one name, and whichever engine VS Code builds this container on silently decides which peq database you get. On 2026-07-30 that cost most of a session: Docker Desktop's volume held the live 930MB DB while the other held a stale Jul-24 import, and the stale one looked perfectly healthy -- the server booted and every query answered. ⚠️⚠️ The second engine is `docker-ce` INSIDE THE WSL `Ubuntu` DISTRO, and VS Code uses it EVEN WHEN LAUNCHED FROM WINDOWS -- the Dev Containers extension runs its CLI in WSL (`Dev Containers: Show Container Log` shows `--workspace-folder /mnt/c/AoTv3/AoTv4` and `/home/<user>/.vscode-remote-containers/...`), so it talks to Ubuntu's `unix:///var/run/docker.sock`, not Docker Desktop. It is NOT the two `docker context ls` entries: Docker Desktop publishes both `default` and `desktop-linux` to the same daemon. FIX: enable Docker Desktop WSL Integration for Ubuntu AND `sudo systemctl disable --now docker` inside Ubuntu, so there is only one engine. Check which one you are on from INSIDE the container, which always works: `hostname` and `grep ' /var/lib/mysql ' /proc/self/mountinfo`, then `bash .devcontainer/custom/tools/db_sanity.sh` (it exits 1 on a stale DB). Full write-up: CLAUDE.md §25. Before deleting any stale copy, be certain which engine owns it -- the Docker Desktop UI only lists its own volumes and the two are indistinguishable by name there.",
     "mounts": [
         "source=aotv4-mysql-data,target=/var/lib/mysql,type=volume"
     ]

@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="us-ascii"?>
+<XML ID="EQInterfaceDefinitionLanguage">
+	<Schema xmlns="EverQuestData" xmlns:dt="EverQuestDataTypes" />
+
+	<!-- AoTv4 Delve window (CCustomWnd "AoTDungeonWnd"), two tabs:
+	       Layers       pick a level and enter; only unlocked layers are ever sent to the client
+	       Score Sheet  every finished run, what it scored, and how hard the creatures actually were
+
+	     These are REAL native tabs (TabBox / Page / TabText), which this client's SIDL parser
+	     supports, and FT_DefTabBorder / FT_DefPageBorder are both defined in EQUI_Templates.xml.
+	     Two Listboxes in one window is likewise fine (EQUI_AoTSpellBook.xml ships four).
+
+	     Each page owns its own controls, which is exactly when native tabs are the right widget:
+	     the Layers page has Enter and Exit, the Score Sheet has neither.
+
+	     The Score Sheet is the Death Book pattern: one header row per run with [+]/[-], and only an
+	     open run lists its level-band breakdown, so twenty runs read as a table of contents.
+
+	     Comments must never contain a double hyphen, which is illegal in XML and makes the SIDL
+	     parser abort the WHOLE file, killing the client before character select. Run
+	     aotv4_client_install/validate_ui_xml.sh before copying this anywhere. -->
+
+	<!-- ================================================================ page 1: Layers -->
+	<Label item="DLV_Hint">
+		<ScreenID>DLV_Hint</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>8</X><Y>4</Y></Location>
+		<Size><CX>280</CX><CY>16</CY></Size>
+		<Text>Select a level, then Enter</Text>
+		<NoWrap>true</NoWrap>
+		<TextColor><R>240</R><G>200</G><B>120</B></TextColor>
+	</Label>
+
+	<Button item="DLV_Refresh">
+		<ScreenID>DLV_Refresh</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>350</X><Y>2</Y></Location>
+		<Size><CX>76</CX><CY>20</CY></Size>
+		<Text>Refresh</Text>
+		<TextColor><R>230</R><G>230</G><B>230</B></TextColor>
+		<Template>BDT_Normal</Template>
+	</Button>
+
+	<Listbox item="DLV_LayerList">
+		<ScreenID>DLV_LayerList</ScreenID>
+		<DrawTemplate>WDT_Inner</DrawTemplate>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>8</X><Y>22</Y></Location>
+		<Size><CX>424</CX><CY>150</CY></Size>
+		<TextColor><R>255</R><G>255</G><B>255</B></TextColor>
+		<Style_Border>true</Style_Border>
+		<Style_VScroll>true</Style_VScroll>
+		<Columns><Width>52</Width><Heading>Level</Heading></Columns>
+		<Columns><Width>270</Width><Heading>Dungeon</Heading></Columns>
+		<Columns><Width>90</Width><Heading>Status</Heading></Columns>
+	</Listbox>
+
+	<!-- Difficulty selection.  The choices and their descriptions arrive from the SERVER over
+	     DUNGMODES and are pushed in with CComboWnd::InsertChoice, so adding a seventh mode is a
+	     server edit and needs no dll change.  Hardcoding the list here is the kIcons[] drift trap
+	     from CLAUDE.md section 3.
+
+	     Combobox is genuinely supported by this client (stock EQUI_AAWindow, EQUI_BazaarSearchWnd
+	     and EQUI_TradeskillWnd all use one) AND its methods are address mapped in this build:
+	     InsertChoice, GetCurChoice, SetChoice and DeleteAll.  That last part is the bit worth
+	     checking before designing around any widget, per section 16. -->
+	<Label item="DLV_ModeLabel">
+		<ScreenID>DLV_ModeLabel</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>8</X><Y>180</Y></Location>
+		<Size><CX>70</CX><CY>20</CY></Size>
+		<Text>Difficulty</Text>
+		<NoWrap>true</NoWrap>
+		<TextColor><R>240</R><G>200</G><B>120</B></TextColor>
+	</Label>
+
+	<Combobox item="DLV_ModeCombo">
+		<ScreenID>DLV_ModeCombo</ScreenID>
+		<DrawTemplate>WDT_Inner</DrawTemplate>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>78</X><Y>176</Y></Location>
+		<Size><CX>150</CX><CY>24</CY></Size>
+		<ListHeight>120</ListHeight>
+		<Button>BDT_Combo</Button>
+		<Style_Border>true</Style_Border>
+	</Combobox>
+
+	<!-- What the selected mode actually does.  An STMLbox rather than a Label because it wraps and
+	     draws a real bordered panel; Label has no confirmed border on this build. -->
+	<STMLbox item="DLV_ModeDesc">
+		<ScreenID>DLV_ModeDesc</ScreenID>
+		<DrawTemplate>WDT_Inner</DrawTemplate>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>8</X><Y>204</Y></Location>
+		<Size><CX>424</CX><CY>56</CY></Size>
+		<Style_Border>true</Style_Border>
+		<Style_VScroll>true</Style_VScroll>
+		<TextColor><R>240</R><G>240</G><B>240</B></TextColor>
+	</STMLbox>
+
+	<Button item="DLV_Enter">
+		<ScreenID>DLV_Enter</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>8</X><Y>266</Y></Location>
+		<Size><CX>96</CX><CY>24</CY></Size>
+		<Text>Enter</Text>
+		<TextColor><R>140</R><G>255</G><B>140</B></TextColor>
+		<Template>BDT_Normal</Template>
+	</Button>
+
+	<Button item="DLV_Exit">
+		<ScreenID>DLV_Exit</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>336</X><Y>266</Y></Location>
+		<Size><CX>96</CX><CY>24</CY></Size>
+		<Text>Exit Delve</Text>
+		<TextColor><R>255</R><G>150</G><B>150</B></TextColor>
+		<Template>BDT_Normal</Template>
+	</Button>
+
+	<Page item="DLV_LayerPage">
+		<ScreenID>DLV_LayerPage</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>0</X><Y>0</Y></Location>
+		<Size><CX>440</CX><CY>298</CY></Size>
+		<Text>Layers</Text>
+		<TabText>Layers</TabText>
+		<TabTextColor><R>255</R><G>255</G><B>255</B></TabTextColor>
+		<TabTextActiveColor><R>255</R><G>255</G><B>0</B></TabTextActiveColor>
+		<Style_VScroll>false</Style_VScroll>
+		<Pieces>DLV_Hint</Pieces>
+		<Pieces>DLV_Refresh</Pieces>
+		<Pieces>DLV_LayerList</Pieces>
+		<Pieces>DLV_ModeLabel</Pieces>
+		<Pieces>DLV_ModeCombo</Pieces>
+		<Pieces>DLV_ModeDesc</Pieces>
+		<Pieces>DLV_Enter</Pieces>
+		<Pieces>DLV_Exit</Pieces>
+	</Page>
+
+	<!-- ================================================================ page 2: Score Sheet -->
+	<Label item="DLV_HistHint">
+		<ScreenID>DLV_HistHint</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>8</X><Y>4</Y></Location>
+		<Size><CX>336</CX><CY>16</CY></Size>
+		<Text>Click a run to open it. Score follows what you fought.</Text>
+		<NoWrap>true</NoWrap>
+		<TextColor><R>240</R><G>200</G><B>120</B></TextColor>
+	</Label>
+
+	<!-- A SECOND refresh button, for the Score Sheet tab.
+	     Each Page owns its own pieces, so the Delve tab's DLV_Refresh does not appear here and the
+	     score sheet had no way to be re-requested while you were looking at it - which is exactly the
+	     tab most likely to look stale, because it only changes when a run ENDS.
+	     Listing DLV_Refresh in both Pages is NOT the fix: a piece named twice is placed twice.
+	     Deliberately the same location and size as DLV_Refresh so the button does not jump when the
+	     tab is switched. Both send the same /say delve, which returns the layer list AND the history
+	     in one round trip. -->
+	<Button item="DLV_HistRefresh">
+		<ScreenID>DLV_HistRefresh</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>350</X><Y>2</Y></Location>
+		<Size><CX>76</CX><CY>20</CY></Size>
+		<Text>Refresh</Text>
+		<TextColor><R>230</R><G>230</G><B>230</B></TextColor>
+		<Template>BDT_Normal</Template>
+	</Button>
+
+	<Listbox item="DLV_HistList">
+		<ScreenID>DLV_HistList</ScreenID>
+		<DrawTemplate>WDT_Inner</DrawTemplate>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>8</X><Y>22</Y></Location>
+		<Size><CX>424</CX><CY>268</CY></Size>
+		<TextColor><R>255</R><G>255</G><B>255</B></TextColor>
+		<Style_Border>true</Style_Border>
+		<Style_VScroll>true</Style_VScroll>
+		<Columns><Width>184</Width><Heading>Run</Heading></Columns>
+		<Columns><Width>54</Width><Heading>Score</Heading></Columns>
+		<Columns><Width>42</Width><Heading>Kills</Heading></Columns>
+		<Columns><Width>56</Width><Heading>Result</Heading></Columns>
+	</Listbox>
+
+	<Page item="DLV_HistPage">
+		<ScreenID>DLV_HistPage</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>0</X><Y>0</Y></Location>
+		<Size><CX>440</CX><CY>298</CY></Size>
+		<Text>Score Sheet</Text>
+		<TabText>Score Sheet</TabText>
+		<TabTextColor><R>255</R><G>255</G><B>255</B></TabTextColor>
+		<TabTextActiveColor><R>255</R><G>255</G><B>0</B></TabTextActiveColor>
+		<Style_VScroll>false</Style_VScroll>
+		<Pieces>DLV_HistHint</Pieces>
+		<Pieces>DLV_HistRefresh</Pieces>
+		<Pieces>DLV_HistList</Pieces>
+	</Page>
+
+	<!-- ================================================================ the tab strip -->
+	<TabBox item="DLV_Tabs">
+		<ScreenID>DLV_Tabs</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>6</X><Y>22</Y></Location>
+		<Size><CX>444</CX><CY>324</CY></Size>
+		<TabBorderTemplate>FT_DefTabBorder</TabBorderTemplate>
+		<PageBorderTemplate>FT_DefPageBorder</PageBorderTemplate>
+		<Pages>DLV_LayerPage</Pages>
+		<Pages>DLV_HistPage</Pages>
+	</TabBox>
+
+	<Screen item="AoTDungeonWnd">
+		<RelativePosition>false</RelativePosition>
+		<Location><X>240</X><Y>140</Y></Location>
+		<Size><CX>460</CX><CY>360</CY></Size>
+		<Text>Delve</Text>
+		<Style_Transparent>false</Style_Transparent>
+		<DrawTemplate>WDT_Def</DrawTemplate>
+		<Style_Titlebar>true</Style_Titlebar>
+		<Style_Closebox>true</Style_Closebox>
+		<Style_Border>true</Style_Border>
+		<Style_Sizable>false</Style_Sizable>
+		<!-- ⚠️ ONLY the TabBox is listed here. Every other piece belongs to a Page; naming one on the
+		     Screen as well places it twice and it draws outside its tab (CLAUDE.md section 20). -->
+		<Pieces>DLV_Tabs</Pieces>
+	</Screen>
+
+</XML>

@@ -47,6 +47,7 @@
 	<Button item="AMW_Search"><ScreenID>AMW_Search</ScreenID><RelativePosition>true</RelativePosition><AutoStretch>true</AutoStretch><LeftAnchorToLeft>true</LeftAnchorToLeft><LeftAnchorOffset>6</LeftAnchorOffset><RightAnchorToLeft>false</RightAnchorToLeft><RightAnchorOffset>6</RightAnchorOffset><TopAnchorToTop>true</TopAnchorToTop><TopAnchorOffset>156</TopAnchorOffset><BottomAnchorToTop>true</BottomAnchorToTop><BottomAnchorOffset>182</BottomAnchorOffset><Text>Allaclone</Text><TextColor><R>200</R><G>200</G><B>255</B></TextColor><Template>BDT_Normal</Template><TooltipReference>In game item, NPC, spell and recipe lookup</TooltipReference></Button>
 
 	<Button item="AMW_Lost"><ScreenID>AMW_Lost</ScreenID><RelativePosition>true</RelativePosition><AutoStretch>true</AutoStretch><LeftAnchorToLeft>true</LeftAnchorToLeft><LeftAnchorOffset>6</LeftAnchorOffset><RightAnchorToLeft>false</RightAnchorToLeft><RightAnchorOffset>6</RightAnchorOffset><TopAnchorToTop>true</TopAnchorToTop><TopAnchorOffset>186</TopAnchorOffset><BottomAnchorToTop>true</BottomAnchorToTop><BottomAnchorOffset>212</BottomAnchorOffset><Text>Death Book</Text><TextColor><R>255</R><G>150</G><B>150</B></TextColor><Template>BDT_Normal</Template><TooltipReference>Everything you have ever lost, and what killed you</TooltipReference></Button>
+	<Button item="AMW_Delve"><ScreenID>AMW_Delve</ScreenID><RelativePosition>true</RelativePosition><AutoStretch>true</AutoStretch><LeftAnchorToLeft>true</LeftAnchorToLeft><LeftAnchorOffset>6</LeftAnchorOffset><RightAnchorToLeft>false</RightAnchorToLeft><RightAnchorOffset>6</RightAnchorOffset><TopAnchorToTop>true</TopAnchorToTop><TopAnchorOffset>216</TopAnchorOffset><BottomAnchorToTop>true</BottomAnchorToTop><BottomAnchorOffset>242</BottomAnchorOffset><Text>Delve</Text><TextColor><R>255</R><G>220</G><B>160</B></TextColor><Template>BDT_Normal</Template><TooltipReference>Scaling instanced dungeons; pick a level and clear it</TooltipReference></Button>
 
 	<Screen item="AoTMenuWnd">
 		<RelativePosition>false</RelativePosition>
@@ -54,7 +55,7 @@
 		     and the client remembers wherever it is dragged to after that. Left edge, mid height, so it
 		     is clear of the chat window and the hotbars at any common resolution. -->
 		<Location><X>12</X><Y>240</Y></Location>
-		<Size><CX>132</CX><CY>232</CY></Size>
+		<Size><CX>132</CX><CY>262</CY></Size>
 		<Style_VScroll>false</Style_VScroll>
 		<Style_HScroll>false</Style_HScroll>
 		<Style_Transparent>false</Style_Transparent>
@@ -84,6 +85,7 @@
 		<Pieces>AMW_Achievements</Pieces>
 		<Pieces>AMW_Search</Pieces>
 		<Pieces>AMW_Lost</Pieces>
+		<Pieces>AMW_Delve</Pieces>
 	</Screen>
 
 </XML>
