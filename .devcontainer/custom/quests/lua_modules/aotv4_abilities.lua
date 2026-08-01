@@ -1,5 +1,5 @@
 -- aotv4_abilities.lua
--- Shared helpers for the custom ability set (spell ids 50000+, see
+-- Shared helpers for the custom ability set (spell ids 43000+, see
 -- .devcontainer/custom/spells/spell_design.csv).
 --
 -- These are the "Bucket B" abilities: the ones with no stock SPA equivalent, so

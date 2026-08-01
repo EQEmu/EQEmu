@@ -1,7 +1,11 @@
-local aotv4_pets = require("aotv4_pets")  -- summon traits + pet behaviour
+local aotv4_worldboss = require("aotv4_worldboss")  -- roaming world boss: loot rights on death
+local aotv4_dungeon = require("aotv4_dungeon")  -- scaling dungeon ("Delve")
 
 function event_spawn(e)
-    aotv4_pets.on_pet_spawn(e.self)   -- Bear holds aggro
+    -- Delve: scale this mob to the layer's level if it is spawning inside a delve instance.
+    -- ⚠️ FIRST THING IN THE HOOK and before any of the seasonal string matching below: it
+    -- early-outs on the instance id, so the normal world pays one integer compare for it.
+    aotv4_dungeon.on_npc_spawn(e)
 
     -- peq_halloween
     if (eq.is_content_flag_enabled("peq_halloween")) then
@@ -34,8 +38,27 @@ function event_spawn(e)
     end
 end
 
--- Summoned-pet behaviours (Leopard backstab, Skeleton lifetap-heal, Willowisp
--- mana leech, Fire Imp burn). Fires for pets because NPCs get damage events too.
-function event_damage_given(e)
-  aotv4_pets.on_pet_damage(e.self, eq.get_entity_list():GetMobID(e.entity_id), e.damage, e.spell_id)
+-- ⚠️ There is deliberately NO event_damage_given here any more. It existed solely to drive the
+-- summoned-pet behaviours of the retired 43000-43112 ability set (Leopard backstab, Skeleton
+-- lifetap-heal, Willowisp mana leech, Fire Imp burn) and did nothing else, so it was removed with
+-- them. The player-side damage hooks (Thirst, Sinew, reactions) live in global_player.lua and are
+-- untouched -- do not re-add this one expecting to find them here.
+
+-- AoTv4: the roaming world boss can die in any zone, so its loot rights are granted from the global
+-- NPC hook rather than a per-zone script. Everyone on its hate list may loot -- see
+-- lua_modules/aotv4_worldboss.lua.
+function event_death_complete(e)
+  aotv4_worldboss.on_death(e)
+
+  -- Delve: bank what this creature was worth into the run's difficulty ledger. Keyed off the mob's
+  -- OWN scaled level, stamped when it spawned, so no later change of gear can revalue it.
+  aotv4_dungeon.on_npc_death(e)
+
+  -- Delve: opening the reward chest ends the run and closes the instance.
+  -- ⚠️ Keyed on the chest's npc type id, not on its name -- a_delve_reward_chest is a clone of
+  -- a_gilded_chest and there are several similarly named chests in the world.
+  -- ⚠️ e.other is a Lua_Mob; on_chest_looted needs a real Lua_Client (CharacterID is not on Lua_Mob).
+  if e.self and e.self.valid and e.self:GetNPCTypeID() == aotv4_dungeon.CHEST_NPC then
+    aotv4_dungeon.on_chest_looted(aotv4_dungeon.as_client(e.other))
+  end
 end

@@ -25,11 +25,16 @@ local SAY_TRIGGER   = "aapick"
 local MAX_PICKS     = 30     -- safety cap on window pops per death (budget normally ends it sooner)
 local SHOW_SAYLINKS = true   -- chat fallback until the dll AA window is built
 
--- Per-AA investment cap: no single AA may absorb more than this many total points, so every AA is
--- fully attainable within ~one death's bank. Cheap AAs (cost 2) can still reach ~rank 5 (enough to
--- satisfy rank<=3 prereqs); a cost-9 AA stays rank 1. Keep this in step with the per-death bank
--- (global_player AA_XP_BASE ~= 10 AA at the level-50 cap); raise BOTH as the level cap rises.
-local RANK_BUDGET   = 10
+-- ⚠️⚠️ THE PER-AA INVESTMENT CAP IS DISABLED (0 = off), and it must stay that way under the current
+-- pricing. It used to be 10, meaning an AA stopped being offered once `next_rank * cost` exceeded
+-- that -- a design from when a death banked ~10 points and one AA could otherwise soak the lot.
+-- With the 2026-07-31 repricing that cap silently makes most of the set unfinishable:
+--   * a custom tree's rank 5 costs 3, so 5 * 3 = 15 > 10 -- every custom tree would stall at rank 3
+--   * Slow Knitting has 31 ranks at 1 point, so it would stall at rank 10 of 31
+-- and the failure is invisible: the AA simply stops appearing in the offers, with no message.
+-- The only gates now are the ones the design actually calls for -- can you afford it, is there a
+-- rank left to buy, and are its prerequisites owned.
+local RANK_BUDGET   = 0
 
 -- Banked AA points live in a PRIVATE data bucket (aa_bank_<charid>), NOT the native unspent pool
 -- (m_pp.aapoints). That way the native AA window shows 0 spendable points -- the player cannot
@@ -102,7 +107,9 @@ local function gather_affordable(client, level, budget)
 				-- offered. mr is floored to 1 so the handful of mr=0 pool rows still offer their first rank.
 				local max_rank    = math.max(1, tonumber(aa.mr) or 1)
 				local within_rank = next_rank <= max_rank
-				local within_cap  = (next_rank * cost <= RANK_BUDGET)
+				-- ⚠️ RANK_BUDGET = 0 disables the per-AA investment cap entirely -- see the note on the
+				-- constant for why it must stay off under the current pricing.
+				local within_cap  = (RANK_BUDGET <= 0) or (next_rank * cost <= RANK_BUDGET)
 				if cost <= budget and within_rank and within_cap and prereqs_met(client, aa) then
 					out[#out + 1] = aa
 				end
@@ -154,12 +161,27 @@ end
 local function resend_stored_offer(client)
 	local stored = eq.get_data(choice_key(client))
 	if not stored or stored == "" then return false end
-	local choices = {}
+	local choices, want = {}, 0
 	for s in stored:gmatch("([^,]+)") do
+		want = want + 1
 		local id = s:match("^(%d+):")
 		local aa = id and aa_lookup(tonumber(id))
 		if aa then choices[#choices + 1] = aa end
 	end
+
+	-- ⚠️⚠️ A PARTIALLY RESOLVED OFFER IS THROWN AWAY, NOT SENT. This used to keep whatever it could
+	-- look up and silently drop the rest, which combines terribly with the offer being STICKY: a
+	-- stored offer naming abilities that are no longer in the pool -- because the pool was
+	-- regenerated, or an AA was disabled -- came back as a SHORTER offer, and then re-sent that same
+	-- degraded set forever, since only a pick ever re-rolls it. Observed as "23 points banked and
+	-- exactly one option", where two of the three stored ids had been disabled.
+	-- Discarding it makes M.offer roll a fresh full set instead, which is always safe: nothing has
+	-- been spent yet, so nothing is lost by re-rolling.
+	if #choices < want then
+		eq.set_data(choice_key(client), "")
+		return false
+	end
+
 	if #choices == 0 then return false end
 	send_offer(client, get_num(bank_key(client)), choices)
 	return true

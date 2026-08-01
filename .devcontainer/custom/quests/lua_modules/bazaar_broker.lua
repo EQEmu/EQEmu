@@ -30,8 +30,24 @@ end
 --   SHOPINVDATA slot|itemid|name|vendor^...   -- droppable items you can ADD (from any bag)
 --   MYSHOPDATA  item_sn|itemid|name|cost^...  -- what's already listed in your shop
 local function send_shop_data(c)
-	c:Message(MT.NPCQuestSay, "SHOPINVDATA " .. (c:GetSellableInventory() or ""))
-	c:Message(MT.NPCQuestSay, "MYSHOPDATA "  .. (c:GetMyShopListing() or ""))
+	c:Message(MT.NPCQuestSay, "SHOPINVDATA "  .. (c:GetSellableInventory() or ""))   -- inventory + projected price
+	c:Message(MT.NPCQuestSay, "SHOPBOOKDATA " .. (c:GetPriceBook() or ""))            -- persistent price book
+	c:Message(MT.NPCQuestSay, "SHOPLOGDATA "  .. (c:GetPriceLog() or ""))             -- recent price changes
+	c:Message(MT.NPCQuestSay, "MYSHOPDATA "   .. (c:GetMyShopListing() or ""))        -- current shop rows
+	-- History panels, sent with the rest so the window never has to ask twice:
+	--   SHOPLISTLOG  itemid|name|qty|price|when^...        -- what you have listed (List Item tab)
+	--   SHOPSOLDLOG  itemid|name|qty|price|buyer|when^...  -- what has sold      (My Shop tab)
+	-- Both are newest-first and capped server side, so they cannot outgrow a chat line.
+	--
+	-- ⚠️ AN EMPTY LOG IS NOT SENT AT ALL. Both are append-only histories, so "empty" only ever means
+	-- "nothing has happened yet" and there is no stale panel to clear -- but a dll that does not yet
+	-- swallow the line prints the bare header to chat, which is what a player sees every time they
+	-- open the shop. Skipping the send costs nothing and keeps a server change from leaking into chat
+	-- ahead of the client half that hides it.
+	local listlog = c:GetShopListingLog() or ""
+	local soldlog = c:GetShopSoldLog()    or ""
+	if listlog ~= "" then c:Message(MT.NPCQuestSay, "SHOPLISTLOG " .. listlog) end
+	if soldlog ~= "" then c:Message(MT.NPCQuestSay, "SHOPSOLDLOG " .. soldlog) end
 end
 
 -- GLOBAL say handler (from global_player event_say). The dll issues these via /say and swallows the
@@ -46,7 +62,14 @@ function M.handle_global_say(e)
 		return true
 	end
 
-	local add = msg:match("^shopadd%s+(.+)$")           -- "slot:price,slot:price,..."
+	local pid, pprice = msg:match("^shopsetprice%s+(%d+):(%d+)$")   -- set the price book: "itemid:price"
+	if pid then
+		c:SetItemPrice(tonumber(pid), tonumber(pprice))
+		send_shop_data(c)
+		return true
+	end
+
+	local add = msg:match("^shopadd%s+(.+)$")           -- "slot:qty,slot:qty,..." (price comes from the book)
 	if add then
 		local n = c:AddItemsToShop(add)
 		if n > 0 then

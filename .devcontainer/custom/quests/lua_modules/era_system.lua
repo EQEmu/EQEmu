@@ -16,12 +16,7 @@ local M = {}
 -- AAs are NOT era-gated anymore -- the whole pool is offered randomly (prereqs still enforced) from the
 -- start. Expansions open smoothly as the first player's accumulated AA value crosses these thresholds.
 M.ERA = {
-	-- Classic caps at 30, not 50: the custom ability set is authored for levels
-	-- 1-30 (see .devcontainer/custom/spells/), so past 30 the reward window would
-	-- have nothing new to offer and would degrade to empty picks. Raise this as
-	-- levels 31+ get authored. cap_exp = GetEXPForLevel(30) = 29^3 * 1.0 * 1000
-	-- (zone/exp.cpp:1024 -- the level modifier is 1.0 below level 31).
-	[0] = { name = "Classic",                  expansion = 0, cap = 30, cap_exp = 24389000,   spent = 0    },
+	[0] = { name = "Classic",                  expansion = 0, cap = 50, cap_exp = 164708600,  spent = 0    },
 	[1] = { name = "The Ruins of Kunark",      expansion = 1, cap = 60, cap_exp = 616137000,  spent = 220  },
 	[2] = { name = "The Scars of Velious",     expansion = 2, cap = 60, cap_exp = 616137000,  spent = 485  },
 	[3] = { name = "The Shadows of Luclin",    expansion = 3, cap = 60, cap_exp = 616137000,  spent = 740  },
@@ -42,8 +37,47 @@ function M.def(era)
 	return M.ERA[era] or M.ERA[0]
 end
 
-function M.level_cap()
-	return M.def(M.current()).cap
+-- ⚠️⚠️ THE SERVER CAP IS 30 AND THE REGION SYSTEM OWNS IT, NOT THE ERA TABLE.
+-- The era table's caps (Classic 50 ... Omens 70) predate the level 30 rework and its unlock trigger
+-- has been orphaned since random AA was retired (nothing advances `aotv4_era`), so it was frozen at
+-- Classic/50 and was the ONLY thing actually clamping anybody. The region ceiling -- the highest
+-- `max_level` among the regions a character has unlocked, all of which are 30 -- is the real design,
+-- but `GetRegionMaxLevel` had no caller anywhere and did nothing.
+--
+-- Both are consulted and the LOWER wins, so neither can raise the other's ceiling by accident.
+-- ⚠️⚠️ 30, matching `regions.max_level` from the 0.1.1 region import. level_cap() takes the MINIMUM
+-- of this, the era cap and the character's region ceiling, so if these two disagree the LOWER one
+-- silently becomes the real cap and the other looks like it does nothing. They are kept equal so
+-- there is one answer to "what is the cap", not two that happen to agree.
+-- 📌 It was 35 earlier today, to match zone/exp.cpp's stated design ("629,000 at level 35"). The
+-- 0.1.1 balance pass moved it to 30. The EXPERIENCE CURVE was never re-tuned for 30 -- it still
+-- describes a 35 ceiling in its own comments -- so a full climb now ends at 495,000 rather than
+-- 665,000, and anything calibrated against that figure (the AA conversion, in particular) is
+-- proportionally generous by about a third.
+M.HARD_CAP = 30
+
+-- ⚠️⚠️ A REGION CEILING OF 0 MEANS "NO REGIONS UNLOCKED", NOT "MAX LEVEL 0".
+-- RegionManager::GetMaxLevel returns 0 when the character holds no regions, and
+-- `character_regions_unlocked` is EMPTY on this server today -- nothing grants a starting region
+-- yet. Treating that 0 as a cap would pin every character on the server at level 0, which is why
+-- this reads it as "unrestricted" and falls back to HARD_CAP.
+-- 📌 When regions do start being granted, this keeps working unchanged: every region is max_level
+-- 30, so the answer is 30 either way. Revisit only if a region above 30 is ever added.
+function M.region_cap(client)
+	if not client or not client.GetRegionMaxLevel then return M.HARD_CAP end
+	local ok, v = pcall(function() return client:GetRegionMaxLevel() end)
+	if not ok or not v or v <= 0 then return M.HARD_CAP end
+	return v
+end
+
+function M.level_cap(client)
+	local cap = M.def(M.current()).cap or M.HARD_CAP
+	if cap > M.HARD_CAP then cap = M.HARD_CAP end
+	if client then
+		local r = M.region_cap(client)
+		if r < cap then cap = r end
+	end
+	return cap
 end
 
 -- AA VALUE the player has accumulated = sum of (owned rank * cost) across the whole pool. This is the
@@ -107,12 +141,20 @@ end
 -- not bounce-level every kill, and so a death at the cap banks the tuned amount (not an ever-growing
 -- pile from grinding at cap).
 function M.clamp_level(client)
-	local cap = M.level_cap()
+	-- ⚠️ Pass the client: the cap is now per character (region ceiling), not server wide.
+	local cap = M.level_cap(client)
 	if client:GetLevel() > cap then
 		client:SetLevel(cap)
-		local d = M.def(M.current())
-		if d.cap_exp and (client:GetEXP() or 0) > d.cap_exp then
-			client:SetEXP(d.cap_exp, client:GetAAExp())
+		-- ⚠️⚠️ THE EXP MUST BE PINNED OR THE CLAMP FIGHTS ITSELF. Experience keeps accruing at cap, so
+		-- a character held at the cap without pinning re-crosses the threshold on the very next kill,
+		-- fires event_level_up again, and gets clamped again -- forever.
+		-- ⚠️ Pinned at the exp for the ACTUAL cap, computed from the client. The era table's `cap_exp`
+		-- was hand written for ITS caps (50/60/65/70) and is far too high for 30: writing it would
+		-- hold a level 30 character on the experience of a level 50 one, and since a death banks AA
+		-- from total run experience, it would also pay out an enormous bank on every death.
+		local cap_exp = client:GetEXPForLevel(cap)
+		if cap_exp and cap_exp > 0 and (client:GetEXP() or 0) > cap_exp then
+			client:SetEXP(cap_exp, client:GetAAExp())
 		end
 		return true
 	end

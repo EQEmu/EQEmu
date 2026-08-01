@@ -1,5 +1,5 @@
--- Duel lock (helper, 50155)
--- Not castable by players -- applied to both participants by Duel (50030).
+-- Duel lock (helper, 43155)
+-- Not castable by players -- applied to both participants by Duel (43030).
 -- Carries the Silence and HealRate -100 halves as stock effects; when it fades,
 -- the duel is over and the pairing must go with it.
 local rx = require("aotv4_reactions")

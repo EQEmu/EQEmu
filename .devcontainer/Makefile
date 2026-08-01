@@ -84,25 +84,57 @@ prep: is-vscode
 .PHONY: sync-custom
 sync-custom:
 	@echo "Syncing live repo customizations -> tracked .devcontainer/custom overlay..."
-	cp .devcontainer/repo/quests/global/global_player.lua .devcontainer/custom/quests/global/
-	cp .devcontainer/repo/quests/lua_modules/skill_pool.lua \
-	   .devcontainer/repo/quests/lua_modules/spell_blacklist.lua \
-	   .devcontainer/repo/quests/lua_modules/spell_choice.lua \
-	   .devcontainer/repo/quests/lua_modules/spell_icons.lua \
-	   .devcontainer/repo/quests/lua_modules/spell_pool.lua \
-	   .devcontainer/repo/quests/lua_modules/aa_choice.lua \
-	   .devcontainer/repo/quests/lua_modules/aa_pool.lua \
-	   .devcontainer/custom/quests/lua_modules/
-	cp .devcontainer/repo/eq-core-dll/src/EQClasses.h \
-	   .devcontainer/repo/eq-core-dll/src/_options.h \
-	   .devcontainer/repo/eq-core-dll/src/core_init.h \
-	   .devcontainer/repo/eq-core-dll/src/core_allcasters.h \
-	   .devcontainer/repo/eq-core-dll/src/core_skillunlock.h \
-	   .devcontainer/repo/eq-core-dll/src/core_spellchoice.h \
-	   .devcontainer/repo/eq-core-dll/src/core_spellwindow.cpp \
-	   .devcontainer/repo/eq-core-dll/src/eq-core-dll-vs2022.vcxproj \
-	   .devcontainer/custom/eq-core-dll/src/
-	@echo "Synced. Review with: git diff .devcontainer/custom"
+#
+# ⚠️⚠️ THIS USED TO BE A HARDCODED LIST OF 8 FILES AND IT SILENTLY LOST WORK.
+# `.devcontainer/repo/` is gitignored (.devcontainer/.gitignore), so the ONLY copy of the Lua and the
+# dll source that reaches the `aotv4-spell-rebuild` branch is this overlay. On 2026-08-01 the live
+# quests clone had 65 changed files against 8 the list copied -- global_npc.lua, every aotv4_*
+# module, lua_modules/commands/, the resplendent NPCs, the 43xxx spell scripts and two edited stock
+# files were ALL outside it. Anything not copied here is invisible to git and dies with the container.
+#
+# ⚠️⚠️ AND `cp` CANNOT EXPRESS A DELETION. The overlay was still carrying the pre-renumber
+# global/spells/50*.lua scripts (see section 14 -- the set moved 50xxx -> 43xxx long ago), which
+# `make inject-custom` would have copied straight back over a fresh clone, resurrecting 16 dead
+# scripts. `rsync --delete` on the directories we own is what fixes that, so a file removed from the
+# clone is removed from the overlay too.
+#
+# 📌 ASK GIT WHAT IS OURS -- do not curate a list, and do not mirror whole directories either.
+# The clone knows exactly what we have changed: everything between the ProjectEQ merge-base and now,
+# committed or not. That is 82 files, where mirroring lua_modules/ + global/ + resplendent/ would
+# drag in 285 -- ~200 of them untouched upstream scripts that have no business in this repo.
+# ⚠️ It is also MORE complete than a directory list, not less: it picks up the stock quests we have
+# edited in odd corners (tutorialb, soldungb, permafrost, oasis, delveb, fearplane, plugins) that
+# nobody would have remembered to add. That is the failure mode this replaces.
+# ⚠️ Deletions are handled both ways -- a file we removed from the clone is removed from the overlay,
+# and any overlay file no longer in the list is pruned. That is what finally cleared the pre-renumber
+# global/spells/50*.lua scripts, which `cp` had been faithfully re-injecting over every fresh clone.
+	@set -e; \
+	Q=.devcontainer/repo/quests; O=.devcontainer/custom/quests; \
+	BASE=$$(git -C $$Q merge-base origin/master HEAD 2>/dev/null); \
+	if [ -z "$$BASE" ]; then \
+	  echo "ERROR: no ProjectEQ merge-base. Run: git -C $$Q fetch origin"; exit 1; fi; \
+	L=$$(mktemp); \
+	{ git -C $$Q diff --name-only $$BASE HEAD; \
+	  git -C $$Q status --porcelain -uall | awk '{print $$NF}'; } | sort -u > $$L; \
+	( cd $$O && find . -type f | sed 's|^\./||' ) | while read -r f; do \
+	  grep -qxF "$$f" $$L || rm -f "$$O/$$f"; \
+	done; \
+	while read -r f; do \
+	  if [ -f "$$Q/$$f" ]; then mkdir -p "$$O/$$(dirname $$f)"; cp -p "$$Q/$$f" "$$O/$$f"; \
+	  else rm -f "$$O/$$f"; fi; \
+	done < $$L; \
+	find $$O -type d -empty -delete 2>/dev/null || true; \
+	echo "  quests: $$(wc -l < $$L) files are ours (vs ProjectEQ $$BASE)"; \
+	rm -f $$L
+#
+# ⚠️ THE dinput8.dll SOURCE IS DELIBERATELY NOT SYNCED HERE. The client dll and the UI files reach
+# players through the CLIENT PATCHER, not through this repo, and the dll has its own repo and branch
+# (Twochords/Dinput, aotv4-advloot-module -- see CLAUDE.md section 0). This target exists to make the
+# SERVER side pushable from `aotv4-spell-rebuild`; mirroring 66 .cpp files of client code into it
+# only creates a second, diverging copy of something that is already version-controlled elsewhere.
+# 📌 The handful of dll files still tracked under .devcontainer/custom/eq-core-dll/ predate this and
+# are left alone rather than churned; treat the dll repo as authoritative.
+	@echo "Synced (server side: quests Lua only). Review with: git status .devcontainer/custom"
 
 is-vscode:
 	@if [ -z "$$REMOTE_CONTAINERS" ]; then \

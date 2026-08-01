@@ -2,26 +2,31 @@
 
 local don = require("dragons_of_norrath")
 local spell_choice = require("spell_choice")
-local aa_choice = require("aa_choice")
+local aa_choice = require("aa_choice")   -- random AA picker, driven by the points a death banks
 local pok_travel = require("pok_travel")
 local death_loss = require("death_loss")
 local era_system = require("era_system")   -- server-wide expansion unlock progression
-local hotzones = require("hotzones")       -- daily-rotating Hot Zones (flat 2x EXP)
+local hotzones = require("hotzones")       -- daily Hot Zones: one per region, 1.5x EXP
 local bazaar_broker = require("bazaar_broker")  -- player-shop vendor window (vpset/vshop/vclose)
-local aotv4_reactions = require("aotv4_reactions")  -- custom "when you are hit" abilities
-local aotv4_pets = require("aotv4_pets")             -- summon traits + pet behaviour
+local aotv4_reactions = require("aotv4_reactions")  -- custom "when you are hit" abilities (Divine Aura, Blade Turn, Counterattack, Vengeful Aura, Duel)
+local aotv4_dungeon = require("aotv4_dungeon")  -- scaling dungeon ("Delve"): instanced DoN zones, layers unlock in order
+local aotv4_thirst = require("aotv4_thirst")         -- Thirst line: flat heal per melee hit
+local aotv4_worldboss = require("aotv4_worldboss") -- roaming world boss encounter
+local aotv4_worldbuff = require("aotv4_worldbuff")  -- server-wide GM buffs (#worldbuff)
+local questjournal = require("aotv4_questjournal")  -- quest catalogue + tracking, in the Allaclone window
+local spell_ranks_sys = require("aotv4_spell_ranks_sys")  -- keep 2 spells through death + rank them up
+local aotv4_regions = require("aotv4_regions")   -- region unlocks earned by dying at the level cap
+local aotv4_reforge = require("aotv4_reforge")   -- race/class change at level 1 (Reforger Vael)
+local skill_pool      = require("skill_pool")       -- combat specials: which are native, which rotate
+local aotv4_aa_tank = require("aotv4_aa_tank")       -- marker AAs in the Tank tree
 
--- AA-on-death tuning (roguelite: death banks AA and resets the character to level 1).
--- Reward tracks XP EFFORT below the cap, then JUMPS at the era level cap to reward the last push.
--- NO owned-AA taper -- the per-death reward is FIXED by how far you got, so these values are exact:
---     below cap:  banked = floor( (run_xp / cap_exp) * cap * DEATH_AA_SUB_CAP )   -- XP-effort ramp
---     at cap:     banked = floor( cap * DEATH_AA_AT_CAP )                          -- big final-push bonus
--- Classic (cap 50): L30 ~2, L40 ~8, L49 ~17, and dying AT 50 banks 20 -- the last push always wins,
--- but only slightly (SUB_CAP is kept just under AT_CAP so at-cap is the best death, not a huge cliff).
--- run_xp is per-run (reset on death); everything scales with the era cap (Kunark cap 60 -> 24 at cap).
-local DEATH_AA_AT_CAP  = 0.40   -- AA for dying AT the era cap = cap * this  (L50 -> 20, L60 -> 24)
-local DEATH_AA_SUB_CAP = 0.38   -- XP-effort scale below the cap = cap * this; ceiling = 0.95 * at-cap
-                                --   so a near-cap death is ~95% of dying AT cap (L59 Kunark ~19 vs 24)
+-- AA-on-death tuning lives at the point of use, in event_death -- see the "RANDOM AA ON DEATH" block.
+-- ⚠️ A long comment here used to describe a two-regime, era-anchored scheme (DEATH_AA_AT_CAP 0.40 /
+-- DEATH_AA_SUB_CAP 0.38, with a break at level 50) together with the two constants it named. None of
+-- it ran: the constants were unreferenced and the formula described a 50-to-70 world that no longer
+-- exists now the cap is 30. Both are deleted rather than left as "documentation", because a comment
+-- confidently describing a formula the code does not use is worse than no comment at all -- it is
+-- the thing a later reader trusts instead of reading the code.
 
 -- Every starting-path task wiped on death so the tutorial restarts as if entered for the FIRST time
 -- (see event_death). Mostly the Gloomingdeep tutorial set; 5745 ("New Beginnings") is the Plane of
@@ -39,10 +44,18 @@ local TUTORIAL_TASKS = {
 function event_enter_zone(e)
 	mysterious_voice(e)
 	era_system.sync_zone()                          -- point this zone's expansion rule at the unlocked era
-	eq.set_hotzone(hotzones.is_hot(eq.get_zone_short_name()))  -- 2x EXP if this is one of today's rotating hot zones
+	aotv4_worldboss.on_enter_zone(e)                -- spawn the armed world boss if it is waiting for this zone
+	aotv4_worldbuff.on_player(e)                    -- pick up an armed world buff on arrival
+	aotv4_dungeon.on_enter_zone(e)                  -- crossing a zone line out of a delve fails the run
+	eq.set_hotzone(hotzones.is_hot(eq.get_zone_short_name()))  -- 1.5x EXP if this is one of today's hot zones
 	e.self:Message(MT.NPCQuestSay, "PORTALCLOSE")   -- dismiss the Portal window on any zone change
+	e.self:Message(MT.NPCQuestSay, "LOOTCLOSE")     -- and the Advanced Loot window (its corpse is gone)
+	-- ...but RE-OPEN the AoT menu: it is meant to be a persistent bar, and zoning tears the UI down.
+	-- Showing an already-open window is harmless, so this is safe to send on every zone.
+	e.self:Message(MT.NPCQuestSay, "AOTMENUSHOW")
 	e.self:SetTimer("skillsync", 2)                 -- one-shot: re-reveal earned combat abilities after the UI builds (no jump)
-	e.self:SetTimer("aotpet", 5)                    -- repeating: auto-summon the Summon-ability pet once out of combat
+	e.self:SetTimer("worldbuff", aotv4_worldbuff.SWEEP_SECS)  -- repeating: catch players who never zone or relog
+	e.self:SetTimer("delvescale", aotv4_dungeon.RESCALE_SECS)  -- repeating: re-measure a delve runner and rescale un-pulled mobs
 
 	-- Gloomingdeep Guard (5150) is a Tutorial-only protective buff; strip it the moment you leave the
 	-- Tutorial so our permanent-buff rule doesn't carry it out into the world. (It stays while in tutorialb.)
@@ -361,6 +374,23 @@ local function grant_free_skills(c)
 	end
 end
 
+-- AoTv4: every class starts with the ACTIVATED combat specials it gets natively -- a Rogue has
+-- Backstab, a Monk has its strikes, a Warrior has Kick and Taunt. The ones a class does NOT get
+-- natively are what the level-up picker offers, so nothing is both granted and rotated.
+--
+-- ⚠️ The native map lives in skill_pool.NATIVE and NOT in skill_caps. Every class now has a cap for
+-- all twelve (custom/sql/aotv4_open_spells_and_skills.sql) because a picked reward cannot otherwise
+-- be granted, which means CanHaveSkill answers true for everything and the database can no longer
+-- tell you what was native. That table is the only surviving copy.
+local function grant_native_combat_skills(c)
+	local class = c:GetClass()
+	for id, _ in pairs(skill_pool.SKILLS) do
+		if skill_pool.is_native(id, class) and c:MaxSkill(id) > 0 and c:GetRawSkill(id) < 1 then
+			c:SetSkill(id, 1)
+		end
+	end
+end
+
 -- AoTv4: every character keeps each TRADESKILL at a floor of 20. New characters start there on their
 -- first connect; existing characters are raised to 20 on login if lower. Only RAISES -- a tradeskill
 -- already trained above 20 is left alone. (Caps are 300 from level 1 for all of these, so the floor
@@ -379,12 +409,17 @@ local function floor_tradeskills(c)
 end
 
 function event_connect(e)
-	-- Bard-only server: every character is a Bard (native spellbook + gems + mana + melee).
-	-- Force-converts anyone not already a Bard; takes full effect on their next relog.
-	if e.self:GetClass() ~= Class.BARD then
-		e.self:SetBaseClass(Class.BARD)
-		e.self:Message(MT.Yellow, "This world bends all souls to the Bard's path. Relog to complete your transformation.")
-	end
+	-- Delve: drop a journal entry left over from a camp or a client crash. No-op if the run is still
+	-- live (camped and came back while the instance is still up).
+	aotv4_dungeon.on_connect(e.self)
+
+	-- AoTv4: ALL CLASSES UNLOCKED. The Bard-force is permanently removed -- every character keeps its
+	-- created class. The four pure-melee classes (Warrior/Monk/Rogue/Berserker) are made casters
+	-- client-side by dinput8.dll (core_allcasters: IsSpellcaster + Max_Mana + mana-gauge patches) and
+	-- server-side by CalcMaxMana (level*40 mana). The reward pool's custom spells are opened to all 16
+	-- classes; they are real spells (skill 98, mana cost) -- IsBardSong is skill-gated so only genuine
+	-- Singing/instrument songs get song behavior. (Existing pre-unlock characters remain Bards -- a valid
+	-- class; no forced reclass.)
 
 	grant_veteran_aa(e)
 	don.fix_invalid_faction_state(e.self)
@@ -393,20 +428,34 @@ function event_connect(e)
 	-- tell the client which combat skills are already earned (so the unlock hook reveals them)
 	spell_choice.send_unlocks(e.self)
 
+	-- Open the AoT menu (core_aotmenu.cpp). The dll swallows this line.
+	--
+	-- ⚠️ THE SERVER TELLS THE CLIENT IT IS IN THE WORLD; the dll must NOT work that out for itself.
+	-- Both client-side tests were tried and both are wrong there: `pinstLocalPlayer != null` is ALSO
+	-- true at character select (it renders the selected character), and `gGameState` is only ever
+	-- assigned by MQ2's detour machinery, which that dll runs with disabled -- so it never updates.
+	-- A chat line cannot arrive before you are in the world, which makes this both simpler and
+	-- strictly more reliable. Same pattern as every other window in the dll.
+	e.self:Message(MT.NPCQuestSay, "AOTMENUSHOW")
+
 	-- hand over coin earned while the player's (permanent) shop sold items offline
 	bazaar_broker.pay_escrow(e.self)
+	aotv4_worldbuff.on_player(e)                    -- and on login
 
 	grant_free_skills(e.self)            -- level-1 chars get Dual Wield etc. now, not only after first ding
+	grant_native_combat_skills(e.self)  -- a Rogue has Backstab, a Monk its strikes; the rest are picker rewards
 	floor_tradeskills(e.self)           -- every tradeskill floored to 20 (new chars start there; existing raised on login)
 
 	-- daily Hot Zone welcome. Computed live from the date (hotzones.lua) so it always matches the actual
-	-- 2x apply (event_enter_zone -> eq.set_hotzone) and the #hotzone popup -- no bucket/cron to drift.
+	-- 1.5x apply (event_enter_zone -> eq.set_hotzone) and the #hotzone popup -- no bucket/cron to drift.
 	-- Printed per-line because the RoF2 MOTD control won't render line breaks.
 	local hz_today = hotzones.today()
 	if #hz_today > 0 then
-		e.self:Message(MT.LightBlue, "----- Welcome to AoTv4!  Today's Hot Zones (2x EXP) -----")
+		e.self:Message(MT.LightBlue, "----- Welcome to AoTv4!  Today's Hot Zones (1.5x EXP) -----")
 		for _, z in ipairs(hz_today) do
-			e.self:Message(MT.Lime, string.format("   %s  -  2x EXP", z.l))
+			-- ⚠️ Name the REGION too. There is exactly one hot zone per region now, so "which region is hot
+			-- today" is meaningless -- what a player needs is which zone in the region they can reach.
+			e.self:Message(MT.Lime, string.format("   %s  -  %s", z.l, z.region or "?"))
 		end
 	end
 end
@@ -417,10 +466,20 @@ function event_timer(e)
 		-- list, then (re)send the earned-skill set + nudge a rebuild so abilities show without jumping.
 		e.self:StopTimer("skillsync")
 		spell_choice.send_unlocks(e.self)
-	elseif e.timer == "aotpet" then
-		-- Summon abilities are traits, not casts: this is what actually puts the
-		-- pet at your side once you are out of combat and petless.
-		aotv4_pets.maybe_summon(e.self)
+	elseif e.timer == "delvescale" then
+		-- Re-measure a player inside a delve and rescale anything not already pulled, so entering
+		-- stripped and then gearing up does not leave the dungeon soft. No-op outside a delve.
+		aotv4_dungeon.on_tick(e.self)
+	elseif e.timer == "delveclose" then
+		-- one-shot: the grace period after the reward chest is opened has run out, so shut the
+		-- instance down. ⚠️ StopTimer FIRST -- a client timer REPEATS, and without this the delve
+		-- would try to close every two minutes for the rest of the session.
+		e.self:StopTimer("delveclose")
+		aotv4_dungeon.on_close_timer(e.self)
+	elseif e.timer == "worldbuff" then
+		-- Catches the player who is parked somewhere and never zones or relogs -- the one hole the
+		-- connect and enter-zone hooks leave. Per CLIENT, so it only ever touches this one player.
+		aotv4_worldbuff.on_sweep(e.self)
 	end
 end
 
@@ -530,6 +589,7 @@ function event_level_up(e)
   -- skill_caps cap just crossed 0 -- e.g. Double Attack @32, Triple Attack @58). Combat ACTIVATED
   -- skills stay reward-gated (skill_pool.lua). Same grant used on connect. See grant_free_skills above.
   grant_free_skills(e.self)
+  grant_native_combat_skills(e.self)   -- cap curves for some specials only open above level 1
 
   if e.self:GetLevel() == 5 then
     eq.popup("", "<c \"#F0F000\">Welcome to level 5.</c><br><br>You have just been granted a new ability called '<c \"#F0F000\">Origin</c>' which allows you to teleport back to your starting city.<br><br>Open the Alternate Advancement window by pressing the '<c \"#F0F000\">V</c>' key, look in the '<c \"#F0F000\">General' tab</c>, and find the '<c \"#F0F000\">Origin</c>' ability and select it.<br><br>Now press the '<c \"#F0F000\">Hotkey</c>' button to create a hotkey you can place on your hot bar.");
@@ -541,21 +601,12 @@ function event_level_up(e)
 
   -- offer a choice of 3 level-appropriate spells to learn
   spell_choice.offer(e)
-
-  -- Let LEFTOVER banked AA (from a prior death) be spent as leveling unlocks new AAs/prereqs. Only
-  -- pops the AA picker when something is newly affordable; otherwise silently refreshes the banked
-  -- header. Without this, points the death-picker couldn't spend yet just sit stuck (looks "lost").
-  aa_choice.reoffer_if_banked(e)
 end
 
 -- On death, bank ALL experience as Alternate Advancement and restart at level 1 (roguelite).
 -- The random AA window then pops; banked AA scales with how far the run got.
 function event_death(e)
   local client = e.self
-
-  -- a duel ends the moment one of the participants dies
-  aotv4_reactions.end_duel(client:GetID())
-
   local death_level = client:GetLevel()   -- capture BEFORE the roguelite reset to level 1 below
   local run_xp      = client:GetEXP()     -- XP earned THIS run (effort); also captured pre-reset
 
@@ -570,33 +621,94 @@ function event_death(e)
   eq.world_emote(MT.Yellow, string.format("%s has been slain by %s at level %d!  They have now died %d %s.",
     client:GetCleanName(), killer, death_level, deaths, times))
 
+  -- a duel ends the moment one of the participants dies
+  aotv4_reactions.end_duel(client:GetID())
+
+  -- Delve: dying ends the run. The roguelite reset below puts this character back to level 1, so the
+  -- mission cannot meaningfully continue -- the task is FAILED and the instance is closed. Called
+  -- BEFORE the level reset so the module still sees the run as it was.
+  aotv4_dungeon.on_death(e)
+
+  -- ⚠️ Credit a capped death toward the region-unlock chain BEFORE the reset to level 1 below --
+  -- afterwards the character is level 1 and no death would ever count.
+  aotv4_regions.on_death(e)
+
   -- ROGUELITE: every death banks AA (scaled by the level reached) and restarts the run at level 1.
   -- SetEXP takes (normal_exp, aa_exp) -- zero normal XP, keep AA exp.
   client:SetLevel(1)
   client:SetEXP(0, client:GetAAExp())
+  -- turn off active tribute on death (a level-1 fresh run shouldn't keep raid-tier tribute buffs).
+  -- pcall-guarded: ToggleTribute is a NEW Lua binding that only exists in the rebuilt zone binary.
+  -- Until that binary is deployed, calling it raises a nil-method error that would ABORT the rest of
+  -- event_death (including the AA banking below). The guard lets death processing continue now, and
+  -- the tribute-off starts working automatically once the rebuilt zone is live.
+  pcall(function() client:ToggleTribute(false) end)
 
-  -- XP-effort bank below the cap, with a big bonus for dying AT the cap (see the tuning block on top).
-  -- No owned-AA taper: the reward is fixed by the level/XP you reached this run.
-  local cap     = era_system.level_cap()
-  local cap_exp = era_system.def(era_system.current()).cap_exp or 1
-  local base
-  if death_level >= cap then
-    base = cap * DEATH_AA_AT_CAP                              -- reached the cap: big final-push reward
-  else
-    base = (run_xp / cap_exp) * (cap * DEATH_AA_SUB_CAP)     -- XP-effort ramp below the cap
-  end
-  -- CATCH-UP: +25% per era the server is ahead of this player's AA tier (0 in Classic; see era_system).
-  local banked = math.floor(base * era_system.catchup_bonus(client))
-  if banked >= 1 then                 -- (no farming: low-XP early deaths bank little/nothing)
-    -- Bank into aa_choice's PRIVATE bucket (not the native unspent pool) so the random picker
-    -- is the ONLY way to spend -- the native AA window shows 0 spendable points.
+  -- RANDOM AA ON DEATH (restored 2026-07-31). The run's experience is converted into AA points and
+  -- the picker offers three RANDOM abilities the player can afford; picking one deducts its cost and
+  -- re-offers from whatever the remainder can still buy, until nothing is affordable and it stops.
+  --
+  -- ⚠️⚠️ THE CONVERSION IS THE SHEET'S OWN RATE -- one AA point per AA_EXP_PER_POINT of run
+  -- experience, the same 200,000 the `AA:ExpPerPoint` rule uses (exp.xlsx). It has to stay in step
+  -- with that rule and with the level curve: a full climb to the level 35 cap is 665,000 experience,
+  -- so a death at cap banks 3 points. That is deliberately small -- three points buys one 2-cost
+  -- ability and then a 1-cost one, which is the intended shape of a single death's reward, not a
+  -- shopping trip.
+  -- ⚠️ Lua cannot read a rule directly (there is no get_rule binding), so the constant is duplicated
+  -- here. If `AA:ExpPerPoint` is ever retuned, THIS MUST MOVE WITH IT or deaths will pay out at a
+  -- rate that no longer matches what experience is worth anywhere else.
+  -- ⚠️ run_xp was captured at the TOP of this function, before SetEXP(0, ...) above wiped it. Reading
+  -- it here would always return 0.
+  local AA_EXP_PER_POINT = 200000
+
+  -- ⚠️⚠️ A LITERAL 1:1 CONVERSION -- ALL run experience becomes AA experience. This is the balance
+  -- sheet's own model (exp.xlsx, the "AA %" column), which is simply
+  --     AA percent = total experience / 2000       i.e. one point per 200,000
+  -- against the curve zone/exp.cpp implements:
+  --     xp to next level (L) = 1000 * (L + 1)
+  --     total xp through  L  = 1000 * L * (L + 3) / 2      -> 665,000 at the level 35 cap
+  -- so a full climb to cap banks 665,000 / 200,000 = 3.32 points. Sample rows, all matching the
+  -- sheet exactly: L5 20,000 xp = 10 percent; L20 230,000 = 115 percent; L35 665,000 = 333 percent.
+  --
+  -- ⚠️⚠️ DO NOT REINTRODUCE A LEVEL-SCALED RATE. A (level/cap)^2 share was tried here to stop safe
+  -- early deaths paying as well per unit of effort as deep ones. It was solving a problem that did
+  -- not exist: it had been sized against a cumulative-experience figure that was ~10x too high,
+  -- because GetEXPForLevel returns the TOTAL to reach a level and had been summed as though it were
+  -- the per-level increment. Against the real curve the whole run to cap is 665,000, and scaling it
+  -- down as well leaves nothing to award. Effort is already superlinear in level because the curve
+  -- itself is quadratic -- level 35 costs 3.2x what level 20 does -- so 1:1 on experience is ALREADY
+  -- depth-weighted. Squaring it a second time double counts.
+  local rate = 1.0
+
+  -- ⚠️⚠️ BANK AA *EXPERIENCE* AND CARRY THE REMAINDER -- do NOT floor run experience into whole
+  -- points and discard the rest. A full run to cap is only 3.32 points, so flooring throws away up
+  -- to a third of it, and every death below level 26 (200,000 xp) would pay literally nothing. The
+  -- leftover is kept in `aa_xp_<charid>` and added to the next death, so nothing earned is ever lost
+  -- and early runs accumulate toward a point instead of evaporating. This is also what makes the
+  -- sheet's fractional "AA percent" meaningful rather than decorative.
+  local gained = math.floor((run_xp or 0) * rate)
+  local pool   = (tonumber(eq.get_data("aa_xp_" .. cid)) or 0) + gained
+  local banked = math.floor(pool / AA_EXP_PER_POINT)
+  eq.set_data("aa_xp_" .. cid, tostring(pool - banked * AA_EXP_PER_POINT))
+
+  if banked > 0 then
+    client:Message(MT.Yellow, string.format(
+      "Your journey is distilled into %d point%s of advancement.", banked, banked == 1 and "" or "s"))
     aa_choice.grant_picks(e, banked)
+  elseif gained > 0 then
+    -- Tell them it counted even when it did not reach a whole point, or a real run reads as wasted.
+    client:Message(MT.Yellow, string.format(
+      "Your journey leaves its mark. (%d of %d toward your next point of advancement.)",
+      pool, AA_EXP_PER_POINT))
   end
+  -- ⚠️ SetEXP above keeps AA exp intact, so anything earned through ordinary AA experience is
+  -- untouched by this -- the banked points are a SEPARATE private pool (aa_bank_<charid>) that only
+  -- the picker can spend, which is what stops a player bypassing it via the native AA window.
 
   -- ROGUELITE LOSS: destroy carried gear/inventory/money + wipe spells (bank + epics are safe),
   -- then report what was lost (chat + the "what you lost" dll window via LOSTDATA).
   local lost = death_loss.process(client)
-  death_loss.announce(client, lost)
+  death_loss.announce(client, lost, killer)   -- killer is captured above, for the Death Book
   spell_choice.clear_pending(client)  -- drop any un-picked offers so the new run starts clean
   spell_choice.send_unlocks(client)   -- re-hide the now-reset combat skills on the client
 
@@ -667,23 +779,72 @@ function event_death_complete(e)
 end
 
 function event_say(e)
-  -- consume "spellpick <N>" (spell window) and "aapick <N>" (AA window) picks
+  -- GM-only: buff every online player server-wide. Usage: /say buffall <spellid>
+  -- world_wide_cast_spell casts the spell on all online clients across all zones (uses the spell's
+  -- own duration). Gated to GM (status >= 80) so ordinary players can't buff the server.
+  local buff_id = e.message:match("^buffall (%d+)$")
+  if buff_id then
+    if e.self:GetGMStatus() >= 80 then
+      local sid = tonumber(buff_id)
+      eq.world_wide_cast_spell(sid)
+      e.self:Message(MT.Yellow, string.format("[GM] Cast spell %d on all online players.", sid))
+    end
+    return
+  end
+
+  -- Delve window: "delve" / "delveenter <level>" / "delveexit". Returns true when it consumed the
+  -- line, so the rest of event_say is skipped for its own commands.
+  if aotv4_dungeon.handle_say(e) then return end
+
+  -- consume "spellpick <N>" from the level-up reward window (the only reward picker now)
   spell_choice.handle_say(e)
+  -- ⚠️ The AA picker owns "/say aapick <n>". Both handlers are called because they match different
+  -- triggers and each ignores anything that is not its own -- do NOT early-return from one of them.
   aa_choice.handle_say(e)
+  spell_choice.handle_journal_say(e)  -- "sjpool <level>" -- Spell Journal window's Pool tab
+
+  -- "lostlog" -- the permanent death-loss history for the You Lost window. The dll swallows the reply.
+  if (e.message or ""):lower():match("^lostlog%s*$") then
+    death_loss.send_log(e.self)
+    return
+  end
   pok_travel.handle_say(e)        -- "portals" (list) + "portalgo <short>" (travel)
   bazaar_broker.handle_global_say(e)  -- vendor window: "vpset .../vshop/vclose"
 
   -- AoTv4 in-game search ("allaclone") -- backs the /search overlay. All swallowed by the dll.
   --   "srch <item|npc|spell> <term>"  -> SRCHDATA <kind>^id|name^id|name^...   (result list)
   --   "srchdet <item|npc|spell> <id>" -> SRCHDET <kind>|<id>|<detail ~-line-separated>
+  -- AoTv4 quest journal: "qtrack <n>" / "quntrack <n>" (§ aotv4_questjournal.lua)
+  if questjournal.handle_say(e) then return end
+
+  -- Spell ranks: "spellkeep <id>" / "spellrelease <id>" / "spellrank <id>" / "spellkept"
+  if spell_ranks_sys.handle_say(e) then return end
+
+  -- Region unlocks: "regions" / "openregion <n>"
+  if aotv4_regions.handle_say(e) then return end
+
+  -- Reforge: "reforgerace <n>" / "reforgeclass <n>"
+  if aotv4_reforge.handle_say(e) then return end
+
   local skind, sterm = e.message:match("^srch (%a+) (.+)$")
   if skind then
-    e.self:Message(MT.NPCQuestSay, "SRCHDATA " .. skind .. "^" .. (e.self:SearchList(skind, sterm) or ""))
+    -- ⚠️⚠️ OUR KINDS ARE TRIED FIRST AND THE NATIVE ONES ARE LEFT ALONE. `quest` and `tracked` are
+    -- served from the Lua catalogue; item/npc/spell/recipe still go to the C++ SearchList exactly as
+    -- before, so the search window's original four modes are untouched by this feature.
+    local ours = questjournal.search_kind(e.self, skind, sterm)
+    e.self:Message(MT.NPCQuestSay, "SRCHDATA " .. skind .. "^" ..
+      (ours or e.self:SearchList(skind, sterm) or ""))
     return
   end
   local dkind, did = e.message:match("^srchdet (%a+) (%d+)$")
   if dkind then
-    e.self:Message(MT.NPCQuestSay, "SRCHDET " .. dkind .. "|" .. did .. "|" .. (e.self:SearchDetail(dkind, tonumber(did)) or ""))
+    local ours = questjournal.detail_kind(e.self, dkind, tonumber(did))
+    local body = ours or e.self:SearchDetail(dkind, tonumber(did)) or ""
+    -- Cross reference: an ITEM lookup also lists the quests that want it, which is the question
+    -- people actually have about an unfamiliar drop. Appended to the NATIVE detail rather than
+    -- replacing it, so the stats block is untouched.
+    if dkind == "item" then body = body .. questjournal.item_usage(tonumber(did)) end
+    e.self:Message(MT.NPCQuestSay, "SRCHDET " .. dkind .. "|" .. did .. "|" .. body)
     return
   end
 end
@@ -739,8 +900,18 @@ function event_test_buff(e)
     end
 end
 
+-- ⚠️ Delve: the trash goal completing is what SPAWNS THE BOSS. Every delve task has a second step
+-- (kill the warden) that the task system opens only once step 1 is done -- so without this hook the
+-- player clears the dungeon and is left with an objective nothing can ever satisfy.
+function event_task_stage_complete(e)
+  aotv4_dungeon.on_task_stage_complete(e)
+end
+
 function event_task_complete(e)
   don.on_task_complete(e.self, e.task_id)
+  -- Delve system: clearing a layer unlocks the next one and drops the reward chest where the last
+  -- objective ticked over. Ignores every task that is not one of its six.
+  aotv4_dungeon.on_task_complete(e)
 end
 
 -- Custom "when you are hit" abilities: Divine Aura, Blade Turn, Counterattack,
@@ -751,7 +922,22 @@ function event_damage_taken(e)
   return aotv4_reactions.on_damage_taken(e)
 end
 
--- Open Wounds banks a share of every hit on a marked target as pending bleed.
+-- Open Wounds banks a share of every hit on a marked target as pending bleed, and the Thirst line
+-- heals a flat amount per melee hit (it has no spell effect of its own -- see aotv4_thirst.lua).
+-- Reactions run FIRST and own the return value: a negative override negates the hit, and a hit that
+-- never landed must not pay out a leech.
 function event_damage_given(e)
-  return aotv4_reactions.on_damage_given(e)
+  local override = aotv4_reactions.on_damage_given(e)
+  if not (override and override < 0) then
+    aotv4_thirst.on_damage_given(e, e.self)
+    aotv4_aa_tank.on_damage_given(e, e.self)   -- Bloodied Bash: Bash/Slam leeches
+  end
+  return override
+end
+
+-- Delve: camping out (/q) inside a delve ends the run, exactly like dying or walking a zone line.
+-- Without this the character is saved standing inside the instance, the instance is orphaned, and the
+-- run bucket keeps claiming they are in a dungeon they have left. See aotv4_dungeon.M.on_disconnect.
+function event_disconnect(e)
+  aotv4_dungeon.on_disconnect(e.self)
 end

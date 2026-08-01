@@ -27,9 +27,41 @@ local LEVEL_BAND        = 6          -- prefer spells learned within [L-band, L]
 local SAY_TRIGGER       = "spellpick" -- player says "spellpick <N>" to choose
 local USE_DLL_TRIGGER   = true       -- emit the SPELLCHOICEDATA line for the eq-core-dll window
 local SHOW_SAYLINKS     = true        -- also show chat saylinks (no-client-mod fallback)
-local SKILL_OFFER_CHANCE = 0.7       -- chance a level-up includes ONE combat-skill slot
+-- Chance a level-up spends ONE of its three slots on a cross-class combat ability.
+-- 0.125 = roughly one level in eight. Deliberately rare: only FOUR abilities can be on autoskill at
+-- once (AOTV4_AUTOSKILL_MAX, zone/special_attacks.cpp), so handing them out often would fill that
+-- budget long before the choice mattered.
+-- ⚠️ It was 0.0 -- combat abilities were never offered at all, while CLAUDE.md still described it as
+-- "~0.7". If this is changed again, change the doc with it.
+local SKILL_OFFER_CHANCE = 0.125
 local SKILL_GRANT_PCT    = 0.25      -- a picked skill is set to this fraction of its level cap
 local DLL_MARK        = string.char(18) -- DC2 control byte the DLL brackets the payload with
+-- Reroll pricing. The Reroll button charges COIN directly -- there is no token item and no vendor.
+-- Cost is 5p for your first reroll, 10p for the second, 15p for the third, and so on forever.
+--
+-- ⚠️ The count is per CHARACTER and PERMANENT (bucket "rerollbuy_<charid>"). It is deliberately NOT
+-- cleared by the roguelite death that resets level, gear and spells: rerolls are meant to get more
+-- expensive over a character's whole life, not to reset to 5p every run.
+local REROLL_BASE_PLAT = 5
+local function reroll_key(client) return "rerollbuy_" .. client:CharacterID() end
+local function reroll_count(client) return tonumber(eq.get_data(reroll_key(client))) or 0 end
+
+-- Price in COPPER of this character's next reroll. Copper because that is the unit every money call
+-- on Lua_Client speaks (GetCarriedMoney / TakeMoneyFromPP).
+function M.reroll_cost(client)
+	return REROLL_BASE_PLAT * (reroll_count(client) + 1) * 1000
+end
+
+-- Tell the window what the next reroll costs, so the box beside the button is never stale. Sent with
+-- every offer AND after every reroll -- the price changes the moment one is bought.
+function M.send_reroll_cost(client)
+	client:Message(MT.NPCQuestSay, "SPELLREROLLCOST " .. M.reroll_cost(client))
+end
+
+-- Offset that lifts a COMBAT ABILITY's skill id (0-76) clear of the spell id space, so the Pool tab
+-- can list both and ask about either with one "sjinfo <id>".
+-- ⚠️ MUST match SJ_SKILL_BASE in eq-core-dll/src/core_spelljournal.cpp.
+local SKILL_ID_BASE   = 1000000
 
 ------------------------------------------------------------------- helpers
 local function bucket_key(client)
@@ -90,14 +122,20 @@ local function skill_target(client, id)
 	return math.floor((client:MaxSkill(id) or 0) * SKILL_GRANT_PCT)
 end
 
--- Combat skills worth offering: the player CAN have it, it has a cap, and they DON'T HAVE IT YET
--- (raw value 0). Each activated ability is offered at most once -- once earned it never re-appears, so
--- the reward window stays free of duplicates. (It keeps improving through use after that.)
+-- Combat skills worth offering: NOT native to this class, and not already earned.
+--
+-- ⚠️ CanHaveSkill is no longer a useful filter. aotv4_open_spells_and_skills.sql gives every class a
+-- skill_caps entry for all twelve -- it has to, or a picked reward cannot be granted at all -- so
+-- CanHaveSkill now answers true for everything and would offer a Rogue its own Backstab. The real
+-- filter is skill_pool.NATIVE: a class already gets its native specials automatically on connect,
+-- so offering one back would be a wasted pick.
+--
+-- Each ability is still offered at most once: once earned it never re-appears. (It keeps improving
+-- through use after that.)
 local function gather_skill_candidates(client)
 	local out = {}
-	for id, info in pairs(skills) do
-		if client:CanHaveSkill(id) and client:MaxSkill(id) > 0
-		   and client:GetRawSkill(id) <= 0 then
+	for id, info in pairs(skills.rotatable_for(client:GetClass())) do
+		if client:MaxSkill(id) > 0 and client:GetRawSkill(id) <= 0 then
 			out[#out + 1] = { kind = "skill", id = id, name = info.name, icon = info.icon }
 		end
 	end
@@ -117,7 +155,19 @@ local function send_offer(client, offer_str)
 			local info = skills[id]
 			nm = (info and info.name) or ("skill " .. id); ic = (info and info.icon) or 0; ds = "A combat skill."
 		else
-			nm = eq.get_spell_name(id) or ("spell " .. id); ic = icons[id] or 0; ds = spelldesc[id] or ""
+			nm = eq.get_spell_name(id) or ("spell " .. id); ic = icons[id] or 0
+			-- ⚠️ SAME SOURCE AS THE SEARCH WINDOW. Client::SearchDetail("spell", id) gives mana, cast
+			-- time, recast, range, learn level, resist, duration AND the db_str text with its #N/@N
+			-- placeholders already filled from the effect values -- none of which spell_desc.lua has;
+			-- that is the bare description only. One builder means a spell reads the same wherever it
+			-- is shown, and the cast time is right there when comparing three choices.
+			--
+			-- ⚠️ SearchDetail separates lines with "~" because the search overlay draws itself. The
+			-- picker's pane is an STML widget, so convert to <br> here. Same conversion the loot
+			-- window's detail panel does, for the same reason.
+			ds = client:SearchDetail("spell", id) or ""
+			if ds == "" then ds = spelldesc[id] or "" end   -- fall back if the row vanished
+			ds = ds:gsub("~", "<br>")
 		end
 		names[#names + 1]  = nm .. "|" .. tostring(ic)
 		descs[#descs + 1]  = (ds:gsub("[%^|]", " "))
@@ -126,7 +176,18 @@ local function send_offer(client, offer_str)
 	if #names == 0 then return end
 	if USE_DLL_TRIGGER then
 		client:Message(MT.NPCQuestSay, "SPELLCHOICEDATA " .. table.concat(names, "^"))
-		client:Message(MT.NPCQuestSay, "SPELLDESCDATA "  .. table.concat(descs, "^"))
+		-- ⚠️ ONE LINE PER CHOICE, not all three joined with "^". Each description is now a full
+		-- SearchDetail block rather than a single sentence, and three of them on one chat line runs
+		-- past what the client will carry -- and an oversized line is truncated SILENTLY, so the third
+		-- choice would just lose its text with nothing to show for it.
+		-- The dll still understands the old joined form, so an older dll keeps working.
+		for i, d in ipairs(descs) do
+			client:Message(MT.NPCQuestSay, string.format("SPELLDESCDATA %d %s", i, d))
+		end
+		-- The reroll price rides along with every offer. It is per character and escalates, so the
+		-- window has no way to work it out for itself and a hardcoded client-side figure would be
+		-- wrong for everyone after their first reroll.
+		M.send_reroll_cost(client)
 	end
 	if SHOW_SAYLINKS then
 		client:Message(MT.Yellow, "Choose a new reward:")
@@ -187,12 +248,17 @@ end
 
 ------------------------------------------------------------------- public API
 -- Offer a fresh set of choices. Call from event_level_up.
-function M.offer(e)
-	local client = e.self
-	local level  = client:GetLevel()
-
+-- Build ONE offer's token string ("S:id,S:id,K:id") for this client at this level. Returns "" if
+-- there is nothing left to offer.
+--
+-- ⚠️ Factored out of M.offer so that REROLL uses the exact same generator. If reroll had its own copy
+-- the two would drift -- the skill chance, the level band and the shuffle all have to match, or a
+-- rerolled offer would obey different rules from the one it replaced.
+local function build_offer(client, level)
 	-- Vary the offer EACH level-up. A per-(char,level) seed repeats the same 3 spells every run
 	-- (roguelite re-levels constantly), so mix in a per-offer counter (bucket) -- like aa_choice.
+	-- ⚠️ Reroll bumps the SAME counter, which is what makes a reroll produce a different set instead
+	-- of re-deriving the one you just paid to get rid of.
 	local sk = "spell_seed_" .. client:CharacterID()
 	local n  = (tonumber(eq.get_data(sk)) or 0) + 1
 	eq.set_data(sk, tostring(n))
@@ -208,10 +274,10 @@ function M.offer(e)
 	for _, sp in ipairs(pick_random(gather_candidates(client, level), CHOICE_COUNT - n_skill)) do
 		choices[#choices + 1] = { kind = "spell", id = sp.id, name = sp.name, icon = icons[sp.id] or 0 }
 	end
-	for _, sk in ipairs(pick_random(skill_cands, n_skill)) do
-		choices[#choices + 1] = sk
+	for _, sc in ipairs(pick_random(skill_cands, n_skill)) do
+		choices[#choices + 1] = sc
 	end
-	if #choices == 0 then return end
+	if #choices == 0 then return "" end
 	choices = pick_random(choices, #choices)  -- shuffle order
 
 	-- typed, ordered tokens so the pick is validated server-side:
@@ -220,16 +286,87 @@ function M.offer(e)
 	for _, c in ipairs(choices) do
 		toks[#toks + 1] = (c.kind == "skill" and "K:" or "S:") .. c.id
 	end
+	return table.concat(toks, ",")
+end
+
+function M.offer(e)
+	local client = e.self
+
+	-- ⚠️⚠️ A FORFEITED LEVEL GETS NO OFFER. Keeping a spell through death costs the pick at the level
+	-- that spell was originally taken (aotv4_spell_ranks_sys) -- that forfeit is the entire price of
+	-- keeping, and it is charged HERE by simply not offering. Returning early rather than building
+	-- and discarding an offer matters: build_offer bumps the RNG seed, so building one we throw away
+	-- would silently change every later roll.
+	local ok, ranksys = pcall(require, "aotv4_spell_ranks_sys")
+	if ok and ranksys.pick_is_forfeit(client, client:GetLevel()) then
+		client:Message(15, "You forfeit this level's reward -- the price of the spell you kept.")
+		return
+	end
+
+	local this_offer = build_offer(client, client:GetLevel())
+	if this_offer == "" then return end
 
 	-- APPEND this offer to the pending QUEUE (offers separated by ";") rather than overwriting, so an
 	-- un-picked offer from an earlier level-up is never lost. The window always shows the FRONT (oldest);
 	-- picking one pops it and reveals the next.
 	local q = eq.get_data(bucket_key(client)) or ""
-	local this_offer = table.concat(toks, ",")
 	q = (q == "") and this_offer or (q .. ";" .. this_offer)
 	eq.set_data(bucket_key(client), q)
 
 	refresh_and_show(client, bucket_key(client))   -- prune known spells, then show the oldest pending offer
+end
+
+-- ---------------------------------------------------------------- reroll
+-- Pay coin to replace the offer currently on screen with a fresh one.
+--
+-- ⚠️ IT REPLACES THE FRONT OFFER, NEVER APPENDS. The queue's front is what the window is showing, so
+-- rerolling has to overwrite that entry -- appending would leave the disliked set still sitting there
+-- to be picked, and the player would have paid for nothing.
+--
+-- ⚠️⚠️ THE ORDER OF THE THREE GATES IS LOAD BEARING: pending offer, then funds, then BUILD, and only
+-- then charge. Taking the money before building would bill a player for a reroll that turns out to
+-- have nothing left to offer, and there is no refund path once TakeMoneyFromPP has run.
+function M.reroll(client)
+	local key = bucket_key(client)
+	local q   = eq.get_data(key) or ""
+	if q == "" then
+		client:Message(MT.Red, "You have no reward choice to reroll.")
+		return false
+	end
+
+	local cost = M.reroll_cost(client)
+	if (client:GetCarriedMoney() or 0) < cost then
+		client:Message(MT.Red, string.format(
+			"You cannot afford that. A reroll costs %dp, and it must be coin you are CARRYING, not banked.",
+			math.floor(cost / 1000)))
+		return false
+	end
+
+	-- ⚠️ Rerolled at the player's CURRENT level, not the level the offer was made at -- the queue does
+	-- not record that. It only differs for an offer left un-picked across several levels, and taking
+	-- the current level is both the friendlier reading and the one that matches what the Pool tab
+	-- shows for "what can I be offered now".
+	local fresh = build_offer(client, client:GetLevel())
+	if fresh == "" then
+		client:Message(MT.Red, "There is nothing else to offer you at this level. You were not charged.")
+		return false
+	end
+
+	if not client:TakeMoneyFromPP(cost, true) then
+		client:Message(MT.Red, "The coin could not be taken from you. Nothing was rerolled.")
+		return false
+	end
+
+	local _, rest = q:match("^([^;]*);?(.*)$")
+	eq.set_data(key, (rest ~= "" and (fresh .. ";" .. rest) or fresh))
+	eq.set_data(reroll_key(client), tostring(reroll_count(client) + 1))
+
+	client:Message(MT.Yellow, string.format(
+		"You spend %dp. Three new paths open before you -- the next reroll will cost %dp.",
+		math.floor(cost / 1000), math.floor(M.reroll_cost(client) / 1000)))
+	refresh_and_show(client, key)
+	M.send_reroll_cost(client)
+	return true
 end
 
 -- Discard any un-picked reward offers still queued. Call on death (roguelite reset) so a new run doesn't
@@ -243,7 +380,7 @@ end
 -- swallows this line; with no client mod it's harmless noise the player won't normally see.
 function M.send_unlocks(client)
 	local earned = {}
-	for id, _ in pairs(skills) do
+	for id, _ in pairs(skills.SKILLS) do
 		if client:GetRawSkill(id) > 0 then earned[#earned + 1] = tostring(id) end
 	end
 	client:Message(MT.NPCQuestSay, "SKILLUNLOCKDATA " .. table.concat(earned, ","))
@@ -253,10 +390,194 @@ function M.send_unlocks(client)
 	-- invisible/unusable until the player forced a rebuild (jumping did it). Re-sending each earned
 	-- skill's own value (OP_SkillUpdate, no skill-up spam) triggers that rebuild now that the dll has
 	-- the earned set -- so abilities appear on login without the jump.
-	for id, _ in pairs(skills) do
+	for id, _ in pairs(skills.SKILLS) do
 		local v = client:GetRawSkill(id)
 		if v > 0 then client:SetSkill(id, v) end
 	end
+end
+
+-- =================================================================================================
+-- Spell Journal (core_spelljournal.cpp) -- "what can still be offered to me at level N".
+--
+-- The Journal's KNOWN tab needs no server help at all: the dll reads the character's spellbook
+-- straight out of CHARINFO2. Only the POOL tab needs us, because the pool is a Lua construct -- the
+-- client cannot know spell_pool.lua, spell_blacklist.lua or the enchant-name reject.
+--
+-- ⚠️ IDS ONLY, NO NAMES. The dll resolves names through GetSpellByID against the client's own spell
+-- data. Names would roughly quadruple the payload for nothing: level 70 holds 125 pool spells, so
+-- "id:known" comes to ~1.1 KB while "id|name|known" would be ~4 KB.
+--
+-- ⚠️ AND IT IS CHUNKED ANYWAY. A single oversized chat line is silently truncated, which would look
+-- exactly like a short pool rather than an error -- and CLAUDE.md section 15 already records the RoF2
+-- chat pipe dropping and reordering bursts. Each line carries its own chunk index so the dll can
+-- tell a complete answer from a partial one, and the count is small (3 lines at the worst level).
+local JOURNAL_TRIGGER = "sjpool"
+local JOURNAL_CHUNK   = 60
+
+-- ---------------------------------------------------------------- pick levels
+-- "what level was I when I took this", per character, as "id:lvl,id:lvl,...".
+--
+-- ⚠️ Kept in a data bucket rather than derived, because it CANNOT be derived: the character record
+-- stores which spells are scribed, never when. Written at the moment of the pick and never rewritten,
+-- so it is the level at acquisition and not the level of some later re-scribe.
+local function level_key(client) return "spelllvl_" .. client:CharacterID() end
+
+function M.record_pick_level(client, spell_id)
+	local key  = level_key(client)
+	local cur  = eq.get_data(key) or ""
+	local lvl  = client:GetLevel()
+
+	-- ⚠️⚠️ THE MOST RECENT ACQUISITION WINS -- this used to keep the FIRST record and never rewrite it.
+	-- That predates the roguelite: a character now re-takes spells from scratch every run, so "the
+	-- first time I ever saw this" is a fact about a character that no longer exists. Ashrem's bucket
+	-- held 21 entries at levels 44 and 50, recorded before the cap came down to 35.
+	--
+	-- ⚠️ It is not merely a confusing display. The kept-spell FORFEIT charges the pick at this level
+	-- (aotv4_spell_ranks_sys), so a level recorded above the current cap can NEVER come round again
+	-- and keeping that spell is silently free -- the one thing the forfeit exists to prevent.
+	local out = {}
+	for e in cur:gmatch("([^,]+)") do
+		local id = tonumber(e:match("^(%d+):"))
+		if id and id ~= spell_id then out[#out + 1] = e end
+	end
+	out[#out + 1] = spell_id .. ":" .. lvl
+	eq.set_data(key, table.concat(out, ","))
+end
+
+-- Send the map to the spell window. Chunked for the same reason the pool is: a character can hold
+-- one pick per level, so this grows with the level cap and an oversized chat line truncates silently.
+function M.send_pick_levels(client)
+	local all = eq.get_data(level_key(client)) or ""
+	local rows = {}
+	for e in all:gmatch("[^,]+") do rows[#rows + 1] = e end
+
+	local chunks = math.max(1, math.ceil(#rows / JOURNAL_CHUNK))
+	for c = 1, chunks do
+		local part = {}
+		for i = (c - 1) * JOURNAL_CHUNK + 1, math.min(c * JOURNAL_CHUNK, #rows) do
+			part[#part + 1] = rows[i]
+		end
+		client:Message(MT.NPCQuestSay, string.format("SJLEVELS %d %d^%s", c, chunks, table.concat(part, ",")))
+	end
+end
+
+function M.send_pool(client, level)
+	if level < 1 then level = 1 end
+
+	-- ⚠️⚠️ THE BAND, NOT THE EXACT LEVEL. gather_candidates offers everything learnable in
+	-- [level - LEVEL_BAND, level], so a tab showing only pool[level] answers a different question than
+	-- the picker does -- and misses most of what you can actually be offered.
+	--
+	-- That is not a subtle discrepancy. The custom lines (Reptile, Sloth, Moonfire, Promised, Kindred,
+	-- Mark, Thirst) exist ONLY at levels 8/18/28/38/48/58, so at any level in between the tab showed
+	-- none of them at all while the picker was happily offering them. They looked missing from the
+	-- pool entirely.
+	--
+	-- Same filters as gather_candidates EXCEPT the already-known reject: the tab shows what you own
+	-- too, flagged, so the window can grey it out. Keep the rest in step or the tab will advertise
+	-- something the picker will never hand you.
+	local rows, seen = {}, {}
+
+	-- ⚠️ COMBAT ABILITIES ARE NOT IN spell_pool -- they are a SEPARATE pool (skill_pool.lua) and
+	-- without this the tab silently answered "these are not obtainable", which is wrong: the picker
+	-- spends one of its three slots on one roughly every eighth level (SKILL_OFFER_CHANCE).
+	-- They are NOT level-banded either -- gather_skill_candidates offers rotatable_for(class) at any
+	-- level -- so they are listed once, ahead of the spells, at every level.
+	-- Wire form is "k<skillid>:<known>:<name>": a skill id (0-76) would otherwise be read as a spell
+	-- id, and the client has no skill-name table of its own to resolve it with (a hardcoded one would
+	-- drift from this file the moment the list changed -- the kIcons lesson, CLAUDE.md section 3).
+	local rot = skills.rotatable_for(client:GetClass())
+	for id, info in pairs(rot) do
+		rows[#rows + 1] = "k" .. id .. ":" ..
+			(((client:GetSkill(id) or 0) > 0) and "1" or "0") .. ":" .. info.name
+	end
+
+	local lo = math.max(1, level - LEVEL_BAND)
+	for lv = level, lo, -1 do
+		local list = pool[lv]
+		if list then
+			for _, sp in ipairs(list) do
+				local is_enchant = sp.name and (sp.name:match("^Enchant ") or sp.name:match("^Mass Enchant "))
+				if not seen[sp.id] and not blacklist[sp.id] and not is_enchant then
+					seen[sp.id] = true
+					rows[#rows + 1] = sp.id .. ":" .. (already_known(client, sp.id) and "1" or "0")
+				end
+			end
+		end
+	end
+
+	local chunks = math.max(1, math.ceil(#rows / JOURNAL_CHUNK))
+	for c = 1, chunks do
+		local part = {}
+		for i = (c - 1) * JOURNAL_CHUNK + 1, math.min(c * JOURNAL_CHUNK, #rows) do
+			part[#part + 1] = rows[i]
+		end
+		client:Message(MT.NPCQuestSay, string.format("SJPOOLDATA %d %d %d^%s",
+			level, c, chunks, table.concat(part, ",")))
+	end
+end
+
+-- Call from event_say alongside handle_say; returns true if it consumed the message.
+function M.handle_journal_say(e)
+	local lv = (e.message or ""):lower():match("^" .. JOURNAL_TRIGGER .. "%s+(%d+)%s*$")
+	if lv then
+		M.send_pool(e.self, tonumber(lv))
+		return true
+	end
+
+	-- "sjinfo <spellid>" -- readable detail for the Known and Pool tabs.
+	--
+	-- ⚠️ THE CLIENT CANNOT WRITE THIS TEXT ITSELF, which is why this exists. The dll rendered the
+	-- detail from the client's own spell record using a hand-kept SPA-to-label table, and every SPA
+	-- missing from that table fell through to a raw line like "SPA 137: 0" -- meaningless to a player,
+	-- and there are hundreds of SPAs so the table can never be complete.
+	-- SearchDetail carries the db_str description with its #N/@N placeholders already filled, which is
+	-- the text a human can actually read, and it is the SAME source the picker, the search window and
+	-- the loot window now use.
+	if (e.message or ""):lower():match("^sjlevels%s*$") then
+		M.send_pick_levels(e.self)
+		return true
+	end
+
+	-- The picker window's Reroll button. Routed here rather than through handle_say so it shares the
+	-- journal's "consumed, never reaches chat" path -- the dll swallows the echo either way.
+	if (e.message or ""):lower():match("^spellreroll%s*$") then
+		M.reroll(e.self)
+		return true
+	end
+
+	local sid = (e.message or ""):lower():match("^sjinfo%s+(%d+)%s*$")
+	if sid then
+		sid = tonumber(sid)
+
+		-- ⚠️ IDS AT OR ABOVE SKILL_ID_BASE ARE COMBAT ABILITIES, NOT SPELLS. The Pool tab lists both
+		-- and the client asks about a row by the one id it was given, so the two id spaces are
+		-- separated by an offset rather than by a second command. SearchDetail("spell", 8) would
+		-- happily describe spell 8 -- a real spell, and nothing to do with Backstab.
+		if sid >= SKILL_ID_BASE then
+			local skid = sid - SKILL_ID_BASE
+			local info = skills.SKILLS[skid]
+			local c    = e.self
+			local cur, cap = c:GetSkill(skid) or 0, c:MaxSkill(skid) or 0
+			local lines = { (info and info.name or ("Skill #" .. skid)) .. "  (combat ability)" }
+			if cur > 0 then
+				lines[#lines + 1] = string.format("Trained: %d of %d", cur, cap)
+				lines[#lines + 1] = "Fires from the Combat Abilities window, or automatically if you"
+				lines[#lines + 1] = "enable it in the Autoskill window."
+			else
+				lines[#lines + 1] = string.format("Not trained.  Cap at your level: %d", cap)
+				lines[#lines + 1] = "Offered as a level-up reward; it is granted at a quarter of cap."
+			end
+			c:Message(MT.NPCQuestSay, "SJINFO " .. sid .. " " .. table.concat(lines, "~"))
+			return true
+		end
+
+		local txt = e.self:SearchDetail("spell", sid) or ""
+		e.self:Message(MT.NPCQuestSay, "SJINFO " .. sid .. " " .. txt)
+		return true
+	end
+
+	return false
 end
 
 -- Resolve a pick. Call from event_say; returns true if it consumed the message.
@@ -318,9 +639,29 @@ function M.handle_say(e)
 				client:Message(MT.Red, "Your spellbook is full -- make room and pick again.")
 				return true
 			end
-			client:ScribeSpell(spell_id, slot)
-			client:Message(MT.Yellow, "You have learned " .. name .. "!")
+			-- ⚠️⚠️ AWARD AT THE CHARACTER'S EARNED RANK, NOT AT RANK 1. Ranks are permanent
+			-- meta-progression: once Superior Healing has been taken to rank III, EVERY future copy
+			-- arrives at rank III, from here or from a kept slot. Scribing the base id here instead
+			-- would silently hand back a rank-1 spell and the player's permanent progress would look
+			-- like it had vanished -- with no error anywhere.
+			-- ⚠️ ranked_id() falls back to the base id when the spell has no rank chain, so unranked
+			-- spells are unaffected.
+			local ok_rs, ranksys = pcall(require, "aotv4_spell_ranks_sys")
+			local give = ok_rs and ranksys.ranked_id(client, spell_id) or spell_id
+			client:ScribeSpell(give, slot)
+			-- Permanent library: the Known tab is what this character has EVER been awarded, not what
+			-- happens to be scribed right now, so it is recorded here and never wiped.
+			if ok_rs then ranksys.note_known(client, spell_id) end
+			client:Message(MT.Yellow, "You have learned " .. (eq.get_spell_name(give) or name) .. "!")
 		end
+
+		-- Record the level the reward was TAKEN at, for the spell window's Known tab.
+		--
+		-- ⚠️ THIS IS THE ONLY PLACE THE PICK LEVEL EXISTS. Nothing in the character record remembers
+		-- when a spell was scribed -- CHARINFO2 knows only WHAT you have -- so if it is not written
+		-- here it cannot be reconstructed afterwards. A spell obtained any other way (a GM grant, a
+		-- pre-existing character) will therefore have no entry and shows no level.
+		M.record_pick_level(client, spell_id)
 	end
 
 	-- resolved: drop the front offer, keep the queued rest, then prune + reveal the next pending offer

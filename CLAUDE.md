@@ -1689,21 +1689,53 @@ a player could only ever see what they had been handed, never what they might be
   Shield Wall buffs). The wording is deliberate.
 - The Known tab costs **zero** server traffic — it reads `CHARINFO2::SpellBook` directly.
 
-### ⚠️⚠️ 43000-43149 is RETIRED from the pool (2026-07-27)
-The generator's clause that offered the 20 all-slots-254 members of that band is **removed** — see
-the comment block in `gen_stock_pool.pl`. That band is the retired 113-spell custom reward set
-(Ember, Zap, Kick, Strike, Counterattack, Moonfire…): mostly redundant with native spells, and being
-inert markers they render as "no effects" in any client-side description. Pool went 2,174 → **2,154**.
-The **rows remain in `spells_new`** (dormant; referenced by their `quests/global/spells/43xxx.lua`
-scripts and the 43150-43199 helpers) — only the offering stopped. Full restore of all 202 custom rows
-is `custom/sql/aotv4_custom_spells_backup.sql`.
+### ⚠️⚠️ 43000-43112 is DELETED (2026-08-01) — retired from the pool 2026-07-27, rows removed now
+That band was the 113-spell custom reward set (Ember, Zap, Kick, Strike, Counterattack, Moonfire…):
+mostly redundant with native spells, and being all-slots-254 inert markers they rendered as "no
+effects" in any client-side description. The generator's clause that offered them was removed on
+2026-07-27 (pool 2,174 → 2,154); **the rows themselves went on 2026-08-01** via
+`custom/sql/aotv4_retire_43000_43112.sql`, together with everything that called them:
+- deleted `lua_modules/aotv4_pets.lua` and `lua_modules/aotv4_summon_table.lua`
+- deleted the 14 scripts `quests/global/spells/{43010,43011,43015,43017,43025,43027,43028,43030,
+  43035,43052,43054,43055,43056,43059}.lua`
+- `global_player.lua` — the pets require, the **repeating 5-second `aotpet` timer** and its branch
+- `global_npc.lua` — the pets require, `on_pet_spawn`, and the **whole `event_damage_given`**, which
+  existed only to drive the summoned-pet behaviours. ⚠️ The player-side damage hooks (Thirst, Sinew,
+  reactions) are in `global_player.lua` and are untouched — do not re-add it looking for them.
+- `aotv4_reactions.lua` — the four reaction branches (Divine Aura 43022, Blade Turn 43035,
+  Counterattack 43056, Vengeful Aura 43059), their charge tables, tuning and `arm_`/`clear_` API.
+Full restore of all 202 original custom rows is `custom/sql/aotv4_custom_spells_backup.sql`; a
+targeted pre-delete dump of 43000-43199 is `peq_pre_43xxx_purge.sql.gz`.
+- ✅ **`on_damage_taken` got measurably cheaper**, which matters because it runs on **every damage
+  event for every player**. It used to resolve `CastToClient` + `CharacterID` **and an
+  `eq.get_entity_list():GetMobID()` lookup — an entity-list walk per hit** — before its first
+  early-out, purely to feed those four branches. All three are gone; only the duel block remains.
+- ⚠️⚠️ **42 STOCK ITEMS REFERENCE THE DELETED BAND, AND THAT IS EXPECTED — LEAVE THEM ALONE.** The
+  50xxx → 43xxx renumber (§14) landed on ids **stock EQ already used**, so items 143000+ (*Tome:
+  Breather*, *Tome: Cyclone Roar*, *Tome: Insult*, *Tome: Warrior's Bulwark*…) carry a `scrolleffect`
+  pointing into it. Those stock disciplines were overwritten and no longer exist anywhere in
+  `spells_new` — checked by name. The tomes are **unobtainable here** (0 rows in `lootdrop_entries`,
+  0 on any merchant; level 70+ content behind a Classic lock and a level 30 cap), so the collision
+  was never reachable. They now point at nothing rather than at the wrong spell, which is strictly
+  better. 📌 Revisit only if a future expansion unlock makes them obtainable.
+- ⚠️ **The 11 helpers at 43150-43199 are now ORPHANED and were deliberately kept.** 43150 (Open
+  Wounds mark) was applied by 43052 and 43155 (Duel lock) by 43030, both in the deleted 113, so
+  nothing applies them. `43150.lua`, `43155.lua` and the `aotv4_reactions` code that reads them still
+  compile and still work — they simply never fire. Removing them is a separate decision.
+- ⚠️ `aotv4_abilities.lua` **survives**: `43150.lua` requires it, and `aotv4_reactions.bleed_tick`
+  still uses `ab.SKILL_OFFENSE`. It is no longer only-for-the-retired-set.
+- ⚠️ Two names survive in shared memory and are **not** leftovers: `Smolder` and `Counterattack` are
+  genuine **stock** spells (917 and 42175) that happened to share names with the customs.
 
 ⚠️⚠️ **"Get rid of the 43xxx spells" must NEVER be read as the whole range.** The band is not
-homogeneous and everything from 43300 up is live: **43300-43349** the custom spell lines (reptile,
-sloth, moonfire, promised, kindred, mark, thirst — all still offered), **43350-43399** their triggers
-plus the Shield Wall buffs, **43400-43454** the AA-tree buffs and pet wards, **43500-43565** the class
-auras. Deleting the range would destroy all four AA trees, Shield Wall, the pet wards and the
-achievement auras.
+homogeneous and everything from 43150 up is live or still referenced: **43150-43199** the helpers
+(11, now dormant — see above), **43300-43349** the custom spell lines (reptile, sloth, moonfire,
+promised, kindred, mark, thirst — all still offered), **43350-43399** their triggers plus the Shield
+Wall buffs, **43400-43454** the AA-tree buffs and pet wards, **43500-43565** the class auras,
+**43576-44327** the 752 spell-rank rows (§29). Deleting the range would destroy all four AA trees,
+Shield Wall, the pet wards, the achievement auras and every spell rank.
+📌 The 2026-08-01 purge above is the *only* part of the band that was safe to remove, and it took a
+five-way reference check first — pool, other spells, AA, items and the Lua call graph.
 
 ### The tabs live in the GENERATED picker XML (`gen_choice_xml.pl`)
 ⚠️ `EQUI_AoTSpellChoiceWnd.xml` is generated, so the Known/Pool widgets are emitted by

@@ -29,41 +29,25 @@ local ab = require("aotv4_abilities")
 local M = {}
 
 ------------------------------------------------------------------ ability ids
-M.DIVINE_AURA   = 50022
-M.BLADE_TURN    = 50035
-M.COUNTERATTACK = 50056
-M.VENGEFUL_AURA = 50059
+-- ⚠️⚠️ FOUR REACTIONS WERE REMOVED HERE (2026-08-01) WITH THE 43000-43112 SET: Divine Aura (43022),
+-- Blade Turn (43035), Counterattack (43056) and Vengeful Aura (43059), along with their charge
+-- tables and the arm_/clear_ functions the 43035/43056/43059 spell scripts used to call. Those
+-- spells no longer exist, so every one of those branches was unreachable.
+-- 📌 What is left is the part that was never tied to that set: the DUEL lock and the Open Wounds
+-- bleed. Do not "restore" the reaction branches without restoring the spell rows first -- a
+-- FindBuff on a deleted spell id simply never matches, so it would fail silently.
 
 -- helper carriers (see gen_spells.py HELPERS)
-M.OPEN_WOUNDS_MARK = 50150
-M.DUEL_LOCK        = 50155
+-- ⚠️ These two rows still EXIST in spells_new, but nothing applies them any more: the mark was cast
+-- by 43052 (Open Wounds) and the lock by 43030, both of which went with the 113. The code below is
+-- therefore correct but dormant. See CLAUDE.md section 20.
+M.OPEN_WOUNDS_MARK = 43150
+M.DUEL_LOCK        = 43155
 
 ------------------------------------------------------------------ tuning
-local DA_THRESHOLD_PCT   = 15   -- Divine Aura absorbs hits under this % of max HP
-local BLADE_RECHARGE_SEC = 30   -- Blade Turn charge comes back this often
-local BLADE_REFRESH_END  = 5    -- ...and costs this much endurance to do so
-local COUNTER_CHARGES    = 5
-local COUNTER_PCT        = 250  -- % of primary DPS struck back
-local VENGEFUL_CHARGES   = 3
-local VENGEFUL_MULT      = 2    -- physical damage taken is doubled
 local BLEED_PCT          = 25   -- Open Wounds banks this % of every hit as bleed
 local BLEED_TICS         = 5    -- ...and pays it out over this many tics
 local DUEL_MULT          = 2    -- melee damage between duel partners is doubled
-
------------------------------------------------------------------- state
--- [character_id] = charges remaining
-local counter_charges  = {}
-local vengeful_charges = {}
--- [character_id] = { ready = bool, next_at = os.time() when it recharges }
-local blade = {}
-
-function M.arm_counterattack(char_id) counter_charges[char_id]  = COUNTER_CHARGES  end
-function M.arm_vengeful(char_id)      vengeful_charges[char_id] = VENGEFUL_CHARGES end
-function M.arm_blade(char_id)         blade[char_id] = { ready = true, next_at = 0 } end
-
-function M.clear_counterattack(char_id) counter_charges[char_id]  = nil end
-function M.clear_vengeful(char_id)      vengeful_charges[char_id] = nil end
-function M.clear_blade(char_id)         blade[char_id] = nil end
 
 -- Open Wounds: [victim entity_id] = unpaid bleed damage, banked by hits and
 -- paid out over BLEED_TICS by the marker's buff tic.
@@ -103,13 +87,9 @@ local function is_physical_hit(e)
 	return e.spell_id == 0 or e.spell_id == 65535
 end
 
--- "in front of you" -- mirrors the stock idiom at zone/attack.cpp:419.
-local function in_front_of(me, attacker)
-	if not attacker or not attacker.valid then
-		return false
-	end
-	return not attacker:BehindMob(me, attacker:GetX(), attacker:GetY())
-end
+-- 📌 A local `in_front_of` helper lived here (mirroring the stock idiom at zone/attack.cpp:419). Its
+-- only caller was Counterattack, which went with the 43000-43112 set, so it was removed too. The
+-- idiom if it is ever wanted again: `not attacker:BehindMob(me, attacker:GetX(), attacker:GetY())`.
 
 ------------------------------------------------------------------ main hook
 
@@ -121,18 +101,17 @@ function M.on_damage_taken(e)
 		return 0
 	end
 
-	local client  = me:CastToClient()
-	local char_id = client:CharacterID()
-	local damage  = e.damage or 0
+	local damage = e.damage or 0
 	if damage <= 0 then
 		return 0
 	end
 
-	local attacker = nil
-	if e.entity_id and e.entity_id > 0 then
-		attacker = eq.get_entity_list():GetMobID(e.entity_id)
-	end
-
+	-- ⚠️⚠️ THIS HOOK RUNS ON EVERY DAMAGE EVENT FOR EVERY PLAYER, so it does the least possible work
+	-- before the duel early-out. It used to resolve CastToClient + CharacterID and an
+	-- eq.get_entity_list():GetMobID(e.entity_id) lookup up front -- an entity-list walk PER HIT --
+	-- purely to feed the four ability reactions that were removed with the 43000-43112 set. Nothing
+	-- left here needs the attacker object or the character id. Do not reintroduce either "so it is
+	-- available": resolve them inside whichever branch actually wants them.
 	local physical = is_physical_hit(e)
 
 	-- 0. Duel outranks everything: while locked in, the pair exist in their own
@@ -149,63 +128,9 @@ function M.on_damage_taken(e)
 		return 0
 	end
 
-	-- 1. Divine Aura -- shrugs off anything that isn't a big hit. Checked first
-	--    so an absorbed hit never burns another ability's charge.
-	if me:FindBuff(M.DIVINE_AURA) then
-		local threshold = ab.pct_of(me:GetMaxHP(), DA_THRESHOLD_PCT)
-		if damage < threshold then
-			return -1
-		end
-	end
-
-	-- 2. Blade Turn -- eats one physical attack, then recharges on a timer for
-	--    an endurance fee. The refresh is lazy (checked on the next hit) rather
-	--    than driven by a timer, so there is nothing to clean up.
-	if physical and me:FindBuff(M.BLADE_TURN) then
-		local state = blade[char_id]
-		if not state then
-			state = { ready = true, next_at = 0 }
-			blade[char_id] = state
-		end
-
-		if not state.ready and os.time() >= state.next_at then
-			local endurance = client:GetEndurance()
-			if endurance >= BLADE_REFRESH_END then
-				client:SetEndurance(endurance - BLADE_REFRESH_END)
-				state.ready = true
-			end
-		end
-
-		if state.ready then
-			state.ready  = false
-			state.next_at = os.time() + BLADE_RECHARGE_SEC
-			return -1
-		end
-	end
-
-	-- 3. Counterattack -- retaliate, without changing the damage taken.
-	if me:FindBuff(M.COUNTERATTACK) then
-		local left = counter_charges[char_id] or COUNTER_CHARGES
-		if left > 0 and attacker and in_front_of(me, attacker) then
-			counter_charges[char_id] = left - 1
-			ab.pct_dps_attack(me, attacker, COUNTER_PCT, ab.SLOT_PRIMARY, ab.SKILL_OFFENSE)
-		end
-	end
-
-	-- 4. Vengeful Aura -- doubles the physical damage you take, then strikes the
-	--    attacker for that FINAL (doubled) amount.
-	if physical and me:FindBuff(M.VENGEFUL_AURA) then
-		local left = vengeful_charges[char_id] or VENGEFUL_CHARGES
-		if left > 0 then
-			vengeful_charges[char_id] = left - 1
-			local final = damage * VENGEFUL_MULT
-			if attacker and attacker.valid then
-				attacker:Damage(me, final, M.VENGEFUL_AURA, ab.SKILL_OFFENSE, false)
-			end
-			return final
-		end
-	end
-
+	-- ⚠️ The four ability reactions that used to run here (Divine Aura, Blade Turn, Counterattack,
+	-- Vengeful Aura) were removed with the 43000-43112 set on 2026-08-01. The duel block above is
+	-- the whole of this hook now.
 	return 0
 end
 
