@@ -528,6 +528,35 @@ void Client::AddEXP(ExpSource exp_source, uint64 in_add_exp, uint8 conlevel, boo
 		aaexp = ScaleAAXPBasedOnCurrentAATotal(GetSpentAA() + GetAAPoints(), aaexp);
 	}
 
+	// AoTv4: the more AA a character has earned, the slower NORMAL experience comes in.
+	//
+	// ⚠️⚠️ THIS IS DELIBERATELY APPLIED TO `exp` ONLY, NEVER TO `aaexp`. AA power is what makes each
+	// re-climb to the cap faster (characters keep their AA through the death reset, section 24), so
+	// this is the brake on that. Applying it to AA experience as well would make the system throttle
+	// ITSELF -- more AA would mean slower AA -- and the AA pool would become progressively harder to
+	// finish rather than the levelling being progressively slower. Those are opposite designs.
+	//
+	// ⚠️⚠️ IT READS TOTAL AA, NOT SPENT AA. `GetSpentAA() + GetAAPoints()` is the same idiom
+	// ScaleAAXPBasedOnCurrentAATotal uses just above. Reading only SPENT points would hand players an
+	// obvious exploit: bank the points unspent, level at full speed, then spend them at the cap.
+	//
+	// Multiplier = (Base + aa) / (Base + Factor * aa), asymptotic to 1/Factor. At the defaults
+	// (100 / 10): 0 AA = full rate, 12.5 AA = half, 35 AA = 30 percent, 100 AA = 18 percent, and it
+	// never falls below 10 percent however much AA is earned. Most of the braking therefore happens
+	// over the first ~50 AA and the curve is close to flat after that -- that is the intended shape,
+	// not an oversight.
+	if (RuleB(AoT, AAExpSlowdownEnabled) && exp > 0) {
+		const uint32 total_aa = GetSpentAA() + GetAAPoints();
+		if (total_aa > 0) {
+			const double base   = static_cast<double>(RuleI(AoT, AAExpSlowdownBase));
+			const double factor = static_cast<double>(RuleI(AoT, AAExpSlowdownFactor));
+			if (base > 0.0 && factor > 0.0) {
+				const double mult = (base + total_aa) / (base + factor * total_aa);
+				exp = static_cast<uint64>(exp * mult);
+			}
+		}
+	}
+
 	// Check for AA XP Cap
 	if (RuleI(AA, MaxAAEXPPerKill) >= 0 && aaexp > RuleI(AA, MaxAAEXPPerKill)) {
 		aaexp = RuleI(AA, MaxAAEXPPerKill);
@@ -565,7 +594,10 @@ void Client::AddEXP(ExpSource exp_source, uint64 in_add_exp, uint8 conlevel, boo
 	}
 
 	// AA Sanity Checking for players who set aa exp and deleveled below allowed aa level.
-	if (GetLevel() <= 50 && m_epp.perAA > 0) {
+	// ⚠️⚠️ AoTv4: the level was HARDCODED to 50 here and to 51 in SetEXP below, which on a server
+	// whose cap is under 51 makes AA experience completely unearnable -- silently, because the AA
+	// window still works and the percentage slider still moves. Both are now RuleI(AoT, AAExpMinLevel).
+	if (GetLevel() < RuleI(AoT, AAExpMinLevel) && m_epp.perAA > 0) {
 		Message(Chat::Yellow, "You are below the level allowed to gain AA Experience. AA Experience set to 0%");
 		aaexp = 0;
 		m_epp.perAA = 0;
@@ -854,8 +886,9 @@ void Client::SetEXP(ExpSource exp_source, uint64 set_exp, uint64 set_aaxp, bool 
 	m_pp.exp = set_exp;
 	m_pp.expAA = set_aaxp;
 
-	if (GetLevel() < 51) {
-		m_epp.perAA = 0;	// turn off aa exp if they drop below 51
+	// ⚠️ AoTv4: was hardcoded to 51 -- see the note on the matching gate in AddEXP.
+	if (GetLevel() < RuleI(AoT, AAExpMinLevel)) {
+		m_epp.perAA = 0;	// turn off aa exp below the configured AA level
 	} else {
 		SendAlternateAdvancementStats();    //otherwise, send them an AA update
 	}
@@ -1019,18 +1052,31 @@ uint32 Client::GetEXPForLevel(uint16 check_level)
 #endif
 
 	uint16 check_levelm1 = check_level-1;
-	// AoTv4: no hell levels + a relaxed above-30 curve. Stock applied a STEPWISE multiplier
-	// (1.0 -> 1.1 -> 1.2 ... -> 3.0) whose jumps, on top of the (level-1)^3 growth, spiked specific
-	// levels (31/36/41/46/52/56-60) -- the classic "hell levels." Replaced with a smooth linear ramp
-	// that is ALSO gentler than stock at every level above 30 (mod 1.6 @ L60 vs 3.0), so per-level cost
-	// rises evenly with no spikes and the total above-30 grind drops. Below 31 is unchanged (mod 1.0).
-	float mod = (check_level < 31) ? 1.0f : 1.0f + (check_level - 30) * 0.02f;
 
-	float base = (check_levelm1)*(check_levelm1)*(check_levelm1);
+	// AoTv4: LINEAR level curve, per the balance sheet (exp.xlsx).
+	//
+	// Cost of the NEXT level is a flat 1000 per level: level 1 -> 2 costs 2,000, level 34 -> 35 costs
+	// 35,000. Cumulative cost to REACH level L is therefore the triangular sum
+	//     1000 * n * (n + 3) / 2      where n = L - 1
+	// which gives 0 at level 1, 2,000 at level 2, and 629,000 at level 35 (665,000 to complete 35).
+	//
+	// ⚠️⚠️ THIS REPLACES A CUBIC CURVE AND THE DIFFERENCE IS ENORMOUS -- roughly 65x. Stock EQ (and
+	// the AoTv4 variant before this) used (level-1)^3 * 1000, which needed about 43 MILLION experience
+	// to reach level 35 against 629 THOUSAND here. Anything tuned against the old curve -- quest
+	// rewards, the delve's experience payouts, mob experience values -- is now worth ~65x more in
+	// levels than it was. That is the intended redesign for a level 35 cap, not an oversight, but it
+	// is the first thing to suspect if levelling feels instant.
+	//
+	// ⚠️ Hell levels cannot occur here by construction: the per-level cost rises by a constant 1000,
+	// so there is no multiplier to spike. The previous implementation needed an explicit smooth ramp
+	// to avoid the stock stepwise multiplier's spikes at 31/36/41/46/52/56-60; that problem is gone
+	// rather than solved.
+	// ⚠️ The AA cost per point is NOT derived from this -- it is the separate AA:ExpPerPoint rule
+	// (200,000, also from the sheet). Reaching level 35 is worth about 3.3 AA points at that rate, so
+	// AA is earned at the cap rather than on the way up.
+	float base = 0.5f * float(check_levelm1) * float(check_levelm1 + 3);
 
-	mod *= 1000;
-
-	uint32 finalxp = uint32(base * mod);
+	uint32 finalxp = uint32(base * 1000.0f);
 
 	if(RuleB(Character,UseOldRaceExpPenalties))
 	{

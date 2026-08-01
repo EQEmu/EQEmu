@@ -293,10 +293,87 @@ my $LDET_Y = $LIST_Y + $LIST_H + 8;
 my $LDET_H = $PAGE_CY - $LDET_Y - 12;
 
 # ---- Known tab
-listbox('ASC_KnownList', $LIST_Y, $LIST_H,
-        [[46, 'Lvl'], [252, 'Spell'], [94, 'Type']], 1);
-listbox('ASC_KnownDetail', $LDET_Y, $LDET_H, [[$DET_W - 12, undef]], 1);
-push @known_pieces, 'ASC_KnownList', 'ASC_KnownDetail';
+#
+# ⚠️⚠️ THE KNOWN TAB IS A PERMANENT LIBRARY, NOT A VIEW OF THE SPELLBOOK. It lists every spell this
+# character has ever been awarded, with the RANK it has been taken to -- both of which live in data
+# buckets and survive the roguelite wipe. That is why it needs server data (SPELLRANKDATA) where it
+# used to cost nothing at all.
+#
+# Two actions, with deliberately different scopes (aotv4_spell_ranks_sys):
+#   KEEP     only a spell currently CARRIED, max 2. Survives death, at its earned rank.
+#   UPGRADE  anything DISCOVERED. Rank is permanent character progress, so it is not hostage to
+#            whether the spell happens to be in the book today.
+#
+# The requirement box sits between the detail pane and the buttons, in the same shape as the reroll
+# price box on the Choose tab: it shows what the next rank costs and what the player is carrying, so
+# a refused Upgrade explains itself instead of just failing.
+# ⚠️⚠️ THE TWO BOXES ARE A MATCHED PAIR AND SHARE ONE HEIGHT. A first pass gave the description 94
+# and the requirement box 52, which looked lopsided AND clipped: the requirement text is three lines
+# ("Rank N requires" plus one per material) and needs about 60. Deriving both from the same figure
+# means they cannot drift apart when the page is next re-laid out.
+# ⚠️ The Known LIST is shortened to pay for it rather than stealing from the description -- the list
+# scrolls, so losing a couple of visible rows costs nothing, whereas a clipped panel loses
+# information outright.
+my $KLIST_H = 200;                                  # Known list, shorter than the other tabs'
+my $KBTN_H  = 24;
+my $KBTN_Y  = $PAGE_CY - $KBTN_H - 8;
+my $KDET_Y  = $LIST_Y + $KLIST_H + 8;
+my $KBOX_H  = int((($KBTN_Y - 6) - $KDET_Y - 6) / 2);   # detail and requirement, equal
+my $KREQ_Y  = $KDET_Y + $KBOX_H + 6;
+
+# ⚠️ NO per-row level column. It carried the level the reward was taken at, which the band headers
+# ("Taken at character level 31 to 40") already say -- and the exact number is actively misleading
+# when the character is above the level cap: era_system.clamp_level runs BEFORE spell_choice.offer on
+# a level up, so a character sitting at 40 with a cap of 35 is momentarily pulled to 35 and the award
+# is honestly recorded at 35. The data is still kept and still drives the kept-spell forfeit; it is
+# only the column that is gone.
+listbox('ASC_KnownList', $LIST_Y, $KLIST_H,
+        [[298, 'Spell'], [94, 'Rank']], 1);
+listbox('ASC_KnownDetail', $KDET_Y, $KBOX_H, [[$DET_W - 12, undef]], 1);
+
+# ⚠️ STMLbox, not Label. Section 3: a Label has no confirmed border on this build, and the reroll
+# price box is an STMLbox for exactly this reason. It also has to wrap two requirement lines.
+w("\t<STMLbox item=\"ASC_KnownReq\">");
+w("\t\t<ScreenID>ASC_KnownReq</ScreenID>");
+w("\t\t<DrawTemplate>WDT_Inner</DrawTemplate>");
+w("\t\t<RelativePosition>true</RelativePosition>");
+# ⚠️ X and width MUST match the listbox helper's ($DET_X / $DET_W), not be re-derived. A first pass
+# used 6 and $DET_W-12 and the requirement box sat 4px left of the description above it with a
+# narrower right edge -- subtle, but two stacked panels that do not share their edges read as broken
+# rather than as a design.
+w("\t\t<Location><X>$DET_X</X><Y>$KREQ_Y</Y></Location>");
+w("\t\t<Size><CX>$DET_W</CX><CY>$KBOX_H</CY></Size>");
+w("\t\t<Style_Border>true</Style_Border>");
+w("\t\t<Style_VScroll>false</Style_VScroll>");
+w("\t\t<Text>Select a spell.</Text>");
+w("\t</STMLbox>");
+w('');
+
+# ⚠️ <Template>BDT_Normal</Template>, NOT <ButtonDrawTemplate> -- the tag differs from the inline
+# form the icon buttons use, and only the ~34 BDT_* names defined in EQUI_Templates.xml resolve.
+# Anything else draws an empty hole with no error (section 3).
+my $KBW = 96;
+# ⚠️ Right-aligned to the SAME edge as the two panels above ($DET_X + $DET_W). Positioning from
+# $DET_W alone ignores the panels' left offset and leaves the buttons 10px adrift of the column they
+# belong to.
+my $KBTN_R = $DET_X + $DET_W;
+for my $b (['ASC_KnownKeep',    'Keep',    $KBTN_R - (2 * $KBW) - 8],
+           ['ASC_KnownUpgrade', 'Upgrade', $KBTN_R - $KBW]) {
+    my ($item, $text, $x) = @$b;
+    w("\t<Button item=\"$item\">");
+    w("\t\t<ScreenID>$item</ScreenID>");
+    w("\t\t<RelativePosition>true</RelativePosition>");
+    w("\t\t<Location><X>$x</X><Y>$KBTN_Y</Y></Location>");
+    w("\t\t<Size><CX>$KBW</CX><CY>$KBTN_H</CY></Size>");
+    w("\t\t<Text>$text</Text>");
+    w("\t\t<TextColor><R>255</R><G>230</G><B>140</B></TextColor>");
+    w("\t\t<Template>BDT_Normal</Template>");
+    w("\t</Button>");
+    w('');
+}
+
+push @known_pieces, 'ASC_KnownList', 'ASC_KnownDetail',
+                    'ASC_KnownReq', 'ASC_KnownKeep', 'ASC_KnownUpgrade';
 
 # ---- Pool tab: a level stepper above the list
 w("\t<Button item=\"ASC_PoolPrev\">");

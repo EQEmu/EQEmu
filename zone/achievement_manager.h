@@ -27,6 +27,7 @@ public:
 	void ProcessSkill(Client *client, uint32 skill_id, uint32 value);
 	void ProcessKill(Client *client, NPC *npc);
 	void ProcessItemReceive(Client *client, uint32 item_id);   // item_receive objective (e.g. class epics)
+	void ProcessDeathAtMaxLevel(Client *client);               // death_at_max objective (region unlocks)
 
 private:
 	struct CategorySummary {

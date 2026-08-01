@@ -1217,6 +1217,44 @@ void Client::ChannelMessageReceived(uint8 chan_num, uint8 language, uint8 lang_s
 		return;
 	}
 
+	// AoTv4 Allaclone search + quest journal: the dll issues
+	//   /say srch <kind> <term>   /say srchdet <kind> <id>   /say qtrack <n>   /say quntrack <n>
+	//
+	// ⚠️⚠️ THESE ARE HANDLED IN LUA, NOT HERE, so unlike the AdvLoot and autoskill blocks above we
+	// must NOT simply return -- that would swallow them before global_player's event_say ever runs
+	// and the window would go dead. We fire the player quest event ourselves and then return, which
+	// gives Lua the message while SKIPPING the fall-through to
+	// entity_list.ChannelMessage(). That broadcast is the whole problem: a plain say reaches every
+	// nearby client and fires EVENT_SAY on every NPC in range, so without this the window's traffic
+	// is audible to other players ("Ashrem says, 'qtrack 5'") and can trip quest dialogue.
+	//
+	// ⚠️ Suppressing our OWN echo in the dll is not sufficient and never was: it only hides the line
+	// from the person who sent it. Both halves are required.
+	if (chan_num == ChatChannel_Say && message && (
+	        !strncasecmp(message, "srch ",         5) ||
+	        !strncasecmp(message, "srchdet ",      8) ||
+	        !strncasecmp(message, "qtrack ",       7) ||
+	        !strncasecmp(message, "quntrack ",     9) ||
+	        // Spell rank window (aotv4_spell_ranks_sys). Same treatment: handled in Lua, so the event
+	        // must still fire, but the broadcast must not.
+	        !strncasecmp(message, "spellkeep ",   10) ||
+	        !strncasecmp(message, "spellrelease ",13) ||
+	        !strncasecmp(message, "spellrank ",   10) ||
+	        !strncasecmp(message, "spellrankreq",  12) ||
+	        !strncasecmp(message, "spellkept",      9) ||
+	        // Region unlocks. ⚠️ `openregion` arrives from a SAYLINK, not from typing, so without this
+	        // clicking a region in the Wayfinder's list would announce "Ashrem says, 'openregion 4'"
+	        // to everyone in the hub -- exactly where every new character is standing.
+	        !strncasecmp(message, "openregion ",   11) ||
+	        !strncasecmp(message, "regions",        7) ||
+	        !strncasecmp(message, "reforgerace ",  12) ||
+	        !strncasecmp(message, "reforgeclass ", 13))) {
+		if (parse->PlayerHasQuestSub(EVENT_SAY)) {
+			parse->EventPlayer(EVENT_SAY, this, message, 0);
+		}
+		return;
+	}
+
 	if (RuleB(Chat, AlwaysCaptureCommandText)) {
 		if (message[0] == COMMAND_CHAR) {
 			if (command_dispatch(this, message, false) == -2) {
@@ -8303,6 +8341,26 @@ FACTION_VALUE Client::GetFactionLevel(uint32 char_id, uint32 npc_id, uint32 p_ra
 	// merchant fix
 	if (tnpc && tnpc->IsNPC() && tnpc->CastToNPC()->MerchantType && (fac == FACTION_THREATENINGLY || fac == FACTION_SCOWLS))
 		fac = FACTION_DUBIOUSLY;
+
+	// AoTv4: nobody is killed in a town for being the wrong race.
+	// ⚠️⚠️ EVERY aggro branch in NPC::CheckWillAggro requires the con to be exactly THREATENINGLY or
+	// SCOWLS (aggro.cpp:326, :516, :545) -- and AlwaysAggro()/npc_aggro sits in the ELIGIBILITY half
+	// of those tests, not the faction half. So flooring to DUBIOUSLY here is what actually stops the
+	// guards, and it would equally pacify anything else it were applied to. Hence the list is scoped
+	// to civic factions only (custom/sql/aotv4_town_factions.sql); monster factions must never be
+	// added to it or that content stops aggroing server-wide, in every zone, with no other symptom.
+	// ⚠️ Dubious, not Indifferent: the city still dislikes you, and the merchant fix above already
+	// treats Dubious as tradeable, so shops keep working with no second exception.
+	// ⚠️ This runs BEFORE the CheckAggro line below on purpose -- an NPC that already has aggro on
+	// you is restored to THREATENINGLY there, so a guard you attack still fights back. The floor
+	// prevents being attacked for existing, not combat you started.
+	if (
+		RuleB(AoT, TownFactionFloor) &&
+		(fac == FACTION_THREATENINGLY || fac == FACTION_SCOWLS) &&
+		zone && zone->IsTownFaction(pFaction)
+	) {
+		fac = FACTION_DUBIOUSLY;
+	}
 
 	if (tnpc != 0 && fac != FACTION_SCOWLS && tnpc->CastToNPC()->CheckAggro(this))
 		fac = FACTION_THREATENINGLY;

@@ -754,6 +754,23 @@ class, `classes8`, skill caps, expansion). The windows are generic (`SPELLCHOICE
 - **AA names come from `db_str`** (type 1 title, type 4 description) resolved by the CLIENT out of
   its own `dbstr_us.txt`, so a `db_str` change needs `./export_client_files` + reinstalling that
   file. `title_sid = -1` renders **no row at all** — it does not fall back to `aa_ability.name`.
+- ⚠️⚠️ **AN AA HAS *THREE* NAMES IN `db_str`, AND THE HOTKEY ONE IS SPLIT ACROSS TWO ROWS.**
+  `aa_ranks` carries `title_sid` **and** `upper_hotkey_sid` **and** `lower_hotkey_sid`, and the
+  client selects on `(id, type)`: **type 1** the window title, **type 2** the hotkey's UPPER line,
+  **type 3** its LOWER line, **type 4** the description. Renaming an AA by writing types 1 and 4 —
+  which is what `aotv4_aa_rename.sql` did — leaves the **host's** hotkey text in place, so the AA
+  window reads "Iron Will" while a hotkey made from that same ability reads **"Frenzied Burnout"**.
+  Fixed for all 10 activated abilities by `custom/sql/aotv4_aa_hotkey_names.sql` (first word to
+  type 2, remainder to type 3; passives carry `-1` and are skipped).
+  - ⚠️⚠️ **The split is why this is nearly unsearchable.** The string on screen never exists in the
+    data: grepping `db_str`, `dbstr_us.txt` **and** `eqgame.exe` for `Frenzied Burnout` all return
+    **zero**, because it is stored as `Frenzied` + `Burnout`. That produced three separate wrong
+    conclusions (a stale `spells_us.txt`, a clone-source name, a hardcoded client string) before
+    `SELECT id, type, value FROM db_str WHERE id = <sid>` — **dump every type for the sid** — showed
+    it instantly. Search a single word, or dump the sid; never grep the rendered string.
+  - ⚠️ In our pool `title_sid`, `upper_hotkey_sid` and `lower_hotkey_sid` are all the **same sid**,
+    so these are three rows of one id. That is exactly what makes it look like fixing the title
+    should have fixed the hotkey: the id matches, only the **type** differs.
 - ⚠️⚠️ **`title_sid` and `desc_sid` are INDEPENDENT, and neither is guaranteed to equal
   `first_rank_id`.** 22 of our 23 hosts have `title_sid = desc_sid = first_rank_id`, which makes it
   look like a rule — **Quick Damage (44) does not**: `title_sid 141`, `desc_sid` **12863**. Writing
@@ -786,6 +803,26 @@ class, `classes8`, skill caps, expansion). The windows are generic (`SPELLCHOICE
   `lootdrop_entries.chance` is a weight in the dominant weighted loot mode); `AoTv4MythicReward`
   (questmgr.cpp + lua_client.cpp) upgrades **quest-reward** gear to its Mythic tier (epics never hand
   out native). Re-run the SQL → rebuild shared memory → restart.
+  - ✅ **CRAFTING ALWAYS YIELDS MYTHIC** (`ZoneDatabase::GetTradeRecipe`, tradeskills.cpp ~:1746). Every
+    combine output is swapped for its Mythic tier when one exists, so crafted gear is top-tier and stays
+    relevant as later expansions unlock better base items. Epics are tiered, so they are covered too.
+    - ⚠️⚠️ **ONE choke point serves BOTH overloads.** `GetTradeRecipe(container, …)` resolves the recipe
+      id from the container's contents and then **delegates** to `GetTradeRecipe(recipe_id, …)` (`:1600`,
+      `:1639`), so the trade window and the world-container path both pass through here exactly once.
+      Never copy the upgrade into a caller — two copies drift, per §22's reasoning.
+    - ⚠️ It normalises through **`AoTv4TierBaseId` first**. Adding the step to an id that is *already* a
+      tier would land outside the reserved band where no item exists, so the swap would silently no-op;
+      normalising makes a Hallowed output upgrade and a Mythic output idempotent. (No stock recipe
+      outputs a tier id today — 0 of 19,464 — so this is a guard, not a live path.)
+    - 📌 **Only WEARABLES are affected, and that falls out of the data rather than a test.** The gate
+      used to be `Slots > 0`, which was redundant: `aotv4_gear_tiers.sql` only generates tiers for
+      slots>0 items, so the "does a Mythic exist" lookup already *is* the wearable test. Of the enabled
+      recipes, **12,323 produce a wearable** (all 8,889 distinct outputs have a Mythic row) and **11,031
+      produce a non-wearable** — 5,112 plain components, 728 food/drink, 71 containers, and 5 junk
+      outliers. **Do not tier those**: a component has no stats to scale, so a "Mythic" one would be
+      byte-identical to its base and would only split **2,556** component stacks across two ids.
+    - ⚠️ Only the **success** list is upgraded — `onfail` and `salvage` are untouched, and quest recipes
+      (5 of 19,464) hand out items from Lua/Perl and bypass this entirely.
   - ⚠️⚠️ **A TIER REPLACES THE DROP, IT DOES NOT ADD ONE (fixed 2026-07-29).** The original
     `AddTierUpgrades` rolled the two tiers **independently** and called `AddLootDrop` for each *on top
     of* the base, so one base item could put **three items on the corpse at once** (base + Hallowed +
@@ -820,12 +857,33 @@ class, `classes8`, skill caps, expansion). The windows are generic (`SPELLCHOICE
     | `Lua_Client::CountItem` / `Perl_Client_CountItem` / `QuestManager::countitem` | possession checks |
     | `Lua_Client::HasItemOnCorpse` | the corpse fallback inside `Client:HasItem` |
     | `Client:HasItem` (`lua_modules/client_ext.lua`) | ~230 Lua files — it **scans slots itself**, never calls CountItem, so it needs its own `aotv4_same_item` |
+    | `Perl_Client_HasItemOnCorpse` (**added 2026-08-01**) | the corpse fallback inside `plugin::check_hasitem` |
+    | `plugin::check_hasitem` (`plugins/check_hasitem.pl`, **added 2026-08-01**) | **133 Perl files** — the Perl twin of `Client:HasItem`, and it scans slots itself the same way |
     - ⚠️ **Scoped to the QUEST bindings, never `Client::CountItem` itself** — the engine calls that for
       merchants, corpses and NPC inventories, where "a Mythic Rusty Dagger is a Rusty Dagger" is the
       WRONG answer.
     - ⚠️ 7 Perl files compare `$itemN ==` directly and bypass all of it. Audited: 5 of the 6 ids are
       untiered quest paper, and the 6th (26015 Pulsing Goo) only ever appears as a
       `quest::ChooseRandom` reward roll — a script-local, never a hand-in. **No real gaps.**
+    - ⚠️⚠️ **THE 2026-07-28 AUDIT MISSED THE WHOLE PERL POSSESSION PATH** (found and fixed 2026-08-01).
+      It reasoned in terms of the *Lua* call graph, fixed `Client:HasItem` when it turned out to scan
+      slots itself — and never asked whether Perl had the same shape. It does: `plugin::check_hasitem`
+      does a raw `GetItemIDAt($slot) == $item_id` (plus the same on every augment socket), reaching
+      none of the C++ choke points, so **133 Perl quest scripts told a player holding only the Mythic
+      copy that they did not have the item.** Its corpse fallback `Perl_Client_HasItemOnCorpse` was
+      unnormalised too, while `Lua_Client::HasItemOnCorpse` had been fixed. The tell was in plain
+      sight: the comment in `client_ext.lua` lists the covered paths and names `Perl_Client_CountItem`
+      but not `Perl_Client_HasItemOnCorpse`.
+      📌 **`aotv4_same_item` now exists TWICE — `lua_modules/client_ext.lua` and
+      `plugins/check_hasitem.pl`. Fix them together.** And when auditing a rule like this, enumerate
+      by *mechanism* (who scans slots directly?) rather than by language, or one interpreter's half
+      gets checked and the other does not.
+    - 📌 **Crafting makes this load-bearing rather than cosmetic.** Every combine output is swapped for
+      its Mythic tier (§ the crafting note above), so **25 quest turn-in requirements are craftable
+      wearables** whose only obtainable form is now Mythic — if the normalisation broke, those quests
+      would be uncompletable rather than merely awkward. Verified 2026-08-01: all 25 have Mythic rows,
+      none is touched by the 7 direct-comparison files, and the Lua chain resolves
+      `items.check_turn_in` → `trade.self:CheckHandin` → `NPC::CheckHandin` (`npc.cpp:4376`).
   - ⚠️ **Tier offset = 300,000 (step), NOT 1,000,000.** RoF2 item LINKS encode the id in a
     5-hex-digit field masked to `0xFFFFF` (1,048,575, see `common/say_link.cpp`), so an item id
     ≥ 1,048,576 makes its chat link render as garbage (and can desync the client link parser for
@@ -1657,6 +1715,23 @@ screen as well places it twice and it draws outside its tab.
 ⚠️ The card coordinates were NOT moved — each page sits at `Y=TAB_Y` (22) and its pieces are
 positioned relative to the page, so the Choose layout is byte-for-byte the old one. The window grew
 450 → 500 tall to pay for the tab strip.
+⚠️⚠️ **THAT `Y=TAB_Y` IS LOAD-BEARING — A `Page` IS NOT AUTOMATICALLY PLACED BELOW ITS TAB STRIP.**
+A page's origin is the TabBox's top-left corner, **tabs included**, so a page at offset 0 puts its
+first row of pieces directly ON TOP of the tab captions and both texts overprint into an unreadable
+smear. The strip has to be paid for by hand on every page. Cost a round trip on
+`EQUI_AoTLostWnd.xml` (§6) when its flat layout was restructured into tabs and the offset was left
+at 0; 24 clears it on this build.
+⚠️⚠️ **CONVERTING A FLAT WINDOW TO TABS DROPS ITS ANCHORS IF YOU ONLY MOVE THE PIECES.** Anything
+that should grow with the window needs `AutoStretch` **plus** its four anchor tags; a piece without
+them keeps its fixed `Size` forever, so dragging the window larger just adds empty space around a
+small list. Same file, same session, immediately before the offset bug — the two together made a
+resizable window look completely broken.
+⚠️ A **sizable** window has its size AND position **saved per character** by the client, so an
+edited `<Size>` only applies to a character that has never opened it. If it comes back wrong, drag
+it once or delete its entry from `UI_<char>_<server>.ini` — the XML is not being ignored.
+⚠️ `validate_ui_xml.sh` counts tags **inside comments**, so prose like `UI_<char>_<server>.ini` or
+a bare `<Size>` in an explanatory note fails the tag-balance check. Write those without angle
+brackets; the failure names a tag that does not exist in the markup at all, which is confusing.
 - `SpellChoiceShow()` still refuses to open with nothing pending (Ctrl+Q's "is a reward owed" test
   keeps its meaning); **`SpellChoiceOpen()`** is the new browse entry point that ignores that.
 - The transport calls back via `SjSetPoolReadyCallback` rather than touching the window, so
@@ -2436,8 +2511,29 @@ next tier.
 
 ### ⚠️⚠️ THE SIGIL CURVE AND THE SCORING FUNCTION ARE ONE CALIBRATION, NOT TWO
 `kill_value` is **`eff * eff`** (×3 named), no divisor and no minimum clamp. The sigil ladder
-(`24000 * n^2`, written as per-level increments) is DERIVED from it — change one and the other is
+(**`4400 * n^2`**, written as per-level increments) is DERIVED from it — change one and the other is
 wrong. **Delve score feeds the SIGIL ONLY**; augments are combined, not fed.
+- ⚠️⚠️ **RETUNED `24000 * n^2` → `4400 * n^2` (2026-08-01) BECAUSE THE LEVEL CAP BECAME 30.** Exactly
+  one input of the derivation changed: it assumes a player working on charm level n sits at rung
+  **`7n`** (charm 10 ↔ rung 70), which was right at a cap of 70; a rung is only clearable if you can
+  fight mobs scaled to it, so at a cap of 30 the reachable ceiling is ~30 and the mapping is **`3n`**.
+  ⚠️ Run income is **quadratic in the rung**, so cutting the ceiling 70 → 30 does not halve run scores,
+  it drops them by `(30/70)² ≈ 5.4×`. **Halving the cap does NOT mean halving this constant** — that
+  intuition gives 12000 and is wrong by more than a factor of 2. Re-derive, don't scale.
+  📌 `aotv4_dungeon.M.MAX_LEVEL` is deliberately **left at 70** (owner's call), so rungs above ~30 exist
+  and stay unreachable. That is why the derivation uses the **character cap**, not `M.MAX_LEVEL` —
+  reading the rung count puts it straight back to `7n`.
+  Pace after the retune: ~90 runs climbing, ~28 parked at rung 30, ~25,600 farming rung 1.
+- ⚠️ **`items_evolving_details` IS NOT SHARED MEMORY** — `EvolvingItemsManager::LoadEvolvingItems`
+  reads it straight from the content DB (`common/evolving_items.cpp:31`) and is called once from
+  `zone/main.cpp:376`. **Retuning the ladder alone needs only a zone restart**, no world down and no
+  `./shared_memory`. (The sigil's `items` rows *are* shared memory; the charm SQL's header used to
+  claim the ladder needed the same, which is wrong and would have cost a needless full cutover.)
+- ⚠️⚠️ **`character_evolving_items.progression` is `double(22,0)` — ZERO decimal places**, i.e. an
+  integer percent. Anything under 1% stores and displays as **0**, so a sigil that is genuinely
+  accruing reads as "evolution experience didn't gain". Diagnose with `current_amount`, which is the
+  real banked figure, never the percentage. This is what a 211-score run against the old 96,000
+  level-2 requirement looked like (0.22% → 0).
 - ⚠️⚠️ It used to be `floor(eff*eff/25)` clamped to a minimum of 1, and `floor(49/25)` is 1 — so
   **every effective level from 1 to 7 paid identically**, the quadratic did not engage until eff 8,
   and farming rung 1 was as efficient as rung 7.
@@ -2470,3 +2566,185 @@ large enough to matter:
   and receive an actual droppable item whose stats match. The reachable pool at a 35 cap is **1,353
   items** banded 251 / 486 / 616 by minimum dropper level, which maps cleanly onto the three augment
   tiers. Parked until the cap rework lands, because the augment weights are an input to the matching.
+
+## 27. Zone sharding (live's `/pick`) — NATIVE, built, deliberately NOT enabled — 2026-07-31
+
+EQEmu already has live's picking system and it needs **no custom code**. Recorded here because it is
+easy to miss and easy to re-implement by accident.
+
+- **The switch is per zone**: `zone.shard_at_player_count` (0 = off). **0 of 618 zones use it today.**
+- **Assignment is automatic on zone-in** (`zone/zoning.cpp:820`): it counts players per instance of
+  that zone, drops you in the first shard **under** the threshold, and if all are full **creates a
+  new instance** and puts you there. Players do not choose; they just land somewhere with room.
+- **`#zoneshard`** is the player-facing command and is already `AccountStatus::Player` (access 0).
+  Bare, it opens a saylink menu of live shards with populations (`Client::ShowZoneShardMenu`);
+  `#zoneshard <zone> <instance>` jumps to one. ⚠️ `instance_id = -1` is the sentinel for "the normal
+  unsharded zone", not an error.
+- ⚠️ **Refused in combat** (`GetAggroCount() > 0`).
+- ⚠️ Shards are created with a ~100 year duration (3,155,760,000 s), so they persist rather than
+  expiring under the people standing in them.
+- Rule `Zone:ZoneShardQuestMenuOnly` (currently false) suppresses the automatic assignment so only
+  quests surface the menu — i.e. makes sharding opt-in.
+
+### ⚠️⚠️ EVERY SHARD IS AN INSTANCE, SO EVERY SHARD COSTS A ZONE PROCESS AND A ZONE PORT
+This is the reason it is off. The port range was widened to **7000-7029** on 2026-07-30 because six
+was not enough for the `zone` launcher's **28 dynamics** (§0), and the Delve already burns an instance
+per run (§24). Sharding stacks on top of both, and the failure mode is the one already seen: *"That
+zone is unavailable"* and a bounce to character select. **Before enabling it anywhere, raise
+`launcher.dynamics` AND the `appPort` / `eqemu_config.json` port range together** — those two must
+always match, per §0.
+📌 Enabling it later is one UPDATE on the target zone plus that headroom; nothing needs rebuilding.
+
+## 28. Town factions — nobody is killed in a town for their race — 2026-08-01
+
+All 16 races may be any class and go anywhere (§14 + the region system), but stock EQ faction is
+built the opposite way round: an Ogre is born at −1000 with Kelethin and is cut down on sight by the
+guards of a city the server has just told him he may walk into. Fixed by flooring the faction **con**
+at Dubious for a curated set of civic factions. **Needs a zone rebuild** (`ruletypes.h` is in
+`common/`, so it is a wide one).
+
+- **Files**: `common/ruletypes.h` (`AoT:TownFactionFloor`), `zone/zone.h` + `zone/zone.cpp`
+  (`LoadTownFactions` / `IsTownFaction`), `zone/client.cpp` (`Client::GetFactionLevel`),
+  `custom/sql/aotv4_town_factions.sql` (the table + the 74-row list + the full derivation).
+- ⚠️⚠️ **EVERY aggro branch requires the con to be exactly `FACTION_THREATENINGLY` or
+  `FACTION_SCOWLS`** (`zone/aggro.cpp:326`, `:516`, `:545`) — and **`AlwaysAggro()` / `npc_aggro`
+  sits in the ELIGIBILITY half of those conditions, not the faction half**, so an aggro-flagged NPC
+  still needs a hostile con to swing. That is why the floor works at all, and equally why it would
+  pacify **anything** it were applied to. Scope is the whole safety argument here.
+- Thresholds are rules (`Faction:*FactionMinimum`): below −750 Scowls, −750..−501 Threatening, −500
+  and up **Dubious**. `CalculateFaction` (`common/faction.cpp:57`) sums
+  `earned + base + class_mod + race_mod + deity_mod`, so a fresh character's con **is** the race mod.
+- ⚠️ **Dubious, not Indifferent.** The city still visibly dislikes you; it just does not murder you.
+  The stock **merchant fix** immediately above our block (`client.cpp:8342`) already treats Dubious
+  as tradeable, so shops keep working with no second exception.
+- ⚠️ **The floor runs BEFORE the `CheckAggro` line**, which restores `THREATENINGLY` for an NPC that
+  already has aggro on you — so a guard you attack still fights back. It prevents being attacked for
+  existing, not combat you started.
+
+### ⚠️⚠️ Why a con floor and NOT an edit to `faction_list_mod`
+There are **7,134 negative race modifiers across 499 factions** (worst −2000) and clamping them was
+the obvious move. It changes stored faction **values**, which is what quests read. **144 quest files**
+test `e.other:GetFaction(e.self)`, and in EQ **lower is better** (Ally 1 … Scowls 9), so all of them
+are "good enough?" tests at the opposite end of the scale from anything the floor touches — it only
+ever moves 8/9 → 7. The four that test the hostile end were checked individually and all still pass:
+`erudnext/Collier.lua` (`>= 7`, satisfied *by* a floor of 7), `erudnext/Weligon_Steelherder.lua`
+(`> 5`), `felwithea/Tynkale.lua` (`> 4`), `westwastes/Sontalak.lua` (`>= 5`).
+⚠️ **Re-verify that list if the floor is ever raised above Dubious** — Collier is the one that breaks.
+
+### ⚠️⚠️ Why a FACTION list and not a ZONE list
+**Kelethin is not a zone** — it is a treetop city inside `gfaydark`, which is also a real hunting
+zone full of Crushbone orcs. A zone-scoped floor must choose between leaving Kelethin's guards lethal
+and pacifying the orcs standing under it. Scoping by the NPC's own faction separates the two and
+covers every other city for free. (`cancombat = 0` fails for the same reason, and more bluntly:
+`GetFactionLevel` returns `FACTION_INDIFFERENTLY` outright when `!zone->CanDoCombat()`, `:8307`.)
+
+### How the 74 were derived — and the two traps in deriving them
+Candidates must be able to be hostile **by race alone** (some race below −500 before any earned
+faction), then: named like a civic body, **and** show commerce — own merchants, or a majority of
+their NPCs standing in a zone with 10+ merchants.
+- ⚠️⚠️ **The commerce test is what keeps dungeon and raid factions with civic names OUT**: Nest
+  Guardians (2,769 NPCs), Thunder Guardians (2,429), Citizens of Takish-Hiz (2,257), Inhabitants of
+  **Hate** (900), Fallen Guard of Illsalin, Guardians of Veeshan, Befallen Inhabitants. All match the
+  naming; all have zero merchants outside cities.
+- ⚠️⚠️ **THE NAME TEST IS A KEYWORD LIST, NOT A CLASSIFIER, AND IT SILENTLY UNDER-COVERS.** It is
+  built from Antonican and Faydwer vocabulary (*Merchants of, Guards of, Knights of, Militia,
+  Residents*) and **nothing in Kunark is named that way** — a per-hub coverage check found Cabilis
+  protected only by `Cabilis Residents` while its actual city guard, **`Legion of Cabilis`**, was
+  still killing people on sight. Five Iksar guilds and `Jaggedpine Treefolk` were hand-added after
+  verifying commerce. **📌 Check coverage per city after any change here; do not trust the name test.**
+- The remaining gap was then closed by sweeping on **commerce alone, no name test**, which found six.
+  Only three were towns (Heretics/Paineel, Wolves of the North/Halas, Gem Choppers). ⚠️ **The other
+  three are raid content** — `Claws of Veeshan` (Skyshrine's dragons; Skyshrine and Great Divide both
+  have merchants, so it scores 66% "city") and the three Seru factions (Sanctus Seru is literally a
+  city *and* a raid target). **Commerce identifies civilisation, not friendliness** — which is why
+  that sweep is a diagnostic, not the rule.
+- ⚠️ **Deliberately left hostile** after being checked: `The Forsaken` (0 merchants; only 6 of its 263
+  NPCs are in Cabilis — pacifying 257 wilderness mobs to fix 6 in town is the wrong trade),
+  `Tunare's Scouts` (0 merchants, half its NPCs are inside Crushbone), `Pack of Tomar` (Dreadlands).
+- ⚠️⚠️ **NEVER add a monster faction.** Crushbone Orcs, Sabertooths of Blackburrow, Goblins of
+  Mountain Death, Frogloks of Guk, Trakanon and Vox all stay lethal. Adding one stops that content
+  aggroing **server-wide, in every zone**, with no other symptom.
+- ⚠️ Read at **zone boot**, not shared memory (only `items` and `spells` are shared) — editing the
+  table needs a zone restart, no `./shared_memory` rebuild. A missing table is not an error: the
+  server just behaves like stock.
+- ⚠️ `faction_list_mod`.`mod` is a **MariaDB reserved word** and needs backticks everywhere.
+
+## 29. Spell ranks, kept spells, and the parchment economy — 2026-07-31
+
+**This system was live and completely undocumented here until 2026-08-01** — the only record was
+`SPELL_RANKS.md`, a design draft still headed *"proposal, nothing built"*, which `.gitignore` was
+also excluding (§0). Read that file for the design reasoning; this section is what actually shipped.
+
+Three things are deliberately separate, and conflating them is the main way to misread the code:
+
+| | what it is | survives death? |
+|---|---|---|
+| **KNOWN** | every spell this character has ever been awarded | **yes**, permanent |
+| **RANK** | per BASE spell, 1-5 | **yes**, permanent |
+| **KEPT** | at most **2** spells you START a run holding | this is the only part death touches |
+
+- **Files**: `lua_modules/aotv4_spell_ranks_sys.lua` (all the logic), `lua_modules/spell_ranks.lua`
+  (**generated** base → `{r2,r3,r4,r5}` map), `custom/tools/gen_spell_ranks.pl`,
+  `custom/sql/aotv4_spell_ranks.sql` (the rows), `custom/sql/aotv4_spell_rank_economy.sql` (the two
+  items + the global drop). Buckets, all per character: `spellrank_` / `spellknown_` / `spellkeep_`
+  (permanent) and `pickspent_`.
+- ⚠️⚠️ **A RANK IS A DIFFERENT SPELL ROW, NOT A MODIFIER.** 188 base spells × 4 ranks = **752 rows at
+  43576-44327**, named `"… Rk. II"` … `"Rk. V"`. "Applying a rank" scribes a *different id*, which is
+  why the native spellbook shows the real damage and the real mana cost with no client work at all.
+- ⚠️⚠️ **THE NAMING IS LOAD-BEARING.** `gen_stock_pool.pl` filters the offerable pool with
+  `name NOT LIKE '% Rk. %'` (§5), so the picker can only ever award a **base** spell, which this
+  module then upgrades on the way in. **Renaming the rank rows would drop 752 upgraded spells straight
+  into the reward pool.**
+- ⚠️⚠️ **RANK IS A PROPERTY OF THE CHARACTER, NOT OF A SCRIBED COPY.** Earn rank III on a spell once
+  and *every* future award of it arrives at rank III — from the picker, from a kept slot, from
+  anywhere. It lives in a data bucket, so it survives the roguelite wipe like AA does.
+  ⚠️ Therefore **keeping is NOT how you protect a rank** — the rank was never at risk. Keeping buys
+  only the spell *in hand at level 1*, paid for by forfeiting the level-up pick at the level that
+  spell was originally taken (`pickspent_`). Two kept, two picks lost: neutral in count, positive in
+  control.
+- ⚠️ **`ranked_id()` is the single funnel.** Everything that awards a spell goes through it, so there
+  is one place that knows how to resolve base → owned rank. Do not add a second.
+- **Economy**: **Parchment Fragment 147920** (one per spell destroyed on death, so income scales with
+  how deep the run got — a full climb scribes ~31) and **Ink of the Lost 147921** (a `global_loot`
+  drop at **1.5%**). Costs live in `M.COST` and **double for fragments while ink is flat +10**:
+  rank 2 = 30/10, 3 = 60/20, 4 = 120/30, 5 = 240/40.
+  ⚠️ The two scale differently **on purpose**: fragments come from *dying* so they track how hard you
+  have been pushing, ink comes from *killing* so it tracks time played. A rank costs both.
+  ⚠️ **Tune `M.COST` ONLY** — it is sent to the client as `SPELLRANKCOST` and the window renders
+  whatever it says. There is no second copy in the dll, deliberately (the `kIcons[]` drift trap, §3).
+- ⚠️⚠️ **FEEDBACK GOES TO THE WINDOW, NOT TO CHAT** (`SPELLRANKMSG`, written into the requirement panel
+  under the description). Keeping and ranking happen inside a window that is already on screen, so a
+  chat reply is both noise and the wrong place to look — and it is the player's own chat.
+  ⚠️ **Both halves are needed**: the dll must also swallow the `/say spellkeep`-style **echoes**, or
+  the commands stay visible even with every reply silenced. Say commands are intercepted in
+  `Client::ChannelMessageReceived` (`spellkeep`, `spellrelease`, `spellrank`, `spellrankreq`,
+  `spellkept`), the same place as the AdvLoot ones (§16), so they never reach chat or quests.
+- ⚠️ **Ranks cover damage and healing only.** Buffs have no hook in either direction — a stat buff's
+  magnitude is read straight from the spell row in `SpellEffect` — so there is nothing to scale.
+- 📌 The cost curve is a first guess and should move once fragment income is *observed* rather than
+  modelled. Same caveat as the sigil ladder in §26, and the same rule applies: divide it by what a
+  run is actually worth before deciding it is too high or too low.
+
+## 30. ⚠️ What is BUILT but NOT YET EXERCISED IN GAME (as of 2026-08-01)
+
+Everything below compiles, applies and has been verified against the database or by static analysis,
+but **no character has actually performed the action**. Listed so a tester knows where to look first
+and so nobody reads "done" as "proven".
+
+- **Town faction floor (§28)** — no character has walked into a hostile city as a KOS race. Fastest
+  check: an Ogre in Kelethin or Felwithe, and an Iksar-hated race in Cabilis (Cabilis was the case
+  that was actually broken and hand-fixed). Confirm guards ignore you AND that a guard you *attack*
+  still fights back.
+- **Crafting always yields Mythic** — no combine has been made. Any wearable recipe will do; the
+  result should be the `Mythic …` name.
+- **The two quest tier-matching fixes** — hand a **Mythic** copy of a craftable turn-in item to one of
+  the 25 affected NPCs (Ghoulbane, Jagged Blade of War, Trueshot Longbow, Robe of the Lost Circle …).
+  Those quests can now only ever *receive* a Mythic, so this is the sharp case.
+- **The retuned sigil ladder (§26)** — one delve clear should now move the charm's percentage visibly.
+  ⚠️ Remember `progression` is `double(22,0)`, so anything under 1 percent still reads **0**; judge it
+  by `current_amount`, not the bar.
+- **Delve rewards end to end** — no death has paid Parchment Fragments, no Ink of the Lost has
+  dropped, no region-unlock achievement has fired, and the three Resplendent hub NPCs
+  (Wayfinder Alessa / Reforger Vael / Herald Coren) have never been hailed by a real player.
+- **Spell ranks (§29)** — the whole chain (keep 2, forfeit the picks, spend fragments + ink, receive
+  the `Rk.` row) is untested in play.

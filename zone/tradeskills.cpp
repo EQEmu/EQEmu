@@ -1743,14 +1743,33 @@ bool ZoneDatabase::GetTradeRecipe(
 	for(auto row : results) {
 		uint32       item_id       = Strings::ToUnsignedInt(row[0]);
 		const uint8  success_count = Strings::ToUnsignedInt(row[1]);
-		// AoTv4: every WEARABLE (slots>0) combine output comes out MYTHIC when a Mythic tier exists -- so
-		// crafted GEAR is always top-tier and stays relevant as later expansions unlock better base items.
-		// (Epics are wearable + always have a Mythic tier, so this covers them too.) Non-wearable outputs
-		// -- components, food, reagents, the refine bag -- are untouched.
+		// AoTv4: EVERY combine output comes out MYTHIC when a Mythic tier exists, so crafted gear is
+		// always top-tier and stays relevant as later expansions unlock better base items. Epics are
+		// always tiered, so this covers them too.
+		//
+		// ⚠️⚠️ THIS IS THE SINGLE CHOKE POINT FOR BOTH OVERLOADS. GetTradeRecipe(container, ...)
+		// resolves the recipe id from the container's contents and then delegates to this one (:1600,
+		// :1639), so every combine in the game -- the trade window, the object/world container path and
+		// the /says that drive them -- passes through here exactly once. Do not copy this upgrade into
+		// the caller; two copies would drift, the same reasoning that keeps the endurance cost in one
+		// place in section 22.
+		//
+		// ⚠️ Normalise through AoTv4TierBaseId FIRST. A recipe whose output id is already a tier id
+		// would otherwise get another +600,000 stacked on it and land outside the reserved band, where
+		// no item exists -- so it would silently stay whatever it already was. Normalising makes a
+		// Hallowed output upgrade to Mythic and a Mythic output idempotent.
+		//
+		// 📌 There is deliberately NO "is it wearable" test any more. It used to be gated on Slots > 0,
+		// which was redundant: aotv4_gear_tiers.sql only ever generates tiers for slots>0 items, so the
+		// GetItem() lookup below is already the real gate. Dropping it makes the rule read as written --
+		// if a Mythic exists, that is what you get. It is a no-op for the ~5,900 non-wearable craft
+		// outputs (5,112 plain components, 728 food/drink, 71 containers), which have no tier rows
+		// because a component has no stats to scale: a "Mythic" one would be byte-identical to its base
+		// and would only split 2,556 component stacks across two ids.
 		{
-			const EQ::ItemData *base_item = GetItem(item_id);
-			if (base_item && base_item->Slots > 0 && GetItem(item_id + 600000)) {
-				item_id += 600000;   // wearable -> always Mythic
+			const uint32 mythic_id = AoTv4TierBaseId(item_id) + 2 * AOTV4_TIER_STEP;
+			if (GetItem(mythic_id)) {
+				item_id = mythic_id;
 			}
 		}
 		spec->onsuccess.emplace_back(std::pair<uint32, uint8>(item_id, success_count));

@@ -2,24 +2,56 @@
 <XML ID="EQInterfaceDefinitionLanguage">
 	<Schema xmlns="EverQuestData" xmlns:dt="EverQuestDataTypes" />
 
-	<!-- AoTv4 "You Lost" window (CCustomWnd "AoTLostWnd").
+	<!-- AoTv4 "Death Book" window (CCustomWnd "AoTLostWnd").
 
-	     Replaces the self-drawn GDI overlay that used to show this list. That overlay painted its
-	     own chrome, could not scale with the UI and only worked in windowed mode; this renders
-	     through the client's own UI engine, so it matches every other window and works fullscreen.
+	     Two tabs, because both are things death hands you and neither deserves a window of its own:
+	       Death Book   what each death cost you, one expandable entry per death.
+	       Advancement  the random AA picker. Death converts the run's experience into points and
+	                    offers three abilities you can afford; picking one deducts its cost and the
+	                    server sends a fresh offer from whatever is left, until nothing is affordable.
 
-	     Fed by the server's existing "LOSTDATA name^name^..." chat line, so nothing changed
-	     server-side. See core_lostwindow.cpp.
+	     Fed by the server's existing chat lines, so nothing changed server side:
+	       LOSTDATA name^name^...
+	       AACHOICEDATA budget^name|icon|cost|cls^...
+	       AADESCDATA desc^desc^desc
+	     and the only thing sent back is /say aapick N. See core_lostwindow.cpp.
+
+	     ⚠️⚠️ EVERY PIECE THAT SHOULD GROW WITH THE WINDOW NEEDS AutoStretch AND ANCHORS. Without them
+	     a piece keeps the fixed Size below forever, so dragging the window larger just adds empty
+	     space around a small list. This window lost its anchors once, when the flat layout was
+	     restructured into tabbed Pages and the anchor tags were not carried across; the symptom was a
+	     window that resized while its contents did not.
+
+	     ⚠️ Anchor semantics: <LeftAnchorToLeft>true</LeftAnchorToLeft> means the left edge is measured
+	     from the parent's LEFT; <RightAnchorToLeft>false</RightAnchorToLeft> means the right edge is
+	     measured from the parent's RIGHT. Same for Top/Bottom. So a piece pinned to all four with
+	     small offsets fills its page and follows every resize.
+
+	     ⚠️ Sizable windows have their position AND size SAVED PER CHARACTER by the client, so the
+	     Size values here are only the default for a window this character has never opened. If it
+	     comes back the wrong size, drag it once, or delete its entry from the character's UI ini file
+	     (UI_charname_servername.ini in the EQ root).
 
 	     Comments must never contain a double hyphen, which is illegal in XML and makes the SIDL
 	     parser abort the WHOLE file, killing the client before character select. Run
 	     aotv4_client_install/validate_ui_xml.sh before copying this anywhere. -->
 
+	<!-- ================================================================ Death Book tab -->
+
 	<Label item="LST_Hint">
 		<ScreenID>LST_Hint</ScreenID>
 		<RelativePosition>true</RelativePosition>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorToLeft>true</LeftAnchorToLeft>
+		<LeftAnchorOffset>10</LeftAnchorOffset>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<RightAnchorOffset>96</RightAnchorOffset>
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<TopAnchorOffset>6</TopAnchorOffset>
+		<BottomAnchorToTop>true</BottomAnchorToTop>
+		<BottomAnchorOffset>22</BottomAnchorOffset>
 		<Location><X>10</X><Y>6</Y></Location>
-		<Size><CX>300</CX><CY>16</CY></Size>
+		<Size><CX>380</CX><CY>16</CY></Size>
 		<Text>Click a date to see what that death cost you</Text>
 		<NoWrap>true</NoWrap>
 		<AlignCenter>false</AlignCenter>
@@ -29,8 +61,17 @@
 	<Label item="LST_Count">
 		<ScreenID>LST_Count</ScreenID>
 		<RelativePosition>true</RelativePosition>
-		<Location><X>250</X><Y>6</Y></Location>
-		<Size><CX>90</CX><CY>16</CY></Size>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorToLeft>false</LeftAnchorToLeft>
+		<LeftAnchorOffset>94</LeftAnchorOffset>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<RightAnchorOffset>8</RightAnchorOffset>
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<TopAnchorOffset>6</TopAnchorOffset>
+		<BottomAnchorToTop>true</BottomAnchorToTop>
+		<BottomAnchorOffset>22</BottomAnchorOffset>
+		<Location><X>370</X><Y>6</Y></Location>
+		<Size><CX>86</CX><CY>16</CY></Size>
 		<Text></Text>
 		<NoWrap>true</NoWrap>
 		<AlignRight>true</AlignRight>
@@ -53,11 +94,11 @@
 		<BottomAnchorToTop>false</BottomAnchorToTop>
 		<BottomAnchorOffset>40</BottomAnchorOffset>
 		<Location><X>8</X><Y>26</Y></Location>
-		<Size><CX>334</CX><CY>206</CY></Size>
+		<Size><CX>452</CX><CY>310</CY></Size>
 		<TextColor><R>255</R><G>255</G><B>255</B></TextColor>
 		<Style_Border>true</Style_Border>
 		<Style_VScroll>true</Style_VScroll>
-		<Columns><Width>326</Width><Heading>Death</Heading></Columns>
+		<Columns><Width>444</Width><Heading>Death</Heading></Columns>
 	</Listbox>
 
 	<Button item="LST_Dismiss">
@@ -72,7 +113,7 @@
 		<TopAnchorOffset>34</TopAnchorOffset>
 		<BottomAnchorToTop>false</BottomAnchorToTop>
 		<BottomAnchorOffset>8</BottomAnchorOffset>
-		<Location><X>254</X><Y>238</Y></Location>
+		<Location><X>368</X><Y>344</Y></Location>
 		<Size><CX>88</CX><CY>26</CY></Size>
 		<Text>Close</Text>
 		<TextColor><R>255</R><G>220</G><B>160</B></TextColor>
@@ -82,10 +123,181 @@
 		<Template>BDT_Normal</Template>
 	</Button>
 
+	<!-- ================================================================ Advancement tab -->
+
+	<Label item="AAP_Banked">
+		<ScreenID>AAP_Banked</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorToLeft>true</LeftAnchorToLeft>
+		<LeftAnchorOffset>10</LeftAnchorOffset>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<RightAnchorOffset>8</RightAnchorOffset>
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<TopAnchorOffset>6</TopAnchorOffset>
+		<BottomAnchorToTop>true</BottomAnchorToTop>
+		<BottomAnchorOffset>22</BottomAnchorOffset>
+		<Location><X>10</X><Y>6</Y></Location>
+		<Size><CX>440</CX><CY>16</CY></Size>
+		<Text>Nothing to spend.</Text>
+		<NoWrap>true</NoWrap>
+		<TextColor><R>240</R><G>200</G><B>120</B></TextColor>
+	</Label>
+
+	<!-- Two columns: what it is, and what it costs. No icon column, because a per row icon cannot be
+	     set from code on this build (CTextureAnimation::SetCurCell is not mapped) and the workaround
+	     the level up picker uses, one hidden Button per icon, needs a generated XML. Not worth it for
+	     three rows that change every pick.
+	     Anchored top and sides but NOT bottom, so it keeps a fixed height and the description pane
+	     below it takes all the extra room a resize provides. -->
+	<Listbox item="AAP_List">
+		<ScreenID>AAP_List</ScreenID>
+		<DrawTemplate>WDT_Inner</DrawTemplate>
+		<RelativePosition>true</RelativePosition>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorToLeft>true</LeftAnchorToLeft>
+		<LeftAnchorOffset>8</LeftAnchorOffset>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<RightAnchorOffset>8</RightAnchorOffset>
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<TopAnchorOffset>26</TopAnchorOffset>
+		<BottomAnchorToTop>true</BottomAnchorToTop>
+		<BottomAnchorOffset>158</BottomAnchorOffset>
+		<Location><X>8</X><Y>26</Y></Location>
+		<Size><CX>452</CX><CY>132</CY></Size>
+		<TextColor><R>255</R><G>255</G><B>255</B></TextColor>
+		<Style_Border>true</Style_Border>
+		<Style_VScroll>true</Style_VScroll>
+		<Columns><Width>386</Width><Heading>Ability</Heading></Columns>
+		<Columns><Width>56</Width><Heading>Cost</Heading></Columns>
+	</Listbox>
+
+	<STMLbox item="AAP_Desc">
+		<ScreenID>AAP_Desc</ScreenID>
+		<DrawTemplate>WDT_Inner</DrawTemplate>
+		<RelativePosition>true</RelativePosition>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorToLeft>true</LeftAnchorToLeft>
+		<LeftAnchorOffset>8</LeftAnchorOffset>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<RightAnchorOffset>8</RightAnchorOffset>
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<TopAnchorOffset>164</TopAnchorOffset>
+		<BottomAnchorToTop>false</BottomAnchorToTop>
+		<BottomAnchorOffset>40</BottomAnchorOffset>
+		<Location><X>8</X><Y>164</Y></Location>
+		<Size><CX>452</CX><CY>180</CY></Size>
+		<Style_Border>true</Style_Border>
+		<Style_VScroll>true</Style_VScroll>
+		<Text>Select an ability to read what it does.</Text>
+	</STMLbox>
+
+	<Button item="AAP_Train">
+		<ScreenID>AAP_Train</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorToLeft>false</LeftAnchorToLeft>
+		<LeftAnchorOffset>96</LeftAnchorOffset>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<RightAnchorOffset>8</RightAnchorOffset>
+		<TopAnchorToTop>false</TopAnchorToTop>
+		<TopAnchorOffset>34</TopAnchorOffset>
+		<BottomAnchorToTop>false</BottomAnchorToTop>
+		<BottomAnchorOffset>8</BottomAnchorOffset>
+		<Location><X>368</X><Y>350</Y></Location>
+		<Size><CX>88</CX><CY>26</CY></Size>
+		<Text>Train</Text>
+		<TextColor><R>255</R><G>220</G><B>160</B></TextColor>
+		<Template>BDT_Normal</Template>
+	</Button>
+
+	<!-- ================================================================ pages and tab strip -->
+
+	<Page item="LST_BookPage">
+		<ScreenID>LST_BookPage</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorToLeft>true</LeftAnchorToLeft>
+		<LeftAnchorOffset>0</LeftAnchorOffset>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<RightAnchorOffset>0</RightAnchorOffset>
+		<!-- ⚠️⚠️ A Page IS NOT AUTOMATICALLY PLACED BELOW ITS TAB STRIP. Its origin is the TabBox's
+		     top left corner, tabs included, so a page at offset 0 puts its first row of pieces
+		     directly ON TOP of the tab labels: the header text and the tab captions overprint each
+		     other and both become unreadable. The strip has to be paid for by hand, which is why the
+		     generated spell picker sets every page to Y = TAB_Y. 24 clears it on this build. -->
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<TopAnchorOffset>24</TopAnchorOffset>
+		<BottomAnchorToTop>false</BottomAnchorToTop>
+		<BottomAnchorOffset>0</BottomAnchorOffset>
+		<Location><X>0</X><Y>24</Y></Location>
+		<Size><CX>560</CX><CY>406</CY></Size>
+		<Text>Death Book</Text>
+		<TabText>Death Book</TabText>
+		<TabTextColor><R>255</R><G>255</G><B>255</B></TabTextColor>
+		<TabTextActiveColor><R>255</R><G>255</G><B>0</B></TabTextActiveColor>
+		<Style_VScroll>false</Style_VScroll>
+		<Pieces>LST_Hint</Pieces>
+		<Pieces>LST_Count</Pieces>
+		<Pieces>LST_ItemList</Pieces>
+		<Pieces>LST_Dismiss</Pieces>
+	</Page>
+
+	<Page item="LST_AAPage">
+		<ScreenID>LST_AAPage</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorToLeft>true</LeftAnchorToLeft>
+		<LeftAnchorOffset>0</LeftAnchorOffset>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<RightAnchorOffset>0</RightAnchorOffset>
+		<!-- ⚠️⚠️ A Page IS NOT AUTOMATICALLY PLACED BELOW ITS TAB STRIP. Its origin is the TabBox's
+		     top left corner, tabs included, so a page at offset 0 puts its first row of pieces
+		     directly ON TOP of the tab labels: the header text and the tab captions overprint each
+		     other and both become unreadable. The strip has to be paid for by hand, which is why the
+		     generated spell picker sets every page to Y = TAB_Y. 24 clears it on this build. -->
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<TopAnchorOffset>24</TopAnchorOffset>
+		<BottomAnchorToTop>false</BottomAnchorToTop>
+		<BottomAnchorOffset>0</BottomAnchorOffset>
+		<Location><X>0</X><Y>24</Y></Location>
+		<Size><CX>560</CX><CY>406</CY></Size>
+		<Text>Advancement</Text>
+		<TabText>Advancement</TabText>
+		<TabTextColor><R>255</R><G>255</G><B>255</B></TabTextColor>
+		<TabTextActiveColor><R>255</R><G>255</G><B>0</B></TabTextActiveColor>
+		<Style_VScroll>false</Style_VScroll>
+		<Pieces>AAP_Banked</Pieces>
+		<Pieces>AAP_List</Pieces>
+		<Pieces>AAP_Desc</Pieces>
+		<Pieces>AAP_Train</Pieces>
+	</Page>
+
+	<TabBox item="LST_Tabs">
+		<ScreenID>LST_Tabs</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<AutoStretch>true</AutoStretch>
+		<LeftAnchorToLeft>true</LeftAnchorToLeft>
+		<LeftAnchorOffset>4</LeftAnchorOffset>
+		<RightAnchorToLeft>false</RightAnchorToLeft>
+		<RightAnchorOffset>4</RightAnchorOffset>
+		<TopAnchorToTop>true</TopAnchorToTop>
+		<TopAnchorOffset>4</TopAnchorOffset>
+		<BottomAnchorToTop>false</BottomAnchorToTop>
+		<BottomAnchorOffset>4</BottomAnchorOffset>
+		<Location><X>4</X><Y>4</Y></Location>
+		<Size><CX>560</CX><CY>454</CY></Size>
+		<Style_Border>true</Style_Border>
+		<TabBorderTemplate>FT_DefTabBorder</TabBorderTemplate>
+		<PageBorderTemplate>FT_DefPageBorder</PageBorderTemplate>
+		<Pages>LST_BookPage</Pages>
+		<Pages>LST_AAPage</Pages>
+	</TabBox>
+
 	<Screen item="AoTLostWnd">
 		<RelativePosition>false</RelativePosition>
-		<Location><X>240</X><Y>140</Y></Location>
-		<Size><CX>358</CX><CY>296</CY></Size>
+		<Location><X>200</X><Y>110</Y></Location>
+		<Size><CX>576</CX><CY>500</CY></Size>
 		<Text>Death Book</Text>
 		<Style_Transparent>false</Style_Transparent>
 		<DrawTemplate>WDT_Def</DrawTemplate>
@@ -93,10 +305,9 @@
 		<Style_Closebox>true</Style_Closebox>
 		<Style_Border>true</Style_Border>
 		<Style_Sizable>true</Style_Sizable>
-		<Pieces>LST_Hint</Pieces>
-		<Pieces>LST_Count</Pieces>
-		<Pieces>LST_ItemList</Pieces>
-		<Pieces>LST_Dismiss</Pieces>
+		<!-- ONLY the TabBox is listed here. Every other piece belongs to a Page; naming one on the
+		     Screen as well places it TWICE and the duplicate draws outside its tab. -->
+		<Pieces>LST_Tabs</Pieces>
 	</Screen>
 
 </XML>

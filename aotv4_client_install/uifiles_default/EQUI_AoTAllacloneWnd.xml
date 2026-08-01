@@ -57,6 +57,43 @@
 		<Template>BDT_Normal</Template>
 	</Button>
 
+	<!-- ================================================================ mode row 2, quests
+	     A SECOND ROW rather than six buttons across: at 490 wide, six would be about 76 each and
+	     "> Tradeskills <" does not fit that, so the active-mode marker would be clipped on exactly
+	     the button that most needs to show it. Everything below this row is shifted down by 26. -->
+	<Button item="ACW_KindQuest">
+		<ScreenID>ACW_KindQuest</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>8</X><Y>30</Y></Location>
+		<Size><CX>112</CX><CY>24</CY></Size>
+		<Text>Quests</Text>
+		<TextColor><R>255</R><G>230</G><B>140</B></TextColor>
+		<Template>BDT_Normal</Template>
+	</Button>
+
+	<Button item="ACW_KindTracked">
+		<ScreenID>ACW_KindTracked</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>124</X><Y>30</Y></Location>
+		<Size><CX>112</CX><CY>24</CY></Size>
+		<Text>Tracked</Text>
+		<TextColor><R>255</R><G>230</G><B>140</B></TextColor>
+		<Template>BDT_Normal</Template>
+	</Button>
+
+	<!-- Shown only in the two quest modes; the dll hides it elsewhere via CXWnd::Show, because no
+	     address-mapped "enable" setter exists on this build. Its label flips to Untrack in the
+	     Tracked mode. -->
+	<Button item="ACW_Track">
+		<ScreenID>ACW_Track</ScreenID>
+		<RelativePosition>true</RelativePosition>
+		<Location><X>356</X><Y>30</Y></Location>
+		<Size><CX>112</CX><CY>24</CY></Size>
+		<Text>Track</Text>
+		<TextColor><R>140</R><G>255</G><B>140</B></TextColor>
+		<Template>BDT_Normal</Template>
+	</Button>
+
 	<!-- ================================================================ search row -->
 	<Editbox item="ACW_Term">
 		<ScreenID>ACW_Term</ScreenID>
@@ -68,10 +105,10 @@
 		<RightAnchorToLeft>false</RightAnchorToLeft>
 		<RightAnchorOffset>106</RightAnchorOffset>
 		<TopAnchorToTop>true</TopAnchorToTop>
-		<TopAnchorOffset>34</TopAnchorOffset>
+		<TopAnchorOffset>60</TopAnchorOffset>
 		<BottomAnchorToTop>true</BottomAnchorToTop>
-		<BottomAnchorOffset>58</BottomAnchorOffset>
-		<Location><X>8</X><Y>34</Y></Location>
+		<BottomAnchorOffset>84</BottomAnchorOffset>
+		<Location><X>8</X><Y>60</Y></Location>
 		<Size><CX>362</CX><CY>24</CY></Size>
 		<Style_Border>true</Style_Border>
 		<TextColor><R>255</R><G>255</G><B>255</B></TextColor>
@@ -86,10 +123,10 @@
 		<RightAnchorToLeft>false</RightAnchorToLeft>
 		<RightAnchorOffset>8</RightAnchorOffset>
 		<TopAnchorToTop>true</TopAnchorToTop>
-		<TopAnchorOffset>34</TopAnchorOffset>
+		<TopAnchorOffset>60</TopAnchorOffset>
 		<BottomAnchorToTop>true</BottomAnchorToTop>
-		<BottomAnchorOffset>58</BottomAnchorOffset>
-		<Location><X>378</X><Y>34</Y></Location>
+		<BottomAnchorOffset>84</BottomAnchorOffset>
+		<Location><X>378</X><Y>60</Y></Location>
 		<Size><CX>90</CX><CY>24</CY></Size>
 		<Text>Search</Text>
 		<TextColor><R>140</R><G>255</G><B>140</B></TextColor>
@@ -105,10 +142,10 @@
 		<RightAnchorToLeft>false</RightAnchorToLeft>
 		<RightAnchorOffset>8</RightAnchorOffset>
 		<TopAnchorToTop>true</TopAnchorToTop>
-		<TopAnchorOffset>62</TopAnchorOffset>
+		<TopAnchorOffset>88</TopAnchorOffset>
 		<BottomAnchorToTop>true</BottomAnchorToTop>
-		<BottomAnchorOffset>78</BottomAnchorOffset>
-		<Location><X>10</X><Y>62</Y></Location>
+		<BottomAnchorOffset>104</BottomAnchorOffset>
+		<Location><X>10</X><Y>88</Y></Location>
 		<Size><CX>458</CX><CY>16</CY></Size>
 		<Text>Type a name and press Search.</Text>
 		<NoWrap>true</NoWrap>
@@ -126,10 +163,10 @@
 		<RightAnchorToLeft>false</RightAnchorToLeft>
 		<RightAnchorOffset>8</RightAnchorOffset>
 		<TopAnchorToTop>true</TopAnchorToTop>
-		<TopAnchorOffset>82</TopAnchorOffset>
+		<TopAnchorOffset>108</TopAnchorOffset>
 		<BottomAnchorToTop>true</BottomAnchorToTop>
-		<BottomAnchorOffset>282</BottomAnchorOffset>
-		<Location><X>8</X><Y>82</Y></Location>
+		<BottomAnchorOffset>308</BottomAnchorOffset>
+		<Location><X>8</X><Y>108</Y></Location>
 		<Size><CX>458</CX><CY>200</CY></Size>
 		<TextColor><R>255</R><G>255</G><B>255</B></TextColor>
 		<Style_Border>true</Style_Border>
@@ -148,10 +185,10 @@
 		<RightAnchorToLeft>false</RightAnchorToLeft>
 		<RightAnchorOffset>8</RightAnchorOffset>
 		<TopAnchorToTop>true</TopAnchorToTop>
-		<TopAnchorOffset>288</TopAnchorOffset>
+		<TopAnchorOffset>314</TopAnchorOffset>
 		<BottomAnchorToTop>false</BottomAnchorToTop>
 		<BottomAnchorOffset>8</BottomAnchorOffset>
-		<Location><X>8</X><Y>288</Y></Location>
+		<Location><X>8</X><Y>314</Y></Location>
 		<Size><CX>458</CX><CY>184</CY></Size>
 		<Style_Border>true</Style_Border>
 		<Style_VScroll>true</Style_VScroll>
@@ -161,7 +198,7 @@
 	<Screen item="AoTAllacloneWnd">
 		<RelativePosition>false</RelativePosition>
 		<Location><X>200</X><Y>90</Y></Location>
-		<Size><CX>490</CX><CY>512</CY></Size>
+		<Size><CX>490</CX><CY>538</CY></Size>
 		<Text>Allaclone</Text>
 		<Style_Transparent>false</Style_Transparent>
 		<DrawTemplate>WDT_Def</DrawTemplate>
@@ -173,6 +210,9 @@
 		<Pieces>ACW_KindNpc</Pieces>
 		<Pieces>ACW_KindSpell</Pieces>
 		<Pieces>ACW_KindRecipe</Pieces>
+		<Pieces>ACW_KindQuest</Pieces>
+		<Pieces>ACW_KindTracked</Pieces>
+		<Pieces>ACW_Track</Pieces>
 		<Pieces>ACW_Term</Pieces>
 		<Pieces>ACW_Go</Pieces>
 		<Pieces>ACW_Hint</Pieces>

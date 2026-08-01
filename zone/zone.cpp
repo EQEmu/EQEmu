@@ -817,6 +817,25 @@ void Zone::LoadLevelEXPMods()
 	}
 }
 
+// AoTv4: the town-faction set (see custom/sql/aotv4_town_factions.sql).
+// ⚠️ Missing table is NOT an error -- a server that has not run the migration simply has no town
+// factions and behaves exactly like stock, rather than failing to boot.
+void Zone::LoadTownFactions()
+{
+	aotv4_town_factions.clear();
+
+	auto results = database.QueryDatabase("SELECT faction_id FROM aotv4_town_factions");
+	if (!results.Success()) {
+		return;
+	}
+
+	for (auto row = results.begin(); row != results.end(); ++row) {
+		aotv4_town_factions.insert(Strings::ToInt(row[0]));
+	}
+
+	LogInfo("Loaded [{}] AoTv4 town factions", Strings::Commify(aotv4_town_factions.size()));
+}
+
 void Zone::LoadMercenarySpells()
 {
 	merc_spells_list.clear();
@@ -1170,6 +1189,8 @@ bool Zone::Init(bool is_static) {
 	if (RuleB(Zone, LevelBasedEXPMods)) {
 		LoadLevelEXPMods();
 	}
+
+	LoadTownFactions();
 
 	RespawnTimesRepository::ClearExpiredRespawnTimers(database);
 

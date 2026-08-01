@@ -107,4 +107,44 @@ utils/EQUI_*.xml
 # spell_icons.lua + skill_pool.lua. ~8600 lines that change wholesale on every pool regen; rerun the
 # generator rather than diffing it.
 aotv4_client_install/uifiles_default/EQUI_AoTSpellChoiceWnd.xml
-race_scaling.csv
+
+# ---------------------------------------------------------------- local-only working files
+# ⚠️⚠️ NOTHING BELOW THIS LINE MAY BE HAND-AUTHORED SOURCE. Everything here is a database dump, a
+# large third-party import, or a generated artifact its own script can reproduce. This block used to
+# be an unstructured pile of bare filenames appended one at a time, and it had rotted three ways:
+#   - it listed `.gitignore` and `CLAUDE.md` (twice), i.e. ITSELF and the project's primary document.
+#     Both survived only because git cannot untrack an already-tracked file, so the entries sat there
+#     inert -- and would have silently dropped either file the moment it was removed and re-added.
+#   - it listed `SPELL_RANKS.md`, which was NOT already tracked. That is the ONLY documentation of a
+#     live system (spell ranks 1-5, Parchment Fragments, Ink of the Lost, keeping 2 spells through
+#     death) -- CLAUDE.md does not mention any of it -- and it was one `rm` from being unrecoverable.
+#   - it carried duplicates (`peq_pre_region_merge.sql.gz` twice).
+# 📌 Add a PATTERN with a comment saying what produces the file, never a bare filename. A bare name
+# with no slash matches at ANY depth, which is the same trap the EQUI_*.xml block above documents.
+
+# Database dumps: pre-migration backups and recovery snapshots (CLAUDE.md §25). Tens of MB each.
+# ⚠️ A small one is not a failed dump -- several are deliberately TABLE-SCOPED (peq_pre_all_race_class
+# is one table, peq_pre_regions_011 is four). Verify with `gzip -dc x.gz | grep -c '^CREATE TABLE'`
+# and the `Dump completed on` tail marker before trusting OR deleting any of them.
+/peq_*.sql.gz
+
+# Third-party SQL imports, applied once and then dead weight (aot_regions_0.1.1.sql is 32 MB).
+/aot_regions_*.sql
+
+# Generated analysis output -- rerun the tool rather than committing the CSV.
+#   custom/spell_usage.csv  <- .devcontainer/custom/tools/spell_usage.pl
+#   quest_turnins.csv       <- .devcontainer/custom/tools/quest_difficulty.pl
+#   race_scaling.csv        <- the race scaling pass (§ base_data / aotv4_dungeon_scale)
+/quest_turnins.csv
+/race_scaling.csv
+custom/spell_usage.csv
+
+# Stock EQ client model archives (global_chr.s3d, global4_chr.s3d, ...). Same rule as the stock
+# EQUI_*.xml above: not ours, and byte-recoverable from any RoF2 install.
+# ⚠️ ROOT-SCOPED ON PURPOSE (`/*.s3d`, not `*.s3d`) so it cannot swallow an archive we deliberately
+# ship under aotv4_client_install/.
+# ⚠️⚠️ IF A MODEL ARCHIVE IS EVER MODIFIED FOR AoTv4, STILL DO NOT COMMIT THE REPACKED .s3d -- a
+# multi-megabyte binary has no diff, no history and no way to rebuild it. Track the extracted
+# textures plus a repack script and let the build produce the archive, exactly as
+# aotv4_client_install/gen_choice_xml.pl generates the picker XML from spell_icons.lua.
+/*.s3d

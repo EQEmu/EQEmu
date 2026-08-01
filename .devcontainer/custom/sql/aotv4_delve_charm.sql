@@ -21,20 +21,35 @@
 -- ⚠️ Level 1 cannot tell the two readings apart -- they are the same number there -- so a single
 -- observed run at level 1 CONFIRMS NOTHING about which is right. That is what made this survive.
 --
--- ⚠️⚠️ THE INCREMENT IS `24000 * n^2` AND IT IS DERIVED, NOT PICKED. It is the same SHAPE as the
+-- ⚠️⚠️ THE INCREMENT IS `4400 * n^2` AND IT IS DERIVED, NOT PICKED. It is the same SHAPE as the
 -- scoring function, and that is the whole point -- see the failure it replaced, below.
 --
 -- The derivation, so it can be recomputed if aotv4_dungeon_scale.M.kill_value ever changes:
 --   a kill is worth eff^2, a named 3x  (lua_modules/aotv4_dungeon_scale.lua)
 --   an observed run is ~41 kills of which ~4 are named  ->  37*L^2 + 4*3*L^2 = 49*L^2 per run
---   a player working on charm level n is around rung 7n ->  49*(7n)^2 = 2401*n^2 per run
---   ten runs per charm level                            ->  24010*n^2, rounded to 24000*n^2
--- Increments: 24000, 96000, 216000, 384000, 600000, 864000, 1176000, 1536000, 1944000.
+--   a player working on charm level n is around rung 3n ->  49*(3n)^2 = 441*n^2 per run
+--   ten runs per charm level                            ->  4410*n^2, rounded to 4400*n^2
+-- Increments: 4400, 17600, 39600, 70400, 110000, 158400, 215600, 281600, 356400.
 --
 --     pace              runs to fully evolve
---     climbing with the ladder        ~85
---     parked at rung 70                ~29
---     farming rung 1              ~139,000
+--     climbing with the ladder        ~90
+--     parked at rung 30                ~28
+--     farming rung 1               ~25,600
+--
+-- ⚠️⚠️ RETUNED 2026-08-01 FROM `24000 * n^2`, AND ONLY ONE INPUT CHANGED: THE RUNG CEILING.
+-- The old constant assumed a player working on charm level n sits at rung **7n**, i.e. charm level 10
+-- against rung 70 -- which was right when the character level cap was 70. The cap is now **30**
+-- (era_system.M.HARD_CAP), and a rung is only clearable if you can fight mobs scaled to it, so the
+-- reachable ceiling is ~30 and the mapping is **3n**. Everything else in the derivation is unchanged.
+-- ⚠️ Because run income is QUADRATIC in the rung, cutting the ceiling from 70 to 30 does not halve
+-- run scores, it drops them by (30/70)^2 = about 5.4x -- which is why the constant moved 24000 -> 4400
+-- and not 24000 -> 12000. Halving the cap does NOT mean halving this number; re-derive it.
+-- 📌 aotv4_dungeon.M.MAX_LEVEL is deliberately LEFT at 70 (owner's call, 2026-08-01), so rungs above
+-- ~30 still exist and remain unreachable at the current cap. That is why the ceiling used here is the
+-- CHARACTER cap and not M.MAX_LEVEL -- reading the rung count would put this straight back to 7n.
+-- ⚠️ The three pace figures above are the SAME model as before, just re-evaluated: climbing is ~10
+-- runs per level by construction, and the anti-farming gap at rung 1 is still enormous (25,600 runs)
+-- because that is carried by the scoring function, not by this curve.
 -- Anti farming is now carried by the SCORING function rather than by this curve: a rung 1 kill is
 -- worth 1 and a rung 70 kill 4900, so the bottom of the ladder is 4,900x less efficient per kill.
 --
@@ -55,7 +70,13 @@
 -- or two of the run ending. That is native and not worth fighting.
 --
 -- ⚠️ `items` IS IN SHARED MEMORY: world down, ./shared_memory, restart. A zone restart is NOT enough.
---    `items_evolving_details` is loaded by the EvolvingItemsManager at boot, so it needs the same.
+--    That applies to the ten SIGIL ITEM rows below (names, stats, icons).
+-- ⚠️⚠️ BUT `items_evolving_details` IS **NOT** SHARED MEMORY -- an earlier version of this comment said
+--    it "needs the same" and that is WRONG. EvolvingItemsManager::LoadEvolvingItems reads it straight
+--    from the CONTENT DATABASE (ItemsEvolvingDetailsRepository::All, common/evolving_items.cpp:31) and
+--    is called once from zone/main.cpp:376 at zone boot. So RETUNING THE LADDER ALONE needs only a
+--    zone restart -- no world down, no ./shared_memory. Only touch the heavier path if the item rows
+--    themselves changed.
 -- ⚠️ Re-runnable; the DELETE names only the ids this script creates (147500-147509, evo id 2000).
 -- ============================================================================================
 
@@ -137,19 +158,19 @@ DROP TEMPORARY TABLE tmp_sigil;
 DELETE FROM items_evolving_details WHERE item_evo_id = 2000;
 INSERT INTO items_evolving_details (item_evo_id, item_evolve_level, item_id, type, sub_type, required_amount) VALUES
 -- ⚠️ These ARE the increments (per level costs), not running totals -- see the note above.
-    (2000,  1, 147500, 1, '0',    24000),
-    (2000,  2, 147501, 1, '0',    96000),
-    (2000,  3, 147502, 1, '0',   216000),
-    (2000,  4, 147503, 1, '0',   384000),
-    (2000,  5, 147504, 1, '0',   600000),
-    (2000,  6, 147505, 1, '0',   864000),
-    (2000,  7, 147506, 1, '0',  1176000),
-    (2000,  8, 147507, 1, '0',  1536000),
-    (2000,  9, 147508, 1, '0',  1944000),
+    (2000,  1, 147500, 1, '0',     4400),
+    (2000,  2, 147501, 1, '0',    17600),
+    (2000,  3, 147502, 1, '0',    39600),
+    (2000,  4, 147503, 1, '0',    70400),
+    (2000,  5, 147504, 1, '0',   110000),
+    (2000,  6, 147505, 1, '0',   158400),
+    (2000,  7, 147506, 1, '0',   215600),
+    (2000,  8, 147507, 1, '0',   281600),
+    (2000,  9, 147508, 1, '0',   356400),
 -- ⚠️ Level 10 is never consumed (DoEvolveCheckProgression stops at evomax) but the row must exist or
 -- CalculateProgression divides by a missing cache entry and reports 0 percent forever. It mirrors
 -- level 9 so a maxed sigil that keeps being fed reads as a full bar rather than an empty one.
-    (2000, 10, 147509, 1, '0',  1944000);
+    (2000, 10, 147509, 1, '0',   356400);
 
 -- ---------------------------------------------------------------- verify
 SELECT 'sigil items'   AS what, COUNT(*) n FROM items WHERE id BETWEEN 147500 AND 147509

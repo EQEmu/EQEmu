@@ -1182,6 +1182,10 @@ RULE_CATEGORY_END()
 
 
 RULE_CATEGORY(AoT)
+RULE_BOOL(AoT, AAExpSlowdownEnabled,    	true, "Slow NORMAL experience the more AA a character has earned, so that accumulated AA power does not make each re-climb to the level cap progressively trivial. Multiplier = (Base + aa) / (Base + Factor * aa).")
+RULE_INT(AoT, AAExpSlowdownBase,        	100,  "Numerator base of the AA experience slowdown. Larger = the slowdown starts more gently. With the default 100/10, half rate is reached at 12.5 AA.")
+RULE_INT(AoT, AAExpSlowdownFactor,      	10,   "Denominator factor of the AA experience slowdown. The multiplier asymptotes to 1/Factor, so 10 means normal experience never drops below 10 percent however much AA is earned.")
+RULE_INT(AoT, AAExpMinLevel,            	1,    "Lowest level at which a character may earn AA experience. Stock EQ hardcodes 51 in two places in zone/exp.cpp; on a server whose cap is below that, AA would be completely unearnable.")
 RULE_INT(AoT, DamageCapBaseDelayPct,    	50, "Base damage cap as a percent of weapon delay (50 = 50% of delay)")
 RULE_INT(AoT, DamageCapLevelPctPerLevel, 	5, "Additional cap percent of weapon delay added per character level (5 = +5% of delay per level)")
 RULE_INT(AoT, DamageCapTwoHandBonusPct,  	80, "Additional percent bonus to the damage cap for two-handed weapons (80 = +80%, so 180% of 1H cap)")
@@ -1225,6 +1229,7 @@ RULE_INT(AoT, ShieldWallPenaltyPercent, 	20,	"Extra damage per ADDITIONAL person
 RULE_INT(AoT, ShieldWallMaxSharers,     	4,	"Maximum people sharing one hit, including the aggro holder.")
 RULE_INT(AoT, SpecialEndurancePct,      	50,	"Endurance a damaging combat special costs, as a percent of the damage it actually dealt. 50 = a 200 damage Backstab costs 100 endurance. 0 disables the cost entirely. Charged AFTER the hit, because the cost depends on the damage rolled.")
 RULE_INT(AoT, SpecialEnduranceMinToUse, 	1,	"Endurance you must have BEFORE a damaging special will fire. Deliberately low: the real brake is the post-hit cost draining you, not a per-use gate. 0 lets specials fire at zero endurance, which makes the cost meaningless.")
+RULE_BOOL(AoT, TownFactionFloor,        	true,	"Floor the faction con at Dubious for the factions listed in aotv4_town_factions, so no race is killed on sight in a town. Every race may be any class and go anywhere here, but stock faction starts an Ogre at -1000 with Kelethin. Dubious, not Indifferent: the city still dislikes you, it just does not murder you, and Dubious already trades. Only these factions are affected, so monster factions stay lethal.")
 RULE_CATEGORY_END()
 
 #undef RULE_CATEGORY

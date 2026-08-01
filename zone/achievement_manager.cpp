@@ -8,6 +8,7 @@
 	(at your option) any later version.
 */
 #include "achievement_manager.h"
+#include "../common/data_bucket.h"
 
 #include "common/seperator.h"
 #include "common/skills.h"
@@ -390,6 +391,32 @@ void AchievementManager::ProcessItemReceive(Client *client, uint32 item_id)
 	ProcessMatchedObjectives(
 		client,
 		fmt::format("(o.`objective_type` = 'item_receive' AND o.`target_id` = {})", item_id),
+		1,
+		false
+	);
+}
+
+// AoTv4: a death AT THE LEVEL CAP. The roguelite's terminal event -- you took a run as far as it
+// goes and then lost it -- and the trigger for the region-unlock achievement chain.
+//
+// ⚠️⚠️ EACH DEATH IS ONE POINT OF PROGRESS ON EVERY MATCHING OBJECTIVE, which is what makes a chain
+// of achievements with goals 1,2,3,4,5 fire on the first, second, third... capped death without any
+// per-achievement bookkeeping. The engine already tracks progress per objective per character, so
+// the chain is expressed entirely in DATA (five rows) rather than in code.
+// ⚠️ absolute_progress is FALSE: the count must accumulate across deaths. True would overwrite the
+// stored progress with 1 every time and no achievement past the first would ever complete.
+//
+// ⚠️ The caller decides what "at max" means -- this is not the place to re-derive the level cap.
+// era_system owns that (region ceiling vs hard cap vs era cap) and it is a Lua-side answer.
+void AchievementManager::ProcessDeathAtMaxLevel(Client *client)
+{
+	if (!client) {
+		return;
+	}
+
+	ProcessMatchedObjectives(
+		client,
+		"(o.`objective_type` = 'death_at_max')",
 		1,
 		false
 	);
@@ -1681,6 +1708,21 @@ bool AchievementManager::AwardQueuedReward(Client *client, const RewardSummary &
 	if (Strings::EqualFold(reward.type, "coin")) {
 		client->AddMoneyToPP(static_cast<uint64>(amount), true);
 		result = fmt::format("Granted {} copper.", amount);
+		return true;
+	}
+
+	// AoTv4: grant one REGION CHOICE -- a credit the player spends on whichever region they want.
+	//
+	// ⚠️⚠️ IT DOES NOT UNLOCK A REGION ITSELF, and must not. The whole point of the chain is that each
+	// capped death opens ANOTHER region OF THE PLAYER'S CHOOSING; hard-wiring a region id here would
+	// make the order fixed and the five achievements interchangeable with a single counter.
+	// The credit lands in the `region_credits_<charid>` bucket and Lua spends it (aotv4_regions.lua).
+	// ⚠️ reward_id is IGNORED for this type. Deliberate -- there is no region to name yet.
+	if (Strings::EqualFold(reward.type, "region_choice")) {
+		const std::string key = fmt::format("region_credits_{}", client->CharacterID());
+		const int have = Strings::ToInt(DataBucket::GetData(&database, key));
+		DataBucket::SetData(&database, key, std::to_string(have + static_cast<int>(amount)));
+		result = fmt::format("Region unlock available ({} unspent).", have + static_cast<int>(amount));
 		return true;
 	}
 

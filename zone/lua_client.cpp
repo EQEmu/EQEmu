@@ -34,6 +34,7 @@
 #include "zone/lua_packet.h"
 #include "zone/lua_raid.h"
 #include "zone/titles.h"
+#include "zone/achievement_manager.h"
 
 #include "lua.hpp"
 #include "luabind/luabind.hpp"
@@ -1064,6 +1065,16 @@ double Lua_Client::AddEvolveProgress(int slot_id, uint64 amount) {
 // ⚠️ A consequence of that key: two IDENTICAL augments on one character share ONE row. The caller
 // (aotv4_dungeon.lua) therefore awards each distinct item id once; feeding it per socket would
 // double-credit a player wearing two of the same roll.
+// ⚠️⚠️ DISABLED 2026-07-31 -- NOT EXPOSED TO LUA AND WITH NOTHING TO ACT ON.
+// The delve augments stopped being evolving items when they moved to crucible combining
+// (CLAUDE.md section 26): they now carry `evoitem = 0`, no `evoid`, and no items_evolving_details
+// rows, so even if this ran it would fall out at the IsEvolving() check below. The luabind
+// registration is commented out as well, so no quest script can reach it at all.
+// It is kept, rather than deleted, because everything it documents about WHY augments cannot use the
+// native evolving system is still true and was expensive to work out. To revive it you would need
+// all three: restore the .def() line, set evoitem/evoid on the augment rows, and re-add the augment
+// block to SharedDatabase::GetInventory -- and you would be back to the two-window problem that
+// caused this to be retired.
 double Lua_Client::AddEvolveProgressAug(int slot_id, int aug_index, uint64 amount) {
 	Lua_Safe_Call_Real();
 
@@ -1674,6 +1685,17 @@ bool Lua_Client::HasRegion(int region_id) {
 int Lua_Client::GetRegionMaxLevel() {
 	Lua_Safe_Call_Int();
 	return static_cast<int>(self->GetRegionMaxLevel());
+}
+
+// AoTv4: credit one death at the level cap toward the `death_at_max` achievement chain.
+//
+// ⚠️⚠️ CALLED FROM LUA, NOT FROM Mob::Death, and deliberately so. What counts as "max level" is the
+// LOWEST of the era cap, the hard cap and the character's region ceiling -- era_system owns that
+// answer and it changes as regions are unlocked. Re-deriving it in C++ would give two definitions of
+// the cap that drift the moment either moves.
+void Lua_Client::CreditDeathAtMaxLevel() {
+	Lua_Safe_Call_Void();
+	achievement_manager.ProcessDeathAtMaxLevel(self);
 }
 
 std::string Lua_Client::GetPriceBook() {
@@ -4333,6 +4355,7 @@ luabind::scope lua_register_client() {
 	.def("UnlockRegion", &Lua_Client::UnlockRegion)
 	.def("HasRegion", &Lua_Client::HasRegion)
 	.def("GetRegionMaxLevel", &Lua_Client::GetRegionMaxLevel)
+	.def("CreditDeathAtMaxLevel", &Lua_Client::CreditDeathAtMaxLevel)
 	.def("GetPriceBook", &Lua_Client::GetPriceBook)
 	.def("GetPriceLog", &Lua_Client::GetPriceLog)
 	.def("GetShopListingLog", &Lua_Client::GetShopListingLog)
@@ -4600,7 +4623,10 @@ luabind::scope lua_register_client() {
 	.def("Stand", (void(Lua_Client::*)(void))&Lua_Client::Stand)
 	.def("SummonBaggedItems", (void(Lua_Client::*)(uint32,luabind::adl::object))&Lua_Client::SummonBaggedItems)
 	.def("AddEvolveProgress", (double(Lua_Client::*)(int,uint64))&Lua_Client::AddEvolveProgress)
-	.def("AddEvolveProgressAug", (double(Lua_Client::*)(int,int,uint64))&Lua_Client::AddEvolveProgressAug)
+	// ⚠️ AddEvolveProgressAug is DELIBERATELY NOT REGISTERED -- see the note on the function itself.
+	// Evolving augments were retired in favour of crucible combining (CLAUDE.md section 26); leaving
+	// the binding exposed would let any quest script drive a system nothing else maintains.
+	// Re-registering this line is the ONLY thing needed to bring it back.
 	.def("SummonItem", (void(Lua_Client::*)(uint32))&Lua_Client::SummonItem)
 	.def("SummonItem", (void(Lua_Client::*)(uint32,int))&Lua_Client::SummonItem)
 	.def("SummonItem", (void(Lua_Client::*)(uint32,int,uint32))&Lua_Client::SummonItem)

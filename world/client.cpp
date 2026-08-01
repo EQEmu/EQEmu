@@ -875,10 +875,19 @@ bool Client::HandleEnterWorldPacket(const EQApplicationPacket *app) {
 				}
 			}
 			if (home_enabled) {
-				// AoTv4: always send to the tutorial hub (tutorialb, 189), then stamp the reuse cooldown.
-				zone_id = 189;
+				// AoTv4: always send to the starting hub, The Resplendent Temple (729), then stamp the
+				// reuse cooldown.
+				// ⚠️⚠️ THIS USED TO SEND TO THE TUTORIAL (tutorialb, 189) and had to move when the
+				// tutorial was disabled. Turning off `World:EnableTutorialButton` does NOT cover this
+				// path -- Go Home is a separate branch that never consults that rule -- so leaving it
+				// would have kept a live route into a zone the server no longer uses, reachable from
+				// the character select screen by a button the player is meant to be able to press.
+				// ⚠️ Keep these coordinates in step with `start_zones` (custom/sql/aotv4_start_resplendent.sql).
+				// They are duplicated because this path writes character_data directly rather than
+				// going through the start-zone lookup.
+				zone_id = 729;
 				database.QueryDatabase(fmt::format(
-					"UPDATE character_data SET zone_id = 189, x = 18, y = -147, z = 20, heading = 0 WHERE id = {}", charid));
+					"UPDATE character_data SET zone_id = 729, x = -22, y = 535, z = 0, heading = 0 WHERE id = {}", charid));
 				database.QueryDatabase(fmt::format(
 					"DELETE FROM data_buckets WHERE character_id = {} AND `key` = 'return_home_cd'", charid));
 				database.QueryDatabase(fmt::format(

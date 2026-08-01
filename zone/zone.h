@@ -235,6 +235,7 @@ public:
 	std::map<uint32, std::list<TempMerchantList> >   tmpmerchanttable;
 	std::map<uint32, std::string>                    adventure_entry_list_flavor;
 	std::map<uint32, ZoneEXPModInfo>                 level_exp_mod;
+	std::set<int32>                                  aotv4_town_factions;
 
 	std::pair<AA::Ability *, AA::Rank *> GetAlternateAdvancementAbilityAndRank(int id, int points_spent);
 
@@ -313,6 +314,15 @@ public:
 	void LoadLDoNTrapEntries();
 	void LoadLDoNTraps();
 	void LoadLevelEXPMods();
+	// AoTv4: factions whose con is floored at Dubious so no race is KOS in a town.
+	// ⚠️ Loaded at ZONE BOOT (not shared memory), so an edit to aotv4_town_factions needs a zone
+	// restart. See custom/sql/aotv4_town_factions.sql for how the list is derived and why it is
+	// scoped by faction rather than by zone (Kelethin lives inside gfaydark).
+	void LoadTownFactions();
+	bool IsTownFaction(int32 faction_id) const
+	{
+		return aotv4_town_factions.find(faction_id) != aotv4_town_factions.end();
+	}
 	void LoadGrids();
 	void LoadMercenarySpells();
 	void LoadMercenaryTemplates();

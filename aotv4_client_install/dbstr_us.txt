@@ -20,7 +20,7 @@
 1^26^This stance causes your mercenary to neither help you nor engage any enemies.^0
 1^28^Test menu item^0
 1^36^General^0
-2^1^Innate Strength^0
+2^1^Brawn^0
 2^4^This ability raises your base Strength by 2 points for each ability level.^0
 2^5^Agility^0
 2^7^Wayfarer's Emblem^0
@@ -272,7 +272,7 @@
 21^18^Brellium Tokens^0
 21^20^Mayong Returns II - Mayong Harder!^0
 21^71^Brellium Token^0
-22^1^Innate Intelligence^0
+22^1^Sharpened Wit^0
 22^4^This ability raises your base Intelligence by 2 points for each ability level.^0
 22^5^Defensive^0
 22^6^Strikes your target with a burst of intense force, causing between #1 and @1 damage.^0
@@ -357,7 +357,7 @@
 31^12^Gelatinous Cubes^0
 31^16^31^0
 31^20^Mecha-Mayong 2112^0
-32^1^Innate Charisma^0
+32^1^Command Presence^0
 32^4^This ability raises your base Charisma by 2 points for each ability level.^0
 32^5^Duration Heals^0
 32^6^Sickens your target with a fever, causing #3 damage initially and between #2 and @2 damage every six seconds for %z.^0
@@ -526,7 +526,7 @@
 64^6^Surrounds your target with an aura of protection, warding away magic for %z.^0
 64^11^Treant^0
 64^12^Treants^0
-65^1^Innate Regeneration^0
+65^1^Slow Knitting^0
 65^4^This ability raises your regeneration ability by 1 point per ability level.^0
 65^5^Movement^0
 65^6^Surrounds your body in a magical shield, increasing your hit points, armor class, and magic resistance.^0
@@ -541,7 +541,7 @@
 67^11^Human^0
 67^12^Humans^0
 67^15^Built within the Butcherblock Mountains and amidst a series of mines, the stronghold of Kaladim houses the Dwarven race and royalty.^0
-68^1^Innate Metabolism^0
+68^1^Lean Rations^0
 68^4^This ability decreases your food consumption by 10, 25 and 50 percent.^0
 68^5^Offensive^0
 68^6^Burns your target's skin with a bolt of flame, causing between #1 and @1 damage.^0
@@ -619,7 +619,7 @@
 82^11^Scarecrow^0
 82^12^Scarecrows^0
 82^15^The Iksar live in the ancient city of Cabilis, on Kunark near the Lake of Ill Omen. It is a dark place with a maze of canals, which the Iksar use for travel around their city.^0
-83^1^Spell Casting Mastery^0
+83^1^Frugal Casting^0
 83^4^This ability lowers the mana cost of spells by 2, 5, 10, and 15 percent.^0
 83^5^Root^0
 83^6^Conjures a rain of fire that assaults all creatures in the vicinity of your target, causing three waves of between #1 and @1 damage.^0
@@ -665,7 +665,7 @@
 91^6^Ignites your target's skin, doing between #1 and @1 damage.^0
 91^11^Alligator^0
 91^12^Alligators^0
-92^1^Spell Casting Fury^0
+92^1^Ruinous Cadence^0
 92^4^The three ranks of this ability give you a 2, 4, and 7 percent chance to land critical hits with your direct damage spells.^0
 92^5^Spell Guard^0
 92^6^Creates a ball of fire that burns your target, doing between #1 and @1 damage.^0
@@ -711,7 +711,7 @@
 100^12^Dervishes^0
 100^34^has earned the EverQuest achievement "Level 100" (Become a level 100 Adventurer.)^0
 100^35^has earned the EverQuest achievement "Level 100" (Become a level 100 Adventurer.)^0
-101^1^Spell Casting Expertise^0
+101^1^Flawless Recital^0
 101^4^This ability makes it impossible for you to fizzle a spell. The first level affects all spells below level 20.  The second, on all spells below level 35.  The third, on all spells below level 52.^0
 101^5^Sum: Familiar^0
 101^6^Focuses mana into the form of a bundle of arrows.^0
@@ -725,7 +725,7 @@
 103^6^Focuses mana into the form of a cold stone that provides greatly improved night vision to the wielder.^0
 103^11^Kedge^0
 103^12^Kedge^0
-104^1^Spell Casting Deftness^0
+104^1^Deft Incantation^0
 104^4^This ability reduces the casting time of beneficial spells that have a duration longer than instant and a cast time greater than three seconds.  The ability levels reduce these casting times by 10, 25, and 50 percent.^0
 104^5^Sum: Warder^0
 104^6^Focuses mana into the form of a dagger of symbols.^0
@@ -782,7 +782,7 @@
 115^6^A burst of holy power that inflicts between #1 and @1 damage to a summoned target.^0
 115^11^Clam^0
 115^12^Clams^0
-116^1^Fear Resistance^0
+116^1^Steady Nerve^0
 116^4^This ability grants you a resistance bonus to fear type spells of 5, 10, and 25 percent. It also increases the chance of breaking fear earlier.^0
 116^5^The Planes^0
 116^6^A burst of holy power that inflicts between #1 and @1 damage to a summoned target.^0
@@ -903,7 +903,7 @@
 136^6^Mends the wounds of everyone in your group, healing between #1 and @1 hit points.^0
 136^11^Xalgoz^0
 136^12^Xalgozs^0
-137^1^Quick Evacuation^0
+137^1^Quick Exit^0
 137^4^This ability reduces the casting time on your evacuation and succor spells by 10, 25, and 50 percent.^0
 137^5^Chromatic^0
 137^6^Hastens your groups natural healing, allowing them to recover hit points faster.^0
@@ -953,14 +953,14 @@
 145^11^Goo^0
 145^12^Goos^0
 146^1^Sanguine Frenzy^0
-146^2^Canni^0
-146^3^V^0
+146^2^Sanguine^0
+146^3^Frenzy^0
 146^4^For 4 seconds, the damage your weapons deal is returned to you as health, three times over. The healing is capped at 8, 11, 14, 17 and 20 percent of your maximum health each time you use it, so no weapon is too fine and none too crude. Reusable every 45 seconds.^0
 146^5^Timer 7^0
 146^6^Fills your target with the spirit of the monkey, increasing their dexterity for %z.^0
 146^11^Sarnak Spirit^0
 146^12^Sarnak Spirits^0
-147^1^Quick Buff^0
+147^1^Ready Blessing^0
 147^4^This ability reduces the casting time of many beneficial spells that have a duration by 10, 25, and 50 percent.^0
 147^5^Timer 8^0
 147^6^Fills your target's body with spiritual power, increasing their strength for %z.^0
@@ -974,7 +974,7 @@
 149^6^Fills your target with the sprit of the ox, increasing their stamina for %z.^0
 149^11^Scorpion^0
 149^12^Scorpions^0
-150^1^Alchemy Mastery^0
+150^1^Alembic^0
 150^4^This ability reduces your chances of failing alchemy combinations by 10, 25, and 50 percent.^0
 150^5^Timer 11^0
 150^6^Fills your target with an alluring aura, increasing their charisma for %z.^0
@@ -989,8 +989,8 @@
 152^11^Bertoxxulous^0
 152^12^Bertoxxulouses^0
 153^1^Second Wind^0
-153^2^Rabid^0
-153^3^Bear^0
+153^2^Second^0
+153^3^Wind^0
 153^4^Spend the last of your stamina and turn it into will. Consumes all of your endurance and returns 40, 55, 70, 85 and 100 percent of it as mana. Mana over your maximum is lost, so do not use it while full. Usable once every 5 minutes.^0
 153^5^Fast^0
 153^6^Fills your target's body with furious power, increases their strength for %z.^0
@@ -1005,8 +1005,8 @@
 154^11^Fay Drake^0
 154^12^Fay Drakes^0
 155^1^Fade^0
-155^2^Impr.^0
-155^3^Fam.^0
+155^2^Fade^0
+155^3^^0
 155^4^Slip out of the world attention. Everything currently angry at you forgets, and you are briefly unseen. In a group this hands whatever was hitting you to somebody else. Requires and consumes at least half your endurance. Usable once every 45 minutes.^0
 155^5^Timer 13^0
 155^6^Fills your target with glamour, increasing their charisma for %z.^0
@@ -1073,8 +1073,8 @@
 166^11^Animated Hand^0
 166^12^Animated Hands^0
 167^1^Iron Will^0
-167^2^Frenzied^0
-167^3^Burnout^0
+167^2^Iron^0
+167^3^Will^0
 167^4^Spend everything at once and wear it. Your entire pool of mana is consumed and returned to you as absorption, at half its worth for the first two ranks and in full from the third. From the second rank your endurance is spent alongside it. The fourth rank turns aside spell damage as well as blows, and the fifth makes it last twice as long. Usable once every 30 minutes.^0
 167^6^Imbues your target with the talisman of Tnarg, providing increased hit points for %z.^0
 167^11^Succulent^0
@@ -1184,8 +1184,8 @@
 187^11^Siren^0
 187^12^Sirens^0
 188^1^Sanctified Blow^0
-188^2^Divine^0
-188^3^Stun^0
+188^2^Sanctified^0
+188^3^Blow^0
 188^4^Strike your target senseless for a moment. Each blow that lands has a 20, 30, 30, 40 and 100 percent chance to leave a ward about you, absorbing melee damage equal to 2, 4, 6, 8 and 10 percent of your maximum health until it is spent. The third rank stuns for longer and holds tougher opponents, and at the fifth rank the ward is certain. Reusable every 30 seconds.^0
 188^6^Causes your opponent to fall into an enchanted sleep for up to %z.  This spell works on creatures up to level @1.^0
 188^11^Giant^0
@@ -1220,7 +1220,7 @@
 194^6^Attacks your target's mind, providing a chance to forget those that have done them harm.^0
 194^11^Sea Turtle^0
 194^12^Sea Turtles^0
-195^1^Fearless^0
+195^1^Nothing Left to Fear^0
 195^4^This ability will make you permanently immune to fear spells.^0
 195^6^Constricts your target's throat, causing between #1 and @1 damage initially and between #4 and @4 damage every six seconds for %z, as well as lowering their strength and agility.^0
 195^11^Dragon^0
@@ -1237,7 +1237,7 @@
 197^6^Commands an undead creature to do your bidding, temporarily bending them to your will.^0
 197^11^Ronnie Test^0
 197^12^Ronnie Tests^0
-198^1^Ambidexterity^0
+198^1^Offhand Grace^0
 198^4^This ability increases your chance to use dual wield successfully.^0
 198^6^Commands an undead creature to do your bidding, temporarily bending them to your will.^0
 198^11^Dragon^0
@@ -1444,7 +1444,7 @@
 243^6^Cloaks you in a shimmering illusion that makes you appear to be an Iksar.^0
 243^11^Dryad^0
 243^12^Dryads^0
-244^1^Poison Mastery^0
+244^1^Steady Hands^0
 244^4^This ability reduces your chance of failing on a poison combination by 10, 25, and 50 percent. It also reduces the time to apply poison by 2.5 seconds per ability level. Once one point is applied to this ability, you will never again fail in poison application.^0
 244^6^Provides your target with a sense of bravery, increasing their hit points and armor class for %z.^0
 244^11^Treant^0
@@ -1514,7 +1514,8 @@
 259^11^Crocodile^0
 259^12^Crocodiles^0
 260^1^Rally^0
-260^2^War Cry^0
+260^2^Rally^0
+260^3^^0
 260^4^Cut through the panic. Frees you and your whole group of fear, root and snare. Usable once every 3 minutes.^0
 260^6^Beckons to the animals of the wild, allowing you to control them.^0
 260^11^Bat^0
@@ -1588,12 +1589,12 @@
 277^6^Fills your target's blood with poison, causing #2 damage initially and between #3 and @3 damage every six seconds for %z.^0
 277^11^Nightmare Goblin^0
 277^12^Nightmare Goblins^0
-278^1^Body and Mind Rejuvenation^0
+278^1^Quiet Recovery^0
 278^4^This ability will give you one additional point of mana and hit point regeneration.^0
 278^6^Infuses your target with the spirit of the wolf, increasing their movement speed for %z.^0
 278^11^Karana^0
 278^12^Karanas^0
-279^1^Physical Enhancement^0
+279^1^Hardened Frame^0
 279^4^This ability will give you additional improvements in your Natural Durability, Avoidance Boost, and Mitigation Boost.^0
 279^6^Fills your target with the spirit of the bear, increasing their stamina for %z.^0
 279^11^Blood Raven^0
@@ -1609,7 +1610,7 @@
 282^6^Creates a rift of bitter cold, causing between #1 and @1 damage to your target.^0
 282^11^Skeletal Horse^0
 282^12^Skeletal Horses^0
-283^1^Acrobatics^0
+283^1^Tumbler's Instinct^0
 283^4^This ability will reduce the damage that you take from falling.^0
 283^6^Causes your target's skin to grow as hard as a turtle's shell, increasing their armor class for %z.^0
 283^11^Saryrn^0
@@ -1625,7 +1626,7 @@
 286^6^Constricts your target's throat, causing between #1 and @1 damage, as well as lowering their strength and agility for %z.^0
 286^11^Soul Devourer^0
 286^12^Soul Devourers^0
-287^1^Chaotic Stab^0
+287^1^Wild Thrust^0
 287^4^This ability will allow you to do minimal backstab damage on your backstab attempt, even if you are not positioned behind the monster.^0
 287^6^Cloaks you in a shimmering illusion that makes you appear to be a nearby inanimate object.^0
 287^11^Nightmare^0
@@ -1650,8 +1651,8 @@
 290^11^Tallon Zek^0
 290^12^Tallon Zeks^0
 291^1^Communion^0
-291^2^Paragon^0
-291^3^of Spirit^0
+291^2^Communion^0
+291^3^^0
 291^4^Pour out your strength for everyone standing with you. Heals your entire group at once, for an amount that grows with your level. Usable once every 5 minutes.^0
 291^6^Weakens your opponent, lowering their strength and armor class.^0
 291^11^Air Mephit^0
@@ -2021,7 +2022,7 @@
 411^6^Surrounds your target in a shield of flame, damaging any creature that attacks them.^0
 411^11^Pyrilen^0
 411^12^Pyrilens^0
-412^1^New Tanaan Crafting Mastery^0
+412^1^Tanaan Schooling^0
 412^4^Training with the sages and merchants of New Tanaan gives adventurers the chance to hone their crafting skills.  For each rank of this ability that you purchase, you are able to raise an additional trade skill past its Specialization level (200).  (This ability applies to Baking, Blacksmithing, Brewing, Fletching, Jewelcraft, Pottery, and Tailoring.)^0
 412^6^Surrounds your target in a shield of lava, damaging any creature that attacks them.^0
 412^11^Chimera^0
@@ -2058,7 +2059,7 @@
 422^6^Hardens the skin of your target, increasing their hit points and armor class for %z.^0
 422^11^Runed Orb^0
 422^12^Runed Orbs^0
-423^1^Planar Durability^0
+423^1^Planeforged^0
 423^4^The planes demand a certain hardiness of those who adventure within.  Each rank of this ability adds an additional 1.5% to your maximum hit points.  You gain the ability to train an additional rank at levels 61, 63, and 65.^0
 423^6^Hardens the skin of your target, increasing their hit points and armor class for %z.^0
 423^11^Dragon Bones^0
@@ -2133,7 +2134,7 @@
 445^6^Drains your target of life energy, siphoning between #1 and @1 hit points.^0
 445^11^Dragon Egg^0
 445^12^Dragon Eggs^0
-446^1^Mastery of the Past^0
+446^1^Word Perfect^0
 446^4^This ability makes it impossible for you to fizzle spells up to a certain level.  Rank 1 - level 54.  Rank 2 - level 56.  Rank 3 - level 58.  Rank 4 - level 62.  Rank 5 - level 64.  Rank 6 - level 66.  Rank 7 - level 67.  Rank 8 - level 69.  Rank 9 - level 71.  Rank 10 - level 72.  Rank 11 - level 74.  Rank 12 - level 76. Rank 13 - 79. Rank 14 - 80. Rank 15 - 81. Rank 16 - 82. Rank 17 - 83. Rank 18 - 84. Rank 19 - 85. Rank 20 - 86. Rank 21 - 87. Rank 22 - 88. Rank 23 - 89. Rank 24 - 90. Rank 25 - 91. Rank 26 - 92. Rank 27 - 93. Rank 28 - 94. Rank 29 - 95. Rank 30 - 96.^0
 446^6^Drains your target of life energy, siphoning between #1 and @1 hit points.^0
 446^11^Dragon Statue^0
@@ -2361,8 +2362,8 @@
 509^11^Root Tentacle^0
 509^12^Root Tentacles^0
 510^1^Disengage^0
-510^2^Wrath^0
-510^3^of Wild^0
+510^2^Disengage^0
+510^3^^0
 510^4^Break contact and run. Frees you of root and snare and greatly increases your movement for a few seconds. It turns aside no damage whatsoever, so you must actually leave. Requires and consumes at least half your endurance. Usable once every 45 minutes.^0
 510^6^Creates a rift of bitter cold, causing between #1 and @1 damage to your target.^0
 510^11^Runic Symbol^0
@@ -2394,8 +2395,8 @@
 516^11^Wicker Basket^0
 516^12^Wicker Baskets^0
 517^1^Last Stand^0
-517^2^Eldritch^0
-517^3^Rune^0
+517^2^Last^0
+517^3^Stand^0
 517^4^Set your feet and refuse to fall. For 8, 10, 12, 14 and 15 seconds nothing can reduce you below a fifth of your maximum health. Requires and consumes at least half your endurance, so spending that endurance elsewhere leaves you without it. Usable once every 45 minutes.^0
 517^6^Surrounds your body in a coat of brambles that increases your armor class, as well as harming those that strike you for %z.^0
 517^11^Nightmare/Unicorn^0
@@ -2465,8 +2466,8 @@
 533^11^Boat^0
 533^12^Boats^0
 534^1^Reprieve^0
-534^2^Hand of^0
-534^3^Piety^0
+534^2^Reprieve^0
+534^3^^0
 534^4^Find a second breath. Restores 20, 27, 34, 42 and 50 percent of your maximum health and frees you of root and snare. It turns aside no damage at all, so it buys you an escape rather than a stand. Requires and consumes at least half your endurance. Usable once every 45 minutes.^0
 534^6^Opens a mystical portal that transports you to the Lavastorm Mountains.^0
 534^11^Weapon Rack^0
@@ -2531,7 +2532,7 @@
 550^6^Opens a mystical portal that transports your group to the Northern Plains of Karana.^0
 550^11^Merchant Ship^0
 550^12^Merchant Ships^0
-551^1^Bestial Frenzy^0
+551^1^Feral Cadence^0
 551^4^Each rank in this ability improves your chance of performing a double attack in any given combat round.^0
 551^6^Opens a mystical portal that transports your group to the Western Commonlands.^0
 551^11^Pirate Ship^0
@@ -2549,7 +2550,7 @@
 555^6^Opens a mystical portal that transports your group to the Southern Desert of Ro.^0
 555^11^Banner^0
 555^12^Banners^0
-556^1^Harmonious Attack^0
+556^1^Song of Blades^0
 556^4^This ability grants you a chance of performing a double attack in any given combat round.  Additional ranks improve your chance of performing the double attack.^0
 556^6^Opens a mystical portal that transports your group to the Feerrott Jungle.^0
 556^11^Banner^0
@@ -2566,7 +2567,7 @@
 560^6^Calls upon the furor of the gods to strike your target, causing between #1 and @1 damage.^0
 560^11^Gorilla^0
 560^12^Gorillas^0
-561^1^Knight's Advantage^0
+561^1^Oathblade^0
 561^4^This ability grants you an increased chance of performing a double attack in any given combat round.  You gain the ability to train an additional rank at levels 61, 63, and 65 and an additional three ranks at level 70.^0
 561^6^Opens an arcane portal that teleports your entire group to Toxxulia Forest.^0
 561^11^Kedge^0
@@ -2577,7 +2578,7 @@
 563^6^Opens an arcane portal that teleports your entire group to the Greater Faydark.^0
 563^11^Shissar^0
 563^12^Shissar^0
-564^1^Ferocity^0
+564^1^Redoubled^0
 564^4^Each rank of this ability grants you an increased chance of performing a double attack in any given combat round.^0
 564^6^Opens an arcane portal that teleports your entire group to Nektulos Forest.^0
 564^11^Siren^0
@@ -2710,7 +2711,7 @@
 598^6^Cloaks you in a shimmering illusion that makes you appear to be a Fire Elemental.  This spell also provides you with a shield of flame that harms those who attack you.^0
 598^11^Wrulon^0
 598^12^Wrulons^0
-599^1^Punishing Blade^0
+599^1^Cleaving Arc^0
 599^4^This ability increases the chance of scoring an extra hit with all two-handed weapons. Each rank in this ability increases the chance of scoring an extra hit with all two-handed weapons that you wield.^0
 599^6^Cloaks you in a shimmering illusion that makes you appear to be a Water Elemental, This spell also grants you magical breathing.^0
 599^11^Spell Particle 1^0
@@ -2721,7 +2722,7 @@
 601^6^Cloaks you in a shimmering illusion that makes you appear to be a tree. This spell can only be cast outdoors.^0
 601^11^Robocopter of Zomm^0
 601^12^Robocopters of Zomm^0
-602^1^Speed of the Knight^0
+602^1^Follow Through^0
 602^4^Each rank in this ability increases the chance of scoring an extra hit with all two-handed weapons that you wield.^0
 602^6^Evacuates your group to the Northern Plains of Karana.  While faster casting than normal portal spells, it is more likely to leave one or more of your group members behind.^0
 602^11^Burynai^0
@@ -2737,7 +2738,7 @@
 605^6^Evacuates your group to the Nektulos Forest.  While faster casting than normal portal spells, it is more likely to leave one or more of your group members behind.^0
 605^11^Iksar Ghost^0
 605^12^Iksar Ghosts^0
-606^1^Nimble Evasion^0
+606^1^Slip Away^0
 606^4^This ability grants you a chance to hide or evade while moving.  Each rank provides an increasing chance. You may train in this ability once each level after reaching level 61.^0
 606^6^Evacuates your group to the Western Plains of Karana.  While faster casting than normal portal spells, it is more likely to leave one or more of your group members behind.^0
 606^11^Iksar Skeleton^0
@@ -2808,7 +2809,7 @@
 624^6^Summons an earth elemental to aid you in battle.^0
 624^11^Ogre NPC - Male^0
 624^12^Ogres^0
-625^1^Ingenuity^0
+625^1^Clever Working^0
 625^4^Years of experimentation have led to the discovery of how to gain additional performance (in the form of critical spell hits) from weapons and other items. Each rank in this ability will increase your critical hit chance with such items.^0
 625^6^Summons a water elemental to aid you in battle.^0
 625^11^Sokokar Mount^0
@@ -2834,7 +2835,7 @@
 630^6^Summons a fire elemental to aid you in battle.^0
 630^11^Wine Cask^0
 630^12^Wine Casks^0
-631^1^Tactical Mastery^0
+631^1^Read the Fight^0
 631^4^Studying one's opponent for weaknesses provides the knowledge and ability to pierce through advanced defenses.  Each rank of this ability grants an increasing chance of bypassing an opponent's special defenses, such as dodge, block, parry, and riposte.  You may train in this ability at or after levels 61, 63, and 65.^0
 631^6^Summons an air elemental to aid you in battle.^0
 631^11^Hydra Mount^0
@@ -2845,7 +2846,7 @@
 633^6^Summons a water elemental to aid you in battle.^0
 633^11^Wedding Flowers^0
 633^12^Wedding Flowers^0
-634^1^Theft of Life^0
+634^1^Stolen Vitality^0
 634^4^This ability grants a chance that the healing effect on your lifetaps will provide an exceptional amount of healing.  Additional ranks further increase this effect.^0
 634^6^Summons a fire elemental to aid you in battle.^0
 634^11^Wedding Arbor^0
@@ -2856,7 +2857,7 @@
 636^6^Surrounds your target's feet in arcane shackles, slowing their movement speed.^0
 636^11^Powder Keg^0
 636^12^Powder Kegs^0
-637^1^Fury of Magic^0
+637^1^Ruinous Focus^0
 637^4^Each rank in this ability increases your chance to score a critical hit with your direct damage spells.^0
 637^11^Apexus^0
 637^12^Apexus^0
@@ -2913,7 +2914,7 @@
 651^6^Causes your target's image to blur, making it harder for your opponents to hit you by increasing your armor class.^0
 651^11^Greken - Young^0
 651^12^Grekens - Young^0
-652^1^Stalwart Endurance^0
+652^1^Refuse to Fall^0
 652^4^This ability grants a chance to endure what would otherwise be a stunning blow, from any angle, without being stunned.  You may train in the ranks of this ability at or after levels 61, 63, and 65.^0
 652^6^Causes your target's image to blur, making it harder for your opponents to hit you by increasing your armor class.^0
 652^11^Cliknar Mount^0
@@ -2924,7 +2925,7 @@
 654^6^Causes your target's image to blur, making it harder for your opponents to hit you by increasing your armor class.^0
 654^11^Spider Mount^0
 654^12^Spider Mounts^0
-655^1^Quick Summoning^0
+655^1^Ready Conjuring^0
 655^4^This ability reduces the casting time of your summoning spells by 10, 25, and 50 percent.^0
 655^6^Infuses your eyes with the vision of a cat, allowing you to see more clearly in the dark for %z.^0
 655^11^Bear Mount^0
@@ -2935,7 +2936,7 @@
 657^6^Surrounds your target in flames, causing between #1 and @1 damage.^0
 657^11^Sessiloid Mount^0
 657^12^Sessiloid Mounts^0
-658^1^Mental Clarity^0
+658^1^Wellspring^0
 658^4^This ability increases your natural mana regeneration by 1 point per ability level.^0
 658^6^Covers your target in a thick layer of ice, causing between #1 and @1 damage.^0
 658^11^Morell Thule^0
@@ -3444,7 +3445,7 @@
 950^6^Cleanses the eyes of your target, removing blindness.^0
 952^1^Planar Durability^0
 952^4^The planes demand a certain hardiness of those who adventure within.  Each rank of this ability adds an additional 1.25% to your maximum hit points.  You gain the ability to train an additional rank at levels 61, 63, and 65.^0
-955^1^Innate Enlightenment^0
+955^1^Tranquil Mind^0
 955^4^Those who have meditated on the Plane of Tranquility find themselves able to expand their capacity of both Insight and Intellect.  Each rank of this ability raises the maximum that you may raise your Intelligence and Wisdom by ten points.  You may train in this ability once each level, beginning at level 61.^0
 959^6^Strengthens your vision, allowing you to see much farther.^0
 960^1^Dire Charm^0
@@ -3649,13 +3650,13 @@
 1126^4^This ability grants you an enhanced version of the Mend Companion ability.  Each additional rank increases the healing power of the ability further.^0
 1129^1^Advanced Pet Discipline^0
 1129^4^The first rank of this ability allows you to give your pet a "focus" command. While focused, your pet will ignore all other opponents until its current opponent is defeated. The second rank allows you to tell your pet to not cast any spells. Usage: /pet focus, /pet spellhold, or hotkeys can be created using the pet control window.^0
-1131^1^Throwing Mastery^0
+1131^1^Heavy Throw^0
 1131^4^Each rank of this ability increases the damage you do with throwing weapons.^0
 1134^1^Blur of Axes^0
 1134^4^Each rank of this ability increases the damage that is done by Frenzy.^0
 1137^1^Hastened War Cry^0
 1137^4^This ability reduces the timer on the various war cry disciplines by 3 minutes per rank.^0
-1140^1^Dead Aim^0
+1140^1^True Cast^0
 1140^4^This ability increases the accuracy of your thrown weapons.^0
 1142^6^Summons pain from your target's soul, causing @2 damage and draining some of their mana.^0
 1143^1^Frenzied Defense^0
@@ -3962,19 +3963,19 @@
 1364^6^Invokes the power of Garzicor's vengeful spirit, lowering the attack rating of your target, and causing #2 damage every 6 seconds for up to %z.^0
 1365^1^Fervor of the Dark Reign^0
 1365^4^Your devotion to Dark Reign provides you with an innate chance to completely resist the effects of most detrimental spells.^0
-1366^1^Gift of the Keepers^0
+1366^1^Tempered Frame^0
 1366^4^Your devotion to Norrath's Keepers grants you increased statistics.^0
 1366^6^Summons down the rage of a stormy sky, causing between #1 and @1 damage to your target.^0
-1367^1^Valor of the Keepers^0
+1367^1^Bulwark Within^0
 1367^4^Your devotion to Norrath's Keepers grants you increased hit points, mana, and endurance.^0
 1367^6^Envelops your body in an aura of blessed fire, increasing your regeneration rate, and causing harm to anyone who attacks you.^0
-1368^1^Embrace of the Keepers^0
+1368^1^Open Vessel^0
 1368^4^Your devotion to Norrath's Keepers increases the number of mystical effects that can affect you at once.^0
 1368^6^Covers your body in a protective skin that will absorb some damage done to you.^0
-1369^1^Power of the Keepers^0
+1369^1^Malefic Reach^0
 1369^4^Your devotion to Norrath's Keepers increases the chance that your direct damage spells, damage over time spells, healing spells, and melee attacks will have a critical effect.^0
 1369^6^Injects your target with chilling poison causing #1 damage.^0
-1370^1^Sanctity of the Keepers^0
+1370^1^Warded Soul^0
 1370^4^Your devotion to Norrath's Keepers provides you with an innate chance to completely resist the effects of most detrimental spells.^0
 1370^6^Causes your target to run away in fear.^0
 1371^1^Lesson of the Devoted^0
@@ -4444,7 +4445,7 @@
 1640^3^Blaze^0
 1640^4^This ability allows you to channel up to 9000 mana into a raw, unfocused blast of pure magical energy aimed at your target.^0
 1640^6^Bolts of lightning consume your target, causing @1 damage. This damage is much more difficult to resist than most spells.^0
-1641^1^Thief's Intuition^0
+1641^1^Sixth Sense^0
 1641^4^This ability grants you an innate chance to detect traps.  Any time you are near a trap, you will have a chance to detect it.  This chance is considerably lower than if you were actively searching for it.^0
 1641^6^Consumes your target in a sudden torrent of ice, causing between #1 and @1 damage.^0
 1642^1^Thief's Intuition^0
@@ -7835,7 +7836,7 @@
 4672^6^Increases your chances to hit with any melee attack.^0
 4673^6^Allows you to perfectly time your counter attacks, riposting every incoming blow.^0
 4674^6^Allows you to perfectly time your counter attacks, riposting every incoming blow.^0
-4675^1^Jewel Craft Mastery ^0
+4675^1^Gemcutter^0
 4675^4^Decreases failure chance of jewel crafting combines by 10, 25 and 50%^0
 4675^6^Increases the damage of melee attacks.^0
 4676^6^Increases the damage of all of your melee attacks.^0
@@ -9709,7 +9710,7 @@
 6544^1^Touch of the Divine ^0
 6545^1^Hastened Call of the Wild ^0
 6545^4^Reduces the reuse time on your ability Call of the Wild. Each rank provides a 120 second reduction.^0
-6546^1^Hunter's Attack Power^0
+6546^1^Hunter's Weight^0
 6546^4^This ability increases your attack power by 4 each rank. You will gain this ability automatically once each level starting at level 55.^0
 6547^1^Hastened Exodus ^0
 6548^1^Clinging Root ^0
@@ -10292,7 +10293,7 @@
 7033^4^Each rank of this ability increases the number of attacks Warlord's Bravery can withstand by 5.^0
 7036^1^Hastened Blast of Anger^0
 7036^4^Each rank of this ability lowers the time between uses of Blast of Anger by 10 seconds.^0
-7062^1^Foraging^0
+7062^1^Forager's Eye^0
 7062^4^Grants an increase of 50 points to the Forage skill of anyone who purchases it. Will increase the skill cap for those that have the Forage skill and grant the skill and raise the cap to those that do not.^0
 7069^1^Perfected Invisibility^0
 7069^2^Perfected^0
@@ -37439,6 +37440,7 @@
 569450^35^has earned the EverQuest achievement "Pottery (450)" (Reached 450 skill in Pottery.)^0
 569500^34^has earned the EverQuest achievement "Pottery (500)" (Reached 500 skill in Pottery.)^0
 569500^35^has earned the EverQuest achievement "Pottery (500)" (Reached 500 skill in Pottery.)^0
+990113^1^Killing Edge^0
 999999^17^Crown^0
 999999^18^Crowns^0
 1000100^21^Apprentice Mercenaries (Human)^0

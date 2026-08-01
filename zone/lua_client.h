@@ -378,6 +378,7 @@ public:
 	bool UnlockRegion(int region_id);
 	bool HasRegion(int region_id);
 	int  GetRegionMaxLevel();
+	void CreditDeathAtMaxLevel();
 	std::string GetPriceBook();
 	std::string GetPriceLog();
 	std::string GetShopListingLog();
