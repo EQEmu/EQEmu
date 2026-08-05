@@ -32,6 +32,7 @@
 #include "world/clientlist.h"
 #include "world/zonelist.h"
 #include "world/zoneserver.h"
+#include <cstring>
 
 std::map<uint32, TributeData> tribute_list;
 
@@ -228,6 +229,47 @@ void WorldGuildManager::ProcessZonePacket(ServerPacket *pack) {
 	case ServerOP_GuildMembersList:
 	{
 		auto in = (ServerOP_GuildMessage_Struct *) pack->pBuffer;
+		ZSList::Instance()->SendPacketToZonesWithGuild(in->guild_id, pack);
+		break;
+	}
+	case ServerOP_GuildAchievement:
+	{
+		const auto header_size = sizeof(ServerGuildAchievement_Struct);
+		if (
+			pack->size <= header_size ||
+			pack->size > header_size + ServerGuildAchievementMaxLinkDataLength + 1
+		) {
+			LogGuilds(
+				"Received ServerOP_GuildAchievement of invalid size [{}]",
+				pack->size
+			);
+			return;
+		}
+
+		auto in = reinterpret_cast<ServerGuildAchievement_Struct *>(pack->pBuffer);
+		const auto link_data_size = pack->size - header_size;
+		const auto link_data =
+			reinterpret_cast<const char *>(pack->pBuffer + header_size);
+		if (
+			in->guild_id == 0 ||
+			in->guild_id == GUILD_NONE ||
+			in->achievement_id == 0 ||
+			in->player_name[0] == '\0' ||
+			in->player_name[sizeof(in->player_name) - 1] != '\0' ||
+			link_data_size < 2 ||
+			link_data[0] == '\0' ||
+			link_data[link_data_size - 1] != '\0' ||
+			link_data[link_data_size - 2] != '^' ||
+			std::memchr(link_data, '\0', link_data_size - 1) != nullptr
+		) {
+			LogGuilds(
+				"Received invalid ServerOP_GuildAchievement for guild [{}], achievement [{}]",
+				in->guild_id,
+				in->achievement_id
+			);
+			return;
+		}
+
 		ZSList::Instance()->SendPacketToZonesWithGuild(in->guild_id, pack);
 		break;
 	}

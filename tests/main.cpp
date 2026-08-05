@@ -32,6 +32,19 @@
 #include <iostream>
 #include <fstream>
 #include <memory>
+#include "../common/platform.h"
+#include "../common/path_manager.h"
+#include "achievements_test.h"
+#include "memory_mapped_file_test.h"
+#include "ipc_mutex_test.h"
+#include "fixed_memory_test.h"
+#include "fixed_memory_variable_test.h"
+#include "atobool_test.h"
+#include "hextoi_32_64_test.h"
+#include "string_util_test.h"
+#include "data_verification_test.h"
+#include "skills_util_test.h"
+#include "task_state_test.h"
 
 const EQEmuConfig *Config;
 
@@ -46,6 +59,7 @@ int main()
 	try {
 		std::unique_ptr<Test::Output> output(new Test::TextOutput(Test::TextOutput::Verbose));
 		Test::Suite                   tests;
+		tests.add(new AchievementsTest());
 		tests.add(new MemoryMappedFileTest());
 		tests.add(new IPCMutexTest());
 		tests.add(new FixedMemoryHashTest());

@@ -20,9 +20,42 @@
 #ifdef EMBPERL_XS_CLASSES
 
 #include "common/data_verification.h"
+
+#include "zone/achievement_mutations.h"
 #include "zone/client.h"
 #include "zone/embperl.h"
 #include "zone/raids.h"
+
+bool Perl_Raid_AdvanceAchievementProgress(
+	Raid* self,
+	uint32 achievement_id,
+	uint32 component_type,
+	uint32 component_id,
+	uint32 value
+) // @categories Achievements, Raid
+{
+	if (component_type > 2) {
+		return false;
+	}
+
+	return AchievementMutations::QueueAdvance(
+		AchievementMutations::TargetType::Raid,
+		self->GetID(),
+		achievement_id,
+		static_cast<uint8_t>(component_type),
+		component_id,
+		value
+	);
+}
+
+bool Perl_Raid_CompleteAchievement(Raid* self, uint32 achievement_id) // @categories Achievements, Raid
+{
+	return AchievementMutations::QueueCompletion(
+		AchievementMutations::TargetType::Raid,
+		self->GetID(),
+		achievement_id
+	);
+}
 
 bool Perl_Raid_IsRaidMember(Raid* self, const char* name) // @categories Raid
 {
@@ -179,8 +212,10 @@ void perl_register_raid()
 	perl::interpreter perl(PERL_GET_THX);
 
 	auto package = perl.new_class<Raid>("Raid");
+	package.add("AdvanceAchievementProgress", &Perl_Raid_AdvanceAchievementProgress);
 	package.add("BalanceHP", &Perl_Raid_BalanceHP);
 	package.add("CastGroupSpell", &Perl_Raid_CastGroupSpell);
+	package.add("CompleteAchievement", &Perl_Raid_CompleteAchievement);
 	package.add("DoesAnyMemberHaveExpeditionLockout", (bool(*)(Raid*, std::string, std::string))&Perl_Raid_DoesAnyMemberHaveExpeditionLockout);
 	package.add("DoesAnyMemberHaveExpeditionLockout", (bool(*)(Raid*, std::string, std::string, int))&Perl_Raid_DoesAnyMemberHaveExpeditionLockout);
 	package.add("GetClientByIndex", &Perl_Raid_GetClientByIndex);

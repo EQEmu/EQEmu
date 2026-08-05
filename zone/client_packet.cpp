@@ -36,6 +36,7 @@
 #include "common/repositories/tradeskill_recipe_entries_repository.h"
 #include "common/rulesys.h"
 #include "common/shared_tasks.h"
+#include "zone/achievement_manager.h"
 #include "zone/bot.h"
 #include "zone/client_version.h"
 #include "zone/dialogue_window.h"
@@ -107,6 +108,11 @@ void MapOpcodes()
 
 	// connected opcode handler assignments:
 	ConnectedOpcodes[OP_AAAction] = &Client::Handle_OP_AAAction;
+	ConnectedOpcodes[OP_AchievementCompareRequest] = &Client::Handle_OP_AchievementCompareRequest;
+	ConnectedOpcodes[OP_AchievementLinkRequest] = &Client::Handle_OP_AchievementLinkRequest;
+	ConnectedOpcodes[OP_AchievementRequest] = &Client::Handle_OP_AchievementRequest;
+	ConnectedOpcodes[OP_AchievementReward] = &Client::Handle_OP_AchievementReward;
+	ConnectedOpcodes[OP_RewardSelection] = &Client::Handle_OP_RewardSelection;
 	ConnectedOpcodes[OP_AcceptNewTask] = &Client::Handle_OP_AcceptNewTask;
 	ConnectedOpcodes[OP_AdventureInfoRequest] = &Client::Handle_OP_AdventureInfoRequest;
 	ConnectedOpcodes[OP_AdventureLeaderboardRequest] = &Client::Handle_OP_AdventureLeaderboardRequest;
@@ -535,6 +541,7 @@ void Client::CompleteConnect()
 
 	// Task Packets
 	LoadClientTaskState();
+	LoadAchievements();
 
 	// moved to dbload and translators since we iterate there also .. keep m_pp values whatever they are when they get here
 	/*const auto sbs = EQ::spells::DynamicLookup(ClientVersion(), GetGM())->SpellbookSize;
@@ -871,6 +878,8 @@ void Client::CompleteConnect()
 
 	/* This needs to be set, this determines whether or not data was loaded properly before a save */
 	client_data_loaded = true;
+
+	SendAchievementPackets();
 
 	CalcItemScale();
 	DoItemEnterZone();
@@ -1912,6 +1921,270 @@ void Client::Handle_OP_AAAction(const EQApplicationPacket *app)
 	}
 	else {
 		LogAA("Unknown AA action : [{}] [{}] [{}] [{}]", action->action, action->ability, action->target_id, action->exp_value);
+	}
+}
+
+void Client::Handle_OP_AchievementCompareRequest(const EQApplicationPacket *app)
+{
+	constexpr uint32 kCompareRequestRateLimitMs = 1000;
+	constexpr float kCompareDistanceSquared = 20.0f * 20.0f;
+	if (
+		ClientVersion() != EQ::versions::ClientVersion::RoF2 ||
+		app->size != sizeof(uint32) * 2
+	) {
+		return;
+	}
+
+	uint32 target_spawn_id = 0;
+	uint32 requester_spawn_id = 0;
+	std::memcpy(&target_spawn_id, app->pBuffer, sizeof(target_spawn_id));
+	std::memcpy(
+		&requester_spawn_id,
+		app->pBuffer + sizeof(target_spawn_id),
+		sizeof(requester_spawn_id)
+	);
+	if (
+		requester_spawn_id != GetID() ||
+		target_spawn_id > std::numeric_limits<uint16>::max()
+	) {
+		return;
+	}
+
+	auto target = entity_list.GetClientByID(static_cast<uint16>(target_spawn_id));
+	if (
+		!target ||
+		GetTarget() != target ||
+		DistanceSquared(GetPosition(), target->GetPosition()) >
+			kCompareDistanceSquared
+	) {
+		return;
+	}
+
+	if (
+		m_achievement_compare_request_rate_limit.Enabled() &&
+		!m_achievement_compare_request_rate_limit.Check(false)
+	) {
+		return;
+	}
+	m_achievement_compare_request_rate_limit.Start(kCompareRequestRateLimitMs);
+	target->SendAchievementCompareSnapshotTo(*this);
+}
+
+void Client::Handle_OP_AchievementLinkRequest(const EQApplicationPacket *app)
+{
+	constexpr size_t kMaximumPlayerNameLength = 63;
+	constexpr uint32 kLinkRequestRateLimitMs = 100;
+	if (
+		ClientVersion() != EQ::versions::ClientVersion::RoF2 ||
+		app->size < sizeof(uint32) + sizeof(int16) + 2
+	) {
+		return;
+	}
+
+	const auto name_terminator = static_cast<const uint8 *>(
+		std::memchr(app->pBuffer, '\0', app->size)
+	);
+	if (!name_terminator) {
+		return;
+	}
+	const auto player_name_length = static_cast<size_t>(
+		name_terminator - app->pBuffer
+	);
+	if (
+		player_name_length == 0 ||
+		player_name_length > kMaximumPlayerNameLength
+	) {
+		return;
+	}
+
+	const auto identity_offset = player_name_length + 1;
+	if (
+		identity_offset + sizeof(uint32) + sizeof(int16) > app->size
+	) {
+		return;
+	}
+
+	uint32 achievement_id = 0;
+	int16 status_value = 0;
+	std::memcpy(
+		&achievement_id,
+		app->pBuffer + identity_offset,
+		sizeof(achievement_id)
+	);
+	std::memcpy(
+		&status_value,
+		app->pBuffer + identity_offset + sizeof(achievement_id),
+		sizeof(status_value)
+	);
+	if (
+		status_value <
+			static_cast<int16>(EQ::Achievements::Status::Completed) ||
+		status_value >
+			static_cast<int16>(EQ::Achievements::Status::Hidden)
+	) {
+		return;
+	}
+
+	const auto definition =
+		AchievementManager::Instance().FindDefinition(achievement_id);
+	if (
+		!definition ||
+		app->size != EQ::Achievements::ComparisonPayloadSize(
+			player_name_length,
+			*definition,
+			static_cast<EQ::Achievements::Status>(status_value)
+		)
+	) {
+		return;
+	}
+
+	std::string player_name(
+		reinterpret_cast<const char *>(app->pBuffer),
+		player_name_length
+	);
+	auto linked_player = entity_list.GetClientByName(player_name.c_str());
+	if (!linked_player) {
+		return;
+	}
+	if (
+		m_achievement_link_request_rate_limit.Enabled() &&
+		!m_achievement_link_request_rate_limit.Check(false)
+	) {
+		return;
+	}
+	m_achievement_link_request_rate_limit.Start(kLinkRequestRateLimitMs);
+	linked_player->SendAchievementComparisonTo(*this, achievement_id);
+}
+
+void Client::Handle_OP_AchievementRequest(const EQApplicationPacket *app)
+{
+	constexpr uint8 kRoF2AchievementWindowRequest = 0x30;
+	constexpr uint32 kAchievementWindowRequestRateLimitMs = 1000;
+	if (ClientVersion() != EQ::versions::ClientVersion::RoF2) {
+		return;
+	}
+
+	if (
+		app->size != 0 &&
+		(app->size != sizeof(kRoF2AchievementWindowRequest) ||
+		 !app->pBuffer ||
+		 app->pBuffer[0] != kRoF2AchievementWindowRequest)
+	) {
+		return;
+	}
+
+	if (
+		m_achievement_window_request_rate_limit.Enabled() &&
+		!m_achievement_window_request_rate_limit.Check(false)
+	) {
+		return;
+	}
+	m_achievement_window_request_rate_limit.Start(kAchievementWindowRequestRateLimitMs);
+
+	SendAchievementPackets();
+
+	// RoF2 has a dedicated zero-payload window opcode. OP_AchievementState is
+	// comparison-only and enables the comparison pane even when its payload is
+	// empty.
+	auto open_window = new EQApplicationPacket(OP_AchievementWindow, 0);
+	FastQueuePacket(&open_window);
+}
+
+void Client::Handle_OP_AchievementReward(const EQApplicationPacket *app)
+{
+	HandleRewardSelectionPacket(
+		app,
+		RewardSelectionChannel::Claimable
+	);
+}
+
+void Client::Handle_OP_RewardSelection(const EQApplicationPacket *app)
+{
+	HandleRewardSelectionPacket(app, RewardSelectionChannel::Preview);
+}
+
+void Client::HandleRewardSelectionPacket(
+	const EQApplicationPacket *app,
+	RewardSelectionChannel channel
+)
+{
+	if (!app) {
+		return;
+	}
+
+	auto &selection = GetRewardSelection();
+	auto result = selection.HandlePacket(*app, channel);
+	switch (result.type) {
+	case RewardSelectionPacketResultType::ViewRequested:
+		if (result.requested_source == RewardSelectionSource::Achievement) {
+			SendAchievementRewardDisplay(result.requested_id);
+		}
+		else if (
+			result.requested_source == RewardSelectionSource::Task &&
+			task_state
+		) {
+			task_state->SendRewardSelection(this, result.requested_id);
+		}
+		return;
+	case RewardSelectionPacketResultType::PendingRequested:
+		if (const auto active = selection.ActiveSession(
+				RewardSelectionChannel::Claimable
+			)) {
+			const auto session = *active;
+			selection.Open(session);
+		}
+		if (task_state) {
+			task_state->RestorePendingRewardSelection(this);
+		}
+		RestorePendingAchievementRewardSelection();
+		if (
+			!selection.HasActiveSession(RewardSelectionChannel::Claimable)
+		) {
+			selection.Clear(RewardSelectionChannel::Claimable);
+		}
+		return;
+	case RewardSelectionPacketResultType::ClaimRequested:
+		break;
+	default:
+		return;
+	}
+
+	if (!result.claim) {
+		return;
+	}
+
+	auto delivery_result = RewardSelectionDeliveryResult::RetryableFailure;
+	switch (result.claim->session.source.source) {
+	case RewardSelectionSource::Achievement:
+		delivery_result = ClaimAchievementReward(
+			result.claim->session.pending_reward_id,
+			result.claim->session.reward_set.reward_set_id,
+			result.claim->selected_option_id
+		);
+		break;
+	case RewardSelectionSource::Task:
+		if (task_state) {
+			delivery_result = task_state->ClaimRewardSelection(
+				this,
+				*result.claim
+			);
+		}
+		break;
+	default:
+		break;
+	}
+
+	selection.CompleteClaim(*result.claim, delivery_result);
+	if (delivery_result == RewardSelectionDeliveryResult::Ambiguous) {
+		return;
+	}
+
+	if (task_state) {
+		task_state->RestorePendingRewardSelection(this);
+	}
+	RestorePendingAchievementRewardSelection();
+	if (!selection.HasActiveSession(RewardSelectionChannel::Claimable)) {
+		selection.Clear(RewardSelectionChannel::Claimable);
 	}
 }
 
@@ -10889,6 +11162,7 @@ void Client::Handle_OP_MoveItem(const EQApplicationPacket *app)
 	BenchTimer bench;
 
 	MoveItem_Struct* mi = (MoveItem_Struct*) app->pBuffer;
+
 	if (spellend_timer.Enabled() && casting_spell_id && !IsBardSong(casting_spell_id)) {
 		if (mi->from_slot != mi->to_slot && (mi->from_slot <= EQ::invslot::GENERAL_END || mi->from_slot > 39) &&
 			IsValidSlot(mi->from_slot) && IsValidSlot(mi->to_slot)) {
@@ -10908,9 +11182,14 @@ void Client::Handle_OP_MoveItem(const EQApplicationPacket *app)
 		}
 	}
 
-	database.TransactionBegin();
+	if (!database.TransactionBeginStrict().Success()) {
+		SwapItemResync(mi);
+		return;
+	}
+	BeginAchievementInventoryTransaction();
 
-	if (!SwapItem(mi) && IsValidSlot(mi->from_slot) && IsValidSlot(mi->to_slot)) {
+	const bool moved = SwapItem(mi);
+	if (!moved && IsValidSlot(mi->from_slot) && IsValidSlot(mi->to_slot)) {
 		SwapItemResync(mi);
 
 		bool error = false;
@@ -10927,7 +11206,22 @@ void Client::Handle_OP_MoveItem(const EQApplicationPacket *app)
 		}
 	}
 
-	database.TransactionCommit();
+	const auto transaction_failed = database.TransactionStrictFailed();
+	bool inventory_committed = false;
+	if (!transaction_failed) {
+		inventory_committed = database.TransactionCommitStrict().Success();
+	}
+	else {
+		database.TransactionRollbackStrict();
+	}
+	EndAchievementInventoryTransaction(inventory_committed);
+	if (transaction_failed || !inventory_committed) {
+		LogError(
+			"Disconnecting [{}] after an unresolved inventory transaction",
+			GetCleanName()
+		);
+		Disconnect();
+	}
 
 	LogInventory("OP_MoveItem took [{}] ms", bench.elapsedMilliseconds());
 }
@@ -10947,7 +11241,12 @@ void Client::Handle_OP_MoveMultipleItems(const EQApplicationPacket *app)
 		}
 
 		const MultiMoveItem_Struct* multi_move = reinterpret_cast<const MultiMoveItem_Struct*>(app->pBuffer);
-		if (app->size != sizeof(MultiMoveItem_Struct) + sizeof(MultiMoveItemSub_Struct) * multi_move->count) {
+		if (
+			!multi_move->count ||
+			app->size !=
+				sizeof(MultiMoveItem_Struct) +
+				sizeof(MultiMoveItemSub_Struct) * multi_move->count
+		) {
 			LinkDead();
 			return; // Packet size does not match expected size
 		}
@@ -10968,6 +11267,13 @@ void Client::Handle_OP_MoveMultipleItems(const EQApplicationPacket *app)
 			}
 		}
 
+		if (!database.TransactionBeginStrict().Success()) {
+			Message(Chat::Red, "Unable to persist the multi-item move.");
+			return;
+		}
+		BeginAchievementInventoryTransaction();
+		bool operation_valid = true;
+
 		// This is a left click which is purely additive. This should always be cursor object or cursor bag contents into general\bank\whatever bag
 		if (left_click) {
 			for (int i = 0; i < multi_move->count; i++) {
@@ -10982,7 +11288,13 @@ void Client::Handle_OP_MoveMultipleItems(const EQApplicationPacket *app)
 				}
 
 				// This sends '1' as the stack count for unstackable items, which our titanium-era SwapItem blows up
-				if (m_inv.GetItem(mi->from_slot)->IsStackable()) {
+				auto *source_item = m_inv.GetItem(mi->from_slot);
+				if (!source_item) {
+					operation_valid = false;
+					safe_delete(mi);
+					break;
+				}
+				if (source_item->IsStackable()) {
 					mi->number_in_stack = multi_move->moves[i].number_in_stack;
 				} else {
 					mi->number_in_stack = 0;
@@ -10997,6 +11309,10 @@ void Client::Handle_OP_MoveMultipleItems(const EQApplicationPacket *app)
 					}
 				}
 				safe_delete(mi);
+				if (database.TransactionStrictFailed()) {
+					operation_valid = false;
+					break;
+				}
 			}
 		// This is the swap.
 		// Client behavior is just to move stacks without combining them
@@ -11034,18 +11350,46 @@ void Client::Handle_OP_MoveMultipleItems(const EQApplicationPacket *app)
 
 				if (move.item) {
 					items.push_back(move);
-					database.SaveInventory(CharacterID(), NULL, from_slot); // We have to manually save inventory here.
+					if (!database.SaveInventory(CharacterID(), NULL, from_slot)) {
+						operation_valid = false;
+						break;
+					}
 				} else {
 					LinkDead();
-					return; // Prevent inventory desync here. Forcing a resync would be better, but we don't have a MoveItem struct to work with.
+					operation_valid = false;
+					break;
 				}
 			}
 
-			for (const MoveInfo& move : items) {
-				PutItemInInventory(move.to_slot, *move.item); // This saves inventory too
+			if (operation_valid) {
+				for (auto &move : items) {
+					if (!PutItemInInventory(move.to_slot, *move.item)) {
+						operation_valid = false;
+						break;
+					}
+				}
+			}
+			for (auto &move : items) {
+				safe_delete(move.item);
 			}
 		}
 
+		const auto transaction_failed = database.TransactionStrictFailed();
+		bool inventory_committed = false;
+		if (operation_valid && !transaction_failed) {
+			inventory_committed = database.TransactionCommitStrict().Success();
+		}
+		else {
+			database.TransactionRollbackStrict();
+		}
+		EndAchievementInventoryTransaction(operation_valid && inventory_committed);
+		if (!operation_valid || transaction_failed || !inventory_committed) {
+			LogError(
+				"Disconnecting [{}] after an unresolved multi-item inventory transaction",
+				GetCleanName()
+			);
+			Disconnect();
+		}
 	} else {
 		LinkDead(); // This packet should not be sent by an older client
 		return;
@@ -14361,7 +14705,7 @@ void Client::Handle_OP_ShopPlayerSell(const EQApplicationPacket *app)
 			sizeof(Merchant_Purchase_Struct), app->size);
 		return;
 	}
-	
+
 	Merchant_Purchase_Struct* mp = (Merchant_Purchase_Struct*)app->pBuffer;
 	Mob* vendor = entity_list.GetMob(mp->npcid);
 

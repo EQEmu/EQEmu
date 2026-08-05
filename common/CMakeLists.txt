@@ -1,4 +1,5 @@
 set(common_sources
+	achievements.cpp
 	base_packet.cpp
 	bazaar.cpp
 	bodytypes.cpp
@@ -539,6 +540,8 @@ set(repositories
 
 set(common_headers
 	additive_lagged_fibonacci_engine.h
+	achievement_mutations.h
+	achievements.h
 	base_packet.h
 	bazaar.h
 	bodytypes.h

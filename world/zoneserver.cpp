@@ -34,6 +34,7 @@
 #include "common/strings.h"
 #include "common/zone_store.h"
 #include "world/adventure_manager.h"
+#include "world/achievement_mutation_manager.h"
 #include "world/client.h"
 #include "world/cliententry.h"
 #include "world/clientlist.h"
@@ -54,6 +55,8 @@
 extern GroupLFPList LFPGroupList;
 extern volatile bool RunLoops;
 extern volatile bool UCSServerAvailable_;
+extern AdventureManager adventure_manager;
+extern AchievementMutationManager achievement_mutation_manager;
 
 void CatchSignal(int sig_num);
 
@@ -993,6 +996,7 @@ void ZoneServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p) {
 		case ServerOP_GuildMemberAdd:
 		case ServerOP_GuildSendGuildList:
 		case ServerOP_GuildMembersList:
+		case ServerOP_GuildAchievement:
 		{
 			guild_mgr.ProcessZonePacket(pack);
 			break;
@@ -1352,6 +1356,20 @@ void ZoneServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p) {
 			ucsss->timestamp = Timer::GetCurrentTime();
 			zs->SendPacket(outapp);
 			safe_delete(outapp);
+			break;
+		}
+		case ServerOP_CZAchievementMutationRequest: {
+			if (pack->size != sizeof(AchievementMutations::Request)) {
+				LogError(
+					"Received achievement mutation packet with invalid size [{}]",
+					pack->size
+				);
+				break;
+			}
+
+			AchievementMutations::Request request;
+			std::memcpy(&request, pack->pBuffer, sizeof(request));
+			achievement_mutation_manager.Queue(request);
 			break;
 		}
 		case ServerOP_QueryServGeneric: {

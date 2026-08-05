@@ -1,6 +1,8 @@
 set(zone_sources
 	aa.cpp
 	aa_ability.cpp
+	achievement_manager.cpp
+	achievement_mutations.cpp
 	aggro.cpp
 	aggromanager.cpp
 	api_service.cpp
@@ -21,6 +23,7 @@ set(zone_sources
 	cli/tests/cli_test_util.cpp
 	cli/tests/cli_zone_state.cpp
 	client.cpp
+	client_achievements.cpp
 	client_bot.cpp
 	client_evolving_items.cpp
 	client_mods.cpp
@@ -79,6 +82,7 @@ set(zone_sources
 	questmgr.cpp
 	raids.cpp
 	raycast_mesh.cpp
+	reward_selection.cpp
 	shared_task_zone_messaging.cpp
 	sidecar_api/loot_simulator_controller.cpp
 	sidecar_api/sidecar_api.cpp
@@ -118,6 +122,8 @@ set(zone_sources
 set(zone_headers
 	aa.h
 	aa_ability.h
+	achievement_manager.h
+	achievement_mutations.h
 	aggromanager.h
 	api_service.h
 	aura.h
@@ -128,6 +134,7 @@ set(zone_headers
 	bot_structs.h
 	cheat_manager.h
 	client.h
+	client_achievements.h
 	client_packet.h
 	client_version.h
 	combat_record.h
@@ -207,6 +214,7 @@ set(zone_headers
 	questmgr.h
 	raids.h
 	raycast_mesh.h
+	reward_selection.h
 	shared_task_zone_messaging.h
 	sidecar_api/sidecar_api.h
 	spawn2.h
@@ -367,6 +375,7 @@ set(gm_command_sources
 	bot_commands/bot_view_combos.cpp
 	command.cpp
 	gm_commands/acceptrules.cpp
+	gm_commands/achievement.cpp
 	gm_commands/advnpcspawn.cpp
 	gm_commands/aggrozone.cpp
 	gm_commands/ai.cpp

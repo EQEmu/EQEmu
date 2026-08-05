@@ -808,6 +808,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	case ServerOP_GuildMemberAdd:
 	case ServerOP_GuildSendGuildList:
 	case ServerOP_GuildMembersList:
+	case ServerOP_GuildAchievement:
 	{
 		guild_mgr.ProcessWorldPacket(pack);
 		break;
@@ -2086,6 +2087,23 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 			}
 		}
 
+		break;
+	}
+	case ServerOP_CZAchievementMutationWake:
+	{
+		if (pack->size != sizeof(ServerCharacterID_Struct)) {
+			LogError(
+				"Received achievement mutation wake packet with invalid size [{}]",
+				pack->size
+			);
+			break;
+		}
+
+		ServerCharacterID_Struct wake;
+		std::memcpy(&wake, pack->pBuffer, sizeof(wake));
+		if (auto client = entity_list.GetClientByCharID(wake.char_id)) {
+			client->NotifyAchievementMutationPending();
+		}
 		break;
 	}
 	case ServerOP_CZLDoNUpdate:
@@ -4530,9 +4548,23 @@ void WorldServer::ProcessReload(const ServerReload::Request& request)
 		}
 	}
 
-	zone->SendReloadMessage(ServerReload::GetName(request.type));
+	const bool is_achievement_reload = request.type == ServerReload::Type::Achievements;
+	const bool can_announce_reload = zone && zone->IsLoaded();
+	bool reload_succeeded = true;
+	uint32 achievement_client_failures = 0;
+
+	// Achievement reloads can fail validation without replacing the live data.
+	// Wait for the transactional reload result before announcing success.
+	if (!is_achievement_reload && can_announce_reload) {
+		zone->SendReloadMessage(ServerReload::GetName(request.type));
+	}
 
 	switch (request.type) {
+		case ServerReload::Type::Achievements:
+			reload_succeeded =
+				entity_list.ReloadAchievements(achievement_client_failures);
+			break;
+
 		case ServerReload::Type::AAData:
 			zone->LoadAlternateAdvancement();
 			entity_list.SendAlternateAdvancementStats();
@@ -4695,5 +4727,48 @@ void WorldServer::ProcessReload(const ServerReload::Request& request)
 			break;
 	}
 
-	LogInfo("Reloaded [{}] ({})", ServerReload::GetName(request.type), request.type);
+	if (reload_succeeded) {
+		if (is_achievement_reload && can_announce_reload) {
+			zone->SendReloadMessage(ServerReload::GetName(request.type));
+			if (achievement_client_failures) {
+				const auto warning = fmt::format(
+					"Achievements reloaded for {}, but {} loaded client(s) could not "
+					"rebuild state; those clients must zone, reconnect, or run the "
+					"reload again.",
+					zone->GetZoneDescription(),
+					achievement_client_failures
+				);
+				SendEmoteMessage(
+					0,
+					0,
+					AccountStatus::GMAdmin,
+					Chat::Yellow,
+					"%s",
+					warning.c_str()
+				);
+			}
+		}
+
+		LogInfo("Reloaded [{}] ({})", ServerReload::GetName(request.type), request.type);
+	} else {
+		if (is_achievement_reload && can_announce_reload) {
+			const auto failure = fmt::format(
+				"Achievement reload failed for {}; existing content remains active.",
+				zone->GetZoneDescription()
+			);
+			SendEmoteMessage(
+				0,
+				0,
+				AccountStatus::GMAdmin,
+				Chat::Red,
+				"%s",
+				failure.c_str()
+			);
+		}
+		LogError(
+			"Failed to reload [{}] ({}); existing data remains active",
+			ServerReload::GetName(request.type),
+			request.type
+		);
+	}
 }

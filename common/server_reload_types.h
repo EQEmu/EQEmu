@@ -61,6 +61,7 @@ namespace ServerReload {
 		WorldWithRespawn,
 		ZoneData,
 		ZonePoints,
+		Achievements,
 		Max
 	};
 
@@ -100,8 +101,13 @@ namespace ServerReload {
 		"World Repop",
 		"World Repop Timers (Clear Respawn Timers)",
 		"Zone Data",
-		"Zone Points"
+		"Zone Points",
+		"Achievements"
 	};
+	static_assert(
+		(sizeof(Name) / sizeof(Name[0])) == ServerReload::Max,
+		"ServerReload::Name must remain aligned with ServerReload::Type"
+	);
 
 	inline std::string GetName(int reload_type)
 	{

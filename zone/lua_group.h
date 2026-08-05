@@ -44,6 +44,8 @@ public:
 		return reinterpret_cast<Group*>(GetLuaPtrData());
 	}
 
+	bool AdvanceAchievementProgress(uint32 achievement_id, uint32 component_type, uint32 component_id, uint32 value);
+	bool CompleteAchievement(uint32 achievement_id);
 	void DisbandGroup();
 	bool IsGroupMember(const char* name);
 	bool IsGroupMember(Lua_Mob c);

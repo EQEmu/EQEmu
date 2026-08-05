@@ -25,6 +25,7 @@
 #include "common/misc_functions.h"
 #include "common/rulesys.h"
 #include "common/spdat.h"
+#include "zone/achievement_manager.h"
 #include "zone/bot.h"
 #include "zone/lua_parser.h"
 #include "zone/quest_parser_collection.h"
@@ -7545,6 +7546,12 @@ bool Mob::PassCastRestriction(int value)
 
 	if (value <= 0) {
 		return true;
+	}
+
+	const auto &achievement_restrictions =
+		AchievementManager::Instance().CastRestrictions(static_cast<uint32_t>(value));
+	if (!achievement_restrictions.empty()) {
+		return IsClient() && CastToClient()->PassAchievementCastRestriction(value);
 	}
 
 	switch(value)
