@@ -1,9 +1,10 @@
 #pragma once
 
-#include "../common/timer.h"
-#include "achievement_manager.h"
-#include "reward_selection.h"
+#include "common/achievements.h"
+#include "common/timer.h"
+#include "zone/reward_selection.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <deque>
 #include <optional>
@@ -93,11 +94,11 @@ private:
 	void QueueCompletionNotification(uint32_t achievement_id);
 	RewardGrantResult GrantRewardBatch(
 		uint32_t achievement_id,
-		const std::vector<AchievementReward> &rewards
+		const std::vector<RewardSelectionReward> &rewards
 	);
 	RewardGrantResult GrantTrackedReward(
 		uint32_t achievement_id,
-		const AchievementReward &reward
+		const RewardSelectionReward &reward
 	);
 	void ArmCompletionNotificationTimer(bool immediate);
 	void SendCompletionNotification(const PendingCompletionNotification &notification);

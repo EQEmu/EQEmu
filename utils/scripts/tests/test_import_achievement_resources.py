@@ -22,7 +22,7 @@ def category(category_id, parent_id, name):
 
 def achievement(achievement_id, name, description=""):
     return IMPORTER.Achievement(
-        achievement_id, name, description, 0, 0, 0, 0
+        achievement_id, name, description, 0, 0, False, 0
     )
 
 
@@ -54,6 +54,20 @@ def level_components(level):
 
 
 class EnableSelectionTests(unittest.TestCase):
+    def test_npc_name_hash_matches_runtime_golden_vectors(self):
+        vectors = {
+            "Vishimtar_the_Fallen00": 0x708BEE77,
+            "  VISHIMTAR__the   Fallen 99 ": 0x708BEE77,
+            "Tunare`s_Guardian00": 0xCF16724E,
+            "Tunare's Guardian": 0xCF16724E,
+            "#A_Rat_01": 0x40FF2A77,
+            " 123_#- ": 0,
+            "\N{LATIN CAPITAL LETTER E WITH ACUTE}": 0,
+        }
+        for name, expected in vectors.items():
+            with self.subTest(name=name):
+                self.assertEqual(IMPORTER.npc_name_hash(name), expected)
+
     def setUp(self):
         self.resources = IMPORTER.ResourceSet(
             categories=(
@@ -161,8 +175,10 @@ class EnableSelectionTests(unittest.TestCase):
         achievement_upsert = sql.split(
             "INSERT INTO `achievements`", maxsplit=1
         )[1].split("INSERT INTO `achievement_category_associations`", maxsplit=1)[0]
+        self.assertIn("`has_reward`, `client_flag`", achievement_upsert)
         self.assertNotIn("`enabled` = VALUES(`enabled`)", achievement_upsert)
         self.assertIn("3000", achievement_upsert)
+        self.assertIn("`component_id`, `name`, `description`", sql)
 
     def test_exact_enable_selection_disables_only_unselected_imported_ids(self):
         selection = IMPORTER.build_enable_selection(

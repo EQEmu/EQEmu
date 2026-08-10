@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../common/achievement_mutations.h"
-#include "../common/timer.h"
+#include "common/achievement_mutations.h"
+#include "common/timer.h"
 
 #include <cstdint>
 #include <deque>

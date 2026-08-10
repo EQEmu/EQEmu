@@ -1,7 +1,7 @@
-#include "achievements.h"
+#include "common/achievements.h"
 
-#include "types.h"
-#include "compression.h"
+#include "common/compression.h"
+#include "common/reward_selection.h"
 
 #include <limits>
 #include <stdexcept>
@@ -11,19 +11,47 @@
 
 namespace EQ::Achievements
 {
-namespace
+uint32_t NpcNameIdentityHash(std::string_view name)
 {
+	constexpr uint32_t fnv_offset_basis = 2166136261u;
+	constexpr uint32_t fnv_prime = 16777619u;
 
-uint32_t Count32(size_t count)
-{
-	if (count > std::numeric_limits<uint32_t>::max()) {
-		throw std::length_error("achievement packet collection exceeds uint32");
+	uint32_t hash = fnv_offset_basis;
+	bool has_letter = false;
+	bool separator_pending = false;
+
+	const auto append = [&hash](uint8_t value) {
+		hash ^= value;
+		hash *= fnv_prime;
+	};
+
+	for (const auto character : name) {
+		const auto byte = static_cast<uint8_t>(character);
+		if (byte == static_cast<uint8_t>(' ') || byte == static_cast<uint8_t>('_')) {
+			separator_pending = has_letter;
+			continue;
+		}
+
+		auto normalized = byte;
+		if (normalized >= static_cast<uint8_t>('A') && normalized <= static_cast<uint8_t>('Z')) {
+			normalized = static_cast<uint8_t>(normalized + ('a' - 'A'));
+		}
+		if (normalized < static_cast<uint8_t>('a') || normalized > static_cast<uint8_t>('z')) {
+			continue;
+		}
+
+		if (separator_pending) {
+			append(static_cast<uint8_t>(' '));
+			separator_pending = false;
+		}
+		append(normalized);
+		has_letter = true;
 	}
 
-	return static_cast<uint32_t>(count);
+	return has_letter && hash ? hash : 0;
 }
 
-uint16_t PackBitsetWord(
+static uint16_t PackBitsetWord(
 	const std::vector<uint8_t> &satisfied,
 	size_t component_count,
 	size_t word_index
@@ -44,13 +72,13 @@ uint16_t PackBitsetWord(
 }
 
 template <typename T>
-void AppendLinkValue(std::string &out, T value)
+static void AppendLinkValue(std::string &out, T value)
 {
 	out.append(std::to_string(value));
 	out.push_back('^');
 }
 
-void SerializeCategory(SerializeBuffer &out, const Category &category)
+static void SerializeCategory(SerializeBuffer &out, const Category &category)
 {
 	out.WriteUInt32(category.category_id);
 	// Content stores a root parent as 0; RoF2 expects the signed sentinel -1.
@@ -64,50 +92,50 @@ void SerializeCategory(SerializeBuffer &out, const Category &category)
 	out.WriteString(category.icon);
 	out.WriteUInt32(category.display_order);
 
-	out.WriteUInt32(Count32(category.associations.size()));
+	out.WriteUInt32(static_cast<uint32_t>(category.associations.size()));
 	for (const auto &association : category.associations) {
 		out.WriteUInt32(association.achievement_id);
 		out.WriteString(association.text);
 		out.WriteUInt32(association.display_order);
 	}
 
-	out.WriteUInt32(Count32(category.child_category_ids.size()));
+	out.WriteUInt32(static_cast<uint32_t>(category.child_category_ids.size()));
 	for (const auto child_category_id : category.child_category_ids) {
 		out.WriteUInt32(child_category_id);
 	}
 }
 
-void SerializeComponent(SerializeBuffer &out, const Component &component)
+static void SerializeComponent(SerializeBuffer &out, const Component &component)
 {
 	out.WriteUInt32(component.component_id);
 	out.WriteUInt8(component.component_type);
 	out.WriteUInt32(component.required_count);
+	out.WriteString(component.name);
 	out.WriteString(component.description);
-	out.WriteString(component.description2);
 	out.WriteUInt8(component.display_order);
 }
 
-void SerializeDefinition(SerializeBuffer &out, const Definition &definition)
+static void SerializeDefinition(SerializeBuffer &out, const Definition &definition)
 {
 	out.WriteUInt32(definition.achievement_id);
 	out.WriteString(definition.name);
 	out.WriteString(definition.description);
 	out.WriteUInt32(definition.icon_id);
 	out.WriteUInt8(1); // persistent
-	out.WriteUInt32(definition.definition_version);
+	out.WriteUInt32(definition.version);
 
 	for (const auto &components : definition.components) {
-		out.WriteUInt32(Count32(components.size()));
+		out.WriteUInt32(static_cast<uint32_t>(components.size()));
 		for (const auto &component : components) {
 			SerializeComponent(out, component);
 		}
 	}
 
 	out.WriteUInt32(definition.points);
-	out.WriteUInt32(definition.reward_display);
+	out.WriteUInt32(definition.has_reward ? 1 : 0);
 }
 
-void SerializeBitset(
+static void SerializeBitset(
 	SerializeBuffer &out,
 	const std::vector<uint8_t> &satisfied,
 	size_t component_count
@@ -119,7 +147,7 @@ void SerializeBitset(
 	}
 }
 
-void SerializeCounts(
+static void SerializeCounts(
 	SerializeBuffer &out,
 	const std::vector<uint32_t> &counts,
 	size_t component_count
@@ -130,20 +158,18 @@ void SerializeCounts(
 	}
 }
 
-} // namespace
-
 SerializeBuffer SerializeDefinitions(
 	const std::vector<Category> &categories,
 	const std::vector<Definition> &definitions
 )
 {
 	SerializeBuffer out;
-	out.WriteUInt32(Count32(categories.size()));
+	out.WriteUInt32(static_cast<uint32_t>(categories.size()));
 	for (const auto &category : categories) {
 		SerializeCategory(out, category);
 	}
 
-	out.WriteUInt32(Count32(definitions.size()));
+	out.WriteUInt32(static_cast<uint32_t>(definitions.size()));
 	for (const auto &definition : definitions) {
 		SerializeDefinition(out, definition);
 	}
@@ -316,7 +342,7 @@ SerializeBuffer SerializeDenseUpdate(
 	SerializeBuffer out;
 	out.WriteUInt32(serial);
 	out.WriteUInt8(1);
-	out.WriteUInt32(Count32(states.size()));
+	out.WriteUInt32(static_cast<uint32_t>(states.size()));
 	for (size_t definition_index = 0; definition_index < definitions.size(); ++definition_index) {
 		SerializeState(out, definitions[definition_index], states[definition_index]);
 	}
@@ -349,7 +375,7 @@ SerializeBuffer SerializeIncremental(
 	SerializeBuffer out;
 	out.WriteUInt32(serial);
 	out.WriteUInt8(dense ? 1 : 0);
-	out.WriteUInt32(Count32(updates.size()));
+	out.WriteUInt32(static_cast<uint32_t>(updates.size()));
 
 	for (const auto &update : updates) {
 		if (update.definition_index >= definitions.size()) {
@@ -376,7 +402,7 @@ SerializeBuffer SerializeProgress(const std::vector<ProgressUpdate> &progress)
 	}
 
 	SerializeBuffer out;
-	out.WriteUInt32(Count32(progress.size()));
+	out.WriteUInt32(static_cast<uint32_t>(progress.size()));
 	for (const auto &entry : progress) {
 		out.WriteUInt32(entry.achievement_id);
 		out.WriteUInt32(entry.component_id);
@@ -496,10 +522,7 @@ size_t ComparisonPayloadSize(
 		sizeof(uint8_t);
 }
 
-namespace
-{
-
-void SerializeRewardDisplaySet(
+static void SerializeRewardDisplaySet(
 	SerializeBuffer &out,
 	const RewardDisplaySet &reward_set
 )
@@ -532,7 +555,7 @@ void SerializeRewardDisplaySet(
 		}
 
 		out.WriteUInt32(subset.subset_id);
-		out.WriteUInt32(Count32(subset.entries.size()));
+		out.WriteUInt32(static_cast<uint32_t>(subset.entries.size()));
 		out.WriteUInt8(subset.common_to_all ? 1 : 0);
 		out.WriteUInt8(subset.flags);
 		out.WriteString(subset.option_label);
@@ -551,7 +574,7 @@ void SerializeRewardDisplaySet(
 				}
 				break;
 			case RewardWireType::Item:
-				out.WriteUInt32(Count32(entry.items.size()));
+				out.WriteUInt32(static_cast<uint32_t>(entry.items.size()));
 				for (const auto &item : entry.items) {
 					out.WriteUInt32(item.field0);
 					out.WriteUInt32(item.field1);
@@ -580,12 +603,10 @@ void SerializeRewardDisplaySet(
 	}
 }
 
-} // namespace
-
 SerializeBuffer SerializeRewardDisplay(const RewardDisplaySet *reward_set)
 {
 	SerializeBuffer out;
-	out.WriteUInt32(RewardActionList);
+	out.WriteUInt32(static_cast<uint32_t>(RewardSelection::Action::List));
 	out.WriteUInt8(reward_set ? 1 : 0);
 	if (reward_set) {
 		SerializeRewardDisplaySet(out, *reward_set);
@@ -604,7 +625,7 @@ SerializeBuffer SerializeRewardDisplays(
 	}
 
 	SerializeBuffer out;
-	out.WriteUInt32(RewardActionBulk);
+	out.WriteUInt32(static_cast<uint32_t>(RewardSelection::Action::Bulk));
 	out.WriteInt32(static_cast<int32_t>(reward_sets.size()));
 	out.WriteUInt8(0);
 	for (const auto &reward_set : reward_sets) {
@@ -626,7 +647,7 @@ SerializeBuffer SerializeRewardClaimReply(
 )
 {
 	SerializeBuffer out;
-	out.WriteUInt32(RewardActionClaim);
+	out.WriteUInt32(static_cast<uint32_t>(RewardSelection::Action::Claim));
 	out.WriteUInt32(pending_reward_id);
 	out.WriteUInt32(reward_set_id);
 	out.WriteUInt32(selected_subset_id);

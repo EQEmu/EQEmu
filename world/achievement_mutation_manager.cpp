@@ -1,15 +1,15 @@
-#include "achievement_mutation_manager.h"
+#include "world/achievement_mutation_manager.h"
 
-#include "../common/eq_packet.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/rulesys.h"
-#include "../common/servertalk.h"
-#include "cliententry.h"
-#include "clientlist.h"
-#include "dynamic_zone.h"
-#include "shared_task_manager.h"
-#include "worlddb.h"
-#include "zoneserver.h"
+#include "common/eq_packet.h"
+#include "common/eqemu_logsys.h"
+#include "common/rulesys.h"
+#include "common/servertalk.h"
+#include "world/cliententry.h"
+#include "world/clientlist.h"
+#include "world/dynamic_zone.h"
+#include "world/shared_task_manager.h"
+#include "world/worlddb.h"
+#include "world/zoneserver.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -18,17 +18,12 @@
 #include <fmt/format.h>
 #include <string>
 #include <utility>
-
-
-
-namespace {
-
-uint32_t ParseUInt32(const char *value)
+static uint32_t ParseUInt32(const char *value)
 {
 	return value ? static_cast<uint32_t>(std::strtoul(value, nullptr, 10)) : 0;
 }
 
-bool SameRequest(
+static bool SameRequest(
 	const AchievementMutations::Request &left,
 	const AchievementMutations::Request &right
 )
@@ -38,13 +33,11 @@ bool SameRequest(
 		left.achievement_id == right.achievement_id &&
 		left.component_id == right.component_id &&
 		left.value == right.value &&
-		left.definition_version == right.definition_version &&
+		left.version == right.version &&
 		left.target_type == right.target_type &&
 		left.operation == right.operation &&
 		left.component_type == right.component_type;
 }
-
-} // namespace
 
 bool AchievementMutationManager::Queue(const AchievementMutations::Request &request)
 {
@@ -316,10 +309,10 @@ bool AchievementMutationManager::Persist(
 			request.target_id,
 			static_cast<uint32_t>(request.operation),
 			request.achievement_id,
-			request.component_type,
+			static_cast<uint32_t>(request.component_type),
 			request.component_id,
 			request.value,
-			request.definition_version,
+			request.version,
 			static_cast<uint32_t>(AchievementMutations::Status::Pending)
 		);
 	}
@@ -333,7 +326,7 @@ bool AchievementMutationManager::Persist(
 		"INSERT INTO character_achievement_pending_mutations "
 		"(character_id, source_target_type, source_target_id, operation, "
 		"achievement_id, component_type, component_id, requested_value, "
-		"definition_version, status, attempt_count, created_at, last_attempt_at, "
+		"`version`, status, attempt_count, created_at, last_attempt_at, "
 		"last_error) VALUES {}",
 		values
 	));

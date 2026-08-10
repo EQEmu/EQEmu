@@ -1,7 +1,7 @@
-#include "../achievement_manager.h"
-#include "../client.h"
-#include "../../common/say_link.h"
-#include "../../common/strings.h"
+#include "common/say_link.h"
+#include "common/strings.h"
+#include "zone/achievement_manager.h"
+#include "zone/client.h"
 
 namespace
 {
@@ -189,8 +189,8 @@ void command_achievement(Client *c, const Seperator *sep)
 						component.component_id,
 						progress >= 0 ? std::to_string(progress) : "display-only",
 						component.required_count,
-						component.description,
-						component.description2.empty() ? "" : fmt::format(" ({})", component.description2)
+						component.name,
+						component.description.empty() ? "" : fmt::format(" ({})", component.description)
 					).c_str()
 				);
 			}

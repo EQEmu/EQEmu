@@ -154,15 +154,17 @@ bool SharedDatabase::SaveCursor(
 	std::list<EQ::ItemInstance*>::const_iterator& end
 )
 {
-	const auto deleted = QueryDatabase(fmt::format(
-		"DELETE FROM inventory WHERE character_id = {} AND "
-		"(slot_id = {} OR slot_id BETWEEN {} AND {})",
-		char_id,
-		EQ::invslot::slotCursor,
-		EQ::invbag::CURSOR_BAG_BEGIN,
-		EQ::invbag::CURSOR_BAG_END
-	));
-	if (!deleted.Success()) {
+	if (!InventoryRepository::TryDeleteWhere(
+		*this,
+		fmt::format(
+			"`character_id` = {} AND "
+			"(`slot_id` = {} OR `slot_id` BETWEEN {} AND {})",
+			char_id,
+			EQ::invslot::slotCursor,
+			EQ::invbag::CURSOR_BAG_BEGIN,
+			EQ::invbag::CURSOR_BAG_END
+		)
+	)) {
 		return false;
 	}
 
@@ -379,22 +381,28 @@ bool SharedDatabase::UpdateSharedBankSlot(uint32 char_id, const EQ::ItemInstance
 bool SharedDatabase::DeleteInventorySlot(uint32 char_id, int16 slot_id)
 {
 	if (!EQ::InventoryProfile::SupportsContainers(slot_id)) {
-		return QueryDatabase(fmt::format(
-			"DELETE FROM inventory WHERE character_id = {} AND slot_id = {}",
-			char_id,
-			slot_id
-		)).Success();
+		return InventoryRepository::TryDeleteWhere(
+			*this,
+			fmt::format(
+				"`character_id` = {} AND `slot_id` = {}",
+				char_id,
+				slot_id
+			)
+		);
 	}
 
 	const int16 base_slot_id = EQ::InventoryProfile::CalcSlotId(slot_id, EQ::invbag::SLOT_BEGIN);
-	return QueryDatabase(fmt::format(
-		"DELETE FROM inventory WHERE character_id = {} AND "
-		"(slot_id = {} OR slot_id BETWEEN {} AND {})",
-		char_id,
-		slot_id,
-		base_slot_id,
-		base_slot_id + (EQ::invbag::SLOT_COUNT - 1)
-	)).Success();
+	return InventoryRepository::TryDeleteWhere(
+		*this,
+		fmt::format(
+			"`character_id` = {} AND "
+			"(`slot_id` = {} OR `slot_id` BETWEEN {} AND {})",
+			char_id,
+			slot_id,
+			base_slot_id,
+			base_slot_id + (EQ::invbag::SLOT_COUNT - 1)
+		)
+	);
 }
 
 bool SharedDatabase::DeleteSharedBankSlot(uint32 char_id, int16 slot_id)
@@ -402,22 +410,28 @@ bool SharedDatabase::DeleteSharedBankSlot(uint32 char_id, int16 slot_id)
 	const uint32 account_id = GetAccountIDByChar(char_id);
 
 	if (!EQ::InventoryProfile::SupportsContainers(slot_id)) {
-		return QueryDatabase(fmt::format(
-			"DELETE FROM sharedbank WHERE account_id = {} AND slot_id = {}",
-			account_id,
-			slot_id
-		)).Success();
+		return SharedbankRepository::TryDeleteWhere(
+			*this,
+			fmt::format(
+				"`account_id` = {} AND `slot_id` = {}",
+				account_id,
+				slot_id
+			)
+		);
 	}
 
 	const int16 base_slot_id = EQ::InventoryProfile::CalcSlotId(slot_id, EQ::invbag::SLOT_BEGIN);
-	return QueryDatabase(fmt::format(
-		"DELETE FROM sharedbank WHERE account_id = {} AND "
-		"(slot_id = {} OR slot_id BETWEEN {} AND {})",
-		account_id,
-		slot_id,
-		base_slot_id,
-		base_slot_id + (EQ::invbag::SLOT_COUNT - 1)
-	)).Success();
+	return SharedbankRepository::TryDeleteWhere(
+		*this,
+		fmt::format(
+			"`account_id` = {} AND "
+			"(`slot_id` = {} OR `slot_id` BETWEEN {} AND {})",
+			account_id,
+			slot_id,
+			base_slot_id,
+			base_slot_id + (EQ::invbag::SLOT_COUNT - 1)
+		)
+	);
 }
 
 int32 SharedDatabase::GetSharedPlatinum(uint32 account_id)

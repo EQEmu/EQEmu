@@ -1,13 +1,14 @@
-#include "client_achievements.h"
+#include "zone/client_achievements.h"
 
-#include "../common/achievement_mutations.h"
-#include "../common/eq_packet.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/rulesys.h"
-#include "client.h"
-#include "guild_mgr.h"
-#include "zone.h"
-#include "zonedb.h"
+#include "common/achievement_mutations.h"
+#include "common/eq_packet.h"
+#include "common/eqemu_logsys.h"
+#include "common/rulesys.h"
+#include "zone/achievement_manager.h"
+#include "zone/client.h"
+#include "zone/guild_mgr.h"
+#include "zone/zone.h"
+#include "zone/zonedb.h"
 
 #include <algorithm>
 #include <array>
@@ -85,37 +86,9 @@ uint32_t ClampCount(uint64_t value, uint32_t required_count)
 	));
 }
 
-RewardSelectionReward ToRewardSelectionReward(
-	const AchievementReward &reward
-)
-{
-	static_assert(
-		static_cast<uint8_t>(EQ::Achievements::RewardType::Item) ==
-			static_cast<uint8_t>(RewardSelectionRewardType::Item) &&
-		static_cast<uint8_t>(EQ::Achievements::RewardType::Experience) ==
-			static_cast<uint8_t>(RewardSelectionRewardType::Experience) &&
-		static_cast<uint8_t>(EQ::Achievements::RewardType::AlternateAdvancement) ==
-			static_cast<uint8_t>(RewardSelectionRewardType::AlternateAdvancement) &&
-		static_cast<uint8_t>(EQ::Achievements::RewardType::Copper) ==
-			static_cast<uint8_t>(RewardSelectionRewardType::Copper) &&
-		static_cast<uint8_t>(EQ::Achievements::RewardType::AlternateCurrency) ==
-			static_cast<uint8_t>(RewardSelectionRewardType::AlternateCurrency) &&
-		static_cast<uint8_t>(EQ::Achievements::RewardType::Title) ==
-			static_cast<uint8_t>(RewardSelectionRewardType::Title)
-	);
-
-	return {
-		.entry_id = reward.reward_row_id,
-		.type = static_cast<RewardSelectionRewardType>(reward.reward_type),
-		.data_id = reward.reward_id,
-		.amount = reward.amount,
-		.description = reward.description
-	};
-}
-
 std::optional<RewardSelectionSession> BuildAchievementRewardSelectionSession(
 	const EQ::Achievements::Definition &definition,
-	const AchievementRewardSet &reward_set,
+	const RewardSelectionSet &reward_set,
 	RewardSelectionChannel channel,
 	uint32_t selected_option_id = 0
 )
@@ -145,12 +118,7 @@ std::optional<RewardSelectionSession> BuildAchievementRewardSelectionSession(
 		selection_option.label = option.label;
 		selection_option.common_to_all = option.common_to_all;
 		selection_option.flags = option.flags;
-		selection_option.rewards.reserve(option.rewards.size());
-		for (const auto &reward : option.rewards) {
-			selection_option.rewards.push_back(
-				ToRewardSelectionReward(reward)
-			);
-		}
+		selection_option.rewards = option.rewards;
 		session.reward_set.options.emplace_back(std::move(selection_option));
 
 		if (!option.common_to_all && option.option_id == selected_option_id) {
@@ -475,7 +443,7 @@ bool ClientAchievementState::Load(bool allow_disabled)
 	std::unordered_set<uint32_t> stale_achievements;
 
 	auto completion_results = database.QueryDatabase(fmt::format(
-		"SELECT achievement_id, definition_version, completed_at "
+		"SELECT achievement_id, `version`, completed_at "
 		"FROM character_achievements WHERE character_id = {}",
 		character_id
 	));
@@ -494,7 +462,7 @@ bool ClientAchievementState::Load(bool allow_disabled)
 		const auto &definition = manager.Definitions()[*definition_index];
 		if (
 			manager.ResetOnVersionChange(achievement_id) &&
-			ParseUInt32(row[1]) != definition.definition_version
+			ParseUInt32(row[1]) != definition.version
 		) {
 			stale_achievements.insert(achievement_id);
 			continue;
@@ -506,7 +474,7 @@ bool ClientAchievementState::Load(bool allow_disabled)
 
 	auto progress_results = database.QueryDatabase(fmt::format(
 		"SELECT achievement_id, component_type, component_sequence, component_id, "
-		"current_count, definition_version "
+		"current_count, `version` "
 		"FROM character_achievement_progress WHERE character_id = {}",
 		character_id
 	));
@@ -535,7 +503,7 @@ bool ClientAchievementState::Load(bool allow_disabled)
 		const auto &definition = manager.Definitions()[*definition_index];
 		if (
 			manager.ResetOnVersionChange(achievement_id) &&
-			ParseUInt32(row[5]) != definition.definition_version
+			ParseUInt32(row[5]) != definition.version
 		) {
 			stale_achievements.insert(achievement_id);
 			continue;
@@ -710,7 +678,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 	constexpr uint32_t batch_size = 64;
 	auto results = database.QueryDatabase(fmt::format(
 		"SELECT mutation_id, operation, achievement_id, component_type, "
-		"component_id, requested_value, definition_version, status, attempt_count "
+		"component_id, requested_value, `version`, status, attempt_count "
 		"FROM character_achievement_pending_mutations "
 		"WHERE character_id = {} AND (status = {} "
 		"OR (status = {} AND last_attempt_at + {} <= UNIX_TIMESTAMP())) "
@@ -758,7 +726,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 		const auto component_type = ParseUInt32(row[3]);
 		const auto component_id = ParseUInt32(row[4]);
 		const auto requested_value = ParseUInt32(row[5]);
-		const auto definition_version = ParseUInt32(row[6]);
+		const auto version = ParseUInt32(row[6]);
 		const auto status_value = ParseUInt32(row[7]);
 		const auto previous_attempt_count = ParseUInt32(row[8]);
 
@@ -820,26 +788,15 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 		}
 
 		const auto &definition = manager.Definitions()[*definition_index];
-		if (!definition_version) {
-			succeeded =
-				set_status(
-					mutation_id,
-					Status::Blocked,
-					"mutation has no definition version",
-					claim_token
-				) &&
-				succeeded;
-			continue;
-		}
-		if (definition_version != definition.definition_version) {
+		if (version != definition.version) {
 			succeeded =
 				set_status(
 					mutation_id,
 					Status::Blocked,
 					fmt::format(
 						"definition version {} does not match loaded version {}",
-						definition_version,
-						definition.definition_version
+						version,
+						definition.version
 					),
 					claim_token
 				) &&
@@ -849,7 +806,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 
 		auto &state = m_states[*definition_index];
 		auto completion_results = database.QueryDatabase(fmt::format(
-			"SELECT definition_version, completed_at "
+			"SELECT `version`, completed_at "
 			"FROM character_achievements "
 			"WHERE character_id = {} AND achievement_id = {} LIMIT 1",
 			character_id,
@@ -873,7 +830,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 			const auto durable_version = ParseUInt32(completion_row[0]);
 			if (
 				manager.ResetOnVersionChange(achievement_id) &&
-				durable_version != definition.definition_version
+				durable_version != definition.version
 			) {
 				succeeded =
 					set_status(
@@ -882,7 +839,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 						fmt::format(
 							"durable completion version {} does not match loaded version {}",
 							durable_version,
-							definition.definition_version
+							definition.version
 						),
 						claim_token
 					) &&
@@ -965,7 +922,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 			const auto &component =
 				definition.components[component_type][*component_index];
 			auto progress_results = database.QueryDatabase(fmt::format(
-				"SELECT component_type, component_id, current_count, definition_version "
+				"SELECT component_type, component_id, current_count, `version` "
 				"FROM character_achievement_progress "
 				"WHERE character_id = {} AND achievement_id = {}",
 				character_id,
@@ -1019,7 +976,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 				const auto durable_version = ParseUInt32(progress_row[3]);
 				if (
 					manager.ResetOnVersionChange(achievement_id) &&
-					durable_version != definition.definition_version
+					durable_version != definition.version
 				) {
 					succeeded =
 						set_status(
@@ -1028,7 +985,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 							fmt::format(
 								"durable progress version {} does not match loaded version {}",
 								durable_version,
-								definition.definition_version
+								definition.version
 							),
 							claim_token
 						) &&
@@ -1466,12 +1423,12 @@ bool ClientAchievementState::NeedsOwnershipReconciliation() const
 
 bool ClientAchievementState::PassCastRestriction(uint32_t restriction_id) const
 {
-	const auto &restrictions = AchievementManager::Instance().CastRestrictions(restriction_id);
-	for (const auto &restriction : restrictions) {
-		const auto completed = HasCompleted(restriction.achievement_id);
+	const auto &requirements = AchievementManager::Instance().CastRequirements(restriction_id);
+	for (const auto &requirement : requirements) {
+		const auto completed = HasCompleted(requirement.achievement_id);
 		if (
-			(restriction.requires_completed && !completed) ||
-			(!restriction.requires_completed && completed)
+			(requirement.requires_completed && !completed) ||
+			(!requirement.requires_completed && completed)
 		) {
 			return false;
 		}
@@ -2001,12 +1958,12 @@ bool ClientAchievementState::PersistProgress(
 	const auto result = database.QueryDatabase(fmt::format(
 		"INSERT INTO character_achievement_progress "
 		"(character_id, achievement_id, component_type, component_sequence, component_id, "
-		"current_count, completed, definition_version, updated_at) "
+		"current_count, completed, `version`, updated_at) "
 		"VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}) "
 		"ON DUPLICATE KEY UPDATE component_sequence = VALUES(component_sequence), "
 		"component_id = VALUES(component_id), "
 		"current_count = VALUES(current_count), completed = VALUES(completed), "
-		"definition_version = VALUES(definition_version), updated_at = VALUES(updated_at)",
+		"`version` = VALUES(`version`), updated_at = VALUES(updated_at)",
 		m_client.CharacterID(),
 		definition.achievement_id,
 		component_type,
@@ -2014,7 +1971,7 @@ bool ClientAchievementState::PersistProgress(
 		component.component_id,
 		count,
 		completed,
-		definition.definition_version,
+		definition.version,
 		now
 	));
 	if (!result.Success()) {
@@ -2033,13 +1990,13 @@ bool ClientAchievementState::PersistCompletion(size_t definition_index, uint32_t
 	const auto &definition = AchievementManager::Instance().Definitions()[definition_index];
 	const auto result = database.QueryDatabase(fmt::format(
 		"INSERT INTO character_achievements "
-		"(character_id, achievement_id, definition_version, completed_at) "
+		"(character_id, achievement_id, `version`, completed_at) "
 		"VALUES ({}, {}, {}, {}) "
-		"ON DUPLICATE KEY UPDATE definition_version = VALUES(definition_version), "
+		"ON DUPLICATE KEY UPDATE `version` = VALUES(`version`), "
 		"completed_at = VALUES(completed_at)",
 		m_client.CharacterID(),
 		definition.achievement_id,
-		definition.definition_version,
+		definition.version,
 		completed_at
 	));
 	return result.Success();
@@ -2272,8 +2229,8 @@ void ClientAchievementState::ProcessPendingRewards()
 		const auto item_count = static_cast<size_t>(std::count_if(
 			rewards.begin(),
 			rewards.end(),
-			[](const AchievementReward &reward) {
-				return reward.reward_type == EQ::Achievements::RewardType::Item;
+			[](const RewardSelectionReward &reward) {
+				return reward.type == RewardSelectionRewardType::Item;
 			}
 		));
 		const auto cursor_size = static_cast<size_t>(m_client.GetInv().CursorSize());
@@ -2292,7 +2249,7 @@ void ClientAchievementState::ProcessPendingRewards()
 
 ClientAchievementState::RewardGrantResult ClientAchievementState::GrantRewardBatch(
 	uint32_t achievement_id,
-	const std::vector<AchievementReward> &rewards
+	const std::vector<RewardSelectionReward> &rewards
 )
 {
 	auto batch_result = RewardGrantResult::Delivered;
@@ -2313,7 +2270,7 @@ ClientAchievementState::RewardGrantResult ClientAchievementState::GrantRewardBat
 
 ClientAchievementState::RewardGrantResult ClientAchievementState::GrantTrackedReward(
 	uint32_t achievement_id,
-	const AchievementReward &reward
+	const RewardSelectionReward &reward
 )
 {
 	const auto now = static_cast<uint32_t>(std::time(nullptr));
@@ -2323,13 +2280,13 @@ ClientAchievementState::RewardGrantResult ClientAchievementState::GrantTrackedRe
 		"VALUES ({}, {}, {}, 0, 1, {})",
 		m_client.CharacterID(),
 		achievement_id,
-		reward.reward_row_id,
+		reward.entry_id,
 		now
 	));
 	if (!claim.Success()) {
 		LogError(
 			"Failed to claim achievement reward [{}] for character [{}]",
-			reward.reward_row_id,
+			reward.entry_id,
 			m_client.CharacterID()
 		);
 		return RewardGrantResult::RetryableFailure;
@@ -2342,7 +2299,7 @@ ClientAchievementState::RewardGrantResult ClientAchievementState::GrantTrackedRe
 			"WHERE character_id = {} AND achievement_id = {} AND reward_id = {} LIMIT 1",
 			m_client.CharacterID(),
 			achievement_id,
-			reward.reward_row_id
+			reward.entry_id
 		));
 		if (!existing.Success() || existing.RowCount() != 1) {
 			return RewardGrantResult::RetryableFailure;
@@ -2370,12 +2327,12 @@ ClientAchievementState::RewardGrantResult ClientAchievementState::GrantTrackedRe
 			now,
 			m_client.CharacterID(),
 			achievement_id,
-			reward.reward_row_id
+			reward.entry_id
 		));
 		if (!retry.Success()) {
 			LogError(
 				"Failed to reclaim achievement reward [{}] for character [{}]",
-				reward.reward_row_id,
+				reward.entry_id,
 				m_client.CharacterID()
 			);
 			return RewardGrantResult::RetryableFailure;
@@ -2389,7 +2346,7 @@ ClientAchievementState::RewardGrantResult ClientAchievementState::GrantTrackedRe
 	const auto grant_result = static_cast<RewardGrantResult>(
 		ClientRewardSelection::GrantReward(
 			m_client,
-			ToRewardSelectionReward(reward)
+			reward
 		)
 	);
 	if (grant_result == RewardGrantResult::Delivered) {
@@ -2400,13 +2357,13 @@ ClientAchievementState::RewardGrantResult ClientAchievementState::GrantTrackedRe
 			static_cast<uint32_t>(std::time(nullptr)),
 			m_client.CharacterID(),
 			achievement_id,
-			reward.reward_row_id
+			reward.entry_id
 		));
 		if (!granted.Success() || granted.RowsAffected() == 0) {
 			LogError(
 				"Achievement reward [{}] was delivered to character [{}], "
 				"but its ledger could not be finalized",
-				reward.reward_row_id,
+				reward.entry_id,
 				m_client.CharacterID()
 			);
 			return RewardGrantResult::Ambiguous;
@@ -2420,12 +2377,12 @@ ClientAchievementState::RewardGrantResult ClientAchievementState::GrantTrackedRe
 			"WHERE character_id = {} AND achievement_id = {} AND reward_id = {}",
 			m_client.CharacterID(),
 			achievement_id,
-			reward.reward_row_id
+			reward.entry_id
 		));
 		if (!failed.Success()) {
 			LogError(
 				"Failed to record delivery failure for achievement reward [{}], character [{}]",
-				reward.reward_row_id,
+				reward.entry_id,
 				m_client.CharacterID()
 			);
 			return RewardGrantResult::Ambiguous;
@@ -2440,19 +2397,19 @@ ClientAchievementState::RewardGrantResult ClientAchievementState::GrantTrackedRe
 		"WHERE character_id = {} AND achievement_id = {} AND reward_id = {}",
 		m_client.CharacterID(),
 		achievement_id,
-		reward.reward_row_id
+		reward.entry_id
 	));
 	if (!ambiguous.Success()) {
 		LogError(
 			"Failed to record ambiguous delivery for achievement reward [{}], character [{}]",
-			reward.reward_row_id,
+			reward.entry_id,
 			m_client.CharacterID()
 		);
 	}
 	LogError(
 		"Achievement reward [{}] delivery was ambiguous for character [{}]; "
 		"the pending claim will not be retried automatically",
-		reward.reward_row_id,
+		reward.entry_id,
 		m_client.CharacterID()
 	);
 	return RewardGrantResult::Ambiguous;
@@ -2734,7 +2691,7 @@ void ClientAchievementState::SendRewardDisplay(uint32_t definition_index)
 		common.common_to_all = true;
 		common.rewards.reserve(rewards.size());
 		for (const auto &reward : rewards) {
-			common.rewards.push_back(ToRewardSelectionReward(reward));
+			common.rewards.push_back(reward);
 		}
 		session.reward_set.options.emplace_back(std::move(common));
 	}
@@ -2912,17 +2869,18 @@ RewardSelectionDeliveryResult ClientAchievementState::ClaimReward(
 		return RewardSelectionDeliveryResult::RetryableFailure;
 	}
 
-	const auto reward_set = AchievementManager::Instance().FindRewardSet(reward_set_id);
+	const auto achievement_id = pending_reward_id;
+	const auto reward_set = AchievementManager::Instance().RewardSet(achievement_id);
 	if (
 		!reward_set ||
-		pending_reward_id != reward_set->achievement_id ||
-		!HasCompleted(reward_set->achievement_id)
+		reward_set_id != reward_set->reward_set_id ||
+		!HasCompleted(achievement_id)
 	) {
 		return RewardSelectionDeliveryResult::RetryableFailure;
 	}
 
-	const AchievementRewardOption *selected_option = nullptr;
-	std::vector<AchievementReward> rewards;
+	const RewardSelectionOption *selected_option = nullptr;
+	std::vector<RewardSelectionReward> rewards;
 	for (const auto &option : reward_set->options) {
 		if (option.common_to_all) {
 			rewards.insert(rewards.end(), option.rewards.begin(), option.rewards.end());
@@ -2947,7 +2905,7 @@ RewardSelectionDeliveryResult ClientAchievementState::ClaimReward(
 		"status, attempt_count, last_attempt_at) "
 		"VALUES ({}, {}, {}, {}, 0, 1, {})",
 		m_client.CharacterID(),
-		reward_set->achievement_id,
+		achievement_id,
 		reward_set->reward_set_id,
 		selected_option_id,
 		now
@@ -2963,7 +2921,7 @@ RewardSelectionDeliveryResult ClientAchievementState::ClaimReward(
 			"WHERE character_id = {} AND achievement_id = {} "
 			"AND reward_set_id = {} LIMIT 1",
 			m_client.CharacterID(),
-			reward_set->achievement_id,
+			achievement_id,
 			reward_set->reward_set_id
 		));
 		if (!existing.Success() || existing.RowCount() != 1) {
@@ -3007,7 +2965,7 @@ RewardSelectionDeliveryResult ClientAchievementState::ClaimReward(
 			selected_option_id,
 			now,
 			m_client.CharacterID(),
-			reward_set->achievement_id,
+			achievement_id,
 			reward_set->reward_set_id,
 			selected_option_id
 		));
@@ -3016,7 +2974,7 @@ RewardSelectionDeliveryResult ClientAchievementState::ClaimReward(
 		}
 	}
 
-	const auto grant_result = GrantRewardBatch(reward_set->achievement_id, rewards);
+	const auto grant_result = GrantRewardBatch(achievement_id, rewards);
 	uint32_t status = 1;
 	const char *last_error = "";
 	if (grant_result == RewardGrantResult::RetryableFailure) {
@@ -3037,7 +2995,7 @@ RewardSelectionDeliveryResult ClientAchievementState::ClaimReward(
 		status == 1 ? static_cast<uint32_t>(std::time(nullptr)) : 0,
 		last_error,
 		m_client.CharacterID(),
-		reward_set->achievement_id,
+		achievement_id,
 		reward_set->reward_set_id,
 		selected_option_id
 	));
@@ -3243,8 +3201,8 @@ int64 Client::GetAchievementProgress(
 
 bool Client::PassAchievementCastRestriction(uint32 restriction_id) const
 {
-	const auto &restrictions = AchievementManager::Instance().CastRestrictions(restriction_id);
-	if (restrictions.empty()) {
+	const auto &requirements = AchievementManager::Instance().CastRequirements(restriction_id);
+	if (requirements.empty()) {
 		return true;
 	}
 	return m_achievement_state && m_achievement_state->PassCastRestriction(restriction_id);

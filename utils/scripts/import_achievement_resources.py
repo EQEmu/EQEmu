@@ -1147,8 +1147,8 @@ class Achievement:
     description: str
     icon_id: int
     points: int
-    reward_display: int
-    world_display_flag: int
+    has_reward: bool
+    client_flag: int
 
 
 @dataclass(frozen=True)
@@ -1164,7 +1164,7 @@ class Component:
     sequence: int
     component_type: int
     component_id: int
-    description: str
+    name: str
 
 
 @dataclass(frozen=True)
@@ -1475,8 +1475,8 @@ def _load_achievements(resource_directory: Path) -> Tuple[Achievement, ...]:
             description,
             icon_id,
             points,
-            reward_display,
-            world_display_flag,
+            has_reward,
+            client_flag,
         ) = fields
         row = Achievement(
             achievement_id=_uint(
@@ -1511,18 +1511,20 @@ def _load_achievements(resource_directory: Path) -> Tuple[Achievement, ...]:
                 line_number=line_number,
                 field_name="points",
             ),
-            reward_display=_uint(
-                reward_display,
-                path=path,
-                line_number=line_number,
-                field_name="reward_display",
-                maximum=UINT8_MAX,
+            has_reward=bool(
+                _uint(
+                    has_reward,
+                    path=path,
+                    line_number=line_number,
+                    field_name="has_reward",
+                    maximum=UINT8_MAX,
+                )
             ),
-            world_display_flag=_uint(
-                world_display_flag,
+            client_flag=_uint(
+                client_flag,
                 path=path,
                 line_number=line_number,
-                field_name="world_display_flag",
+                field_name="client_flag",
                 maximum=UINT8_MAX,
             ),
         )
@@ -1584,7 +1586,7 @@ def _load_components(resource_directory: Path) -> Tuple[Component, ...]:
     result: List[Component] = []
     seen = set()
     for line_number, fields in _read_caret_rows(path, 5):
-        achievement_id, sequence, component_type, component_id, description = fields
+        achievement_id, sequence, component_type, component_id, name = fields
         row = Component(
             achievement_id=_uint(
                 achievement_id,
@@ -1613,11 +1615,11 @@ def _load_components(resource_directory: Path) -> Tuple[Component, ...]:
                 field_name="component_id",
                 minimum=1,
             ),
-            description=_text(
-                description,
+            name=_text(
+                name,
                 path=path,
                 line_number=line_number,
-                field_name="description",
+                field_name="name",
             ),
         )
         key = (row.achievement_id, row.component_type, row.component_id)
@@ -1992,7 +1994,7 @@ def _component_shape_digest(
 ) -> str:
     rows = (
         f"{component.sequence}\t{component.component_type}\t"
-        f"{component.component_id}\t{component.description}\t"
+        f"{component.component_id}\t{component.name}\t"
         f"{component_counts.get(component.component_id, 1)}"
         for component in sorted(
             components,
@@ -2111,7 +2113,7 @@ def _reviewed_source_criteria(
                 key,
                 (
                     REVIEWED_NPC_NAME_OVERRIDES.get(
-                        key, component.description
+                        key, component.name
                     ),
                 ),
             )
@@ -2168,7 +2170,7 @@ def _reviewed_source_criteria(
             )
             behavior = _criterion_behavior(component.component_type)
             npc_name = REVIEWED_NPC_NAME_OVERRIDES.get(
-                key, component.description
+                key, component.name
             )
             target_id = npc_name_hash(npc_name)
             if (
@@ -2413,7 +2415,7 @@ def _progression_level_milestones(
             and state_components[0].component_type == 1
             and state_components[0].sequence == 0
             and state_components[0].component_id == achievement_id
-            and state_components[0].description == f"Reach level {level}"
+            and state_components[0].name == f"Reach level {level}"
             and component_counts.get(
                 state_components[0].component_id, 1
             )
@@ -2421,7 +2423,7 @@ def _progression_level_milestones(
             and len(gates) == 1
             and gates[0].sequence == 0
             and gates[0].component_id == 10014
-            and gates[0].description == "On a Level Locked Server"
+            and gates[0].name == "On a Level Locked Server"
         )
         if not valid:
             rejected += 1
@@ -2486,7 +2488,7 @@ def _skill_cap_milestones(
         class_match = (
             re.fullmatch(
                 r"Meet or Exceed the Class Requirement \(([^)]+)\)",
-                gates[0].description,
+                gates[0].name,
             )
             if len(gates) == 1
             else None
@@ -2520,7 +2522,7 @@ def _skill_cap_milestones(
             component_match = re.fullmatch(
                 r"Reach the maximum skill in (.+) at level "
                 r"([1-9][0-9]*)\.",
-                component.description,
+                component.name,
             )
             skill_name = (
                 component_match.group(1)
@@ -2612,7 +2614,7 @@ def _traveler_criteria(
                 == list(range(1, 7))
                 and all(row.component_type == 1 for row in components)
                 and all(
-                    re.fullmatch(r"Visit .+", row.description) is not None
+                    re.fullmatch(r"Visit .+", row.name) is not None
                     for row in components
                 )
                 and all(
@@ -2633,7 +2635,7 @@ def _traveler_criteria(
                 and components[0].component_type == 1
                 and components[0].sequence == 1
                 and re.fullmatch(
-                    r"Visit .+", components[0].description
+                    r"Visit .+", components[0].name
                 )
                 is not None
                 and component_counts.get(components[0].component_id, 1) == 1
@@ -2736,7 +2738,7 @@ def _achievement_dependency_criteria(
     rejected = 0
     for achievement_id in sorted(selected_ids):
         for component in components_by_achievement.get(achievement_id, ()):
-            matches = names.get(component.description, ())
+            matches = names.get(component.name, ())
             if not matches:
                 continue
             if len(matches) != 1:
@@ -2835,7 +2837,7 @@ def _slayer_dependency_name(
         pattern = r'\(Optional\) Complete the achievement "([^"]+)"'
     else:
         return None
-    match = re.fullmatch(pattern, component.description)
+    match = re.fullmatch(pattern, component.name)
     return match.group(1) if match is not None else None
 
 
@@ -2953,7 +2955,7 @@ def _slayer_criteria(
                 component.component_id, 1
             )
             race_ids, unresolved = _slayer_race_ids(
-                component.description
+                component.name
             )
             if behavior is None:
                 failure = (
@@ -2971,13 +2973,13 @@ def _slayer_criteria(
                 failure = (
                     f"component {component.component_id} has unmapped race "
                     f"term(s) {', '.join(repr(value) for value in unresolved)} "
-                    f"in {component.description!r}"
+                    f"in {component.name!r}"
                 )
                 break
             if not race_ids:
                 failure = (
                     f"component {component.component_id} resolved to no "
-                    f"RoF2 race IDs from {component.description!r}"
+                    f"RoF2 race IDs from {component.name!r}"
                 )
                 break
             for race_id in race_ids:
@@ -3185,7 +3187,7 @@ def _filter_don_historical_selection(
         for component in resources.components
         if component.achievement_id in selected_ids
         and component.component_type == 3
-        and ENHANCED_AVAILABILITY_MARKER in component.description
+        and ENHANCED_AVAILABILITY_MARKER in component.name
     )
 
     allowed_locations: set[str] = set()
@@ -3243,7 +3245,7 @@ def _filter_don_historical_selection(
                     continue
                 dependencies = (
                     achievement_ids_by_name.get(
-                        component.description, set()
+                        component.name, set()
                     )
                     - {achievement_id}
                 )
@@ -3364,11 +3366,11 @@ def _npc_name_criteria(
             achievement_id, ()
         ):
             # Meta Hunter rows are handled by AchievementComplete.
-            if component.description in selected_names:
+            if component.name in selected_names:
                 continue
             behavior = _criterion_behavior(component.component_type)
             canonical_name = canonicalize_npc_name(
-                component.description
+                component.name
             )
             hashed_name = (
                 fnv1a_32(canonical_name) if canonical_name else 0
@@ -3539,7 +3541,7 @@ def _tradeskill_milestones(
             and components[0].component_type == 1
             and components[0].sequence == 1
             and components[0].component_id == achievement_id
-            and components[0].description
+            and components[0].name
             == expected_component_description
             and achievement.description
             == expected_achievement_description
@@ -3640,7 +3642,7 @@ def _aa_spent_milestones(
             len(components) == 1
             and components[0].component_type == 1
             and components[0].sequence == 1
-            and components[0].description
+            and components[0].name
             == f"Spend {spent_points} Alternate Advancement Points"
             and achievement.description
             == (
@@ -3787,7 +3789,7 @@ def _item_name_milestones(
                 and required_class != 0
                 and len(gates) == 1
                 and gates[0].component_id == 1302 + required_class
-                and gates[0].description
+                and gates[0].name
                 == (
                     "Meet or Exceed the Class Requirement "
                     f"({class_name})"
@@ -3805,7 +3807,7 @@ def _item_name_milestones(
 
             item_names: List[str] = []
             if is_epic:
-                item_match = re.fullmatch(r"Obtain (.+)", component.description)
+                item_match = re.fullmatch(r"Obtain (.+)", component.name)
                 if item_match is None:
                     valid = False
                     break
@@ -3824,12 +3826,12 @@ def _item_name_milestones(
                 item_names.append(item_name)
             else:
                 alternatives = re.fullmatch(
-                    r"(.+) or (.+)", component.description
+                    r"(.+) or (.+)", component.name
                 )
                 if alternatives is not None:
                     item_names.extend(alternatives.groups())
                 else:
-                    item_names.append(component.description)
+                    item_names.append(component.name)
                 if len(state_components) == 1:
                     item_names.append(achievement.name)
 
@@ -4030,7 +4032,7 @@ def build_enable_selection(
                 or state_components[0].component_type != 1
                 or state_components[0].sequence != 1
                 or state_components[0].component_id != level
-                or state_components[0].description != expected_description
+                or state_components[0].name != expected_description
                 or component_counts.get(state_components[0].component_id, 1) != 1
             ):
                 raise ResourceError(
@@ -5001,10 +5003,10 @@ def generate_sql(
     )
     output = [
         "-- Generated by utils/scripts/import_achievement_resources.py.",
-        "-- Source fields are mapped positionally: AchievementsClient field 6 is",
-        "-- reward_display and field 7 is the newer-client world_display_flag.",
+        "-- AchievementsClient field 6 indicates whether a reward is shown;",
+        "-- field 7 is preserved as client_flag without assigning semantics.",
         "-- RoF2's pre-component fields are persistent=1 and the server-authored",
-        "-- definition_version; other runtime policy remains server-authored.",
+        "-- version; other runtime policy remains server-authored.",
     ]
     if selection_requested:
         if preserve_enable_state:
@@ -5254,8 +5256,8 @@ def generate_sql(
             "description",
             "icon_id",
             "points",
-            "reward_display",
-            "world_display_flag",
+            "has_reward",
+            "client_flag",
             "enabled",
         ),
         rows=resources.achievements,
@@ -5265,8 +5267,8 @@ def generate_sql(
             _sql_text(value.description),
             str(value.icon_id),
             str(value.points),
-            str(value.reward_display),
-            str(value.world_display_flag),
+            "1" if value.has_reward else "0",
+            str(value.client_flag),
             "1" if value.achievement_id in enabled_ids else "0",
         ),
         updates=(
@@ -5274,8 +5276,8 @@ def generate_sql(
             "description",
             "icon_id",
             "points",
-            "reward_display",
-            "world_display_flag",
+            "has_reward",
+            "client_flag",
         ),
     )
 
@@ -5322,8 +5324,8 @@ def generate_sql(
             "component_type",
             "sequence",
             "component_id",
+            "name",
             "description",
-            "description_2",
         ),
         rows=resources.components,
         values=lambda value: (
@@ -5331,15 +5333,15 @@ def generate_sql(
             str(value.component_type),
             str(value.sequence),
             str(value.component_id),
-            _sql_text(value.description),
+            _sql_text(value.name),
             "''",
         ),
-        updates=("sequence", "description"),
+        updates=("sequence", "name"),
     )
 
     _emit_insert(
         output,
-        table="achievement_component_counts",
+        table="achievement_associations",
         columns=("component_id", "required_count"),
         rows=resources.component_counts,
         values=lambda value: (
@@ -5367,7 +5369,7 @@ def generate_sql(
                 "\tAND source.`achievement_id` = target.`achievement_id`",
                 "WHERE source.`category_id` IS NULL;",
                 "",
-                "DELETE target FROM `achievement_component_counts` AS target",
+                "DELETE target FROM `achievement_associations` AS target",
                 "LEFT JOIN `_achievement_import_counts` AS source",
                 "\tON source.`component_id` = target.`component_id`",
                 "WHERE source.`component_id` IS NULL;",

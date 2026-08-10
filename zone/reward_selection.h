@@ -1,7 +1,8 @@
 #pragma once
 
-#include "../common/eq_constants.h"
-#include "../common/timer.h"
+#include "common/eq_constants.h"
+#include "common/reward_selection.h"
+#include "common/timer.h"
 
 #include <cstdint>
 #include <optional>
@@ -11,65 +12,16 @@
 class Client;
 class EQApplicationPacket;
 
-// RoF2 shares Select Reward across providers, with separate claimable and
-// read-only preview channels.
-enum class RewardSelectionSource : uint8_t {
-	Unknown     = 0,
-	Achievement = 1,
-	Task        = 2,
-	General     = 3
-};
+using RewardSelectionSource = EQ::RewardSelection::Source;
+using RewardSelectionRewardType = EQ::RewardSelection::RewardType;
+using RewardSelectionExperienceMode = EQ::RewardSelection::ExperienceMode;
+using RewardSelectionReward = EQ::RewardSelection::Reward;
+using RewardSelectionOption = EQ::RewardSelection::Option;
+using RewardSelectionSet = EQ::RewardSelection::Set;
 
 enum class RewardSelectionChannel : uint8_t {
 	Claimable,
 	Preview
-};
-
-// RoF2 actions not already declared by the shared achievement wire serializer.
-inline constexpr uint32_t RewardSelectionActionTaskView        = 4;
-inline constexpr uint32_t RewardSelectionActionAchievementView = 5;
-inline constexpr uint32_t RewardSelectionActionPending         = 6;
-
-enum class RewardSelectionRewardType : uint8_t {
-	Item                 = 0,
-	Experience           = 1,
-	AlternateAdvancement = 2,
-	Copper               = 3,
-	AlternateCurrency    = 4,
-	Title                = 5
-};
-
-// Experience rewards use data_id to select normal-only or normal/AA allocation.
-enum class RewardSelectionExperienceMode : uint32_t {
-	Default    = 0,
-	NormalOnly = 1
-};
-
-struct RewardSelectionReward {
-	// RoF2 echoes only the low 32 bits; loaders reject wider entry IDs.
-	uint64_t                  entry_id = 0;
-	RewardSelectionRewardType type = RewardSelectionRewardType::Item;
-	uint32_t                  data_id = 0;
-	uint64_t                  amount = 0;
-	std::string               description;
-};
-
-struct RewardSelectionOption {
-	uint32_t                           option_id = 0;
-	// RoF2 indexes option details across the entire reward manager. This ID is
-	// assigned per displayed collection and mapped back to option_id on input.
-	uint32_t                           wire_option_id = 0;
-	uint32_t                           sequence = 0;
-	std::string                        label;
-	bool                               common_to_all = false;
-	uint8_t                            flags = 0;
-	std::vector<RewardSelectionReward> rewards;
-};
-
-struct RewardSelectionSet {
-	uint32_t                           reward_set_id = 0;
-	std::string                        title;
-	std::vector<RewardSelectionOption> options;
 };
 
 struct RewardSelectionSourceKey {

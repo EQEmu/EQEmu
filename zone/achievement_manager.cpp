@@ -1,53 +1,27 @@
-#include "achievement_manager.h"
+#include "zone/achievement_manager.h"
 
-#include "../common/classes.h"
-#include "../common/eqemu_logsys.h"
-#include "../common/rulesys.h"
-#include "../common/skills.h"
-#include "reward_selection.h"
-#include "zonedb.h"
+#include "common/classes.h"
+#include "common/eqemu_logsys.h"
+#include "common/repositories/achievement_associations_repository.h"
+#include "common/repositories/achievement_cast_requirements_repository.h"
+#include "common/repositories/achievement_categories_repository.h"
+#include "common/repositories/achievement_category_associations_repository.h"
+#include "common/repositories/achievement_components_repository.h"
+#include "common/repositories/achievement_criteria_repository.h"
+#include "common/repositories/achievements_repository.h"
+#include "common/rulesys.h"
+#include "common/skills.h"
+#include "zone/reward_selection.h"
+#include "zone/reward_selection_catalog.h"
+#include "zone/zonedb.h"
 
 #include <algorithm>
-#include <cstdlib>
 #include <limits>
 #include <map>
 #include <set>
 #include <tuple>
+#include <unordered_map>
 #include <unordered_set>
-
-namespace
-{
-
-uint32_t ParseUInt32(const char *value)
-{
-	return value ? static_cast<uint32_t>(std::strtoul(value, nullptr, 10)) : 0;
-}
-
-uint64_t ParseUInt64(const char *value)
-{
-	return value ? static_cast<uint64_t>(std::strtoull(value, nullptr, 10)) : 0;
-}
-
-int64_t ParseInt64(const char *value)
-{
-	return value ? static_cast<int64_t>(std::strtoll(value, nullptr, 10)) : 0;
-}
-
-std::string Text(const char *value)
-{
-	return value ? value : "";
-}
-
-uint32_t RequiredCount(uint64_t value)
-{
-	return static_cast<uint32_t>(std::clamp<uint64_t>(
-		value ? value : 1,
-		1,
-		std::numeric_limits<uint32_t>::max()
-	));
-}
-
-} // namespace
 
 AchievementManager &AchievementManager::Instance()
 {
@@ -68,8 +42,7 @@ void AchievementManager::Clear()
 	m_criteria_by_achievement.clear();
 	m_rewards.clear();
 	m_reward_sets.clear();
-	m_reward_set_achievements.clear();
-	m_cast_restrictions.clear();
+	m_cast_requirements.clear();
 	m_required_classes.clear();
 	m_reset_on_version_change.clear();
 }
@@ -125,8 +98,7 @@ void AchievementManager::Swap(AchievementManager &other)
 	swap(m_criteria_by_achievement, other.m_criteria_by_achievement);
 	swap(m_rewards, other.m_rewards);
 	swap(m_reward_sets, other.m_reward_sets);
-	swap(m_reward_set_achievements, other.m_reward_set_achievements);
-	swap(m_cast_restrictions, other.m_cast_restrictions);
+	swap(m_cast_requirements, other.m_cast_requirements);
 	swap(m_required_classes, other.m_required_classes);
 	swap(m_reset_on_version_change, other.m_reset_on_version_change);
 }
@@ -162,97 +134,96 @@ bool AchievementManager::LoadSnapshot()
 		return false;
 	}
 
-	auto category_results = content_db.QueryDatabase(
-		"SELECT id, parent_id, sequence, name, description, icon "
-		"FROM achievement_categories ORDER BY parent_id, sequence, id"
-	);
-	if (!category_results.Success()) {
+	std::vector<AchievementCategoriesRepository::AchievementCategories> category_rows;
+	if (!AchievementCategoriesRepository::GetAll(content_db, category_rows)) {
 		LogError("Failed to load achievement categories");
 		return false;
 	}
+	std::sort(category_rows.begin(), category_rows.end(), [](const auto &left, const auto &right) {
+		return std::tie(left.parent_id, left.sequence, left.id) <
+			std::tie(right.parent_id, right.sequence, right.id);
+	});
 
 	std::unordered_map<uint32_t, size_t> category_indices;
-	for (auto row : category_results) {
+	for (const auto &row : category_rows) {
 		Category category;
-		category.category_id = ParseUInt32(row[0]);
+		category.category_id = row.id;
 		if (category_indices.contains(category.category_id)) {
 			LogError("Duplicate achievement category ID [{}]", category.category_id);
 			Clear();
 			return false;
 		}
-		category.parent_category_id = ParseUInt32(row[1]);
-		category.display_order = ParseUInt32(row[2]);
-		category.name = Text(row[3]);
-		category.description = Text(row[4]);
-		category.icon = Text(row[5]);
+		category.parent_category_id = row.parent_id;
+		category.display_order = row.sequence;
+		category.name = row.name;
+		category.description = row.description;
+		category.icon = row.icon;
 		category_indices[category.category_id] = m_categories.size();
 		m_categories.emplace_back(std::move(category));
 	}
 
-	auto definition_results = content_db.QueryDatabase(
-		"SELECT id, name, description, icon_id, definition_version, "
-		"points, reward_display, reset_on_version_change "
-		"FROM achievements WHERE enabled = 1 ORDER BY id"
-	);
-	if (!definition_results.Success()) {
+	std::vector<AchievementsRepository::Achievements> definition_rows;
+	if (!AchievementsRepository::GetAll(content_db, definition_rows)) {
 		LogError("Failed to load achievement definitions");
 		Clear();
 		return false;
 	}
+	std::sort(definition_rows.begin(), definition_rows.end(), [](const auto &left, const auto &right) {
+		return left.id < right.id;
+	});
 
-	for (auto row : definition_results) {
+	for (const auto &row : definition_rows) {
+		if (!row.enabled) {
+			continue;
+		}
+
 		Definition definition;
-		definition.achievement_id = ParseUInt32(row[0]);
+		definition.achievement_id = row.id;
 		if (m_definition_indices.contains(definition.achievement_id)) {
 			LogError("Duplicate enabled achievement ID [{}]", definition.achievement_id);
 			Clear();
 			return false;
 		}
-		definition.name = Text(row[1]);
-		definition.description = Text(row[2]);
-		definition.icon_id = ParseUInt32(row[3]);
-		definition.definition_version = ParseUInt32(row[4]);
-		if (!definition.definition_version) {
-			LogError(
-				"Enabled achievement [{}] has definition version zero",
-				definition.achievement_id
-			);
-			Clear();
-			return false;
-		}
-		definition.points = ParseUInt32(row[5]);
-		definition.reward_display = ParseUInt32(row[6]);
-		m_reset_on_version_change[definition.achievement_id] = ParseUInt32(row[7]) != 0;
+		definition.name = row.name;
+		definition.description = row.description;
+		definition.icon_id = row.icon_id;
+		definition.version = row.version;
+		definition.points = row.points;
+		definition.has_reward = row.has_reward != 0;
+		m_reset_on_version_change[definition.achievement_id] = row.reset_on_version_change != 0;
 		m_definition_indices[definition.achievement_id] = m_definitions.size();
 		m_definitions.emplace_back(std::move(definition));
 	}
 
-	auto association_results = content_db.QueryDatabase(
-		"SELECT a.category_id, a.sequence, a.achievement_id, a.display_text "
-		"FROM achievement_category_associations a "
-		"INNER JOIN achievements d ON d.id = a.achievement_id AND d.enabled = 1 "
-		"ORDER BY a.category_id, a.sequence, a.achievement_id"
-	);
-	if (!association_results.Success()) {
+	std::vector<AchievementCategoryAssociationsRepository::AchievementCategoryAssociations>
+		association_rows;
+	if (!AchievementCategoryAssociationsRepository::GetAll(content_db, association_rows)) {
 		LogError("Failed to load achievement category associations");
 		Clear();
 		return false;
 	}
+	std::sort(association_rows.begin(), association_rows.end(), [](const auto &left, const auto &right) {
+		return std::tie(left.category_id, left.sequence, left.achievement_id) <
+			std::tie(right.category_id, right.sequence, right.achievement_id);
+	});
 
 	std::unordered_set<uint32_t> associated_achievement_ids;
-	for (auto row : association_results) {
-		const auto category = category_indices.find(ParseUInt32(row[0]));
+	for (const auto &row : association_rows) {
+		if (!m_definition_indices.contains(row.achievement_id)) {
+			continue;
+		}
+
+		const auto category = category_indices.find(row.category_id);
 		if (category == category_indices.end()) {
 			continue;
 		}
 
-		const auto achievement_id = ParseUInt32(row[2]);
 		m_categories[category->second].associations.push_back({
-			achievement_id,
-			Text(row[3]),
-			ParseUInt32(row[1])
+			row.achievement_id,
+			row.display_text,
+			row.sequence
 		});
-		associated_achievement_ids.insert(achievement_id);
+		associated_achievement_ids.insert(row.achievement_id);
 	}
 
 	for (const auto &definition : m_definitions) {
@@ -275,25 +246,45 @@ bool AchievementManager::LoadSnapshot()
 		return false;
 	}
 
-	auto component_results = content_db.QueryDatabase(
-		"SELECT c.achievement_id, c.component_type, c.sequence, c.component_id, "
-		"c.description, c.description_2, COALESCE(n.required_count, 1) "
-		"FROM achievement_components c "
-		"INNER JOIN achievements d ON d.id = c.achievement_id AND d.enabled = 1 "
-		"LEFT JOIN achievement_component_counts n ON n.component_id = c.component_id "
-		"ORDER BY c.achievement_id, c.component_type, c.sequence, c.component_id"
-	);
-	if (!component_results.Success()) {
+	std::vector<AchievementComponentsRepository::AchievementComponents> component_rows;
+	std::vector<AchievementAssociationsRepository::AchievementAssociations> component_count_rows;
+	if (
+		!AchievementComponentsRepository::GetAll(content_db, component_rows) ||
+		!AchievementAssociationsRepository::GetAll(content_db, component_count_rows)
+	) {
 		LogError("Failed to load achievement components");
 		Clear();
 		return false;
 	}
+	std::sort(component_rows.begin(), component_rows.end(), [](const auto &left, const auto &right) {
+		return std::tie(
+			left.achievement_id,
+			left.component_type,
+			left.sequence,
+			left.component_id
+		) < std::tie(
+			right.achievement_id,
+			right.component_type,
+			right.sequence,
+			right.component_id
+		);
+	});
 
-	for (auto row : component_results) {
-		const auto achievement_id = ParseUInt32(row[0]);
+	std::unordered_map<uint32_t, uint32_t> component_counts;
+	component_counts.reserve(component_count_rows.size());
+	for (const auto &row : component_count_rows) {
+		component_counts[row.component_id] = std::max<uint32_t>(row.required_count, 1);
+	}
+
+	for (const auto &row : component_rows) {
+		const auto achievement_id = row.achievement_id;
 		const auto definition = m_definition_indices.find(achievement_id);
-		const auto component_type = ParseUInt32(row[1]);
-		if (definition == m_definition_indices.end() || component_type > 3) {
+		if (definition == m_definition_indices.end()) {
+			continue;
+		}
+
+		const auto component_type = static_cast<uint32_t>(row.component_type);
+		if (component_type > 3) {
 			LogError(
 				"Enabled achievement [{}] has an invalid component type [{}]",
 				achievement_id,
@@ -306,14 +297,14 @@ bool AchievementManager::LoadSnapshot()
 			FindComponentIndex(
 				achievement_id,
 				static_cast<uint8_t>(component_type),
-				ParseUInt32(row[3])
+				row.component_id
 			)
 		) {
 			LogError(
 				"Enabled achievement [{}] has duplicate component identity [{}/{}]",
 				achievement_id,
 				component_type,
-				ParseUInt32(row[3])
+				row.component_id
 			);
 			Clear();
 			return false;
@@ -321,11 +312,12 @@ bool AchievementManager::LoadSnapshot()
 
 		Component component;
 		component.component_type = static_cast<uint8_t>(component_type);
-		component.sequence = ParseUInt32(row[2]);
-		component.component_id = ParseUInt32(row[3]);
-		component.description = Text(row[4]);
-		component.description2 = Text(row[5]);
-		component.required_count = RequiredCount(ParseUInt64(row[6]));
+		component.sequence = row.sequence;
+		component.component_id = row.component_id;
+		component.name = row.name;
+		component.description = row.description;
+		const auto required_count = component_counts.find(component.component_id);
+		component.required_count = required_count != component_counts.end() ? required_count->second : 1;
 		component.display_order = static_cast<uint8_t>(std::min<uint32_t>(component.sequence, 255));
 		m_definitions[definition->second].components[component_type].emplace_back(std::move(component));
 	}
@@ -342,28 +334,29 @@ bool AchievementManager::LoadSnapshot()
 		std::tuple<uint32_t, uint8_t, uint32_t, uint8_t, uint32_t, uint32_t>
 	> criterion_keys;
 
-	auto criterion_results = content_db.QueryDatabase(
-		"SELECT c.id, c.achievement_id, c.component_type, c.component_id, c.event_type, "
-		"c.progress_mode, c.behavior, c.target_id, c.target_id2, c.target_value, "
-		"c.required_count FROM achievement_criteria c "
-		"INNER JOIN achievements a ON a.id = c.achievement_id AND a.enabled = 1 "
-		"WHERE c.enabled = 1 ORDER BY c.id"
-	);
-	if (!criterion_results.Success()) {
+	std::vector<AchievementCriteriaRepository::AchievementCriteria> criterion_rows;
+	if (!AchievementCriteriaRepository::GetAll(content_db, criterion_rows)) {
 		LogError("Failed to load achievement evaluation criteria");
 		Clear();
 		return false;
 	}
+	std::sort(criterion_rows.begin(), criterion_rows.end(), [](const auto &left, const auto &right) {
+		return left.id < right.id;
+	});
 
-	for (auto row : criterion_results) {
-		const auto achievement_id = ParseUInt32(row[1]);
-		const auto component_type = ParseUInt32(row[2]);
-		const auto event_type = ParseUInt32(row[4]);
-		const auto progress_mode = ParseUInt32(row[5]);
-		const auto behavior = ParseUInt32(row[6]);
-		const auto target_id = ParseUInt32(row[7]);
-		const auto target_id2 = ParseUInt32(row[8]);
-		const auto target_value = ParseInt64(row[9]);
+	for (const auto &row : criterion_rows) {
+		if (!row.enabled || !m_definition_indices.contains(row.achievement_id)) {
+			continue;
+		}
+
+		const auto achievement_id = row.achievement_id;
+		const auto component_type = static_cast<uint32_t>(row.component_type);
+		const auto event_type = static_cast<uint32_t>(row.event_type);
+		const auto progress_mode = static_cast<uint32_t>(row.progress_mode);
+		const auto behavior = static_cast<uint32_t>(row.behavior);
+		const auto target_id = row.target_id;
+		const auto target_id2 = row.target_id2;
+		const auto target_value = row.target_value;
 		if (
 			component_type > 2 ||
 			event_type > static_cast<uint32_t>(EventType::SkillCap) ||
@@ -373,7 +366,7 @@ bool AchievementManager::LoadSnapshot()
 		) {
 			LogError(
 				"Invalid enabled achievement criterion [{}]; RoF2 component type 3 is presentation-only",
-				ParseUInt64(row[0])
+				row.id
 			);
 			Clear();
 			return false;
@@ -388,7 +381,7 @@ bool AchievementManager::LoadSnapshot()
 		) {
 			LogError(
 				"Achievement criterion [{}] uses unsupported target_id2 [{}]",
-				ParseUInt64(row[0]),
+				row.id,
 				target_id2
 			);
 			Clear();
@@ -397,7 +390,7 @@ bool AchievementManager::LoadSnapshot()
 		if (effective_event_type == EventType::NpcNameKill && !target_id) {
 			LogError(
 				"Achievement criterion [{}] has no usable NPC-name identity hash",
-				ParseUInt64(row[0])
+				row.id
 			);
 			Clear();
 			return false;
@@ -406,7 +399,7 @@ bool AchievementManager::LoadSnapshot()
 			LogError(
 				"Achievement criterion [{}] must target a specific task so its "
 				"one-time completion can be reconciled",
-				ParseUInt64(row[0])
+				row.id
 			);
 			Clear();
 			return false;
@@ -421,7 +414,7 @@ bool AchievementManager::LoadSnapshot()
 		) {
 			LogError(
 				"Achievement criterion [{}] has invalid OwnItem class [{}]",
-				ParseUInt64(row[0]),
+				row.id,
 				target_id2
 			);
 			Clear();
@@ -440,7 +433,7 @@ bool AchievementManager::LoadSnapshot()
 			LogError(
 				"Achievement criterion [{}] has invalid SkillCap skill [{}], "
 				"class [{}], or milestone level [{}]",
-				ParseUInt64(row[0]),
+				row.id,
 				target_id,
 				target_id2,
 				target_value
@@ -456,7 +449,7 @@ bool AchievementManager::LoadSnapshot()
 			LogError(
 				"Achievement criterion [{}] targets invalid skill ID [{}]; use "
 				"[{}] for the SkillValue wildcard",
-				ParseUInt64(row[0]),
+				row.id,
 				target_id,
 				SkillWildcardTargetId
 			);
@@ -484,7 +477,7 @@ bool AchievementManager::LoadSnapshot()
 			LogError(
 				"Achievement criterion [{}] uses increment mode for a reconciled "
 				"absolute or one-time event",
-				ParseUInt64(row[0])
+				row.id
 			);
 			Clear();
 			return false;
@@ -497,7 +490,7 @@ bool AchievementManager::LoadSnapshot()
 			LogError(
 				"Achievement criterion [{}] must have a positive target value "
 				"when Boolean mode evaluates an absolute fact",
-				ParseUInt64(row[0])
+				row.id
 			);
 			Clear();
 			return false;
@@ -506,16 +499,16 @@ bool AchievementManager::LoadSnapshot()
 		const auto component_index = FindComponentIndex(
 			achievement_id,
 			static_cast<uint8_t>(component_type),
-			ParseUInt32(row[3])
+			row.component_id
 		);
 		const auto definition_index = FindDefinitionIndex(achievement_id);
 		if (!component_index || !definition_index) {
 			LogError(
 				"Enabled achievement criterion [{}] references missing component [{}/{}/{}]",
-				ParseUInt64(row[0]),
+				row.id,
 				achievement_id,
 				component_type,
-				ParseUInt32(row[3])
+				row.component_id
 			);
 			Clear();
 			return false;
@@ -549,19 +542,16 @@ bool AchievementManager::LoadSnapshot()
 			Clear();
 			return false;
 		}
-		const auto required_override = ParseUInt64(row[10]);
-		if (
-			!required_override ||
-			required_override > std::numeric_limits<uint32_t>::max()
-		) {
+		const auto required_override = row.required_count;
+		if (!required_override) {
 			LogError(
 				"Achievement criterion [{}] must have an explicit uint32 required count",
-				ParseUInt64(row[0])
+				row.id
 			);
 			Clear();
 			return false;
 		}
-		const auto effective_required_count = static_cast<uint32_t>(required_override);
+		const auto effective_required_count = required_override;
 		const auto effective_behavior = static_cast<CriterionBehavior>(behavior);
 		const auto [policy, inserted] = component_policies.try_emplace(
 			component_key,
@@ -593,10 +583,10 @@ bool AchievementManager::LoadSnapshot()
 		}
 
 		AchievementCriterion criterion;
-		criterion.criterion_id = ParseUInt64(row[0]);
+		criterion.criterion_id = row.id;
 		criterion.achievement_id = achievement_id;
 		criterion.component_type = static_cast<uint8_t>(component_type);
-		criterion.component_id = ParseUInt32(row[3]);
+		criterion.component_id = row.component_id;
 		criterion.event_type = effective_event_type;
 		criterion.progress_mode = effective_progress_mode;
 		criterion.behavior = effective_behavior;
@@ -653,279 +643,84 @@ bool AchievementManager::LoadSnapshot()
 		m_required_classes[achievement_id] = *classes.begin();
 	}
 
-	auto reward_set_results = content_db.QueryDatabase(
-		"SELECT reward_set_id, achievement_id, title "
-		"FROM achievement_reward_sets WHERE enabled = 1 "
-		"ORDER BY achievement_id, reward_set_id"
-	);
-	if (!reward_set_results.Success()) {
-		LogError("Failed to load achievement reward sets");
+	std::unordered_set<uint64_t> active_reward_source_ids;
+	active_reward_source_ids.reserve(m_definition_indices.size());
+	for (const auto &definition : m_definitions) {
+		active_reward_source_ids.insert(definition.achievement_id);
+	}
+
+	RewardSelectionCatalog reward_catalog;
+	if (!LoadRewardSelectionCatalog(
+		content_db,
+		RewardSelectionSource::Achievement,
+		active_reward_source_ids,
+		reward_catalog
+	)) {
+		LogError("Failed to load the shared reward catalog for achievements");
 		Clear();
 		return false;
 	}
 
-	for (auto row : reward_set_results) {
-		AchievementRewardSet reward_set;
-		reward_set.reward_set_id = ParseUInt32(row[0]);
-		reward_set.achievement_id = ParseUInt32(row[1]);
-		reward_set.title = Text(row[2]);
+	for (auto &[source_id, rewards] : reward_catalog.automatic) {
 		if (
-			!reward_set.reward_set_id ||
-			!m_definition_indices.contains(reward_set.achievement_id) ||
-			m_reward_sets.contains(reward_set.achievement_id) ||
-			!m_reward_set_achievements.emplace(
-				reward_set.reward_set_id,
-				reward_set.achievement_id
-			).second
+			source_id > std::numeric_limits<uint32_t>::max() ||
+			!m_definition_indices.contains(static_cast<uint32_t>(source_id))
 		) {
-			LogError(
-				"Enabled achievement reward set [{}/{}] is invalid or duplicated",
-				reward_set.reward_set_id,
-				reward_set.achievement_id
-			);
+			LogError("Automatic rewards reference unknown achievement [{}]", source_id);
 			Clear();
 			return false;
 		}
-		if (reward_set.title.empty()) {
-			reward_set.title =
-				m_definitions[m_definition_indices[reward_set.achievement_id]].name;
-		}
-		m_reward_sets.emplace(
-			reward_set.achievement_id,
-			std::move(reward_set)
-		);
+		m_rewards.emplace(static_cast<uint32_t>(source_id), std::move(rewards));
 	}
 
-	auto reward_option_results = content_db.QueryDatabase(
-		"SELECT reward_set_id, option_id, sequence, label, common_to_all, flags "
-		"FROM achievement_reward_options WHERE enabled = 1 "
-		"ORDER BY reward_set_id, sequence, option_id"
-	);
-	if (!reward_option_results.Success()) {
-		LogError("Failed to load achievement reward options");
-		Clear();
-		return false;
-	}
-
-	std::map<std::pair<uint32_t, uint32_t>, size_t> reward_option_indices;
-	for (auto row : reward_option_results) {
-		const auto reward_set_id = ParseUInt32(row[0]);
-		const auto reward_set_achievement = m_reward_set_achievements.find(reward_set_id);
-		if (reward_set_achievement == m_reward_set_achievements.end()) {
-			continue;
-		}
-
-		auto &reward_set = m_reward_sets[reward_set_achievement->second];
-		AchievementRewardOption option;
-		option.option_id = ParseUInt32(row[1]);
-		option.sequence = ParseUInt32(row[2]);
-		option.label = Text(row[3]);
-		option.common_to_all = ParseUInt32(row[4]) != 0;
-		const auto flags = ParseUInt32(row[5]);
+	for (auto &[source_id, selection_set] : reward_catalog.selectable) {
 		if (
-			!option.option_id ||
-			flags > std::numeric_limits<uint8_t>::max() ||
-			!reward_option_indices.emplace(
-				std::make_pair(reward_set_id, option.option_id),
-				reward_set.options.size()
-			).second
+			source_id > std::numeric_limits<uint32_t>::max() ||
+			!m_definition_indices.contains(static_cast<uint32_t>(source_id))
 		) {
-			LogError(
-				"Enabled achievement reward option [{}/{}] is invalid or duplicated",
-				reward_set_id,
-				option.option_id
-			);
-			Clear();
-			return false;
-		}
-		option.flags = static_cast<uint8_t>(flags);
-		reward_set.options.emplace_back(std::move(option));
-	}
-
-	auto reward_results = content_db.QueryDatabase(
-		"SELECT reward_id, achievement_id, reward_type, reward_data_id, amount, description "
-		"FROM achievement_rewards WHERE enabled = 1 "
-		"ORDER BY achievement_id, sequence, reward_id"
-	);
-	if (!reward_results.Success()) {
-		LogError("Failed to load achievement rewards");
-		Clear();
-		return false;
-	}
-
-	std::unordered_map<uint64_t, AchievementReward> reward_rows;
-	for (auto row : reward_results) {
-		const auto reward_row_id = ParseUInt64(row[0]);
-		const auto achievement_id = ParseUInt32(row[1]);
-		const auto reward_type = ParseUInt32(row[2]);
-		if (!m_definition_indices.contains(achievement_id)) {
-			continue;
-		}
-		if (reward_type > static_cast<uint32_t>(RewardType::Title)) {
-			LogError(
-				"Enabled achievement reward [{}] has invalid type [{}]",
-				reward_row_id,
-				reward_type
-			);
+			LogError("Selectable rewards reference unknown achievement [{}]", source_id);
 			Clear();
 			return false;
 		}
 
-		const auto reward_data_id = ParseUInt32(row[3]);
-		const auto amount = ParseUInt64(row[4]);
-		const auto effective_reward_type = static_cast<RewardType>(reward_type);
-		const auto requires_data_id =
-			effective_reward_type == RewardType::Item ||
-			effective_reward_type == RewardType::AlternateCurrency ||
-			effective_reward_type == RewardType::Title;
-		const auto invalid_experience_mode =
-			effective_reward_type == RewardType::Experience &&
-			reward_data_id > static_cast<uint32_t>(
-				RewardSelectionExperienceMode::NormalOnly
-			);
-		if (
-			!reward_row_id ||
-			reward_row_id > std::numeric_limits<uint32_t>::max() ||
-			!amount ||
-			(requires_data_id && !reward_data_id) ||
-			invalid_experience_mode
-		) {
-			LogError(
-				"Enabled achievement reward [{}] has an invalid RoF2 wire ID, "
-				"data ID, or amount",
-				reward_row_id
-			);
-			Clear();
-			return false;
+		const auto achievement_id = static_cast<uint32_t>(source_id);
+		if (selection_set.title.empty()) {
+			selection_set.title =
+				m_definitions[m_definition_indices[achievement_id]].name;
 		}
-
-		AchievementReward reward;
-		reward.reward_row_id = reward_row_id;
-		reward.achievement_id = achievement_id;
-		reward.reward_type = effective_reward_type;
-		reward.reward_id = reward_data_id;
-		reward.amount = amount;
-		reward.description = Text(row[5]);
-		if (!reward_rows.emplace(reward_row_id, std::move(reward)).second) {
-			LogError("Duplicate enabled achievement reward ID [{}]", reward_row_id);
+		if (!m_reward_sets.emplace(achievement_id, std::move(selection_set)).second) {
+			LogError("Achievement [{}] has more than one selectable reward set", achievement_id);
 			Clear();
 			return false;
 		}
 	}
 
-	auto reward_mapping_results = content_db.QueryDatabase(
-		"SELECT reward_set_id, option_id, reward_id "
-		"FROM achievement_reward_option_entries "
-		"ORDER BY reward_set_id, option_id, reward_id"
-	);
-	if (!reward_mapping_results.Success()) {
-		LogError("Failed to load achievement reward option entries");
-		Clear();
-		return false;
-	}
-
-	std::unordered_set<uint64_t> mapped_reward_ids;
-	// A mapping keeps its reward out of automatic grants even when the set,
-	// option, or reward row is disabled.
-	for (auto row : reward_mapping_results) {
-		const auto reward_set_id = ParseUInt32(row[0]);
-		const auto option_id = ParseUInt32(row[1]);
-		const auto reward_row_id = ParseUInt64(row[2]);
-		if (!mapped_reward_ids.insert(reward_row_id).second) {
-			LogError(
-				"Achievement reward [{}] belongs to more than one selectable option",
-				reward_row_id
-			);
-			Clear();
-			return false;
-		}
-
-		const auto reward_row = reward_rows.find(reward_row_id);
-		if (reward_row == reward_rows.end()) {
-			continue;
-		}
-		const auto reward_set_achievement = m_reward_set_achievements.find(reward_set_id);
-		const auto option_index = reward_option_indices.find(
-			std::make_pair(reward_set_id, option_id)
-		);
-		if (
-			reward_set_achievement == m_reward_set_achievements.end() ||
-			option_index == reward_option_indices.end()
-		) {
-			continue;
-		}
-		if (reward_row->second.achievement_id != reward_set_achievement->second) {
-			LogError(
-				"Achievement reward [{}] does not belong to reward set [{}]'s achievement",
-				reward_row_id,
-				reward_set_id
-			);
-			Clear();
-			return false;
-		}
-
-		m_reward_sets[reward_set_achievement->second]
-			.options[option_index->second]
-			.rewards.push_back(reward_row->second);
-	}
-
-	for (const auto &[reward_row_id, reward] : reward_rows) {
-		if (!mapped_reward_ids.contains(reward_row_id)) {
-			m_rewards[reward.achievement_id].push_back(reward);
-		}
-	}
-
-	// Client resources flag rewards but do not define them. Show View Reward
-	// only when the server loaded reward content.
 	for (auto &definition : m_definitions) {
-		definition.reward_display = 0;
-	}
-	for (auto &[achievement_id, reward_set] : m_reward_sets) {
-		bool has_selectable_option = false;
-		for (const auto &option : reward_set.options) {
-			if (option.rewards.empty()) {
-				LogError(
-					"Enabled achievement reward option [{}/{}] has no enabled rewards",
-					reward_set.reward_set_id,
-					option.option_id
-				);
-				Clear();
-				return false;
-			}
-			has_selectable_option = has_selectable_option || !option.common_to_all;
-		}
-		if (reward_set.options.empty() || !has_selectable_option) {
-			LogError(
-				"Enabled achievement reward set [{}] has no selectable option",
-				reward_set.reward_set_id
-			);
-			Clear();
-			return false;
-		}
-		m_definitions[m_definition_indices[achievement_id]].reward_display = 1;
-	}
-	for (const auto &[achievement_id, rewards] : m_rewards) {
-		if (!rewards.empty()) {
-			m_definitions[m_definition_indices[achievement_id]].reward_display = 1;
-		}
+		definition.has_reward =
+			m_rewards.contains(definition.achievement_id) ||
+			m_reward_sets.contains(definition.achievement_id);
 	}
 
-	auto restriction_results = content_db.QueryDatabase(
-		"SELECT r.restriction_id, r.achievement_id, r.requires_completed "
-		"FROM achievement_cast_restrictions r "
-		"INNER JOIN achievements a ON a.id = r.achievement_id AND a.enabled = 1 "
-		"ORDER BY r.restriction_id, r.achievement_id"
-	);
-	if (!restriction_results.Success()) {
+	std::vector<AchievementCastRequirementsRepository::AchievementCastRequirements>
+		restriction_rows;
+	if (!AchievementCastRequirementsRepository::GetAll(content_db, restriction_rows)) {
 		LogError("Failed to load achievement spell restrictions");
 		Clear();
 		return false;
 	}
+	std::sort(restriction_rows.begin(), restriction_rows.end(), [](const auto &left, const auto &right) {
+		return std::tie(left.restriction_id, left.achievement_id) <
+			std::tie(right.restriction_id, right.achievement_id);
+	});
 
 	std::set<std::pair<uint32_t, uint32_t>> restriction_keys;
-	for (auto row : restriction_results) {
-		const auto restriction_id = ParseUInt32(row[0]);
-		const auto achievement_id = ParseUInt32(row[1]);
+	for (const auto &row : restriction_rows) {
+		if (!m_definition_indices.contains(row.achievement_id)) {
+			continue;
+		}
+
+		const auto restriction_id = row.restriction_id;
+		const auto achievement_id = row.achievement_id;
 		if (!restriction_keys.emplace(restriction_id, achievement_id).second) {
 			LogError(
 				"Duplicate achievement cast restriction [{}/{}]",
@@ -935,9 +730,9 @@ bool AchievementManager::LoadSnapshot()
 			Clear();
 			return false;
 		}
-		m_cast_restrictions[restriction_id].push_back({
+		m_cast_requirements[restriction_id].push_back({
 			achievement_id,
-			ParseUInt32(row[2]) != 0
+			row.requires_completed != 0
 		});
 	}
 
@@ -1017,34 +812,30 @@ const std::vector<const AchievementCriterion *> &AchievementManager::CriteriaFor
 	return criteria != m_criteria_by_achievement.end() ? criteria->second : empty;
 }
 
-const std::vector<AchievementReward> &AchievementManager::Rewards(uint32_t achievement_id) const
+const std::vector<RewardSelectionReward> &AchievementManager::Rewards(
+	uint32_t achievement_id
+) const
 {
-	static const std::vector<AchievementReward> empty;
+	static const std::vector<RewardSelectionReward> empty;
 	const auto rewards = m_rewards.find(achievement_id);
 	return rewards != m_rewards.end() ? rewards->second : empty;
 }
 
-const AchievementRewardSet *AchievementManager::RewardSet(uint32_t achievement_id) const
+const RewardSelectionSet *AchievementManager::RewardSet(
+	uint32_t achievement_id
+) const
 {
 	const auto reward_set = m_reward_sets.find(achievement_id);
 	return reward_set != m_reward_sets.end() ? &reward_set->second : nullptr;
 }
 
-const AchievementRewardSet *AchievementManager::FindRewardSet(uint32_t reward_set_id) const
-{
-	const auto achievement = m_reward_set_achievements.find(reward_set_id);
-	return achievement != m_reward_set_achievements.end()
-		? RewardSet(achievement->second)
-		: nullptr;
-}
-
-const std::vector<AchievementCastRestriction> &AchievementManager::CastRestrictions(
+const std::vector<AchievementCastRequirement> &AchievementManager::CastRequirements(
 	uint32_t restriction_id
 ) const
 {
-	static const std::vector<AchievementCastRestriction> empty;
-	const auto restrictions = m_cast_restrictions.find(restriction_id);
-	return restrictions != m_cast_restrictions.end() ? restrictions->second : empty;
+	static const std::vector<AchievementCastRequirement> empty;
+	const auto requirements = m_cast_requirements.find(restriction_id);
+	return requirements != m_cast_requirements.end() ? requirements->second : empty;
 }
 
 std::optional<uint8_t> AchievementManager::RequiredClass(

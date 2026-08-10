@@ -19,103 +19,112 @@
 
 #include "common/types.h"
 
+#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
 
 namespace ServerReload {
+	// Reload IDs are sent between world and zone, so existing numeric values
+	// remain stable even though the declarations and display list are sorted.
 	enum Type {
 		ReloadTypeNone = 0,
-		AAData,
-		AlternateCurrencies,
-		BaseData,
-		BlockedSpells,
-		Commands,
-		ContentFlags,
-		DataBucketsCache,
-		Doors,
-		DzTemplates,
-		Factions,
-		GroundSpawns,
-		LevelEXPMods,
-		Logs,
-		Loot,
-		Maps,
-		Merchants,
-		NPCEmotes,
-		NPCSpells,
-		Objects,
-		Opcodes,
-		PerlExportSettings,
-		Quests,
-		QuestsTimerReset,
-		Rules,
-		SkillCaps,
-		StaticZoneData,
-		Tasks,
-		Titles,
-		Traps,
-		Variables,
-		VeteranRewards,
-		WorldRepop,
-		WorldWithRespawn,
-		ZoneData,
-		ZonePoints,
-		Achievements,
-		Max
+		AAData = 1,
+		Achievements = 36,
+		AlternateCurrencies = 2,
+		BaseData = 3,
+		BlockedSpells = 4,
+		Commands = 5,
+		ContentFlags = 6,
+		DataBucketsCache = 7,
+		Doors = 8,
+		DzTemplates = 9,
+		Factions = 10,
+		GroundSpawns = 11,
+		LevelEXPMods = 12,
+		Logs = 13,
+		Loot = 14,
+		Maps = 15,
+		Merchants = 16,
+		NPCEmotes = 17,
+		NPCSpells = 18,
+		Objects = 19,
+		Opcodes = 20,
+		PerlExportSettings = 21,
+		Quests = 22,
+		QuestsTimerReset = 23,
+		Rules = 24,
+		SkillCaps = 25,
+		StaticZoneData = 26,
+		Tasks = 27,
+		Titles = 28,
+		Traps = 29,
+		Variables = 30,
+		VeteranRewards = 31,
+		WorldRepop = 32,
+		WorldWithRespawn = 33,
+		ZoneData = 34,
+		ZonePoints = 35,
+		Max = 37
 	};
 
-	static const char *Name[ServerReload::Max] = {
-		"None",
-		"AA Data",
-		"Alternate Currencies",
-		"Base Data",
-		"Blocked Spells",
-		"Commands",
-		"Content Flags",
-		"Data Buckets Cache",
-		"Doors",
-		"DZ Templates",
-		"Factions",
-		"Ground Spawns",
-		"Level EXP Mods",
-		"Logs",
-		"Loot",
-		"Maps",
-		"Merchants",
-		"NPC Emotes",
-		"NPC Spells",
-		"Objects",
-		"Opcodes",
-		"Perl Event Export Settings",
-		"Quest",
-		"Quests With Timer (Resets timer events)",
-		"Rules",
-		"Skill Caps",
-		"Static Zone Data",
-		"Tasks",
-		"Titles",
-		"Traps",
-		"Variables",
-		"Veteran Rewards",
-		"World Repop",
-		"World Repop Timers (Clear Respawn Timers)",
-		"Zone Data",
-		"Zone Points",
-		"Achievements"
+	struct TypeName {
+		Type type;
+		const char *name;
 	};
-	static_assert(
-		(sizeof(Name) / sizeof(Name[0])) == ServerReload::Max,
-		"ServerReload::Name must remain aligned with ServerReload::Type"
-	);
+
+	inline constexpr std::array<TypeName, Max - 1> Types{{
+		{AAData, "AA Data"},
+		{Achievements, "Achievements"},
+		{AlternateCurrencies, "Alternate Currencies"},
+		{BaseData, "Base Data"},
+		{BlockedSpells, "Blocked Spells"},
+		{Commands, "Commands"},
+		{ContentFlags, "Content Flags"},
+		{DataBucketsCache, "Data Buckets Cache"},
+		{Doors, "Doors"},
+		{DzTemplates, "DZ Templates"},
+		{Factions, "Factions"},
+		{GroundSpawns, "Ground Spawns"},
+		{LevelEXPMods, "Level EXP Mods"},
+		{Logs, "Logs"},
+		{Loot, "Loot"},
+		{Maps, "Maps"},
+		{Merchants, "Merchants"},
+		{NPCEmotes, "NPC Emotes"},
+		{NPCSpells, "NPC Spells"},
+		{Objects, "Objects"},
+		{Opcodes, "Opcodes"},
+		{PerlExportSettings, "Perl Event Export Settings"},
+		{Quests, "Quest"},
+		{QuestsTimerReset, "Quests With Timer (Resets timer events)"},
+		{Rules, "Rules"},
+		{SkillCaps, "Skill Caps"},
+		{StaticZoneData, "Static Zone Data"},
+		{Tasks, "Tasks"},
+		{Titles, "Titles"},
+		{Traps, "Traps"},
+		{Variables, "Variables"},
+		{VeteranRewards, "Veteran Rewards"},
+		{WorldRepop, "World Repop"},
+		{WorldWithRespawn, "World Repop Timers (Clear Respawn Timers)"},
+		{ZoneData, "Zone Data"},
+		{ZonePoints, "Zone Points"}
+	}};
 
 	inline std::string GetName(int reload_type)
 	{
-		if (reload_type < 0 || reload_type >= ServerReload::Type::Max) {
-			return "Unknown";
+		if (reload_type == ReloadTypeNone) {
+			return "None";
 		}
 
-		return ServerReload::Name[reload_type];
+		for (const auto &entry : Types) {
+			if (entry.type == reload_type) {
+				return entry.name;
+			}
+		}
+
+		return "Unknown";
 	}
 
 	// Get a clean name without spaces or special characters
@@ -126,7 +135,7 @@ namespace ServerReload {
 		}
 
 		// get the name before parentheses
-		std::string name = ServerReload::Name[reload_type];
+		std::string name = GetName(reload_type);
 		size_t pos = name.find('(');
 		if (pos != std::string::npos) {
 			name = name.substr(0, pos);
@@ -150,9 +159,9 @@ namespace ServerReload {
 	inline std::vector<ServerReload::Type> GetTypes()
 	{
 		std::vector<ServerReload::Type> types;
-		types.reserve(ServerReload::Type::Max);
-		for (int i = 1; i < ServerReload::Type::Max; i++) {
-			types.push_back(static_cast<ServerReload::Type>(i));
+		types.reserve(Types.size());
+		for (const auto &entry : Types) {
+			types.push_back(entry.type);
 		}
 		return types;
 	}

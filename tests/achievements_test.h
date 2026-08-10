@@ -1,13 +1,15 @@
 #pragma once
 
+#include "common/achievement_mutations.h"
+#include "common/achievements.h"
+#include "common/compression.h"
+#include "common/reward_selection.h"
+#include "common/rulesys.h"
+#include "common/skills.h"
+#include "common/types.h"
 #include "cppunit/cpptest.h"
-#include "../common/achievement_mutations.h"
-#include "../common/achievements.h"
-#include "../common/rulesys.h"
-#include "../common/skills.h"
-#include "../common/types.h"
-#include "../common/compression.h"
 
+#include <array>
 #include <cstring>
 #include <limits>
 #include <stdexcept>
@@ -56,19 +58,26 @@ private:
 			.achievement_id = 100,
 			.component_id = 7,
 			.value = 3,
-			.definition_version = 2,
+			.version = 0,
 			.target_type = TargetType::Character,
 			.operation = Operation::Advance,
-			.component_type = 1
+			.component_type = ComponentType::Required
 		};
 		TEST_ASSERT(IsValidRequest(advance));
+		TEST_ASSERT(advance.version == 0);
 		advance.component_id = 0;
 		TEST_ASSERT(IsValidRequest(advance));
 		advance.component_id = 7;
 
-		advance.reserved32 = 1;
-		TEST_ASSERT(!IsValidRequest(advance));
-		advance.reserved32 = 0;
+		std::array<uint8_t, RequestWireSize> wire{};
+		TEST_ASSERT(EncodeRequest(advance, wire.data(), wire.size()));
+		Request decoded;
+		TEST_ASSERT(DecodeRequest(wire.data(), wire.size(), decoded));
+		TEST_ASSERT(decoded.target_id == advance.target_id);
+		TEST_ASSERT(decoded.component_type == ComponentType::Required);
+		wire.back() = 1;
+		TEST_ASSERT(!DecodeRequest(wire.data(), wire.size(), decoded));
+
 		advance.target_type = TargetType::SharedTask;
 		advance.target_id = std::numeric_limits<uint64_t>::max();
 		TEST_ASSERT(!IsValidRequest(advance));
@@ -76,7 +85,7 @@ private:
 		Request completion{
 			.target_id = 9,
 			.achievement_id = 100,
-			.definition_version = 2,
+			.version = 0,
 			.target_type = TargetType::Raid,
 			.operation = Operation::Complete
 		};
@@ -175,11 +184,11 @@ private:
 		definition.name = "A";
 		definition.description = "B";
 		definition.icon_id = 77;
-		definition.definition_version = 2;
+		definition.version = 2;
 		definition.components[1].push_back({101, 1, 2, 5, "Reach five", "", 2});
 		definition.components[3].push_back({303, 3, 9, 1, "Presentation only", "", 9});
 		definition.points = 10;
-		definition.reward_display = 1;
+		definition.has_reward = true;
 		return definition;
 	}
 
@@ -612,12 +621,18 @@ private:
 
 		auto empty = SerializeRewardDisplay(nullptr);
 		Reader empty_reader{empty.buffer(), empty.size()};
-		TEST_ASSERT(empty_reader.Read<uint32_t>() == RewardActionList);
+		TEST_ASSERT(
+			empty_reader.Read<uint32_t>() ==
+				static_cast<uint32_t>(EQ::RewardSelection::Action::List)
+		);
 		TEST_ASSERT(empty_reader.Read<uint8_t>() == 0);
 		TEST_ASSERT(empty_reader.position == empty_reader.size);
 		auto clear = SerializeRewardDisplayClear();
 		Reader clear_reader{clear.buffer(), clear.size()};
-		TEST_ASSERT(clear_reader.Read<uint32_t>() == RewardActionBulk);
+		TEST_ASSERT(
+			clear_reader.Read<uint32_t>() ==
+				static_cast<uint32_t>(EQ::RewardSelection::Action::Bulk)
+		);
 		TEST_ASSERT(clear_reader.Read<uint32_t>() == 0);
 		TEST_ASSERT(clear_reader.Read<uint8_t>() == 0);
 		TEST_ASSERT(clear_reader.position == clear_reader.size);
@@ -658,7 +673,10 @@ private:
 
 		auto packet = SerializeRewardDisplay(&reward_set);
 		Reader reader{packet.buffer(), packet.size()};
-		TEST_ASSERT(reader.Read<uint32_t>() == RewardActionList);
+		TEST_ASSERT(
+			reader.Read<uint32_t>() ==
+				static_cast<uint32_t>(EQ::RewardSelection::Action::List)
+		);
 		TEST_ASSERT(reader.Read<uint8_t>() == 1);
 		TEST_ASSERT(reader.Read<uint32_t>() == 42);
 		TEST_ASSERT(reader.Read<uint32_t>() == 700);
@@ -714,7 +732,10 @@ private:
 		auto second_packet = SerializeRewardDisplay(&second_reward_set);
 		auto bulk = SerializeRewardDisplays({reward_set, second_reward_set});
 		Reader bulk_reader{bulk.buffer(), bulk.size()};
-		TEST_ASSERT(bulk_reader.Read<uint32_t>() == RewardActionBulk);
+		TEST_ASSERT(
+			bulk_reader.Read<uint32_t>() ==
+				static_cast<uint32_t>(EQ::RewardSelection::Action::Bulk)
+		);
 		TEST_ASSERT(bulk_reader.Read<int32_t>() == 2);
 		TEST_ASSERT(bulk_reader.Read<uint8_t>() == 0);
 		constexpr size_t single_header_size = sizeof(uint32_t) + sizeof(uint8_t);
@@ -749,7 +770,10 @@ private:
 		using namespace EQ::Achievements;
 		auto packet = SerializeRewardClaimReply(42, 700, 702, true);
 		Reader reader{packet.buffer(), packet.size()};
-		TEST_ASSERT(reader.Read<uint32_t>() == RewardActionClaim);
+		TEST_ASSERT(
+			reader.Read<uint32_t>() ==
+				static_cast<uint32_t>(EQ::RewardSelection::Action::Claim)
+		);
 		TEST_ASSERT(reader.Read<uint32_t>() == 42);
 		TEST_ASSERT(reader.Read<uint32_t>() == 700);
 		TEST_ASSERT(reader.Read<uint32_t>() == 702);
@@ -817,8 +841,6 @@ private:
 	{
 		using namespace EQ::Achievements;
 
-		static_assert(NpcNameIdentityHash("Vishimtar_the_Fallen00") == 0x708BEE77u);
-		static_assert(NpcNameIdentityHash("Tunare's Guardian") == 0xCF16724Eu);
 		TEST_ASSERT(static_cast<uint8_t>(EventType::NpcNameKill) == 12);
 		TEST_ASSERT(static_cast<uint8_t>(EventType::SkillCap) == 13);
 		TEST_ASSERT(NpcNameIdentityHash("Vishimtar_the_Fallen00") == 0x708BEE77u);

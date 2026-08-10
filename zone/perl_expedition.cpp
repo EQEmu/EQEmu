@@ -67,11 +67,10 @@ bool Perl_Expedition_AdvanceAchievementProgress(
 		return false;
 	}
 
-	return AchievementMutations::QueueAdvance(
-		AchievementMutations::TargetType::DynamicZone,
+	return AchievementMutations::QueueDynamicZoneAdvance(
 		self->GetID(),
 		achievement_id,
-		static_cast<uint8_t>(component_type),
+		static_cast<AchievementMutations::ComponentType>(component_type),
 		component_id,
 		value
 	);
@@ -82,8 +81,7 @@ bool Perl_Expedition_CompleteAchievement(
 	uint32_t achievement_id
 ) // @categories Achievements, Adventures and Expeditions
 {
-	return AchievementMutations::QueueCompletion(
-		AchievementMutations::TargetType::DynamicZone,
+	return AchievementMutations::QueueDynamicZoneCompletion(
 		self->GetID(),
 		achievement_id
 	);

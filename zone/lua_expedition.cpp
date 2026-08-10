@@ -38,11 +38,10 @@ bool Lua_Expedition::AdvanceAchievementProgress(
 		return false;
 	}
 
-	return AchievementMutations::QueueAdvance(
-		AchievementMutations::TargetType::DynamicZone,
+	return AchievementMutations::QueueDynamicZoneAdvance(
 		self->GetID(),
 		achievement_id,
-		static_cast<uint8_t>(component_type),
+		static_cast<AchievementMutations::ComponentType>(component_type),
 		component_id,
 		value
 	);
@@ -51,8 +50,7 @@ bool Lua_Expedition::AdvanceAchievementProgress(
 bool Lua_Expedition::CompleteAchievement(uint32_t achievement_id)
 {
 	Lua_Safe_Call_Bool();
-	return AchievementMutations::QueueCompletion(
-		AchievementMutations::TargetType::DynamicZone,
+	return AchievementMutations::QueueDynamicZoneCompletion(
 		self->GetID(),
 		achievement_id
 	);

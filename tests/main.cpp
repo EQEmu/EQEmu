@@ -15,6 +15,7 @@
 	You should have received a copy of the GNU General Public License
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
+#include "tests/achievements_test.h"
 #include "tests/atobool_test.h"
 #include "tests/data_verification_test.h"
 #include "tests/fixed_memory_test.h"
@@ -29,22 +30,9 @@
 #include "common/path_manager.h"
 #include "common/platform.h"
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
 #include <memory>
-#include "../common/platform.h"
-#include "../common/path_manager.h"
-#include "achievements_test.h"
-#include "memory_mapped_file_test.h"
-#include "ipc_mutex_test.h"
-#include "fixed_memory_test.h"
-#include "fixed_memory_variable_test.h"
-#include "atobool_test.h"
-#include "hextoi_32_64_test.h"
-#include "string_util_test.h"
-#include "data_verification_test.h"
-#include "skills_util_test.h"
-#include "task_state_test.h"
 
 const EQEmuConfig *Config;
 

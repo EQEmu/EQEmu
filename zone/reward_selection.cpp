@@ -1,11 +1,11 @@
-#include "reward_selection.h"
+#include "zone/reward_selection.h"
 
-#include "../common/achievements.h"
-#include "../common/eq_packet.h"
-#include "../common/rulesys.h"
-#include "client.h"
-#include "zone.h"
-#include "zonedb.h"
+#include "common/achievements.h"
+#include "common/eq_packet.h"
+#include "common/rulesys.h"
+#include "zone/client.h"
+#include "zone/zone.h"
+#include "zone/zonedb.h"
 
 #include <algorithm>
 #include <cstring>
@@ -14,14 +14,11 @@
 #include <memory>
 #include <unordered_set>
 
-namespace
-{
+static constexpr uint32_t kRewardRequestRateLimitMs = 500;
+static constexpr uint32_t kRewardItemRequestRateLimitMs = 100;
+static constexpr uint32_t kRoF2PlayerFlagsStringId = 3689;
 
-constexpr uint32_t kRewardRequestRateLimitMs = 500;
-constexpr uint32_t kRewardItemRequestRateLimitMs = 100;
-constexpr uint32_t kRoF2PlayerFlagsStringId = 3689;
-
-uint32_t RewardDisplayValue(uint64_t value)
+static uint32_t RewardDisplayValue(uint64_t value)
 {
 	return static_cast<uint32_t>(std::min<uint64_t>(
 		value,
@@ -29,7 +26,7 @@ uint32_t RewardDisplayValue(uint64_t value)
 	));
 }
 
-EQ::Achievements::RewardDisplayEntry BuildDisplayEntry(
+static EQ::Achievements::RewardDisplayEntry BuildDisplayEntry(
 	const RewardSelectionReward &reward
 )
 {
@@ -107,7 +104,7 @@ EQ::Achievements::RewardDisplayEntry BuildDisplayEntry(
 	return entry;
 }
 
-EQ::Achievements::RewardDisplaySet BuildDisplaySet(
+static EQ::Achievements::RewardDisplaySet BuildDisplaySet(
 	const RewardSelectionSession &session
 )
 {
@@ -133,19 +130,17 @@ EQ::Achievements::RewardDisplaySet BuildDisplaySet(
 	return display;
 }
 
-bool SupportsRewardSelection(const Client &client)
+static bool SupportsRewardSelection(const Client &client)
 {
 	return client.ClientVersion() == EQ::versions::ClientVersion::RoF2;
 }
 
-EmuOpcode RewardSelectionOpcode(RewardSelectionChannel channel)
+static EmuOpcode RewardSelectionOpcode(RewardSelectionChannel channel)
 {
 	return channel == RewardSelectionChannel::Claimable
 		? OP_AchievementReward
 		: OP_RewardSelection;
 }
-
-} // namespace
 
 ClientRewardSelection::ClientRewardSelection(Client &client)
 	: m_client(client)
@@ -468,40 +463,40 @@ RewardSelectionPacketResult ClientRewardSelection::HandlePacket(
 	RewardSelectionChannel channel
 )
 {
-	using namespace EQ::Achievements;
+	using EQ::RewardSelection::Action;
 
 	RewardSelectionPacketResult result;
 	if (!SupportsRewardSelection(m_client) || app.size < sizeof(uint32_t)) {
 		return result;
 	}
 
-	uint32_t action = 0;
+	Action action{};
 	std::memcpy(&action, app.pBuffer, sizeof(action));
 	if (
 		(channel == RewardSelectionChannel::Claimable &&
-			action == RewardSelectionActionTaskView) ||
+			action == Action::TaskView) ||
 		(channel == RewardSelectionChannel::Preview &&
-			(action == RewardSelectionActionAchievementView ||
-				action == RewardActionClaim))
+			(action == Action::AchievementView ||
+				action == Action::Claim))
 	) {
 		return result;
 	}
 	if (
-		((action == RewardSelectionActionTaskView ||
-			action == RewardSelectionActionAchievementView) &&
+		((action == Action::TaskView ||
+			action == Action::AchievementView) &&
 			app.size != sizeof(uint32_t) * 2) ||
-		(action == RewardSelectionActionPending &&
+		(action == Action::Pending &&
 			app.size != sizeof(uint32_t)) ||
-		(action == RewardActionInspectItem && app.size != sizeof(uint32_t) * 5) ||
-		(action == RewardActionClaim && app.size != sizeof(uint32_t) * 5)
+		(action == Action::InspectItem && app.size != sizeof(uint32_t) * 5) ||
+		(action == Action::Claim && app.size != sizeof(uint32_t) * 5)
 	) {
 		return result;
 	}
 
 	if (
-		action == RewardSelectionActionTaskView ||
-		action == RewardSelectionActionAchievementView ||
-		action == RewardSelectionActionPending
+		action == Action::TaskView ||
+		action == Action::AchievementView ||
+		action == Action::Pending
 	) {
 		auto &state = State(channel);
 		if (
@@ -513,7 +508,7 @@ RewardSelectionPacketResult ClientRewardSelection::HandlePacket(
 		}
 		state.request_rate_limit.Start(kRewardRequestRateLimitMs);
 
-		if (action == RewardSelectionActionPending) {
+		if (action == Action::Pending) {
 			result.requested_source = RewardSelectionSource::General;
 			result.type = RewardSelectionPacketResultType::PendingRequested;
 			return result;
@@ -525,14 +520,14 @@ RewardSelectionPacketResult ClientRewardSelection::HandlePacket(
 			sizeof(result.requested_id)
 		);
 		result.requested_source =
-			action == RewardSelectionActionTaskView
+			action == Action::TaskView
 				? RewardSelectionSource::Task
 				: RewardSelectionSource::Achievement;
 		result.type = RewardSelectionPacketResultType::ViewRequested;
 		return result;
 	}
 
-	if (action == RewardActionInspectItem) {
+	if (action == Action::InspectItem) {
 		auto &state = State(channel);
 		if (
 			state.item_request_rate_limit.Enabled() &&
@@ -578,7 +573,7 @@ RewardSelectionPacketResult ClientRewardSelection::HandlePacket(
 		return result;
 	}
 
-	if (action != RewardActionClaim) {
+	if (action != Action::Claim) {
 		return result;
 	}
 
@@ -690,7 +685,7 @@ bool ClientRewardSelection::SendItemInspect(
 		RewardSelectionOpcode(channel),
 		sizeof(uint32_t) * 2 + internal_item.size()
 	);
-	uint32_t action = EQ::Achievements::RewardActionInspectItem;
+	const auto action = EQ::RewardSelection::Action::InspectItem;
 	std::memcpy(packet->pBuffer, &action, sizeof(action));
 	std::memcpy(
 		packet->pBuffer + sizeof(action),

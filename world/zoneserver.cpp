@@ -1359,7 +1359,7 @@ void ZoneServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p) {
 			break;
 		}
 		case ServerOP_CZAchievementMutationRequest: {
-			if (pack->size != sizeof(AchievementMutations::Request)) {
+			if (pack->size != AchievementMutations::RequestWireSize) {
 				LogError(
 					"Received achievement mutation packet with invalid size [{}]",
 					pack->size
@@ -1368,7 +1368,10 @@ void ZoneServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p) {
 			}
 
 			AchievementMutations::Request request;
-			std::memcpy(&request, pack->pBuffer, sizeof(request));
+			if (!AchievementMutations::DecodeRequest(pack->pBuffer, pack->size, request)) {
+				LogError("Received an invalid achievement mutation packet");
+				break;
+			}
 			achievement_mutation_manager.Queue(request);
 			break;
 		}

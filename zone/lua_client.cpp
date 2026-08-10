@@ -1528,11 +1528,10 @@ bool Lua_Client::AdvanceSharedTaskAchievementProgress(
 		return false;
 	}
 
-	return AchievementMutations::QueueAdvance(
-		AchievementMutations::TargetType::SharedTask,
-		static_cast<uint64_t>(shared_task_id),
+	return AchievementMutations::QueueSharedTaskAdvance(
+		shared_task_id,
 		achievement_id,
-		static_cast<uint8_t>(component_type),
+		static_cast<AchievementMutations::ComponentType>(component_type),
 		component_id,
 		value
 	);
@@ -1546,9 +1545,8 @@ bool Lua_Client::CompleteSharedTaskAchievement(uint32 achievement_id)
 		return false;
 	}
 
-	return AchievementMutations::QueueCompletion(
-		AchievementMutations::TargetType::SharedTask,
-		static_cast<uint64_t>(shared_task_id),
+	return AchievementMutations::QueueSharedTaskCompletion(
+		shared_task_id,
 		achievement_id
 	);
 }

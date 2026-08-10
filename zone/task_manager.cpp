@@ -29,30 +29,16 @@
 #include "common/shared_tasks.h"
 #include "zone/client.h"
 #include "zone/dynamic_zone.h"
+#include "zone/reward_selection_catalog.h"
 #include "zone/string_ids.h"
 #include "zone/worldserver.h"
 
-#include <cstdlib>
 #include <limits>
-#include <map>
 #include <unordered_set>
 
 extern WorldServer worldserver;
 
-namespace
-{
-
-uint64_t ParseTaskRewardUInt64(const char *value)
-{
-	return value ? static_cast<uint64_t>(std::strtoull(value, nullptr, 10)) : 0;
-}
-
-std::string TaskRewardText(const char *value)
-{
-	return value ? value : "";
-}
-
-bool SupportsTaskRewardMethod(
+static bool SupportsTaskRewardMethod(
 	const Client *client,
 	const TaskInformation *task
 )
@@ -68,23 +54,6 @@ bool SupportsTaskRewardMethod(
 			)
 		);
 }
-
-struct StagedTaskRewardSet {
-	uint32_t                                  task_id = 0;
-	RewardSelectionSet                        reward_set;
-	std::unordered_map<uint32_t, size_t>       option_indices;
-	std::unordered_set<uint32_t>               disabled_option_ids;
-	bool                                      invalid = false;
-};
-
-struct StagedTaskReward {
-	uint32_t                  task_id = 0;
-	uint32_t                  reward_set_id = 0;
-	uint32_t                  sequence = 0;
-	RewardSelectionReward     reward;
-};
-
-} // namespace
 
 bool TaskManager::LoadTaskSets()
 {
@@ -112,516 +81,96 @@ bool TaskManager::LoadTaskSets()
 
 bool TaskManager::LoadTaskRewardSets()
 {
-	for (auto &[task_id, task] : m_task_data) {
-		task.has_reward_selection = false;
+	const auto restore_existing_flags = [this]() {
+		for (auto &[task_id, task] : m_task_data) {
+			task.has_reward_selection =
+				task.reward_method == METHODSELECT &&
+				task.type != TaskType::Shared &&
+				m_task_reward_sets.contains(task_id);
+		}
+	};
+
+	std::unordered_set<uint64_t> active_reward_source_ids;
+	for (const auto &[task_id, task] : m_task_data) {
+		if (
+			task.reward_method == METHODSELECT &&
+			task.type != TaskType::Shared
+		) {
+			active_reward_source_ids.insert(task_id);
+		}
 	}
-	m_task_reward_sets.clear();
 
-	std::unordered_map<uint32_t, StagedTaskRewardSet> staged_sets;
-	std::unordered_map<uint32_t, uint32_t> reward_set_ids_by_task;
-
-	auto reward_set_results = content_db.QueryDatabase(
-		"SELECT reward_set_id, task_id, title "
-		"FROM task_reward_sets WHERE enabled = 1 "
-		"ORDER BY task_id, reward_set_id"
-	);
-	if (!reward_set_results.Success()) {
-		LogError("Failed to load selectable task reward sets");
+	RewardSelectionCatalog catalog;
+	if (!LoadRewardSelectionCatalog(
+		content_db,
+		RewardSelectionSource::Task,
+		active_reward_source_ids,
+		catalog
+	)) {
+		LogError("Failed to load the shared reward catalog for tasks");
+		restore_existing_flags();
+		return false;
+	}
+	if (!catalog.automatic.empty()) {
+		LogError(
+			"Task reward sources cannot use automatic catalog entries; "
+			"use the task's existing automatic reward fields"
+		);
+		restore_existing_flags();
 		return false;
 	}
 
-	for (auto row : reward_set_results) {
-		const auto raw_reward_set_id = ParseTaskRewardUInt64(row[0]);
-		const auto raw_task_id = ParseTaskRewardUInt64(row[1]);
-		if (
-			!raw_reward_set_id ||
-			raw_reward_set_id > std::numeric_limits<uint32_t>::max() ||
-			!raw_task_id ||
-			raw_task_id > std::numeric_limits<uint32_t>::max()
-		) {
-			LogError(
-				"Enabled task reward set [{}/{}] has an invalid RoF2 wire or task ID",
-				raw_reward_set_id,
-				raw_task_id
-			);
+	std::unordered_map<uint32_t, RewardSelectionSet> staged_reward_sets;
+	for (auto &[source_id, reward_set] : catalog.selectable) {
+		if (source_id > std::numeric_limits<uint32_t>::max()) {
+			LogError("Selectable rewards reference invalid task ID [{}]", source_id);
 			continue;
 		}
 
-		const auto reward_set_id = static_cast<uint32_t>(raw_reward_set_id);
-		const auto task_id = static_cast<uint32_t>(raw_task_id);
+		const auto task_id = static_cast<uint32_t>(source_id);
 		auto task = GetTaskData(task_id);
 		if (!task) {
 			LogError(
-				"Enabled task reward set [{}] references missing or disabled task [{}]",
-				reward_set_id,
+				"Selectable reward set [{}] references missing or disabled task [{}]",
+				reward_set.reward_set_id,
 				task_id
 			);
 			continue;
 		}
 		if (task->reward_method != METHODSELECT) {
 			LogError(
-				"Enabled task reward set [{}] references task [{}] with legacy "
-				"reward method [{}]; ignoring the set",
-				reward_set_id,
+				"Selectable reward set [{}] references task [{}] with legacy "
+				"reward method [{}]",
+				reward_set.reward_set_id,
 				task_id,
 				static_cast<int>(task->reward_method)
 			);
 			continue;
 		}
 		if (task->type == TaskType::Shared) {
-			// Shared-task membership is coordinated by world and can include
-			// offline or older-client members whose Select Reward capability
-			// is unknown. Do not advertise a reward path that one of those
-			// members could inherit but never claim.
 			LogError(
-				"Enabled task reward set [{}] references shared task [{}]; "
-				"METHODSELECT shared tasks are not supported until member "
-				"client capabilities can be validated",
-				reward_set_id,
+				"Selectable reward set [{}] references shared task [{}], "
+				"which is not supported",
+				reward_set.reward_set_id,
 				task_id
 			);
 			continue;
 		}
-
-		const auto duplicate_set = staged_sets.find(reward_set_id);
-		if (duplicate_set != staged_sets.end()) {
-			duplicate_set->second.invalid = true;
-			LogError("Duplicate enabled task reward set ID [{}]", reward_set_id);
-			continue;
+		if (reward_set.title.empty()) {
+			reward_set.title = task->title;
 		}
-
-		const auto duplicate_task = reward_set_ids_by_task.find(task_id);
-		if (duplicate_task != reward_set_ids_by_task.end()) {
-			auto existing = staged_sets.find(duplicate_task->second);
-			if (existing != staged_sets.end()) {
-				existing->second.invalid = true;
-			}
-			LogError(
-				"Task [{}] has more than one enabled reward set ([{}] and [{}])",
-				task_id,
-				duplicate_task->second,
-				reward_set_id
-			);
-			continue;
-		}
-
-		StagedTaskRewardSet staged;
-		staged.task_id = task_id;
-		staged.reward_set.reward_set_id = reward_set_id;
-		staged.reward_set.title = TaskRewardText(row[2]);
-		if (staged.reward_set.title.empty()) {
-			staged.reward_set.title = task->title;
-		}
-		staged_sets.emplace(reward_set_id, std::move(staged));
-		reward_set_ids_by_task.emplace(task_id, reward_set_id);
+		staged_reward_sets.emplace(task_id, std::move(reward_set));
 	}
 
-	auto reward_option_results = content_db.QueryDatabase(
-		"SELECT reward_set_id, option_id, sequence, label, common_to_all, "
-		"flags, enabled FROM task_reward_options "
-		"ORDER BY reward_set_id, sequence, option_id"
-	);
-	if (!reward_option_results.Success()) {
-		LogError("Failed to load selectable task reward options");
-		return false;
-	}
-
-	for (auto row : reward_option_results) {
-		const auto raw_reward_set_id = ParseTaskRewardUInt64(row[0]);
-		if (
-			!raw_reward_set_id ||
-			raw_reward_set_id > std::numeric_limits<uint32_t>::max()
-		) {
-			continue;
-		}
-
-		const auto reward_set_id = static_cast<uint32_t>(raw_reward_set_id);
-		auto staged = staged_sets.find(reward_set_id);
-		if (staged == staged_sets.end()) {
-			continue;
-		}
-
-		const auto raw_option_id = ParseTaskRewardUInt64(row[1]);
-		const auto enabled = ParseTaskRewardUInt64(row[6]) != 0;
-		if (!enabled) {
-			if (
-				raw_option_id &&
-				raw_option_id <= std::numeric_limits<uint32_t>::max()
-			) {
-				staged->second.disabled_option_ids.insert(
-					static_cast<uint32_t>(raw_option_id)
-				);
-			}
-			continue;
-		}
-
-		const auto raw_sequence = ParseTaskRewardUInt64(row[2]);
-		const auto raw_flags = ParseTaskRewardUInt64(row[5]);
-		if (
-			!raw_option_id ||
-			raw_option_id > std::numeric_limits<uint32_t>::max() ||
-			raw_sequence > std::numeric_limits<uint32_t>::max() ||
-			raw_flags > std::numeric_limits<uint8_t>::max()
-		) {
-			staged->second.invalid = true;
-			LogError(
-				"Enabled task reward option [{}/{}] has an invalid wire ID, "
-				"sequence, or flags value",
-				reward_set_id,
-				raw_option_id
-			);
-			continue;
-		}
-
-		RewardSelectionOption option;
-		option.option_id = static_cast<uint32_t>(raw_option_id);
-		option.sequence = static_cast<uint32_t>(raw_sequence);
-		option.label = TaskRewardText(row[3]);
-		option.common_to_all = ParseTaskRewardUInt64(row[4]) != 0;
-		option.flags = static_cast<uint8_t>(raw_flags);
-		if (
-			!staged->second.option_indices.emplace(
-				option.option_id,
-				staged->second.reward_set.options.size()
-			).second
-		) {
-			staged->second.invalid = true;
-			LogError(
-				"Duplicate enabled task reward option [{}/{}]",
-				reward_set_id,
-				option.option_id
-			);
-			continue;
-		}
-		staged->second.reward_set.options.emplace_back(std::move(option));
-	}
-
-	std::unordered_map<uint64_t, StagedTaskReward> reward_rows;
-	std::unordered_set<uint64_t> disabled_reward_ids;
-	auto reward_results = content_db.QueryDatabase(
-		"SELECT reward_id, task_id, sequence, reward_type, reward_data_id, "
-		"amount, description, enabled FROM task_rewards "
-		"ORDER BY task_id, sequence, reward_id"
-	);
-	if (!reward_results.Success()) {
-		LogError("Failed to load selectable task rewards");
-		return false;
-	}
-
-	for (auto row : reward_results) {
-		const auto reward_id = ParseTaskRewardUInt64(row[0]);
-		const auto enabled = ParseTaskRewardUInt64(row[7]) != 0;
-		if (!enabled) {
-			if (reward_id) {
-				disabled_reward_ids.insert(reward_id);
-			}
-			continue;
-		}
-
-		const auto raw_task_id = ParseTaskRewardUInt64(row[1]);
-		if (
-			!raw_task_id ||
-			raw_task_id > std::numeric_limits<uint32_t>::max()
-		) {
-			LogError(
-				"Enabled task reward [{}] has invalid task ID [{}]",
-				reward_id,
-				raw_task_id
-			);
-			continue;
-		}
-
-		const auto task_id = static_cast<uint32_t>(raw_task_id);
-		const auto reward_set_id_entry = reward_set_ids_by_task.find(task_id);
-		if (reward_set_id_entry == reward_set_ids_by_task.end()) {
-			// Rows for legacy, disabled, or otherwise unloaded tasks never alter
-			// their existing reward behavior.
-			continue;
-		}
-		auto staged = staged_sets.find(reward_set_id_entry->second);
-		if (staged == staged_sets.end()) {
-			continue;
-		}
-
-		const auto raw_sequence = ParseTaskRewardUInt64(row[2]);
-		const auto raw_reward_type = ParseTaskRewardUInt64(row[3]);
-		const auto raw_data_id = ParseTaskRewardUInt64(row[4]);
-		const auto amount = ParseTaskRewardUInt64(row[5]);
-		if (
-			!reward_id ||
-			reward_id > std::numeric_limits<uint32_t>::max() ||
-			raw_sequence > std::numeric_limits<uint32_t>::max() ||
-			raw_reward_type >
-				static_cast<uint64_t>(RewardSelectionRewardType::Title) ||
-			raw_data_id > std::numeric_limits<uint32_t>::max() ||
-			!amount
-		) {
-			staged->second.invalid = true;
-			LogError(
-				"Enabled task reward [{}] has an invalid wire ID, sequence, "
-				"type, data ID, or amount",
-				reward_id
-			);
-			continue;
-		}
-
-		const auto reward_type =
-			static_cast<RewardSelectionRewardType>(raw_reward_type);
-		const auto requires_data_id =
-			reward_type == RewardSelectionRewardType::Item ||
-			reward_type == RewardSelectionRewardType::AlternateCurrency ||
-			reward_type == RewardSelectionRewardType::Title;
-		const auto invalid_experience_mode =
-			reward_type == RewardSelectionRewardType::Experience &&
-			raw_data_id > static_cast<uint64_t>(
-				RewardSelectionExperienceMode::NormalOnly
-			);
-		if ((requires_data_id && !raw_data_id) || invalid_experience_mode) {
-			staged->second.invalid = true;
-			LogError(
-				"Enabled task reward [{}] type [{}] has an invalid data ID",
-				reward_id,
-				raw_reward_type
-			);
-			continue;
-		}
-
-		StagedTaskReward reward;
-		reward.task_id = task_id;
-		reward.reward_set_id = reward_set_id_entry->second;
-		reward.sequence = static_cast<uint32_t>(raw_sequence);
-		reward.reward.entry_id = reward_id;
-		reward.reward.type = reward_type;
-		reward.reward.data_id = static_cast<uint32_t>(raw_data_id);
-		reward.reward.amount = amount;
-		reward.reward.description = TaskRewardText(row[6]);
-
-		const auto [existing_reward, inserted] = reward_rows.emplace(
-			reward_id,
-			std::move(reward)
-		);
-		if (!inserted) {
-			staged->second.invalid = true;
-			auto previous = staged_sets.find(
-				existing_reward->second.reward_set_id
-			);
-			if (previous != staged_sets.end()) {
-				previous->second.invalid = true;
-			}
-			LogError("Duplicate enabled task reward ID [{}]", reward_id);
-		}
-	}
-
-	std::map<uint64_t, std::pair<uint32_t, uint32_t>> mapping_owners;
-	std::unordered_set<uint64_t> invalid_mapping_reward_ids;
-	auto reward_mapping_results = content_db.QueryDatabase(
-		"SELECT reward_set_id, option_id, reward_id "
-		"FROM task_reward_option_entries "
-		"ORDER BY reward_set_id, option_id, reward_id"
-	);
-	if (!reward_mapping_results.Success()) {
-		LogError("Failed to load selectable task reward option entries");
-		return false;
-	}
-
-	for (auto row : reward_mapping_results) {
-		const auto raw_reward_set_id = ParseTaskRewardUInt64(row[0]);
-		const auto raw_option_id = ParseTaskRewardUInt64(row[1]);
-		const auto reward_id = ParseTaskRewardUInt64(row[2]);
-		if (
-			!raw_reward_set_id ||
-			raw_reward_set_id > std::numeric_limits<uint32_t>::max()
-		) {
-			continue;
-		}
-
-		const auto reward_set_id = static_cast<uint32_t>(raw_reward_set_id);
-		auto staged = staged_sets.find(reward_set_id);
-		if (staged == staged_sets.end()) {
-			continue;
-		}
-		if (
-			!raw_option_id ||
-			raw_option_id > std::numeric_limits<uint32_t>::max() ||
-			!reward_id
-		) {
-			staged->second.invalid = true;
-			LogError(
-				"Task reward mapping [{}/{}/{}] has an invalid identity",
-				reward_set_id,
-				raw_option_id,
-				reward_id
-			);
-			continue;
-		}
-
-		const auto option_id = static_cast<uint32_t>(raw_option_id);
-		const auto reward = reward_rows.find(reward_id);
-		if (disabled_reward_ids.contains(reward_id)) {
-			continue;
-		}
-		if (reward == reward_rows.end()) {
-			staged->second.invalid = true;
-			LogError(
-				"Task reward mapping [{}/{}/{}] references an unknown enabled "
-				"reward",
-				reward_set_id,
-				option_id,
-				reward_id
-			);
-			continue;
-		}
-
-		auto reward_owner = staged_sets.find(reward->second.reward_set_id);
-		if (
-			reward->second.task_id != staged->second.task_id ||
-			reward->second.reward_set_id != reward_set_id
-		) {
-			staged->second.invalid = true;
-			if (reward_owner != staged_sets.end()) {
-				reward_owner->second.invalid = true;
-			}
-			invalid_mapping_reward_ids.insert(reward_id);
-			mapping_owners.erase(reward_id);
-			LogError(
-				"Task reward [{}] does not belong to reward set [{}]'s task [{}]",
-				reward_id,
-				reward_set_id,
-				staged->second.task_id
-			);
-			continue;
-		}
-		if (staged->second.disabled_option_ids.contains(option_id)) {
-			staged->second.invalid = true;
-			invalid_mapping_reward_ids.insert(reward_id);
-			mapping_owners.erase(reward_id);
-			LogError(
-				"Enabled task reward [{}] is mapped to disabled option "
-				"[{}/{}]",
-				reward_id,
-				reward_set_id,
-				option_id
-			);
-			continue;
-		}
-		if (invalid_mapping_reward_ids.contains(reward_id)) {
-			continue;
-		}
-
-		const auto option = staged->second.option_indices.find(option_id);
-		if (option == staged->second.option_indices.end()) {
-			staged->second.invalid = true;
-			invalid_mapping_reward_ids.insert(reward_id);
-			mapping_owners.erase(reward_id);
-			LogError(
-				"Task reward mapping [{}/{}/{}] references an unknown enabled "
-				"option",
-				reward_set_id,
-				option_id,
-				reward_id
-			);
-			continue;
-		}
-
-		const auto [mapping, inserted] = mapping_owners.emplace(
-			reward_id,
-			std::make_pair(reward_set_id, option_id)
-		);
-		if (!inserted) {
-			staged->second.invalid = true;
-			auto previous = staged_sets.find(mapping->second.first);
-			if (previous != staged_sets.end()) {
-				previous->second.invalid = true;
-			}
-			invalid_mapping_reward_ids.insert(reward_id);
-			mapping_owners.erase(mapping);
-			LogError(
-				"Task reward [{}] belongs to more than one selectable option",
-				reward_id
-			);
-			continue;
-		}
-
-		staged->second.reward_set.options[option->second].rewards.push_back(
-			reward->second.reward
-		);
-	}
-
-	for (const auto &[reward_id, reward] : reward_rows) {
-		if (!mapping_owners.contains(reward_id)) {
-			auto staged = staged_sets.find(reward.reward_set_id);
-			if (staged != staged_sets.end()) {
-				staged->second.invalid = true;
-			}
-			LogError(
-				"Enabled task reward [{}] is not mapped to a reward option",
-				reward_id
-			);
-		}
-	}
-
-	std::unordered_map<uint32_t, RewardSelectionSet> loaded_reward_sets;
-	for (auto &[reward_set_id, staged] : staged_sets) {
-		bool has_selectable_option = false;
-		for (auto &option : staged.reward_set.options) {
-			std::sort(
-				option.rewards.begin(),
-				option.rewards.end(),
-				[&reward_rows](
-					const RewardSelectionReward &left,
-					const RewardSelectionReward &right
-				) {
-					const auto left_row = reward_rows.find(left.entry_id);
-					const auto right_row = reward_rows.find(right.entry_id);
-					if (
-						left_row != reward_rows.end() &&
-						right_row != reward_rows.end() &&
-						left_row->second.sequence != right_row->second.sequence
-					) {
-						return
-							left_row->second.sequence <
-							right_row->second.sequence;
-					}
-					return left.entry_id < right.entry_id;
-				}
-			);
-			if (option.rewards.empty()) {
-				staged.invalid = true;
-				LogError(
-					"Enabled task reward option [{}/{}] has no enabled rewards",
-					reward_set_id,
-					option.option_id
-				);
-			}
-			has_selectable_option =
-				has_selectable_option || !option.common_to_all;
-		}
-		if (
-			staged.reward_set.options.empty() ||
-			!has_selectable_option
-		) {
-			staged.invalid = true;
-			LogError(
-				"Enabled task reward set [{}] has no selectable option",
-				reward_set_id
-			);
-		}
-		if (staged.invalid) {
-			continue;
-		}
-
-		loaded_reward_sets.emplace(
-			staged.task_id,
-			std::move(staged.reward_set)
-		);
-	}
-
-	m_task_reward_sets.swap(loaded_reward_sets);
 	for (auto &[task_id, task] : m_task_data) {
-		if (task.reward_method != METHODSELECT) {
+		if (
+			task.reward_method != METHODSELECT ||
+			task.type == TaskType::Shared
+		) {
+			task.has_reward_selection = false;
 			continue;
 		}
-		task.has_reward_selection = m_task_reward_sets.contains(task_id);
+		task.has_reward_selection = staged_reward_sets.contains(task_id);
 		if (!task.has_reward_selection) {
 			LogError(
 				"Task [{}] uses METHODSELECT but has no valid enabled reward set",
@@ -629,6 +178,7 @@ bool TaskManager::LoadTaskRewardSets()
 			);
 		}
 	}
+	m_task_reward_sets = std::move(staged_reward_sets);
 
 	LogInfo(
 		"Loaded [{}] selectable task reward set(s)",

@@ -38,11 +38,10 @@ bool Perl_Raid_AdvanceAchievementProgress(
 		return false;
 	}
 
-	return AchievementMutations::QueueAdvance(
-		AchievementMutations::TargetType::Raid,
-		self->GetID(),
+	return AchievementMutations::QueueRaidAdvance(
+		static_cast<int32_t>(self->GetID()),
 		achievement_id,
-		static_cast<uint8_t>(component_type),
+		static_cast<AchievementMutations::ComponentType>(component_type),
 		component_id,
 		value
 	);
@@ -50,9 +49,8 @@ bool Perl_Raid_AdvanceAchievementProgress(
 
 bool Perl_Raid_CompleteAchievement(Raid* self, uint32 achievement_id) // @categories Achievements, Raid
 {
-	return AchievementMutations::QueueCompletion(
-		AchievementMutations::TargetType::Raid,
-		self->GetID(),
+	return AchievementMutations::QueueRaidCompletion(
+		static_cast<int32_t>(self->GetID()),
 		achievement_id
 	);
 }

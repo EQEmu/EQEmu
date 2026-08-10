@@ -2,8 +2,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <limits>
-#include <type_traits>
 
 namespace AchievementMutations {
 
@@ -20,6 +18,12 @@ enum class Operation : uint8_t {
 	Complete
 };
 
+enum class ComponentType : uint8_t {
+	Completion = 0,
+	Required,
+	Optional
+};
+
 enum class Status : uint8_t {
 	Pending = 0,
 	Blocked,
@@ -33,60 +37,32 @@ struct Request {
 	uint32_t achievement_id = 0;
 	uint32_t component_id = 0;
 	uint32_t value = 0;
-	uint32_t definition_version = 0;
+	uint32_t version = 0;
 	TargetType target_type = TargetType::Character;
 	Operation operation = Operation::Advance;
-	uint8_t component_type = 0;
-	uint8_t reserved8 = 0;
-	uint32_t reserved32 = 0;
+	ComponentType component_type = ComponentType::Completion;
 };
 
-static_assert(sizeof(Request) == 32);
-static_assert(std::is_standard_layout_v<Request>);
-static_assert(std::is_trivially_copyable_v<Request>);
-static_assert(offsetof(Request, reserved32) == 28);
+// Zone and world exchange a fixed-width representation rather than the
+// compiler-dependent layout of Request.
+inline constexpr std::size_t RequestWireSize = 32;
 
-constexpr bool IsValidTarget(TargetType target_type, uint64_t target_id)
-{
-	if (!target_id || target_type > TargetType::SharedTask) {
-		return false;
-	}
+bool IsValidCharacterTarget(uint32_t character_id);
+bool IsValidGroupTarget(uint32_t group_id);
+bool IsValidRaidTarget(int32_t raid_id);
+bool IsValidDynamicZoneTarget(uint32_t dynamic_zone_id);
+bool IsValidSharedTaskTarget(int64_t shared_task_id);
+bool IsValidRequest(const Request &request);
 
-	if (target_type == TargetType::SharedTask) {
-		return target_id <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max());
-	}
-	if (target_type == TargetType::Raid) {
-		return target_id <= static_cast<uint64_t>(std::numeric_limits<int32_t>::max());
-	}
-
-	return target_id <= std::numeric_limits<uint32_t>::max();
-}
-
-constexpr bool IsValidRequest(const Request &request)
-{
-	if (
-		!IsValidTarget(request.target_type, request.target_id) ||
-		!request.achievement_id ||
-		!request.definition_version ||
-		request.reserved8 ||
-		request.reserved32
-	) {
-		return false;
-	}
-
-	switch (request.operation) {
-	case Operation::Advance:
-		return
-			request.component_type <= 2 &&
-			request.value;
-	case Operation::Complete:
-		return
-			request.component_type == 0 &&
-			request.component_id == 0 &&
-			request.value == 0;
-	}
-
-	return false;
-}
+bool EncodeRequest(
+	const Request &request,
+	uint8_t *buffer,
+	std::size_t buffer_size
+);
+bool DecodeRequest(
+	const uint8_t *buffer,
+	std::size_t buffer_size,
+	Request &request
+);
 
 } // namespace AchievementMutations

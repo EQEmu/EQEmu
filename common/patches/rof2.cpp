@@ -30,6 +30,7 @@
 #include "common/path_manager.h"
 #include "common/races.h"
 #include "common/raid.h"
+#include "common/reward_selection.h"
 #include "common/rulesys.h"
 #include "common/strings.h"
 
@@ -1974,7 +1975,6 @@ namespace RoF2
 
 	ENCODE(OP_AchievementReward)
 	{
-		constexpr uint32 inspect_item_action = 1;
 		constexpr size_t inspect_header_size = sizeof(uint32) * 2;
 		constexpr size_t inspect_internal_size =
 			inspect_header_size + sizeof(EQ::InternalSerializedItem_Struct);
@@ -1989,10 +1989,10 @@ namespace RoF2
 			return;
 		}
 
-		uint32 action = 0;
+		EQ::RewardSelection::Action action{};
 		memcpy(&action, (*p)->pBuffer, sizeof(action));
-		if (action != inspect_item_action) {
-			// Actions 0, 3, and 7 are already serialized RoF2 payloads.
+		if (action != EQ::RewardSelection::Action::InspectItem) {
+			// List, claim, and bulk payloads are already serialized for RoF2.
 			dest->FastQueuePacket(p, ack_req);
 			return;
 		}

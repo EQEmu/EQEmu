@@ -1,36 +1,33 @@
-#include "achievement_mutations.h"
+#include "zone/achievement_mutations.h"
 
-#include "../common/eq_packet.h"
-#include "../common/rulesys.h"
-#include "../common/servertalk.h"
-#include "achievement_manager.h"
-#include "worldserver.h"
-
-#include <cstring>
+#include "common/eq_packet.h"
+#include "common/rulesys.h"
+#include "common/servertalk.h"
+#include "zone/achievement_manager.h"
+#include "zone/worldserver.h"
 
 extern WorldServer worldserver;
 
 namespace AchievementMutations {
-namespace {
 
-bool Send(const Request &request)
+static bool Send(const Request &request)
 {
 	if (!IsValidRequest(request) || !worldserver.Connected()) {
 		return false;
 	}
 
-	ServerPacket packet(ServerOP_CZAchievementMutationRequest, sizeof(Request));
-	std::memcpy(packet.pBuffer, &request, sizeof(Request));
+	ServerPacket packet(ServerOP_CZAchievementMutationRequest, RequestWireSize);
+	if (!EncodeRequest(request, packet.pBuffer, packet.size)) {
+		return false;
+	}
 	return worldserver.SendPacket(&packet);
 }
 
-} // namespace
-
-bool QueueAdvance(
+static bool QueueAdvance(
 	TargetType target_type,
 	uint64_t target_id,
 	uint32_t achievement_id,
-	uint8_t component_type,
+	ComponentType component_type,
 	uint32_t component_id,
 	uint32_t value
 )
@@ -39,8 +36,6 @@ bool QueueAdvance(
 	if (
 		!RuleB(Achievements, EnableAchievements) ||
 		!manager.IsLoaded() ||
-		!IsValidTarget(target_type, target_id) ||
-		component_type > 2 ||
 		!value
 	) {
 		return false;
@@ -49,7 +44,11 @@ bool QueueAdvance(
 	const auto definition = manager.FindDefinition(achievement_id);
 	if (
 		!definition ||
-		!manager.FindComponentIndex(achievement_id, component_type, component_id)
+		!manager.FindComponentIndex(
+			achievement_id,
+			static_cast<uint8_t>(component_type),
+			component_id
+		)
 	) {
 		return false;
 	}
@@ -59,14 +58,14 @@ bool QueueAdvance(
 		.achievement_id = achievement_id,
 		.component_id = component_id,
 		.value = value,
-		.definition_version = definition->definition_version,
+		.version = definition->version,
 		.target_type = target_type,
 		.operation = Operation::Advance,
 		.component_type = component_type
 	});
 }
 
-bool QueueCompletion(
+static bool QueueCompletion(
 	TargetType target_type,
 	uint64_t target_id,
 	uint32_t achievement_id
@@ -75,8 +74,7 @@ bool QueueCompletion(
 	const auto &manager = AchievementManager::Instance();
 	if (
 		!RuleB(Achievements, EnableAchievements) ||
-		!manager.IsLoaded() ||
-		!IsValidTarget(target_type, target_id)
+		!manager.IsLoaded()
 	) {
 		return false;
 	}
@@ -89,10 +87,136 @@ bool QueueCompletion(
 	return Send({
 		.target_id = target_id,
 		.achievement_id = achievement_id,
-		.definition_version = definition->definition_version,
+		.version = definition->version,
 		.target_type = target_type,
 		.operation = Operation::Complete
 	});
+}
+
+bool QueueGroupAdvance(
+	uint32_t group_id,
+	uint32_t achievement_id,
+	ComponentType component_type,
+	uint32_t component_id,
+	uint32_t value
+)
+{
+	return
+		IsValidGroupTarget(group_id) &&
+		QueueAdvance(
+			TargetType::Group,
+			group_id,
+			achievement_id,
+			component_type,
+			component_id,
+			value
+		);
+}
+
+bool QueueGroupCompletion(uint32_t group_id, uint32_t achievement_id)
+{
+	return
+		IsValidGroupTarget(group_id) &&
+		QueueCompletion(TargetType::Group, group_id, achievement_id);
+}
+
+bool QueueRaidAdvance(
+	int32_t raid_id,
+	uint32_t achievement_id,
+	ComponentType component_type,
+	uint32_t component_id,
+	uint32_t value
+)
+{
+	return
+		IsValidRaidTarget(raid_id) &&
+		QueueAdvance(
+			TargetType::Raid,
+			static_cast<uint64_t>(raid_id),
+			achievement_id,
+			component_type,
+			component_id,
+			value
+		);
+}
+
+bool QueueRaidCompletion(int32_t raid_id, uint32_t achievement_id)
+{
+	return
+		IsValidRaidTarget(raid_id) &&
+		QueueCompletion(
+			TargetType::Raid,
+			static_cast<uint64_t>(raid_id),
+			achievement_id
+		);
+}
+
+bool QueueDynamicZoneAdvance(
+	uint32_t dynamic_zone_id,
+	uint32_t achievement_id,
+	ComponentType component_type,
+	uint32_t component_id,
+	uint32_t value
+)
+{
+	return
+		IsValidDynamicZoneTarget(dynamic_zone_id) &&
+		QueueAdvance(
+			TargetType::DynamicZone,
+			dynamic_zone_id,
+			achievement_id,
+			component_type,
+			component_id,
+			value
+		);
+}
+
+bool QueueDynamicZoneCompletion(
+	uint32_t dynamic_zone_id,
+	uint32_t achievement_id
+)
+{
+	return
+		IsValidDynamicZoneTarget(dynamic_zone_id) &&
+		QueueCompletion(
+			TargetType::DynamicZone,
+			dynamic_zone_id,
+			achievement_id
+		);
+}
+
+bool QueueSharedTaskAdvance(
+	int64_t shared_task_id,
+	uint32_t achievement_id,
+	ComponentType component_type,
+	uint32_t component_id,
+	uint32_t value
+)
+{
+	return
+		IsValidSharedTaskTarget(shared_task_id) &&
+		QueueAdvance(
+			TargetType::SharedTask,
+			static_cast<uint64_t>(shared_task_id),
+			achievement_id,
+			component_type,
+			component_id,
+			value
+		);
+}
+
+bool QueueSharedTaskCompletion(
+	int64_t shared_task_id,
+	uint32_t achievement_id
+)
+{
+	return
+		IsValidSharedTaskTarget(shared_task_id) &&
+		QueueCompletion(
+			TargetType::SharedTask,
+			static_cast<uint64_t>(shared_task_id),
+			achievement_id
+		);
 }
 
 } // namespace AchievementMutations

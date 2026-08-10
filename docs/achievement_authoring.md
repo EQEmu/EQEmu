@@ -27,20 +27,22 @@ erDiagram
     achievement_categories ||--o{ achievement_category_associations : "category_id"
     achievements ||--o{ achievement_category_associations : "achievement_id"
     achievements ||--o{ achievement_components : "achievement_id"
-    achievement_components }o--o| achievement_component_counts : "component_id"
+    achievement_components }o--o| achievement_associations : "component_id"
     achievement_components ||--o{ achievement_criteria : "achievement_id + component_type + component_id"
-    achievements ||--o{ achievement_rewards : "achievement_id"
-    achievements ||--o| achievement_reward_sets : "achievement_id"
-    achievement_reward_sets ||--o{ achievement_reward_options : "reward_set_id"
-    achievement_reward_options ||--o{ achievement_reward_option_entries : "reward_set_id + option_id"
-    achievement_rewards ||--o| achievement_reward_option_entries : "reward_id"
-    achievements ||--o{ achievement_cast_restrictions : "achievement_id"
+    achievements ||--o| reward_sources : "source_type=1 + source_id"
+    reward_sources }o--|| reward_sets : "reward_set_id"
+    reward_sets ||--o{ reward_options : "reward_set_id"
+    reward_options ||--o{ reward_option_entries : "reward_set_id + option_id"
+    rewards ||--o{ reward_option_entries : "reward_id"
+    achievements ||--o{ reward_source_entries : "source_type=1 + source_id"
+    rewards ||--o{ reward_source_entries : "reward_id"
+    achievements ||--o{ achievement_cast_requirements : "achievement_id"
 
     achievements ||--o{ character_achievements : "achievement_id"
     achievement_components ||--o{ character_achievement_progress : "component identity"
     achievements ||--o{ character_achievement_pending_mutations : "achievement_id"
-    achievement_rewards ||--o{ character_achievement_rewards : "reward_id"
-    achievement_reward_sets ||--o{ character_achievement_reward_selections : "reward_set_id"
+    rewards ||--o{ character_achievement_rewards : "reward_id"
+    reward_sets ||--o{ character_achievement_reward_selections : "reward_set_id"
 ```
 
 The character tables also link `character_id` to `character_data.id`.
@@ -55,8 +57,10 @@ Treat these values as durable API:
 - A criterion is unique by
   `(achievement_id, component_type, component_id, event_type, target_id,
   target_id2)`.
-- A grant is identified by `achievement_rewards.reward_id`.
-- A selectable reward is identified by `achievement_reward_sets.reward_set_id`
+- A grant is identified by `rewards.reward_id`.
+- A reward source is identified by `(source_type, source_id)`. Source type `1`
+  is an achievement and source type `2` is a task.
+- A selectable reward is identified by `reward_sets.reward_set_id`
   and an option by `(reward_set_id, option_id)`.
 
 `sequence` controls presentation order. It is not a substitute for any of
@@ -100,9 +104,9 @@ This is the top-level definition record.
 | `description` | Visible achievement description. |
 | `icon_id` | Numeric client icon ID. |
 | `points` | Score awarded for completing the achievement. |
-| `reward_display` | Imported client presentation field. At load time the server replaces it with `1` only when a valid server-authored reward or reward set exists. |
-| `world_display_flag` | Newer-client styling field retained with imported data. RoF2 does not receive it. |
-| `definition_version` | Nonzero version copied into character completion and progress. Increment it when a deployed definition changes incompatibly. |
+| `has_reward` | Imported client reward-button hint. Runtime derives the effective value from loaded automatic or selectable reward mappings for this achievement. |
+| `client_flag` | Uninterpreted field 7 from `AchievementsClient.txt`, retained for lossless import and export. It is not sent to RoF2. |
+| `version` | Definition and persistence version. `0` is the initial version; increment it when a deployed definition changes incompatibly. |
 | `reset_on_version_change` | When `1`, a version mismatch removes that character's old completion, progress, reward ledger, and selection ledger before rebuilding state. |
 | `enabled` | `1` loads the definition; `0` excludes it from the active snapshot. |
 
@@ -132,12 +136,12 @@ Components are the visible steps inside an achievement.
 | `component_type` | RoF2 component bucket `0` through `3`. Only `0` through `2` carry server-evaluated state. |
 | `sequence` | Display order within the component type. The wire display order is clamped to `255`. |
 | `component_id` | Stable component ID. It is part of the component identity. |
-| `description` | Primary visible step text. |
-| `description_2` | Secondary client text; use an empty string when it is not needed. |
+| `name` | Primary visible step text. |
+| `description` | Secondary client text; use an empty string when it is not needed. |
 
 The primary key is `(achievement_id, component_type, component_id)`.
 
-### `achievement_component_counts`
+### `achievement_associations`
 
 This table supplies the presentation count imported from client resources.
 
@@ -153,6 +157,9 @@ sent to RoF2.
 ### `achievement_criteria`
 
 Criteria connect visible components to server events.
+They are achievement-specific event bindings, not a general-purpose
+requirements table: component presentation, category placement, and rewards
+remain separate relationships.
 
 | Field | Meaning |
 | --- | --- |
@@ -167,14 +174,14 @@ Criteria connect visible components to server events.
 | `target_id` | Primary event filter. Its meaning depends on `event_type`. |
 | `target_id2` | Secondary event filter. Supported only by NPC-name kills, owned items, and skill caps. |
 | `target_value` | Minimum observed value, except that skill caps use it as the milestone level. It must not be negative. |
-| `required_count` | Nonzero count needed to satisfy the component. This overrides `achievement_component_counts`. |
+| `required_count` | Nonzero count needed to satisfy the component. This overrides `achievement_associations`. |
 | `enabled` | `1` loads the criterion; `0` leaves the row available for later use. |
 
 All enabled criteria for one component must use the same `event_type`,
 `progress_mode`, `behavior`, and effective `required_count`. Multiple target
 rows are alternatives for that component; the highest valid candidate wins.
 
-### `achievement_cast_restrictions`
+### `achievement_cast_requirements`
 
 This table extends existing spell restriction IDs with achievement state.
 
@@ -187,45 +194,43 @@ This table extends existing spell restriction IDs with achievement state.
 All rows with the same `restriction_id` must pass. The primary key is
 `(restriction_id, achievement_id)`.
 
-## Reward content tables
+## Reward catalog tables
 
-### `achievement_rewards`
+Achievements and tasks share one reward catalog. The provider-specific
+character tables still own authorization, pending selections, and delivery
+ledgers. See [RoF2 Select Reward support](reward_selection.md) for the packet
+and claim lifecycle.
 
-Each row is one independently guarded grant.
+### `rewards`
+
+Each row is one reusable grant definition.
 
 | Field | Meaning |
 | --- | --- |
 | `reward_id` | Auto-incremented grant identity. Enabled values must be nonzero and fit in an unsigned 32-bit RoF2 wire field. |
-| `achievement_id` | Achievement that owns the grant. |
-| `sequence` | Display and automatic-grant order. It is unique within the achievement. |
 | `reward_type` | Grant type described in [Reward types](#reward-types). |
 | `reward_data_id` | Type-specific item, currency, title-set, or experience-mode value. |
 | `amount` | Positive type-specific quantity. |
 | `description` | Text shown in the reward preview. The server supplies a fallback for an empty description. |
-| `enabled` | `1` loads the grant. A disabled mapped row stays mapped and cannot fall back to an automatic grant. |
+| `enabled` | `1` makes the grant available to enabled source and option mappings. |
 
-An enabled row absent from `achievement_reward_option_entries` is granted
-automatically at completion. A mapped row belongs to a common or selectable
-option instead.
+### `reward_sets`
 
-### `achievement_reward_sets`
-
-An achievement may have one selectable reward set.
+A set supplies the title and choices for one or more selectable reward sources.
 
 | Field | Meaning |
 | --- | --- |
 | `reward_set_id` | Stable nonzero set ID and primary key. |
-| `achievement_id` | Owning achievement. This column is unique. |
-| `title` | Select Reward window title. An empty value falls back to the achievement name. |
-| `enabled` | `1` loads the set and its enabled options. |
+| `title` | Select Reward window title. |
+| `enabled` | `1` loads the set when an enabled source references it. |
 
-### `achievement_reward_options`
+### `reward_options`
 
 Options define the common and selectable groups in a reward set.
 
 | Field | Meaning |
 | --- | --- |
-| `reward_set_id` | Logical reference to `achievement_reward_sets.reward_set_id`. |
+| `reward_set_id` | Logical reference to `reward_sets.reward_set_id`. |
 | `option_id` | Stable nonzero option ID within the set. |
 | `sequence` | Display order. |
 | `label` | Text in the reward choices list. |
@@ -233,21 +238,52 @@ Options define the common and selectable groups in a reward set.
 | `flags` | RoF2 option flags passed to the reward window. Use `0` unless a verified client behavior requires another value. |
 | `enabled` | `1` loads the option. |
 
-The primary key is `(reward_set_id, option_id)`. Every enabled set must contain
+The primary key is `(reward_set_id, option_id)`. Every loaded set must contain
 at least one enabled, non-common option, and every loaded option must contain at
 least one enabled grant.
 
-### `achievement_reward_option_entries`
+### `reward_option_entries`
 
-This table assigns canonical grants to options.
+This table assigns grants to options.
 
 | Field | Meaning |
 | --- | --- |
 | `reward_set_id` | Reward set containing the option. |
 | `option_id` | Option receiving the grant. |
-| `reward_id` | Logical reference to `achievement_rewards.reward_id`. A grant may appear in only one option. |
+| `sequence` | Grant display and delivery order within the option. |
+| `reward_id` | Logical reference to `rewards.reward_id`. A grant may appear only once within a set. |
 
 The primary key is `(reward_set_id, option_id, reward_id)`.
+
+### `reward_sources`
+
+This table gives a provider object one selectable set.
+
+| Field | Meaning |
+| --- | --- |
+| `source_type` | Provider type: `1` achievement or `2` task. |
+| `source_id` | Achievement or task ID, interpreted according to `source_type`. |
+| `reward_set_id` | Logical reference to `reward_sets.reward_set_id`. |
+| `enabled` | `1` activates this provider-to-set mapping. |
+
+The primary key `(source_type, source_id)` permits at most one selectable set
+per achievement or task. A set may be reused by multiple sources.
+
+### `reward_source_entries`
+
+This table assigns automatic grants directly to a provider object.
+
+| Field | Meaning |
+| --- | --- |
+| `source_type` | Provider type. Automatic catalog entries currently support `1` (achievement). |
+| `source_id` | Provider-owned object ID; for type `1`, the achievement ID. |
+| `sequence` | Automatic delivery order within the source. |
+| `reward_id` | Logical reference to `rewards.reward_id`. |
+
+An achievement may have automatic entries, a selectable set, or both. A grant
+cannot be both automatic and selectable for the same source.
+Tasks continue to use their established automatic reward fields; a type-`2`
+row in this table makes task reward loading fail closed.
 
 ## Character state tables
 
@@ -272,7 +308,7 @@ state is already satisfied or its persistence succeeds.
 | `component_type` | State-bearing component type for an advance; `0` for whole completion. |
 | `component_id` | Authored component identity for an advance, where `0` is valid; `0` is also carried for whole completion and is disambiguated by `operation`. |
 | `requested_value` | Monotonic progress floor for an advance, clamped to the component's required count; `0` for whole completion. |
-| `definition_version` | Source zone's active definition version. A target using another version blocks the row rather than applying it to changed content. |
+| `version` | Source zone's active definition version. A target using another version blocks the row rather than applying it to changed content. |
 | `status` | `0` pending, `1` blocked by invalid or incompatible content, or `2` processing under a target-zone lease. |
 | `attempt_count` | Number of application claims. Its incremented value is also the compare-and-swap ownership token for the current attempt. |
 | `created_at` | Database Unix timestamp when world committed the per-character row. |
@@ -298,7 +334,7 @@ loaded at a newer version.
 | --- | --- |
 | `character_id` | Logical reference to `character_data.id`. |
 | `achievement_id` | Completed achievement. |
-| `definition_version` | Definition version in force when completion was persisted. |
+| `version` | Definition version in force when completion was persisted. |
 | `completed_at` | Unix completion timestamp. |
 
 The primary key `(character_id, achievement_id)` prevents duplicate completion.
@@ -314,7 +350,7 @@ The primary key `(character_id, achievement_id)` prevents duplicate completion.
 | `component_id` | Stable component ID. |
 | `current_count` | Durable, clamped progress count. |
 | `completed` | Materialized component-satisfied flag. |
-| `definition_version` | Definition version under which this progress was written. |
+| `version` | Definition version under which this progress was written. |
 | `updated_at` | Unix timestamp of the last durable update. |
 
 The primary key is
@@ -328,7 +364,7 @@ This is the idempotency ledger for each individual grant.
 | --- | --- |
 | `character_id` | Character receiving the grant. |
 | `achievement_id` | Achievement that produced it. |
-| `reward_id` | Canonical `achievement_rewards.reward_id`. |
+| `reward_id` | Canonical `rewards.reward_id`. |
 | `status` | `0` claimed/in flight, `1` durably granted, or `2` explicit retryable delivery failure. |
 | `attempt_count` | Number of delivery claims started. |
 | `granted_at` | Unix timestamp of successful delivery, otherwise `0`. |
@@ -441,8 +477,8 @@ ON DUPLICATE KEY UPDATE
     icon = VALUES(icon);
 
 INSERT INTO achievements
-    (id, name, description, icon_id, points, reward_display,
-     world_display_flag, definition_version, reset_on_version_change, enabled)
+    (id, name, description, icon_id, points, has_reward,
+     client_flag, version, reset_on_version_change, enabled)
 VALUES
     (9900200, 'Reach Level 60', 'Reach level 60 on this character',
      0, 10, 0, 0, 1, 1, 1)
@@ -451,7 +487,7 @@ ON DUPLICATE KEY UPDATE
     description = VALUES(description),
     icon_id = VALUES(icon_id),
     points = VALUES(points),
-    definition_version = VALUES(definition_version),
+    version = VALUES(version),
     reset_on_version_change = VALUES(reset_on_version_change),
     enabled = VALUES(enabled);
 
@@ -465,15 +501,15 @@ ON DUPLICATE KEY UPDATE
 
 INSERT INTO achievement_components
     (achievement_id, component_type, sequence, component_id,
-     description, description_2)
+     name, description)
 VALUES
     (9900200, 1, 0, 9910200, 'Reach level 60', '')
 ON DUPLICATE KEY UPDATE
     sequence = VALUES(sequence),
-    description = VALUES(description),
-    description_2 = VALUES(description_2);
+    name = VALUES(name),
+    description = VALUES(description);
 
-INSERT INTO achievement_component_counts (component_id, required_count)
+INSERT INTO achievement_associations (component_id, required_count)
 VALUES (9910200, 1)
 ON DUPLICATE KEY UPDATE required_count = VALUES(required_count);
 
@@ -523,8 +559,8 @@ ON DUPLICATE KEY UPDATE
     icon = VALUES(icon);
 
 INSERT INTO achievements
-    (id, name, description, icon_id, points, reward_display,
-     world_display_flag, definition_version, reset_on_version_change, enabled)
+    (id, name, description, icon_id, points, has_reward,
+     client_flag, version, reset_on_version_change, enabled)
 VALUES
     (9900001, 'Scripted Counter', 'Complete a custom scripted objective',
      0, 10, 0, 0, 1, 1, 1),
@@ -559,7 +595,7 @@ ON DUPLICATE KEY UPDATE
     description = VALUES(description),
     icon_id = VALUES(icon_id),
     points = VALUES(points),
-    definition_version = VALUES(definition_version),
+    version = VALUES(version),
     reset_on_version_change = VALUES(reset_on_version_change),
     enabled = VALUES(enabled);
 
@@ -586,7 +622,7 @@ ON DUPLICATE KEY UPDATE
 
 INSERT INTO achievement_components
     (achievement_id, component_type, sequence, component_id,
-     description, description_2)
+     name, description)
 VALUES
     (9900001, 1, 0, 9910001, 'Complete ten scripted steps', ''),
     (9900002, 1, 0, 9910002, 'Reach level 60', ''),
@@ -604,10 +640,10 @@ VALUES
     (9900014, 1, 0, 9910014, 'Reach the Warrior 1H Blunt cap at 60', '')
 ON DUPLICATE KEY UPDATE
     sequence = VALUES(sequence),
-    description = VALUES(description),
-    description_2 = VALUES(description_2);
+    name = VALUES(name),
+    description = VALUES(description);
 
-INSERT INTO achievement_component_counts (component_id, required_count)
+INSERT INTO achievement_associations (component_id, required_count)
 VALUES
     (9910001, 10),
     (9910002, 1),
@@ -742,31 +778,35 @@ title rewards also require a nonzero `reward_data_id`.
 
 ## Automatic reward example
 
-An enabled reward not mapped to an option is automatic. This example grants
-item `1001` once when achievement `9900002` completes.
+This example grants item `1001` once when achievement `9900002` completes.
+Achievement sources use `source_type = 1`.
 
 ```sql
 START TRANSACTION;
 
-INSERT INTO achievement_rewards
-    (reward_id, achievement_id, sequence, reward_type, reward_data_id,
-     amount, description, enabled)
+INSERT INTO rewards
+    (reward_id, reward_type, reward_data_id, amount, description, enabled)
 VALUES
-    (9920001, 9900002, 0, 0, 1001, 1, 'Example completion item', 1)
+    (9920001, 0, 1001, 1, 'Example completion item', 1)
 ON DUPLICATE KEY UPDATE
-    achievement_id = VALUES(achievement_id),
-    sequence = VALUES(sequence),
     reward_type = VALUES(reward_type),
     reward_data_id = VALUES(reward_data_id),
     amount = VALUES(amount),
     description = VALUES(description),
     enabled = VALUES(enabled);
 
+INSERT INTO reward_source_entries
+    (source_type, source_id, sequence, reward_id)
+VALUES
+    (1, 9900002, 0, 9920001)
+ON DUPLICATE KEY UPDATE
+    sequence = VALUES(sequence);
+
 COMMIT;
 ```
 
-Do not add reward `9920001` to `achievement_reward_option_entries`; doing so
-would remove it from automatic delivery.
+Do not also map reward `9920001` into the selectable set for achievement
+`9900002`; the catalog rejects the same grant in both paths for one source.
 
 ## Single-option reward example
 
@@ -777,30 +817,34 @@ only one claimable choice. This example grants item `1001` for achievement
 ```sql
 START TRANSACTION;
 
-INSERT INTO achievement_reward_sets
-    (reward_set_id, achievement_id, title, enabled)
+INSERT INTO reward_sets
+    (reward_set_id, title, enabled)
 VALUES
-    (9940001, 9900004, 'Example Reward', 1)
+    (9940001, 'Example Reward', 1)
 ON DUPLICATE KEY UPDATE
-    achievement_id = VALUES(achievement_id),
     title = VALUES(title),
     enabled = VALUES(enabled);
 
-INSERT INTO achievement_rewards
-    (reward_id, achievement_id, sequence, reward_type, reward_data_id,
-     amount, description, enabled)
+INSERT INTO reward_sources
+    (source_type, source_id, reward_set_id, enabled)
 VALUES
-    (9920020, 9900004, 0, 0, 1001, 1, 'Example reward item', 1)
+    (1, 9900004, 9940001, 1)
 ON DUPLICATE KEY UPDATE
-    achievement_id = VALUES(achievement_id),
-    sequence = VALUES(sequence),
+    reward_set_id = VALUES(reward_set_id),
+    enabled = VALUES(enabled);
+
+INSERT INTO rewards
+    (reward_id, reward_type, reward_data_id, amount, description, enabled)
+VALUES
+    (9920020, 0, 1001, 1, 'Example reward item', 1)
+ON DUPLICATE KEY UPDATE
     reward_type = VALUES(reward_type),
     reward_data_id = VALUES(reward_data_id),
     amount = VALUES(amount),
     description = VALUES(description),
     enabled = VALUES(enabled);
 
-INSERT INTO achievement_reward_options
+INSERT INTO reward_options
     (reward_set_id, option_id, sequence, label, common_to_all, flags, enabled)
 VALUES
     (9940001, 1, 0, 'Example Item', 0, 0, 1)
@@ -811,13 +855,13 @@ ON DUPLICATE KEY UPDATE
     flags = VALUES(flags),
     enabled = VALUES(enabled);
 
-INSERT INTO achievement_reward_option_entries
-    (reward_set_id, option_id, reward_id)
+INSERT INTO reward_option_entries
+    (reward_set_id, option_id, sequence, reward_id)
 VALUES
-    (9940001, 1, 9920020)
+    (9940001, 1, 0, 9920020)
 ON DUPLICATE KEY UPDATE
-    reward_set_id = VALUES(reward_set_id),
-    option_id = VALUES(option_id);
+    option_id = VALUES(option_id),
+    sequence = VALUES(sequence);
 
 COMMIT;
 ```
@@ -831,33 +875,37 @@ valid content IDs.
 ```sql
 START TRANSACTION;
 
-INSERT INTO achievement_reward_sets
-    (reward_set_id, achievement_id, title, enabled)
+INSERT INTO reward_sets
+    (reward_set_id, title, enabled)
 VALUES
-    (9930001, 9900003, 'Choose a Victory Reward', 1)
+    (9930001, 'Choose a Victory Reward', 1)
 ON DUPLICATE KEY UPDATE
-    achievement_id = VALUES(achievement_id),
     title = VALUES(title),
     enabled = VALUES(enabled);
 
-INSERT INTO achievement_rewards
-    (reward_id, achievement_id, sequence, reward_type, reward_data_id,
-     amount, description, enabled)
+INSERT INTO reward_sources
+    (source_type, source_id, reward_set_id, enabled)
 VALUES
-    (9920010, 9900003, 0, 5, 42, 1,
-     'Unlocks the example prefix and suffix titles', 1),
-    (9920011, 9900003, 1, 0, 1001, 1, 'First item choice', 1),
-    (9920012, 9900003, 2, 0, 1002, 1, 'Second item choice', 1)
+    (1, 9900003, 9930001, 1)
 ON DUPLICATE KEY UPDATE
-    achievement_id = VALUES(achievement_id),
-    sequence = VALUES(sequence),
+    reward_set_id = VALUES(reward_set_id),
+    enabled = VALUES(enabled);
+
+INSERT INTO rewards
+    (reward_id, reward_type, reward_data_id, amount, description, enabled)
+VALUES
+    (9920010, 5, 42, 1,
+     'Unlocks the example prefix and suffix titles', 1),
+    (9920011, 0, 1001, 1, 'First item choice', 1),
+    (9920012, 0, 1002, 1, 'Second item choice', 1)
+ON DUPLICATE KEY UPDATE
     reward_type = VALUES(reward_type),
     reward_data_id = VALUES(reward_data_id),
     amount = VALUES(amount),
     description = VALUES(description),
     enabled = VALUES(enabled);
 
-INSERT INTO achievement_reward_options
+INSERT INTO reward_options
     (reward_set_id, option_id, sequence, label, common_to_all, flags, enabled)
 VALUES
     (9930001, 1, 0, 'Player Flags', 1, 0, 1),
@@ -870,15 +918,15 @@ ON DUPLICATE KEY UPDATE
     flags = VALUES(flags),
     enabled = VALUES(enabled);
 
-INSERT INTO achievement_reward_option_entries
-    (reward_set_id, option_id, reward_id)
+INSERT INTO reward_option_entries
+    (reward_set_id, option_id, sequence, reward_id)
 VALUES
-    (9930001, 1, 9920010),
-    (9930001, 2, 9920011),
-    (9930001, 3, 9920012)
+    (9930001, 1, 0, 9920010),
+    (9930001, 2, 0, 9920011),
+    (9930001, 3, 0, 9920012)
 ON DUPLICATE KEY UPDATE
-    reward_set_id = VALUES(reward_set_id),
-    option_id = VALUES(option_id);
+    option_id = VALUES(option_id),
+    sequence = VALUES(sequence);
 
 COMMIT;
 ```
@@ -1146,7 +1194,7 @@ Before publishing content:
    recipe, skill, class, achievement, and title data.
 4. Keep each component's behavior, event, progress mode, and required count
    consistent across alternate target rows.
-5. Bump `definition_version` for incompatible deployed changes. Decide
+5. Bump `version` for incompatible deployed changes. Decide
    explicitly whether `reset_on_version_change` should clear existing state and
    reward ledgers.
 6. Apply the content transaction, then run `#reload achievements` in one zone

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "serialize_buffer.h"
+#include "common/serialize_buffer.h"
 
 #include <array>
 #include <cstddef>
@@ -58,16 +58,7 @@ enum class CriterionBehavior : uint8_t {
 	Blocker     = 5
 };
 
-enum class RewardType : uint8_t {
-	Item              = 0,
-	Experience        = 1,
-	AlternateAdvancement = 2,
-	Copper            = 3,
-	AlternateCurrency = 4,
-	Title             = 5
-};
-
-// RoF2 reward-window entry types. RewardType describes server delivery instead.
+// RoF2 reward-window entry types. RewardSelection::RewardType describes delivery.
 enum class RewardWireType : uint32_t {
 	Text                         = 0,
 	Money                        = 1,
@@ -77,12 +68,6 @@ enum class RewardWireType : uint32_t {
 	AlternateAdvancementPoints  = 5,
 	GenericPoints                = 11
 };
-
-inline constexpr uint32_t RewardActionList        = 0;
-inline constexpr uint32_t RewardActionInspectItem = 1;
-inline constexpr uint32_t RewardActionClaim       = 3;
-inline constexpr uint32_t RewardActionView        = 5;
-inline constexpr uint32_t RewardActionBulk        = 7;
 
 struct RewardDisplayItem {
 	uint32_t    field0 = 0;
@@ -138,10 +123,10 @@ struct Category {
 struct Component {
 	uint32_t    component_id = 0;
 	uint8_t     component_type = 0;
-	uint32_t    sequence = 0; // Server-side persistence identity; not serialized.
+	uint32_t    sequence = 0; // Full presentation order; display_order is the RoF2 byte value.
 	uint32_t    required_count = 1;
+	std::string name;
 	std::string description;
-	std::string description2;
 	uint8_t     display_order = 0;
 };
 
@@ -150,10 +135,10 @@ struct Definition {
 	std::string                           name;
 	std::string                           description;
 	uint32_t                              icon_id = 0;
-	uint32_t                              definition_version = 1; // Client definition and server persistence version.
+	uint32_t                              version = 0; // Client definition and server persistence version.
 	std::array<std::vector<Component>, 4> components;
 	uint32_t                              points = 0;
-	uint32_t                              reward_display = 0;
+	bool                                  has_reward = false;
 };
 
 struct State {
@@ -176,48 +161,7 @@ struct ProgressUpdate {
 	uint32_t current_count = 0;
 };
 
-// NpcNameKill identity: lowercase ASCII letters with spaces/underscores folded
-// to one separator, then FNV-1a hashed. Punctuation and spawn suffix digits are
-// ignored; zero is reserved for names without a usable identity.
-inline constexpr uint32_t NpcNameIdentityHash(std::string_view name)
-{
-	constexpr uint32_t fnv_offset_basis = 2166136261u;
-	constexpr uint32_t fnv_prime = 16777619u;
-
-	uint32_t hash = fnv_offset_basis;
-	bool has_letter = false;
-	bool separator_pending = false;
-
-	const auto append = [&hash](uint8_t value) {
-		hash ^= value;
-		hash *= fnv_prime;
-	};
-
-	for (const auto character : name) {
-		const auto byte = static_cast<uint8_t>(character);
-		if (byte == static_cast<uint8_t>(' ') || byte == static_cast<uint8_t>('_')) {
-			separator_pending = has_letter;
-			continue;
-		}
-
-		auto normalized = byte;
-		if (normalized >= static_cast<uint8_t>('A') && normalized <= static_cast<uint8_t>('Z')) {
-			normalized = static_cast<uint8_t>(normalized + ('a' - 'A'));
-		}
-		if (normalized < static_cast<uint8_t>('a') || normalized > static_cast<uint8_t>('z')) {
-			continue;
-		}
-
-		if (separator_pending) {
-			append(static_cast<uint8_t>(' '));
-			separator_pending = false;
-		}
-		append(normalized);
-		has_letter = true;
-	}
-
-	return has_letter && hash ? hash : 0;
-}
+uint32_t NpcNameIdentityHash(std::string_view name);
 
 // The client consumes this uncompressed stream after inflating the definition packet.
 SerializeBuffer SerializeDefinitions(
@@ -305,8 +249,8 @@ size_t ComparisonPayloadSize(
 // "no reward" response (action followed by has_reward=0).
 SerializeBuffer SerializeRewardDisplay(const RewardDisplaySet *reward_set);
 
-// RoF2 action 7 replaces the reward manager with a tab for each display set.
-// An empty collection clears an already-populated manager.
+// The bulk action replaces the reward manager with one tab per display set.
+// An empty collection clears the manager.
 SerializeBuffer SerializeRewardDisplays(
 	const std::vector<RewardDisplaySet> &reward_sets
 );

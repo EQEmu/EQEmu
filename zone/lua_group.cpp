@@ -42,11 +42,10 @@ bool Lua_Group::AdvanceAchievementProgress(
 		return false;
 	}
 
-	return AchievementMutations::QueueAdvance(
-		AchievementMutations::TargetType::Group,
+	return AchievementMutations::QueueGroupAdvance(
 		self->GetID(),
 		achievement_id,
-		static_cast<uint8_t>(component_type),
+		static_cast<AchievementMutations::ComponentType>(component_type),
 		component_id,
 		value
 	);
@@ -55,8 +54,7 @@ bool Lua_Group::AdvanceAchievementProgress(
 bool Lua_Group::CompleteAchievement(uint32 achievement_id)
 {
 	Lua_Safe_Call_Bool();
-	return AchievementMutations::QueueCompletion(
-		AchievementMutations::TargetType::Group,
+	return AchievementMutations::QueueGroupCompletion(
 		self->GetID(),
 		achievement_id
 	);

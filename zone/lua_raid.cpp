@@ -42,11 +42,10 @@ bool Lua_Raid::AdvanceAchievementProgress(
 		return false;
 	}
 
-	return AchievementMutations::QueueAdvance(
-		AchievementMutations::TargetType::Raid,
-		self->GetID(),
+	return AchievementMutations::QueueRaidAdvance(
+		static_cast<int32_t>(self->GetID()),
 		achievement_id,
-		static_cast<uint8_t>(component_type),
+		static_cast<AchievementMutations::ComponentType>(component_type),
 		component_id,
 		value
 	);
@@ -55,9 +54,8 @@ bool Lua_Raid::AdvanceAchievementProgress(
 bool Lua_Raid::CompleteAchievement(uint32 achievement_id)
 {
 	Lua_Safe_Call_Bool();
-	return AchievementMutations::QueueCompletion(
-		AchievementMutations::TargetType::Raid,
-		self->GetID(),
+	return AchievementMutations::QueueRaidCompletion(
+		static_cast<int32_t>(self->GetID()),
 		achievement_id
 	);
 }

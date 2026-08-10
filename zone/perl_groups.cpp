@@ -37,11 +37,10 @@ bool Perl_Group_AdvanceAchievementProgress(
 		return false;
 	}
 
-	return AchievementMutations::QueueAdvance(
-		AchievementMutations::TargetType::Group,
+	return AchievementMutations::QueueGroupAdvance(
 		self->GetID(),
 		achievement_id,
-		static_cast<uint8_t>(component_type),
+		static_cast<AchievementMutations::ComponentType>(component_type),
 		component_id,
 		value
 	);
@@ -49,8 +48,7 @@ bool Perl_Group_AdvanceAchievementProgress(
 
 bool Perl_Group_CompleteAchievement(Group* self, uint32 achievement_id) // @categories Achievements, Group
 {
-	return AchievementMutations::QueueCompletion(
-		AchievementMutations::TargetType::Group,
+	return AchievementMutations::QueueGroupCompletion(
 		self->GetID(),
 		achievement_id
 	);

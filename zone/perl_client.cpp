@@ -1492,11 +1492,10 @@ bool Perl_Client_AdvanceSharedTaskAchievementProgress(
 		return false;
 	}
 
-	return AchievementMutations::QueueAdvance(
-		AchievementMutations::TargetType::SharedTask,
-		static_cast<uint64_t>(shared_task_id),
+	return AchievementMutations::QueueSharedTaskAdvance(
+		shared_task_id,
 		achievement_id,
-		static_cast<uint8_t>(component_type),
+		static_cast<AchievementMutations::ComponentType>(component_type),
 		component_id,
 		value
 	);
@@ -1512,9 +1511,8 @@ bool Perl_Client_CompleteSharedTaskAchievement(
 		return false;
 	}
 
-	return AchievementMutations::QueueCompletion(
-		AchievementMutations::TargetType::SharedTask,
-		static_cast<uint64_t>(shared_task_id),
+	return AchievementMutations::QueueSharedTaskCompletion(
+		shared_task_id,
 		achievement_id
 	);
 }

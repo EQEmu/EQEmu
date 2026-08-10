@@ -83,6 +83,7 @@ set(zone_sources
 	raids.cpp
 	raycast_mesh.cpp
 	reward_selection.cpp
+	reward_selection_catalog.cpp
 	shared_task_zone_messaging.cpp
 	sidecar_api/loot_simulator_controller.cpp
 	sidecar_api/sidecar_api.cpp
@@ -215,6 +216,7 @@ set(zone_headers
 	raids.h
 	raycast_mesh.h
 	reward_selection.h
+	reward_selection_catalog.h
 	shared_task_zone_messaging.h
 	sidecar_api/sidecar_api.h
 	spawn2.h

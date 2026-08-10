@@ -51,20 +51,33 @@ selectable set may also contain coin, experience, AA, currency, or title
 entries; leave the corresponding legacy field empty when the same grant is in
 the set so content does not award it twice.
 
-## Task content
+## Reward catalog
 
-The content database owns four tables:
+Achievements and tasks share six provider-neutral content tables:
 
-- `task_reward_sets`: one enabled set per task.
-- `task_reward_options`: ordered choices within the set. An option marked
+- `rewards` defines typed grants.
+- `reward_sets` defines titled selectable collections.
+- `reward_options` defines ordered choices. An option marked
   `common_to_all = 1` is granted with every selectable option.
-- `task_rewards`: typed grant entries owned by the task.
-- `task_reward_option_entries`: maps each reward to exactly one option.
+- `reward_option_entries` places grants in options.
+- `reward_sources` maps one provider object to one selectable set.
+- `reward_source_entries` maps automatic grants directly to a provider object.
+
+`source_type = 1` identifies an achievement and `source_type = 2` identifies a
+task. In both cases, `source_id` is the corresponding achievement or task ID.
+Definitions may be reused, but provider authorization and character delivery
+ledgers remain separate.
+
+Automatic catalog entries currently apply only to achievements. Tasks use
+their established automatic reward fields, and task loading rejects
+`reward_source_entries` rows with `source_type = 2`.
 
 Reward, set, and option IDs sent over the wire must fit in an unsigned 32-bit
-integer. Every enabled reward must be mapped exactly once, every enabled option
-must contain at least one enabled reward, and a set must contain at least one
-non-common option.
+integer. Every referenced reward must be enabled, every loaded option must
+contain at least one reward, and a loaded set must contain at least one
+non-common option. A reward may be reused across sources or sets, but may appear
+only once within one set and cannot be both automatic and selectable for the
+same source.
 
 Supported reward types are:
 
@@ -92,29 +105,32 @@ Example with one common coin entry and two item choices:
 ```sql
 UPDATE tasks SET reward_method = 3 WHERE id = 1001;
 
-INSERT INTO task_reward_sets (reward_set_id, task_id, title)
-VALUES (1001, 1001, 'Choose a Reward');
+INSERT INTO reward_sets (reward_set_id, title)
+VALUES (1001, 'Choose a Reward');
 
-INSERT INTO task_reward_options
+INSERT INTO reward_sources (source_type, source_id, reward_set_id)
+VALUES (2, 1001, 1001);
+
+INSERT INTO reward_options
 	(reward_set_id, option_id, sequence, label, common_to_all)
 VALUES
 	(1001, 1, 0, 'Completion coin', 1),
 	(1001, 2, 1, 'First item', 0),
 	(1001, 3, 2, 'Second item', 0);
 
-INSERT INTO task_rewards
-	(reward_id, task_id, sequence, reward_type, reward_data_id, amount)
+INSERT INTO rewards
+	(reward_id, reward_type, reward_data_id, amount, description)
 VALUES
-	(10001, 1001, 0, 3, 0, 1000),
-	(10002, 1001, 1, 0, 5001, 1),
-	(10003, 1001, 2, 0, 5002, 1);
+	(10001, 3, 0, 1000, '1 platinum'),
+	(10002, 0, 5001, 1, 'First item'),
+	(10003, 0, 5002, 1, 'Second item');
 
-INSERT INTO task_reward_option_entries
-	(reward_set_id, option_id, reward_id)
+INSERT INTO reward_option_entries
+	(reward_set_id, option_id, sequence, reward_id)
 VALUES
-	(1001, 1, 10001),
-	(1001, 2, 10002),
-	(1001, 3, 10003);
+	(1001, 1, 0, 10001),
+	(1001, 2, 0, 10002),
+	(1001, 3, 0, 10003);
 ```
 
 ## Completion and claim lifecycle
@@ -175,13 +191,12 @@ already-delivered entries are skipped.
 
 ## Operational notes
 
-Install content migration `9377` and character migration `9378` before starting
-a zone that includes this support. The character migration normalizes existing
-task-reward rows to occurrence tokens and removes the obsolete same-second
-identity. Task reload validates and replaces the in-memory reward definitions;
-active client sessions hold copied definitions, so a reload cannot leave
-dangling pointers. Pending rows remain the durable authority across zoning,
-disconnects, and server restarts.
+Install content migration `9329` and character migration `9330` before starting
+a zone that includes this support. The character migration creates the
+occurrence-token state used by selectable task rewards. Task reload validates
+and replaces the in-memory reward definitions; active client sessions hold
+copied definitions, so a reload cannot leave dangling pointers. Pending rows
+remain the durable authority across zoning, disconnects, and server restarts.
 
 When changing selectable reward content, avoid reusing a reward, option, or set
 ID for a different semantic grant. Stable IDs are part of claim validation and

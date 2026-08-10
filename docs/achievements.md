@@ -10,6 +10,8 @@ opt-in. Nothing that is unique to ToB's packet protocol is sent to RoF2.
 
 See [Achievement content authoring](achievement_authoring.md) for the database
 relationships, criterion examples, rewards, and quest API recipes.
+See [RoF2 Select Reward support](reward_selection.md) for the shared reward
+catalog, client lanes, and claim lifecycle.
 See [RoF2 / Dragons of Norrath achievement coverage](achievement_coverage.md)
 for the audited native, quest-owned, presentation-only, and unavailable IDs.
 
@@ -131,8 +133,8 @@ parent, reserved ID zero, or cycle, prevents achievement content from loading.
 
 An achievement definition contains four component vectors in type order
 0, 1, 2, 3. The byte immediately before those vectors is RoF2's `persistent`
-flag and is written as `1`; the following dword is `definition_version`. The
-final two fields are RoF2 points and reward-display values.
+flag and is written as `1`; the following dword is the definition `version`.
+The final two fields are RoF2 points and the `has_reward` value.
 
 The comparison/summary snapshot has no count or achievement IDs. It has exactly
 one state in the same order as the definition vector:
@@ -277,7 +279,7 @@ Action `3` carries the pending reward ID, reward-set ID, and selected option
 ID; its reply has the same identities plus the success byte. The action-`1`
 request is exactly five `u32` values: action, reward-set ID, option ID,
 reward-entry ID, and item ID. Every displayed reward entry uses its nonzero
-canonical `achievement_rewards.reward_id` as the 32-bit reward-entry ID. The
+canonical `rewards.reward_id` as the 32-bit reward-entry ID. The
 server verifies all three identities and requires the item to belong to that
 exact loaded option. Its reply is action `1`, the item ID, then the ordinary
 RoF2 serialized item body. A RoF2-only outbound encoder reuses the existing
@@ -289,469 +291,99 @@ Database option IDs are scoped to their reward set, but RoF2 indexes option
 detail records by option ID across the entire displayed manager. Before an
 action-`7` replacement, the zone assigns every displayed option a unique wire
 ID. Inspect and claim requests are translated back to the canonical
-`achievement_reward_options.option_id` before provider validation and ledger
+`reward_options.option_id` before provider validation and ledger
 updates. This permits different achievement and task sets to use ordinary
 local option IDs such as `1`, `100`, and `110` without cross-populating tabs.
 
 The five optional client resource files do not contain reward-set, option, or
-grant contents. Their imported reward-display field is therefore not treated
-as proof that a usable reward exists. Runtime clears that display flag and
-enables View Reward only for definitions with loaded server-authored reward
-rows or a valid selectable reward set.
+grant contents. Their imported `has_reward` hint is therefore not proof that a
+usable reward exists. Runtime enables View Reward only when that achievement
+has loaded automatic reward entries or a valid selectable set.
 
-## Content and state tables
+## Runtime policy and authoring boundary
 
-Presentation and server policy are intentionally separate:
+The normalized content tables, character-state tables, criterion values, reward
+types, SQL examples, and Lua/Perl recipes are documented in
+[Achievement content authoring](achievement_authoring.md). The shared reward
+catalog and claim state machine are documented in
+[RoF2 Select Reward support](reward_selection.md).
 
-- `achievement_categories`
-- `achievements`
-- `achievement_category_associations`
-- `achievement_components`
-- `achievement_component_counts`
-- `achievement_criteria`
-- `achievement_rewards`
-- `achievement_reward_sets`
-- `achievement_reward_options`
-- `achievement_reward_option_entries`
-- `achievement_cast_restrictions`
-- `character_achievement_pending_mutations`
-- `character_achievements`
-- `character_achievement_progress`
-- `character_achievement_rewards`
-- `character_achievement_reward_selections`
+The RoF2 progress packet calls its component fields `requirement_id` and
+`requirement_type`; they do not identify rows in `achievement_criteria`.
+Criteria are server-side event bindings. Several alternatives may feed one
+visible component, while component behavior and `required_count` decide
+whether that component is required for completion.
 
-Completion, progress, reward claims, and cast-restriction checks are
-character-scoped. The definition catalog and its zero-based indices remain
-global and identical for every client. When positive Own Item and Skill Cap
-criteria that carry a valid class ID resolve to one EQ class, a character of a
-different class receives state `Hidden` (`3`) for that definition. Blocker,
-optional, and display-only criteria do not establish class applicability, and
-contradictory required class criteria make the content snapshot fail closed.
-RoF2 then omits hidden definitions from the window while the global index is
-preserved for dense state, links, View Reward, and reloads. Thus the UI shows
-only class-applicable Epics and skill families without making their completion
-account-wide.
+Completion, progress, reward claims, and cast requirements are character-scoped.
+The definition catalog and its zero-based indices are global. Positive Own Item
+and Skill Cap criteria that resolve to one class hide the definition from other
+classes without changing its global index, so class Epics and skill families do
+not become account-wide. Shared-bank ownership may satisfy an active
+character's criterion, but completion and rewards still belong to that
+character.
 
-Shared-bank rows are deliberately an account-accessible input to Own Item, but
-any resulting completion and reward still belong to the active character. A
-future account-wide mode needs an explicit per-definition scope and separate
-reward policy; it must not be implemented by simply OR-ing character completion
-rows.
+Component identity is
+`(achievement_id, component_type, component_id)`; sequence is presentation
+order. Types `0` through `2` carry evaluated state. Type `3` is
+presentation-only because RoF2 has no state or progress channel for it.
+Imported component counts are presentation defaults; every evaluated component
+uses the criterion's explicit nonzero count.
 
-Scripted group, raid, dynamic-zone, and shared-task updates are expanded by
-world into `character_achievement_pending_mutations`. Each target character
-applies that durable row in its current zone or on a later login. Progress
-requests are monotonic floors and completion requests are idempotent, so a row
-left behind after an interrupted delete can be replayed safely. Definition
-version mismatches and invalid components are retained as blocked rows with a
-diagnostic instead of being applied to different content. A character-scoped
-database lock serializes zone-handoff consumers. Per-row claim tokens and a
-60-second processing lease recover work left by a stopped zone process, while
-a 64-row client-tick budget prevents an accumulated raid backlog from stalling
-login.
+Definition `version` is sent to RoF2 and stored with character state. Version
+`0` is valid initially. When the version changes and
+`reset_on_version_change` is enabled, completion, progress, and reward ledgers
+are rebuilt together. Invalid or conflicting enabled content makes the
+achievement snapshot fail closed.
 
-Component identity is `(achievement_id, component_type, component_id)`.
-Sequence is display order, not identity. This matters because the supplied ToB
-data contains repeated `(achievement_id, component_type, sequence)` tuples.
-Definition components may use the four RoF2 wire types `0` through `3`, but
-server-evaluated criteria may use only types `0` through `2`. Type `3` is
-presentation-only because RoF2 has no state or count channel for it.
+Native event feeds cover level changes, credited NPC type/race/name kills,
+durably recorded task completion, zone entry, corpse loot, authoritative item
+ownership, successful tradeskills, persisted raw skills and database-backed
+skill caps, spent AA, and prerequisite achievement completion. Login and zone
+reconciliation replay durable absolute facts: current level, completed tasks,
+inventory, shared bank, keyring, raw skills and caps, spent AA, and completed
+prerequisites. It does not invent historical kills, prior zone visits, loot, or
+combines that the server did not persist.
 
-Imported component counts are presentation defaults only. Every enabled
-server criterion must provide an explicit, nonzero `required_count`; the
-manager rejects zero and uses the server value for both evaluation and the
-RoF2 definition sent for that evaluated component. ToB data therefore cannot
-silently become completion policy.
+Owned-item evaluation reads persisted inventory, shared-bank, keyring, cursor,
+bag, and augment state. A fresh ownership pass guards any completion whose
+required, visibility, unlock, or blocker policy depends on item ownership. This
+prevents stale shared-bank state from granting a reward. Periodic reconciliation
+also makes another character's shared-bank mutation visible without adding a
+cross-zone achievement protocol.
 
-`definition_version` is sent to RoF2 and also controls server persistence. When
-it changes and `reset_on_version_change` is enabled, completion, progress, and
-the reward ledger are reset together. Deleting completion last makes an
-interrupted reset discoverable on the next zone entry.
+Scripted group, raid, expedition, and shared-task updates are expanded by world
+into durable per-character mutations, including members in other zones or
+offline. Progress requests are monotonic floors and completion requests are
+idempotent. Version mismatches or invalid components remain blocked for
+diagnosis; processing leases recover rows abandoned by a stopped zone.
 
-Enabled runtime content is fail-closed. Invalid component/criterion/reward
-types, missing evaluated components, conflicting or duplicate criterion
-identities, duplicate definition/component/reward identities, and duplicate
-cast restrictions prevent the zone from starting. The schema migrations also
-verify the critical content keys and all character-state idempotency keys,
-adding a missing unique key when legacy rows permit it. Conflicting duplicate
-legacy rows make the migration fail for operator repair rather than allowing
-doubled progress or reward claims.
+Reward definitions are provider-neutral, but achievement and task authorization,
+pending selections, and delivery ledgers remain separate. Completion is
+reconciled with the achievement ledger on login. Automatic delivery runs after
+the completing game event finishes, and selectable rewards wait for a validated
+client choice. A confirmed entry is never delivered again; an ambiguous
+in-flight result is not retried automatically because the underlying grant may
+already have committed.
 
-## Evaluation criteria
-
-The client resources describe what to display, not what game action satisfies
-it. Automatic progression therefore requires explicit `achievement_criteria`
-rows. The importer authors policy only for the narrow resource shapes that can
-be mapped independently to a stable server fact: level milestones, leaf
-travelers, exact child-achievement dependencies, zone-scoped Hunter names,
-class skill caps at a milestone level, exact item-name ownership, and
-explicitly opted-in direct tradeskill and AA-spent milestones. Everything else
-remains server-authored.
-
-Event values are:
-
-| Value | Event |
-| --- | --- |
-| 0 | Manual |
-| 1 | Level |
-| 2 | NPC type kill |
-| 3 | NPC race kill |
-| 4 | Task complete |
-| 5 | Zone enter |
-| 6 | Loot item |
-| 7 | Own item |
-| 8 | Tradeskill success |
-| 9 | Skill value |
-| 10 | Spent/assigned alternate-advancement points |
-| 11 | Achievement complete |
-| 12 | Canonical NPC-name kill, scoped by zone |
-| 13 | DB-backed class skill cap at a milestone level |
-
-`target_id` is an exact-match filter. Zero is normally a wildcard, except for
-two deliberate cases: task completion must name a specific task so it can be
-replayed from durable task history, and Skill Value criteria use `4294967295`
-(`UINT32_MAX`) as their wildcard because skill ID zero is the valid 1H Blunt
-skill. Skill Cap criteria always name an exact valid skill; the same sentinel is
-used only by the runtime to request a full Skill Cap reconciliation.
-
-`target_id2` is normally zero. For NPC Name Kill it is the exact zone ID, with
-zero as the explicit zone wildcard. For Own Item it may be an EQ class ID;
-zero means any class. Skill Cap requires an EQ class ID. A positive
-`target_value` is normally a minimum event value. For Skill Cap it is instead
-the milestone level used to query `skill_caps`; the resulting DB cap is the
-value compared with the character's persisted raw skill.
-
-NPC-name kill criteria use the FNV-1a 32-bit hash of a deliberately narrow
-canonical name in `target_id` and the exact zone ID in `target_id2`. Canonical
-names retain ASCII letters only, lowercase them, collapse underscores and
-spaces to one space, and remove digits, punctuation, and non-ASCII characters.
-A zero hash is invalid. Hash collisions between different canonical names are
-audited within each zone; repeated names in different zones remain distinct.
-
-Runtime trigger and replay coverage is:
-
-| Event | Live source | Login/zone replay | Importer policy |
-| --- | --- | --- | --- |
-| Manual | Lua/Perl progress or completion calls | Persisted achievement state | Never inferred |
-| Level | Successful character save after a level change | Current level | Validated Level and level-locked Progression milestones |
-| NPC type/race kill | Credited NPC death for raid, group, or solo recipients | None; no durable named-kill history | Reviewed server IDs only |
-| NPC name kill | Same credited death, canonical original name plus base zone | None | Validated Hunter leaves; reviewed raid/boss criteria |
-| Task complete | After completed-task state is durably saved | Recorded completed tasks, including shared tasks | Reviewed task IDs only |
-| Zone enter | Destination zone achievement load/reconciliation | Current zone only | Validated Traveler leaves |
-| Loot item | Successful NPC-corpse transfer | None | Reviewed item IDs only |
-| Own item | Durable inventory/shared-bank/keyring mutation | Authoritative inventory, shared bank, and keyring | Exact-name Key and class-gated Epic items; reviewed item IDs |
-| Tradeskill success | Successful manual or auto-combine | None | Reviewed recipe IDs only |
-| Skill value | Successful raw-skill persistence | All persisted raw skills | Opt-in direct tradeskill milestones |
-| Skill cap | Successful raw-skill persistence or level change | All persisted raw skills against DB caps | Validated class proficiency families |
-| AA points spent | Successful AA-state save | Purchased ranks plus durable expended-AA history | Opt-in validated spent-AA milestones |
-| Achievement complete | Persisted completion propagation | Completed prerequisite achievements | Unique exact-name dependencies |
-
-Named raid bosses can use the same NPC-name path when a server author supplies
-the reviewed name hash and zone. The importer does not infer Raid or
-`Conqueror` components from display prose: many describe phases, trials, or
-scripted events rather than killable NPC names. Raid trials, scripted encounter
-wins, faction/access flags, and quests whose client text does not identify a
-server task remain explicit task-ID criteria or quest-script calls. Historical
-kills, visits other than the current zone, loot, recipes, and combines are not
-fabricated at login.
-
-Normal skill gains and quest `SetSkill` calls persist through `Client::SetSkill`
-before emitting Skill Value. The legacy Lua/Perl `IncreaseSkill` helper mutates
-only the in-memory profile and does not persist or emit an immediate
-achievement event; achievement-bearing scripts must use `SetSkill`. Login
-reconciliation always evaluates the persisted raw skill, never item-modified
-skill. Skill Cap criteria additionally query `skill_caps` for the criterion's
-class, skill, and milestone level. They do not embed a cap copied from the ToB
-client.
-
-Progress modes are:
-
-| Value | Mode | Effect |
-| --- | --- | --- |
-| 0 | Increment | Add the event value |
-| 1 | Highest | Keep the highest observed value |
-| 2 | Set | Replace with the event value |
-| 3 | Boolean | Satisfy the component on a matching event |
-
-Component behaviors are:
-
-| Value | Behavior |
-| --- | --- |
-| 0 | Required for completion |
-| 1 | Optional |
-| 2 | Unlock gate; locked until satisfied |
-| 3 | Visibility gate; state is Hidden until satisfied |
-| 4 | Display only |
-| 5 | Blocker; locks when satisfied |
-
-Every criterion that targets the same component must use the same behavior and
-effective required count, event type, and progress mode. The manager rejects
-conflicting alternate policy instead of depending on row order. Increment mode
-is also rejected for reconciled absolute facts (level, owned-item count, raw
-skill, DB-backed skill cap, and spent AA), for specifically targeted one-time
-tasks, and for all
-achievement-completion dependency criteria; use Highest, Set, or Boolean for
-those. Boolean criteria over absolute facts
-must also specify a positive `target_value`, so an owned count or skill value
-of zero cannot satisfy them during login reconciliation. Set and Boolean
-absolute facts are actively cleared when they fall below the threshold.
-Alternate absolute criteria for one component are aggregated by their highest
-valid value, so database or inventory iteration order cannot change the
-result. A definition with no required criteria remains open and cannot
-accidentally auto-complete.
-
-Owned-item reconciliation reads the persisted `inventory`, `sharedbank`, and
-`keyring` rows rather than trusting possibly newer in-memory mutations. It
-covers equipment, general inventory, bank, shared bank, persisted bag contents,
-socketed augments, every durable buffered cursor item rather than only the
-visible front item, and the retained item identity for each acquired key.
-A keyring entry satisfies one copy without double-counting a physical copy
-still held. Non-ringable keys remain covered while physically present in any
-included item location; keyring is an additional durable source, not an
-exclusive path. Reconciliation applies the same expansion-slot, parent container,
-bag-size, item-definition, augment-definition, and legacy charge normalization
-rules as inventory loading, so stale database rows are not achievement credit.
-A wildcard owned-item criterion uses the largest quantity held for any single
-item ID. Cursor overflow is reported as a persistence failure; an item reward
-also checks cursor capacity before mutation. A nonzero Own Item `target_id2`
-restricts that criterion to the matching EQ class; this is used for Epic
-definitions while Key definitions remain class-neutral.
-
-Before any non-ownership event evaluates a definition whose completion,
-visibility, unlock, or blocker policy depends on Own Item, the server performs
-one fresh ownership pass. This is also the final completion gate. It prevents
-stale-high rewards and stale-low lock state when another concurrently online
-character on the same account changes the account-wide shared bank, without
-requiring ToB behavior or cross-zone achievement messages. If any component of
-that authoritative pass cannot be persisted, no definition is evaluated from
-the partial result.
-
-Clients with configured Own Item criteria also perform a periodic authoritative
-pass. This makes an account-wide shared-bank change visible to an otherwise idle
-character in another zone, including Own-only achievements, without adding a
-new cross-zone message dependency. The interval is configurable and the pass is
-coalesced with any local inventory reconciliation already pending. The first
-deadline is deterministically jittered per character, linkdead clients do not
-poll, and polling stops after every Own-based definition is complete. A failed
-background pass waits for the next interval; it does not enter the foreground
-per-process retry path used to protect an active inventory mutation.
-
-Example server-authored criteria:
-
-```sql
--- Kill 100 of NPC type 12345.
-INSERT INTO achievement_criteria
-    (achievement_id, component_type, component_sequence, component_id,
-     event_type, progress_mode, behavior, target_id, required_count)
-VALUES
-    (900001, 0, 0, 700001, 2, 0, 0, 12345, 100);
-
--- Reach level 60.
-INSERT INTO achievement_criteria
-    (achievement_id, component_type, component_sequence, component_id,
-     event_type, progress_mode, behavior, target_value, required_count)
-VALUES
-    (900002, 0, 0, 700002, 1, 3, 0, 60, 1);
-
--- Acquire or retain reviewed item ID 12345. A matching keyring entry also
--- satisfies one copy.
-INSERT INTO achievement_criteria
-    (achievement_id, component_type, component_sequence, component_id,
-     event_type, progress_mode, behavior, target_id, target_value,
-     required_count)
-VALUES
-    (900003, 1, 0, 700003, 7, 3, 0, 12345, 1, 1);
-```
-
-The achievement, component type, and component ID in these rows must match the
-associated presentation component. Display sequence is mutable presentation
-ordering and is not part of runtime component identity.
-
-## Rewards
-
-Reward types are item `0`, experience `1`, AA points `2`, copper `3`,
-alternate currency `4`, and title `5`. Each `achievement_rewards` row remains
-the canonical grant identity and is guarded by
-`character_achievement_rewards` before delivery.
-
-For experience rows, `reward_data_id = 0` uses the established experience
-path, including the character's AA allocation and configured modifiers.
-`reward_data_id = 1` adds the raw amount to normal experience while preserving
-AA experience, matching rewards explicitly described as **No AA Exp**. Title
-rows use a nonzero `titles.title_set`, not a row's `titles.id`; every eligible
-prefix or suffix sharing that set is unlocked together.
-
-An enabled reward row that is not present in
-`achievement_reward_option_entries` is an automatic completion grant. Mapping
-that row through `achievement_reward_option_entries` removes it from automatic
-delivery and places it in the server-authored selectable model:
-
-- `achievement_reward_sets` assigns at most one enabled set and window title to
-  an achievement.
-- `achievement_reward_options` orders the set's options. An option with
-  `common_to_all = 1` is granted with every selection; every valid set must also
-  contain at least one non-common selectable option.
-- `achievement_reward_option_entries` maps each canonical
-  `achievement_rewards.reward_id` to one option. Disabled or incomplete
-  mappings fail closed and never fall back to an automatic grant.
-
-For example, this creates one common AA-point grant plus a choice between two
-items for achievement `900001`:
-
-```sql
-INSERT INTO achievement_reward_sets
-    (reward_set_id, achievement_id, title, enabled)
-VALUES
-    (700001, 900001, 'Choose Your Reward', 1);
-
-INSERT INTO achievement_reward_options
-    (reward_set_id, option_id, sequence, label, common_to_all, flags, enabled)
-VALUES
-    (700001, 1, 0, 'Included with every choice', 1, 0, 1),
-    (700001, 2, 1, 'First item', 0, 0, 1),
-    (700001, 3, 2, 'Second item', 0, 0, 1);
-
-INSERT INTO achievement_rewards
-    (reward_id, achievement_id, sequence, reward_type, reward_data_id,
-     amount, description, enabled)
-VALUES
-    (800001, 900001, 0, 2, 0, 1, '1 Alternate Advancement Point', 1),
-    (800002, 900001, 1, 0, 12345, 1, 'First item', 1),
-    (800003, 900001, 2, 0, 23456, 1, 'Second item', 1);
-
-INSERT INTO achievement_reward_option_entries
-    (reward_set_id, option_id, reward_id)
-VALUES
-    (700001, 1, 800001),
-    (700001, 2, 800002),
-    (700001, 3, 800003);
-```
-
-View Reward serializes non-pending rows as action `0` on the read-only
-`OP_RewardSelection` manager, so the stock RoF2 window displays the common
-bundle and choices without offering **Choose**. If that exact selectable
-reward is earned and outstanding, the same request reopens it on the
-claim-capable manager instead. The five imported client resource files do not
-supply any of these contents: reward sets, labels, item/currency identities,
-quantities, and grant policy must all be authored in the server database.
-
-Outstanding selectable rewards are not serialized as a single active claim.
-The zone rebuilds the complete claimable collection from the achievement and
-task ledgers and sends it as an action-`7` replacement. Each tab retains its
-own pending ID, reward-set ID, source identity, and claim validation. Earning a
-second reward while the first window is open adds another tab; claiming one
-removes only that occurrence and leaves the others available.
-
-A completed achievement with a valid selectable set and no whole-selection
-ledger row is an outstanding pending reward. The server opens it on the
-claimable `OP_AchievementReward` manager after initial achievement state,
-immediately after completion when no other pending selection owns that lane,
-or in response to action `6`. A status-`0` row with no selected option is also
-pending. Status `2` is restored with the original option locked; status `0`
-with an option is first recovered as status `2` when the per-entry ledger proves
-that replay is safe, or quarantined as status `3` when any entry is still
-in-flight. Status `1` and status `3` are not presented as claimable.
-
-For a selectable set, the action-`3` request must identify the pending
-achievement, loaded reward set, and one enabled non-common option. The server
-requires that achievement to be completed, grants every common option plus the
-selected option, and replies success only after the selection and every
-per-entry grant have been durably finalized.
-
-`character_achievement_reward_selections` records the selected option and
-whole-claim state: status `0` with option `0` is pending, status `0` with a
-nonzero option is in progress or interrupted, `1` is fully granted, `2` is an
-explicit retryable failure, and `3` is ambiguous delivery. Only status `2` may
-be relocked and retried automatically. Interrupted status-`0` rows are promoted
-to `2` only when no per-entry row remains in-flight; otherwise they become `3`.
-Individual entries remain independently idempotent in
-`character_achievement_rewards`, so resuming a partially successful selectable
-claim does not duplicate entries already finalized.
-
-- For item rewards, `amount` is the charge/stack count passed to one item
-  summon. Use multiple reward rows when multiple non-stackable copies are
-  intended.
-- In `character_achievement_rewards`, status `1` means delivered and prevents
-  duplicate grants.
-- Entry status `2` means the delivery API explicitly failed and is retryable.
-- Entry status `0` is an in-flight/ambiguous claim. It is not automatically
-  retried after a process interruption because doing so could duplicate an
-  item or currency grant. An operator can inspect it and change it to `2` when
-  retry is known to be safe.
-
-Completion is reconciled with the ledger on login, so a crash after persisting
-completion but before creating an automatic reward claim does not lose that
-reward. Automatic delivery is queued until the next client-processing tick.
-This lets the game event that completed the achievement finish mutating level,
-experience, inventory, or AA state before any chained reward invokes those
-systems again. Selectable rows wait for a validated client selection instead.
-Experience and AA delivery is synchronously saved before the claim is finalized;
-item, currency, and title delivery likewise checks the available persistence
-result. A failed post-mutation persistence result remains status `0`, since
-retrying that uncertain delivery would risk duplication.
-
-## Quest scripting
-
-Lua and Perl clients expose the same focused methods:
-
-- `HasCompletedAchievement(achievement_id)`
-- `GetAchievementStatus(achievement_id)`
-- `GetAchievementProgress(achievement_id, component_type, component_id)`
-- `SetAchievementProgress(achievement_id, component_type, component_id, value)`
-- `SetAchievementProgress(achievement_id, component_type, component_id, value, additive)`
-- `CompleteAchievement(achievement_id)`
-
-Group, Raid, and Expedition objects expose
-`AdvanceAchievementProgress(achievement_id, component_type, component_id,
-value)` and `CompleteAchievement(achievement_id)`. Client also exposes
-`AdvanceSharedTaskAchievementProgress(...)` and
-`CompleteSharedTaskAchievement(...)` for the client's active shared-task
-instance. These scope operations are routed through world and stored per
-character, so recipients can be in another zone or offline. Advance is a
-replay-safe "set at least" operation, not an additive delta. The Boolean return
-confirms handoff to the connected world process; it does not wait for member
-rows to be committed or applied. World retries transient pre-commit failures
-in a bounded memory queue and preserves a resolved membership snapshot.
-
-`GetAchievementStatus` returns `0` for completed, `1` for open, `2` for locked,
-`3` for hidden, or `-1` when the state is unavailable. `GetAchievementProgress`
-returns the current component count or `-1` when the achievement, component
-type, or component ID is invalid. These `Client` methods require a live player
-whose achievement state has loaded; they do not address an arbitrary offline
-character ID.
-
-Component type must be in the state-bearing RoF2 range `0` through `2`; type
-`3` is definition/presentation-only, and wider script numeric values are
-validated before conversion. The non-additive `SetAchievementProgress`
-overload sets an exact clamped count and can lower existing progress; the
-additive overload adds to the current count and clamps at the required count.
-Both persist before sending packets or evaluating completion.
-`CompleteAchievement` deliberately bypasses criteria, persists completion,
-queues normal notifications and rewards, and fires achievement-dependency
-events. Automatic criteria should be preferred for engine-observable facts,
-while these methods cover bespoke quest conditions. Calls made inside an
-inventory transaction, or while an ownership reconciliation is pending, are
-accepted into the client-local deferred queue and become durable only after
-that ownership boundary succeeds.
-
-See [Achievement content authoring](achievement_authoring.md#quest-scripting)
-for complete Lua and Perl recipes for player, group, raid, expedition, personal
-task, and shared-task state.
-
+Lua and Perl expose player reads and progress/completion writes plus
+world-routed group, raid, expedition, and shared-task operations. A successful
+remote call confirms handoff to world, not that every recipient has already
+applied the mutation. See the authoring guide's
+[quest scripting recipes](achievement_authoring.md#quest-scripting) for the
+complete API and return-value contract.
 ## Spell restrictions
 
-`achievement_cast_restrictions` maps an existing spell restriction number to
+`achievement_cast_requirements` maps an existing spell restriction number to
 one or more achievement requirements. All rows for one restriction number must
 pass. Unmapped values continue through the existing spell-restriction switch.
 
-The verified RoF2 mappings for achievement `2100243` are:
+An installation may author mappings such as:
 
 - restriction `39281`: the achievement must not be completed;
 - restriction `42280`: the achievement must be completed.
 
 A restriction row becomes active only when its referenced achievement exists
-and is enabled. The seeded mappings therefore do not change stock-server spell
-behavior before achievement `2100243` content is actually deployed.
+and is enabled. Structural migrations do not seed content-specific mappings.
 
 ## Importing optional ToB presentation data
 
@@ -768,6 +400,24 @@ Use `--validate-only` to inspect the resource set without producing SQL.
 `--strict-references` turns the known dangling references in the source files
 into errors. Every required resource file must contain at least one data row;
 an empty snapshot is rejected before SQL generation.
+
+To export the five presentation tables back to resource files, use the standard
+MySQL command-line client through the companion exporter:
+
+```powershell
+python utils\scripts\export_achievement_resources.py `
+  exported-achievements `
+  --database peq `
+  --login-path eqemu
+```
+
+With neither credential option, the client uses its normal MySQL defaults.
+Use `--login-path` for a `mysql_config_editor` login or
+`--defaults-extra-file` for a MySQL option file; the exporter does not accept a
+password on its command line. The output is exactly the five presentation
+files consumed by the importer. Re-import the exported directory to review a
+database-to-resource round trip; server-only criteria, rewards, versions, and
+character state are not part of those files.
 
 To enable a progression-era slice while importing the complete presentation
 snapshot, pass `--enable-through-expansion`. Expansion names and common
@@ -1053,7 +703,7 @@ then enable only the definitions intended for production.
 temporary key tables. Do not use it on a mixed/custom content database unless
 that deletion scope is intended. It removes stale presentation rows while
 preserving server-authored fields such as definition version, reset policy,
-enable state, component secondary text, criteria, rewards, restrictions, and
+enable state, component descriptions, criteria, rewards, restrictions, and
 character state.
 
 Generated criteria are deliberately upsert-only: the importer does not delete
@@ -1065,10 +715,10 @@ DoN generator should therefore be deployed from a clean criteria import or
 with a reviewed, narrowly scoped cleanup; it never issues a broad criteria
 delete.
 
-The optional crosswalk imports ToB field 6 into the shared reward-display
-concept. That is an importer choice, not evidence about the RoF2 wire layout.
-ToB field 7 is retained as `world_display_flag` for provenance but is never
-serialized to RoF2. The narrowly documented structural mappings above do not
+The optional crosswalk imports ToB field 6 as `has_reward`. Runtime still
+derives the effective reward-button state from server-authored reward content.
+ToB field 7 is retained as uninterpreted `client_flag` data for lossless import
+and export, but is never serialized to RoF2. These structural mappings do not
 infer rewards or packet layouts. No ToB packet layout or reward behavior is
 used by the runtime implementation;
 
@@ -1135,8 +785,8 @@ used by the runtime implementation;
   class Skill Cap, Own Item, Traveler, dependency, direct-tradeskill,
   AA-spent, Hunter, and explicitly opted-in Slayer shapes still require
   reviewed server-authored criteria and, when desired, reward rows.
-- Content update `9377` installs achievement definitions, evaluation criteria,
-  cast restrictions, and the achievement/task selectable-reward definitions.
-- Character update `9378` installs achievement progress, reward-delivery state,
+- Content update `9329` installs achievement definitions, evaluation criteria,
+  cast requirements, and the shared reward catalog.
+- Character update `9330` installs achievement progress, reward-delivery state,
   task-reward occurrence state, and the durable pending-mutation queue used by
   cross-zone group, raid, dynamic-zone, and shared-task scripting.

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../common/achievements.h"
+#include "common/achievements.h"
+#include "zone/reward_selection.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -22,32 +23,7 @@ struct AchievementCriterion {
 	uint32_t                            required_count = 1;
 };
 
-struct AchievementReward {
-	uint64_t                     reward_row_id = 0;
-	uint32_t                     achievement_id = 0;
-	EQ::Achievements::RewardType reward_type = EQ::Achievements::RewardType::Item;
-	uint32_t                     reward_id = 0;
-	uint64_t                     amount = 0;
-	std::string                  description;
-};
-
-struct AchievementRewardOption {
-	uint32_t                       option_id = 0;
-	uint32_t                       sequence = 0;
-	std::string                    label;
-	bool                           common_to_all = false;
-	uint8_t                        flags = 0;
-	std::vector<AchievementReward> rewards;
-};
-
-struct AchievementRewardSet {
-	uint32_t                             reward_set_id = 0;
-	uint32_t                             achievement_id = 0;
-	std::string                          title;
-	std::vector<AchievementRewardOption> options;
-};
-
-struct AchievementCastRestriction {
+struct AchievementCastRequirement {
 	uint32_t achievement_id = 0;
 	bool     requires_completed = true;
 };
@@ -79,10 +55,9 @@ public:
 	) const;
 	const std::vector<const AchievementCriterion *> &CriteriaForAchievement(uint32_t achievement_id) const;
 	// Rows not assigned to a selectable reward set are granted automatically.
-	const std::vector<AchievementReward> &Rewards(uint32_t achievement_id) const;
-	const AchievementRewardSet *RewardSet(uint32_t achievement_id) const;
-	const AchievementRewardSet *FindRewardSet(uint32_t reward_set_id) const;
-	const std::vector<AchievementCastRestriction> &CastRestrictions(uint32_t restriction_id) const;
+	const std::vector<RewardSelectionReward> &Rewards(uint32_t achievement_id) const;
+	const RewardSelectionSet *RewardSet(uint32_t achievement_id) const;
+	const std::vector<AchievementCastRequirement> &CastRequirements(uint32_t restriction_id) const;
 	std::optional<uint8_t> RequiredClass(uint32_t achievement_id) const;
 	bool ResetOnVersionChange(uint32_t achievement_id) const;
 
@@ -105,10 +80,9 @@ private:
 	std::unordered_map<uint32_t, std::vector<const AchievementCriterion *>>
 		m_npc_name_kill_criteria;
 	std::unordered_map<uint32_t, std::vector<const AchievementCriterion *>> m_criteria_by_achievement;
-	std::unordered_map<uint32_t, std::vector<AchievementReward>> m_rewards;
-	std::unordered_map<uint32_t, AchievementRewardSet> m_reward_sets;
-	std::unordered_map<uint32_t, uint32_t> m_reward_set_achievements;
-	std::unordered_map<uint32_t, std::vector<AchievementCastRestriction>> m_cast_restrictions;
+	std::unordered_map<uint32_t, std::vector<RewardSelectionReward>> m_rewards;
+	std::unordered_map<uint32_t, RewardSelectionSet> m_reward_sets;
+	std::unordered_map<uint32_t, std::vector<AchievementCastRequirement>> m_cast_requirements;
 	std::unordered_map<uint32_t, uint8_t> m_required_classes;
 	std::unordered_map<uint32_t, bool> m_reset_on_version_change;
 };
