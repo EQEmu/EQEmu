@@ -191,7 +191,7 @@ already-delivered entries are skipped.
 
 ## Operational notes
 
-Install content migration `9329` and character migration `9330` before starting
+Install content migration `9331` and character migration `9332` before starting
 a zone that includes this support. The character migration creates the
 occurrence-token state used by selectable task rewards. Task reload validates
 and replaces the in-memory reward definitions; active client sessions hold

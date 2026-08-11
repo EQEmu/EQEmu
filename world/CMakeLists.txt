@@ -1,4 +1,5 @@
 set(world_sources
+	achievement_state_update_manager.cpp
 	adventure.cpp
 	adventure_manager.cpp
 	cli/cli_bots_disable.cpp
@@ -20,7 +21,6 @@ set(world_sources
 	cli/cli_test_repository_2.cpp
 	cli/cli_test_string_benchmark.cpp
 	cli/cli_version.cpp
-	achievement_state_update_manager.cpp
 	client.cpp
 	cliententry.cpp
 	clientlist.cpp
@@ -53,9 +53,9 @@ set(world_sources
 )
 
 set(world_headers
+	achievement_state_update_manager.h
 	adventure.h
 	adventure_manager.h
-	achievement_state_update_manager.h
 	adventure_template.h
 	client.h
 	cliententry.h

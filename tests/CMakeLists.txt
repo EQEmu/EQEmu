@@ -4,7 +4,7 @@ set(tests_sources
 	main.cpp
 )
 
-SET(tests_headers
+set(tests_headers
 	achievements_test.h
 	atobool_test.h
 	data_verification_test.h

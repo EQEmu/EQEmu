@@ -785,9 +785,9 @@ used by the runtime implementation;
   class Skill Cap, Own Item, Traveler, dependency, direct-tradeskill,
   AA-spent, Hunter, and explicitly opted-in Slayer shapes still require
   reviewed server-authored criteria and, when desired, reward rows.
-- Content update `9329` installs achievement definitions, evaluation criteria,
+- Content update `9331` installs achievement definitions, evaluation criteria,
   cast requirements, and the shared reward catalog.
-- Character update `9330` installs achievement progress, reward-delivery state,
+- Character update `9332` installs achievement progress, reward-delivery state,
   task-reward occurrence state, and the durable pending state-update queue used by
   cross-zone group, raid, dynamic-zone, and shared-task scripting.
   The updates remain separate because EQEmu may place content and character
