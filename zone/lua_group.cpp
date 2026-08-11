@@ -21,7 +21,7 @@
 
 #include "common/data_verification.h"
 
-#include "zone/achievement_mutations.h"
+#include "zone/achievement_state_updates.h"
 #include "zone/groups.h"
 #include "zone/lua_client.h"
 #include "zone/lua_mob.h"
@@ -42,10 +42,10 @@ bool Lua_Group::AdvanceAchievementProgress(
 		return false;
 	}
 
-	return AchievementMutations::QueueGroupAdvance(
+	return AchievementStateUpdates::QueueGroupAdvance(
 		self->GetID(),
 		achievement_id,
-		static_cast<AchievementMutations::ComponentType>(component_type),
+		static_cast<AchievementStateUpdates::ComponentType>(component_type),
 		component_id,
 		value
 	);
@@ -54,7 +54,7 @@ bool Lua_Group::AdvanceAchievementProgress(
 bool Lua_Group::CompleteAchievement(uint32 achievement_id)
 {
 	Lua_Safe_Call_Bool();
-	return AchievementMutations::QueueGroupCompletion(
+	return AchievementStateUpdates::QueueGroupCompletion(
 		self->GetID(),
 		achievement_id
 	);

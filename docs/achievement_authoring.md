@@ -40,7 +40,7 @@ erDiagram
 
     achievements ||--o{ character_achievements : "achievement_id"
     achievement_components ||--o{ character_achievement_progress : "component identity"
-    achievements ||--o{ character_achievement_pending_mutations : "achievement_id"
+    achievements ||--o{ character_achievement_pending_updates : "achievement_id"
     rewards ||--o{ character_achievement_rewards : "reward_id"
     reward_sets ||--o{ character_achievement_reward_selections : "reward_set_id"
 ```
@@ -144,6 +144,8 @@ The primary key is `(achievement_id, component_type, component_id)`.
 ### `achievement_associations`
 
 This table supplies the presentation count imported from client resources.
+Component IDs are reused across definitions, so one row can supply the same
+default to many component records.
 
 | Field | Meaning |
 | --- | --- |
@@ -290,7 +292,7 @@ row in this table makes task reward loading fail closed.
 These tables are server-owned runtime state. Content migrations and quest
 scripts should not write them directly.
 
-### `character_achievement_pending_mutations`
+### `character_achievement_pending_updates`
 
 This durable queue carries scripted updates to players outside the source zone.
 World resolves a character, group, raid, dynamic-zone, or shared-task target
@@ -299,8 +301,8 @@ state is already satisfied or its persistence succeeds.
 
 | Field | Meaning |
 | --- | --- |
-| `mutation_id` | Auto-incremented queue identity and primary key. |
-| `character_id` | Character that must consume this mutation. |
+| `update_id` | Auto-incremented queue identity and primary key. |
+| `character_id` | Character that must consume this state update. |
 | `source_target_type` | Original scope: `0` character, `1` group, `2` raid, `3` dynamic zone, or `4` shared-task instance. |
 | `source_target_id` | Original character, group, raid, dynamic-zone, or shared-task instance ID. It is retained for diagnostics. |
 | `operation` | `0` advances a component to at least `requested_value`; `1` completes the whole achievement. |
@@ -432,9 +434,9 @@ hand-calculating the value.
 | `2` | Set | Replaces progress with the current observed value. Use when state must fall as well as rise, such as current item ownership. |
 | `3` | Boolean | Writes the component's full `required_count` on a qualifying event and `0` when a reconciled absolute fact falls below `target_value`. |
 
-Increment is rejected for Level, Own Item, Skill Value, Skill Cap, AA spent,
-specific tasks, and achievement dependencies because those facts are replayed
-or absolute. Use Highest, Set, or Boolean.
+Increment is rejected for Level, Zone Enter, Own Item, Skill Value, Skill Cap,
+AA spent, specific tasks, and achievement dependencies because those facts are
+replayed or absolute. Use Highest, Set, or Boolean.
 
 For non-absolute events, an observation below a positive `target_value` is
 ignored. For absolute events, Set and Boolean can clear stale progress when the
@@ -982,7 +984,7 @@ whole-achievement completion only when the script is authoritative for that
 outcome.
 
 World expands a group, raid, expedition, or active shared-task instance into
-character IDs and stores one pending mutation per player. Online characters
+character IDs and stores one pending state update per player. Online characters
 are notified in their current zones. Zoning and offline characters consume the
 same durable work on their next zone load. A shared-task call targets the
 specific active shared-task instance, not every player running the same task
@@ -1002,7 +1004,7 @@ queue holds at most 1,024 requests in world memory. If persistence is failing
 while that queue is full, additional requests are logged and dropped. Queued
 requests do not survive a world restart.
 
-Target zones serialize mutation drains per character with a MySQL advisory lock
+Target zones serialize state-update drains per character with a MySQL advisory lock
 and also claim each row with an attempt token and 60-second lease. Advisory-lock
 ownership is connection-scoped. If the database session reconnects during a
 drain, MySQL releases that lock; the row claim and lease keep the work

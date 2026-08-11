@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common/achievement_mutations.h"
+#include "common/achievement_state_updates.h"
 #include "common/achievements.h"
 #include "common/compression.h"
 #include "common/reward_selection.h"
@@ -38,15 +38,15 @@ public:
 		TEST_ADD(AchievementsTest::NpcNameIdentityHashLayout);
 		TEST_ADD(AchievementsTest::SkillWildcardDoesNotAliasSkillZero);
 		TEST_ADD(AchievementsTest::TypeThreeIsPresentationOnly);
-		TEST_ADD(AchievementsTest::MutationRequestValidation);
+		TEST_ADD(AchievementsTest::StateUpdateRequestValidation);
 		TEST_ADD(AchievementsTest::GuildMemberNotificationRule);
 		TEST_ADD(AchievementsTest::NearbyPlayerNotificationRules);
 	}
 
 private:
-	void MutationRequestValidation()
+	void StateUpdateRequestValidation()
 	{
-		using namespace AchievementMutations;
+		using namespace AchievementStateUpdates;
 
 		TEST_ASSERT(static_cast<uint8_t>(Status::Pending) == 0);
 		TEST_ASSERT(static_cast<uint8_t>(Status::Blocked) == 1);

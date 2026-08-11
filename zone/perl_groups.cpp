@@ -21,7 +21,7 @@
 
 #include "common/data_verification.h"
 
-#include "zone/achievement_mutations.h"
+#include "zone/achievement_state_updates.h"
 #include "zone/embperl.h"
 #include "zone/groups.h"
 
@@ -37,10 +37,10 @@ bool Perl_Group_AdvanceAchievementProgress(
 		return false;
 	}
 
-	return AchievementMutations::QueueGroupAdvance(
+	return AchievementStateUpdates::QueueGroupAdvance(
 		self->GetID(),
 		achievement_id,
-		static_cast<AchievementMutations::ComponentType>(component_type),
+		static_cast<AchievementStateUpdates::ComponentType>(component_type),
 		component_id,
 		value
 	);
@@ -48,7 +48,7 @@ bool Perl_Group_AdvanceAchievementProgress(
 
 bool Perl_Group_CompleteAchievement(Group* self, uint32 achievement_id) // @categories Achievements, Group
 {
-	return AchievementMutations::QueueGroupCompletion(
+	return AchievementStateUpdates::QueueGroupCompletion(
 		self->GetID(),
 		achievement_id
 	);

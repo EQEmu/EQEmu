@@ -2,7 +2,7 @@ set(zone_sources
 	aa.cpp
 	aa_ability.cpp
 	achievement_manager.cpp
-	achievement_mutations.cpp
+	achievement_state_updates.cpp
 	aggro.cpp
 	aggromanager.cpp
 	api_service.cpp
@@ -124,7 +124,7 @@ set(zone_headers
 	aa.h
 	aa_ability.h
 	achievement_manager.h
-	achievement_mutations.h
+	achievement_state_updates.h
 	aggromanager.h
 	api_service.h
 	aura.h

@@ -20,7 +20,7 @@
 #include "lua_expedition.h"
 
 #include "common/zone_store.h"
-#include "zone/achievement_mutations.h"
+#include "zone/achievement_state_updates.h"
 #include "zone/dynamic_zone.h"
 
 #include "lua.hpp"
@@ -38,10 +38,10 @@ bool Lua_Expedition::AdvanceAchievementProgress(
 		return false;
 	}
 
-	return AchievementMutations::QueueDynamicZoneAdvance(
+	return AchievementStateUpdates::QueueDynamicZoneAdvance(
 		self->GetID(),
 		achievement_id,
-		static_cast<AchievementMutations::ComponentType>(component_type),
+		static_cast<AchievementStateUpdates::ComponentType>(component_type),
 		component_id,
 		value
 	);
@@ -50,7 +50,7 @@ bool Lua_Expedition::AdvanceAchievementProgress(
 bool Lua_Expedition::CompleteAchievement(uint32_t achievement_id)
 {
 	Lua_Safe_Call_Bool();
-	return AchievementMutations::QueueDynamicZoneCompletion(
+	return AchievementStateUpdates::QueueDynamicZoneCompletion(
 		self->GetID(),
 		achievement_id
 	);

@@ -19,7 +19,7 @@
 
 #include "lua_client.h"
 
-#include "zone/achievement_mutations.h"
+#include "zone/achievement_state_updates.h"
 #include "zone/client.h"
 #include "zone/dialogue_window.h"
 #include "zone/dynamic_zone.h"
@@ -1528,10 +1528,10 @@ bool Lua_Client::AdvanceSharedTaskAchievementProgress(
 		return false;
 	}
 
-	return AchievementMutations::QueueSharedTaskAdvance(
+	return AchievementStateUpdates::QueueSharedTaskAdvance(
 		shared_task_id,
 		achievement_id,
-		static_cast<AchievementMutations::ComponentType>(component_type),
+		static_cast<AchievementStateUpdates::ComponentType>(component_type),
 		component_id,
 		value
 	);
@@ -1545,7 +1545,7 @@ bool Lua_Client::CompleteSharedTaskAchievement(uint32 achievement_id)
 		return false;
 	}
 
-	return AchievementMutations::QueueSharedTaskCompletion(
+	return AchievementStateUpdates::QueueSharedTaskCompletion(
 		shared_task_id,
 		achievement_id
 	);

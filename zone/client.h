@@ -1678,7 +1678,7 @@ public:
 	bool ReloadAchievements();
 	void SendAchievementPackets();
 	void ProcessAchievementRewards();
-	void NotifyAchievementMutationPending();
+	void NotifyAchievementStateUpdatePending();
 	bool HasCompletedAchievement(uint32 achievement_id) const;
 	int GetAchievementStatus(uint32 achievement_id) const;
 	int64 GetAchievementProgress(
@@ -2395,7 +2395,7 @@ private:
 	std::vector<uint32_t> m_completed_shared_tasks;
 	std::unique_ptr<ClientRewardSelection> m_reward_selection;
 	std::unique_ptr<ClientAchievementState> m_achievement_state;
-	enum class DeferredAchievementMutationType : uint8 {
+	enum class DeferredAchievementStateUpdateType : uint8 {
 		Kill,
 		Level,
 		Task,
@@ -2407,32 +2407,32 @@ private:
 		SetProgress,
 		Complete
 	};
-	struct DeferredAchievementMutation {
-		DeferredAchievementMutationType type;
+	struct DeferredAchievementStateUpdate {
+		DeferredAchievementStateUpdateType type;
 		uint32 value1 = 0;
 		uint32 value2 = 0;
 		uint32 value3 = 0;
 		uint32 value4 = 0;
 		bool flag = false;
 	};
-	bool ShouldDeferAchievementMutation() const;
-	void QueueAchievementMutation(const DeferredAchievementMutation &mutation);
+	bool ShouldDeferAchievementStateUpdate() const;
+	void QueueAchievementStateUpdate(const DeferredAchievementStateUpdate &update);
 	bool ReplaceAchievementState(bool send_initial, bool allow_disabled);
 	void ConfigureAchievementOwnershipReconciliation();
 	bool FlushAchievementInventoryUpdate();
-	void ReplayDeferredAchievementMutations();
-	void ProcessPendingAchievementMutations();
-	std::vector<DeferredAchievementMutation> m_deferred_achievement_mutations;
+	void ReplayDeferredAchievementStateUpdates();
+	void ProcessPendingAchievementStateUpdates();
+	std::vector<DeferredAchievementStateUpdate> m_deferred_achievement_state_updates;
 	Timer m_achievement_state_load_retry_timer;
 	Timer m_achievement_ownership_reconcile_timer;
 	Timer m_achievement_window_request_rate_limit;
 	Timer m_achievement_compare_request_rate_limit;
 	Timer m_achievement_link_request_rate_limit;
 	uint32 m_achievement_inventory_transaction_depth = 0;
-	size_t m_achievement_inventory_transaction_mutation_checkpoint = 0;
+	size_t m_achievement_inventory_transaction_update_checkpoint = 0;
 	bool m_achievement_inventory_update_pending = false;
 	bool m_achievement_inventory_transaction_failed = false;
-	bool m_achievement_pending_mutations = false;
+	bool m_achievement_pending_state_updates = false;
 	bool m_achievement_state_load_pending = false;
 	bool m_achievement_state_load_send_initial = false;
 	bool m_achievement_state_load_allow_disabled = false;

@@ -4720,7 +4720,7 @@ def _emit_reviewed_coverage_report(
             "-- condition with non-additive SetAchievementProgress(achievement_id,",
             "-- component_type, component_id, 1). CompleteAchievement is reserved for",
             "-- a verified whole-achievement grant. Group, raid, DZ, and task participants",
-            "-- in other zones must be updated through the world mutation path.",
+            "-- in other zones must be updated through the world state-update path.",
             "-- Reconciliation contract: durable TaskComplete, OwnItem, and dependency",
             "-- facts are reconciled by server criteria. Script-only facts must also be",
             "-- persisted by their owning quest/task system so login reconciliation can",

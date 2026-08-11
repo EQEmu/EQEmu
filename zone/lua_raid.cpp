@@ -21,7 +21,7 @@
 
 #include "common/data_verification.h"
 
-#include "zone/achievement_mutations.h"
+#include "zone/achievement_state_updates.h"
 #include "zone/lua_client.h"
 #include "zone/lua_mob.h"
 #include "zone/lua_npc.h"
@@ -42,10 +42,10 @@ bool Lua_Raid::AdvanceAchievementProgress(
 		return false;
 	}
 
-	return AchievementMutations::QueueRaidAdvance(
+	return AchievementStateUpdates::QueueRaidAdvance(
 		static_cast<int32_t>(self->GetID()),
 		achievement_id,
-		static_cast<AchievementMutations::ComponentType>(component_type),
+		static_cast<AchievementStateUpdates::ComponentType>(component_type),
 		component_id,
 		value
 	);
@@ -54,7 +54,7 @@ bool Lua_Raid::AdvanceAchievementProgress(
 bool Lua_Raid::CompleteAchievement(uint32 achievement_id)
 {
 	Lua_Safe_Call_Bool();
-	return AchievementMutations::QueueRaidCompletion(
+	return AchievementStateUpdates::QueueRaidCompletion(
 		static_cast<int32_t>(self->GetID()),
 		achievement_id
 	);

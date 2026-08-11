@@ -1,5 +1,5 @@
 set(common_sources
-	achievement_mutations.cpp
+	achievement_state_updates.cpp
 	achievements.cpp
 	base_packet.cpp
 	bazaar.cpp
@@ -178,7 +178,7 @@ set(repositories
 	repositories/base/base_char_create_combinations_repository.h
 	repositories/base/base_char_create_point_allocations_repository.h
 	repositories/base/base_char_recipe_list_repository.h
-	repositories/base/base_character_achievement_pending_mutations_repository.h
+	repositories/base/base_character_achievement_pending_updates_repository.h
 	repositories/base/base_character_achievement_progress_repository.h
 	repositories/base/base_character_achievement_reward_selections_repository.h
 	repositories/base/base_character_achievement_rewards_repository.h
@@ -397,7 +397,7 @@ set(repositories
 	repositories/char_create_combinations_repository.h
 	repositories/char_create_point_allocations_repository.h
 	repositories/char_recipe_list_repository.h
-	repositories/character_achievement_pending_mutations_repository.h
+	repositories/character_achievement_pending_updates_repository.h
 	repositories/character_achievement_progress_repository.h
 	repositories/character_achievement_reward_selections_repository.h
 	repositories/character_achievement_rewards_repository.h
@@ -583,7 +583,7 @@ set(repositories
 
 set(common_headers
 	additive_lagged_fibonacci_engine.h
-	achievement_mutations.h
+	achievement_state_updates.h
 	achievements.h
 	base_packet.h
 	bazaar.h

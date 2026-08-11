@@ -2089,11 +2089,11 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 
 		break;
 	}
-	case ServerOP_CZAchievementMutationWake:
+	case ServerOP_CZAchievementStateUpdateWake:
 	{
 		if (pack->size != sizeof(ServerCharacterID_Struct)) {
 			LogError(
-				"Received achievement mutation wake packet with invalid size [{}]",
+				"Received achievement state update wake packet with invalid size [{}]",
 				pack->size
 			);
 			break;
@@ -2102,7 +2102,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 		ServerCharacterID_Struct wake;
 		std::memcpy(&wake, pack->pBuffer, sizeof(wake));
 		if (auto client = entity_list.GetClientByCharID(wake.char_id)) {
-			client->NotifyAchievementMutationPending();
+			client->NotifyAchievementStateUpdatePending();
 		}
 		break;
 	}

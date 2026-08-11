@@ -44,7 +44,7 @@ the audited hungry/stringy/toughened, dark/wicked/foul,
 superior/prime/prismatic, and king/master/supreme anglerfish names in zone 216.
 Do not also fan these kills out from `global/global_npc.lua`: the native merit
 event already runs for each credited local raid/group member, while an
-expedition-wide hook would repeat the same world mutation once per recipient.
+expedition-wide hook would repeat the same world state update once per recipient.
 Expedition fan-out remains appropriate for encounter-completion flags whose
 members may be in other zones.
 
@@ -67,7 +67,7 @@ Quest hooks set a component to `1` only after its authoritative success
 condition. They do not increment it. The common helper is
 `quests/lua_modules/achievement_flags.lua`. Expedition-owned completion uses
 `AdvanceAchievementProgress`, which reaches members in other zones through the
-world mutation path. Dynamic-zone mutations also include online characters
+world state-update path. Dynamic-zone state updates also include online characters
 still inside the matching zone instance, even if they were removed from the
 expedition roster after participating.
 
@@ -186,7 +186,7 @@ to make its Hunter identity explicit. The unique disabled-ID count remains 99.
 
 - Call `SetAchievementProgress(achievement_id, component_type, component_id,
   1)` only after the source quest state is durably successful.
-- Use the expedition/world mutation API for group, raid, DZ, or task members
+- Use the expedition/world state-update API for group, raid, DZ, or task members
   who may be in another zone.
 - Keep durable task, item, and prerequisite facts in criteria so login and
   achievement reload reconcile existing characters.

@@ -64,7 +64,7 @@ public:
 	);
 	void ProcessPendingNotifications();
 	void ProcessPendingRewards();
-	bool DrainPendingMutations(bool retry_blocked);
+	bool DrainPendingStateUpdates(bool retry_blocked);
 
 private:
 	enum class RewardGrantResult : uint8_t {
@@ -79,7 +79,7 @@ private:
 	};
 
 	void InitializeStates();
-	bool DrainPendingMutationsLocked(bool retry_blocked);
+	bool DrainPendingStateUpdatesLocked(bool retry_blocked);
 	bool Reconcile();
 	void EvaluateAll(bool send_packets, bool ownership_is_fresh = false);
 	bool EvaluateDefinition(

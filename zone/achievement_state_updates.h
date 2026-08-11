@@ -1,8 +1,8 @@
 #pragma once
 
-#include "common/achievement_mutations.h"
+#include "common/achievement_state_updates.h"
 
-namespace AchievementMutations {
+namespace AchievementStateUpdates {
 
 // A true result means the validated request was handed to world; member
 // expansion and application are asynchronous. Advance functions set an
@@ -49,4 +49,4 @@ bool QueueSharedTaskCompletion(
 	uint32_t achievement_id
 );
 
-} // namespace AchievementMutations
+} // namespace AchievementStateUpdates

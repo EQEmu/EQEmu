@@ -21,7 +21,7 @@
 
 #include "common/zone_store.h"
 
-#include "zone/achievement_mutations.h"
+#include "zone/achievement_state_updates.h"
 #include "zone/dynamic_zone.h"
 #include "zone/embperl.h"
 
@@ -67,10 +67,10 @@ bool Perl_Expedition_AdvanceAchievementProgress(
 		return false;
 	}
 
-	return AchievementMutations::QueueDynamicZoneAdvance(
+	return AchievementStateUpdates::QueueDynamicZoneAdvance(
 		self->GetID(),
 		achievement_id,
-		static_cast<AchievementMutations::ComponentType>(component_type),
+		static_cast<AchievementStateUpdates::ComponentType>(component_type),
 		component_id,
 		value
 	);
@@ -81,7 +81,7 @@ bool Perl_Expedition_CompleteAchievement(
 	uint32_t achievement_id
 ) // @categories Achievements, Adventures and Expeditions
 {
-	return AchievementMutations::QueueDynamicZoneCompletion(
+	return AchievementStateUpdates::QueueDynamicZoneCompletion(
 		self->GetID(),
 		achievement_id
 	);

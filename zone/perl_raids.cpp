@@ -21,7 +21,7 @@
 
 #include "common/data_verification.h"
 
-#include "zone/achievement_mutations.h"
+#include "zone/achievement_state_updates.h"
 #include "zone/client.h"
 #include "zone/embperl.h"
 #include "zone/raids.h"
@@ -38,10 +38,10 @@ bool Perl_Raid_AdvanceAchievementProgress(
 		return false;
 	}
 
-	return AchievementMutations::QueueRaidAdvance(
+	return AchievementStateUpdates::QueueRaidAdvance(
 		static_cast<int32_t>(self->GetID()),
 		achievement_id,
-		static_cast<AchievementMutations::ComponentType>(component_type),
+		static_cast<AchievementStateUpdates::ComponentType>(component_type),
 		component_id,
 		value
 	);
@@ -49,7 +49,7 @@ bool Perl_Raid_AdvanceAchievementProgress(
 
 bool Perl_Raid_CompleteAchievement(Raid* self, uint32 achievement_id) // @categories Achievements, Raid
 {
-	return AchievementMutations::QueueRaidCompletion(
+	return AchievementStateUpdates::QueueRaidCompletion(
 		static_cast<int32_t>(self->GetID()),
 		achievement_id
 	);

@@ -7281,8 +7281,7 @@ CREATE TABLE IF NOT EXISTS `achievement_categories` (
 	`name` VARCHAR(255) NOT NULL DEFAULT '',
 	`description` TEXT NOT NULL,
 	`icon` VARCHAR(255) NOT NULL DEFAULT '',
-	PRIMARY KEY (`id`),
-	KEY `achievement_categories_parent_sequence` (`parent_id`, `sequence`, `id`)
+	PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `achievements` (
@@ -7292,12 +7291,11 @@ CREATE TABLE IF NOT EXISTS `achievements` (
 	`icon_id` INT(10) UNSIGNED NOT NULL DEFAULT 0,
 	`points` INT(10) UNSIGNED NOT NULL DEFAULT 0,
 	`has_reward` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
-	`client_flag` TINYINT(3) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Uninterpreted field 7 from AchievementsClient.txt',
+	`client_flag` TINYINT(3) UNSIGNED NOT NULL DEFAULT 0,
 	`version` INT(10) UNSIGNED NOT NULL DEFAULT 0,
 	`reset_on_version_change` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
 	`enabled` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
-	PRIMARY KEY (`id`),
-	KEY `achievements_enabled` (`enabled`, `id`)
+	PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `achievement_category_associations` (
@@ -7305,9 +7303,7 @@ CREATE TABLE IF NOT EXISTS `achievement_category_associations` (
 	`sequence` INT(10) UNSIGNED NOT NULL DEFAULT 0,
 	`achievement_id` INT(10) UNSIGNED NOT NULL,
 	`display_text` VARCHAR(255) NOT NULL DEFAULT '',
-	PRIMARY KEY (`category_id`, `achievement_id`),
-	KEY `achievement_category_associations_sequence` (`category_id`, `sequence`, `achievement_id`),
-	KEY `achievement_category_associations_achievement` (`achievement_id`, `category_id`)
+	PRIMARY KEY (`category_id`, `achievement_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `achievement_components` (
@@ -7317,9 +7313,7 @@ CREATE TABLE IF NOT EXISTS `achievement_components` (
 	`component_id` INT(10) UNSIGNED NOT NULL,
 	`name` TEXT NOT NULL,
 	`description` TEXT NOT NULL,
-	PRIMARY KEY (`achievement_id`, `component_type`, `component_id`),
-	KEY `achievement_components_component` (`component_id`),
-	KEY `achievement_components_achievement_sequence` (`achievement_id`, `component_type`, `sequence`, `component_id`)
+	PRIMARY KEY (`achievement_id`, `component_type`, `component_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `achievement_associations` (
@@ -7345,9 +7339,7 @@ CREATE TABLE IF NOT EXISTS `achievement_criteria` (
 	`required_count` INT(10) UNSIGNED NOT NULL DEFAULT 1,
 	`enabled` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
 	PRIMARY KEY (`id`),
-	UNIQUE KEY `achievement_criteria_definition` (`achievement_id`, `component_type`, `component_id`, `event_type`, `target_id`, `target_id2`),
-	KEY `achievement_criteria_component` (`achievement_id`, `component_type`, `component_sequence`, `component_id`, `enabled`),
-	KEY `achievement_criteria_event_target` (`event_type`, `target_id`, `target_id2`, `enabled`)
+	UNIQUE KEY `achievement_criteria_definition` (`achievement_id`, `component_type`, `component_id`, `event_type`, `target_id`, `target_id2`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- All rows for one restriction_id must pass.
@@ -7355,8 +7347,7 @@ CREATE TABLE IF NOT EXISTS `achievement_cast_requirements` (
 	`restriction_id` INT(10) UNSIGNED NOT NULL,
 	`achievement_id` INT(10) UNSIGNED NOT NULL,
 	`requires_completed` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
-	PRIMARY KEY (`restriction_id`, `achievement_id`),
-	KEY `achievement_cast_requirements_achievement` (`achievement_id`, `restriction_id`)
+	PRIMARY KEY (`restriction_id`, `achievement_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Reward definitions are provider-independent. reward_sources links a
@@ -7366,8 +7357,7 @@ CREATE TABLE IF NOT EXISTS `reward_sets` (
 	`reward_set_id` INT(10) UNSIGNED NOT NULL,
 	`title` VARCHAR(255) NOT NULL DEFAULT '',
 	`enabled` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
-	PRIMARY KEY (`reward_set_id`),
-	KEY `reward_sets_enabled` (`enabled`, `reward_set_id`)
+	PRIMARY KEY (`reward_set_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `reward_options` (
@@ -7378,9 +7368,7 @@ CREATE TABLE IF NOT EXISTS `reward_options` (
 	`common_to_all` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
 	`flags` TINYINT(3) UNSIGNED NOT NULL DEFAULT 0,
 	`enabled` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
-	PRIMARY KEY (`reward_set_id`, `option_id`),
-	KEY `reward_options_sequence` (`reward_set_id`, `sequence`, `option_id`),
-	KEY `reward_options_enabled` (`reward_set_id`, `enabled`, `sequence`)
+	PRIMARY KEY (`reward_set_id`, `option_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `rewards` (
@@ -7390,8 +7378,7 @@ CREATE TABLE IF NOT EXISTS `rewards` (
 	`amount` BIGINT(20) UNSIGNED NOT NULL DEFAULT 1,
 	`description` VARCHAR(255) NOT NULL DEFAULT '',
 	`enabled` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
-	PRIMARY KEY (`reward_id`),
-	KEY `rewards_enabled` (`enabled`, `reward_id`)
+	PRIMARY KEY (`reward_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `reward_option_entries` (
@@ -7400,8 +7387,7 @@ CREATE TABLE IF NOT EXISTS `reward_option_entries` (
 	`sequence` INT(10) UNSIGNED NOT NULL DEFAULT 0,
 	`reward_id` INT(10) UNSIGNED NOT NULL,
 	PRIMARY KEY (`reward_set_id`, `option_id`, `reward_id`),
-	UNIQUE KEY `reward_option_entries_set_reward` (`reward_set_id`, `reward_id`),
-	KEY `reward_option_entries_sequence` (`reward_set_id`, `option_id`, `sequence`, `reward_id`)
+	UNIQUE KEY `reward_option_entries_set_reward` (`reward_set_id`, `reward_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `reward_sources` (
@@ -7409,8 +7395,7 @@ CREATE TABLE IF NOT EXISTS `reward_sources` (
 	`source_id` BIGINT(20) UNSIGNED NOT NULL,
 	`reward_set_id` INT(10) UNSIGNED NOT NULL,
 	`enabled` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
-	PRIMARY KEY (`source_type`, `source_id`),
-	KEY `reward_sources_set` (`reward_set_id`, `source_type`, `source_id`)
+	PRIMARY KEY (`source_type`, `source_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `reward_source_entries` (
@@ -7419,8 +7404,7 @@ CREATE TABLE IF NOT EXISTS `reward_source_entries` (
 	`sequence` INT(10) UNSIGNED NOT NULL DEFAULT 0,
 	`reward_id` INT(10) UNSIGNED NOT NULL,
 	PRIMARY KEY (`source_type`, `source_id`, `reward_id`),
-	UNIQUE KEY `reward_source_entries_source_sequence` (`source_type`, `source_id`, `sequence`),
-	KEY `reward_source_entries_reward` (`reward_id`, `source_type`, `source_id`)
+	UNIQUE KEY `reward_source_entries_source_sequence` (`source_type`, `source_id`, `sequence`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 )SQL",
 		.content_schema_update = true
@@ -7432,15 +7416,14 @@ CREATE TABLE IF NOT EXISTS `reward_source_entries` (
 		.condition = "not_empty",
 		.match = "",
 		.sql = R"SQL(
--- Character achievement state, reward delivery state, and queued mutations.
+-- Character achievement state, reward delivery state, and queued state updates.
 
 CREATE TABLE IF NOT EXISTS `character_achievements` (
 	`character_id` INT(10) UNSIGNED NOT NULL,
 	`achievement_id` INT(10) UNSIGNED NOT NULL,
 	`version` INT(10) UNSIGNED NOT NULL DEFAULT 0,
 	`completed_at` INT(10) UNSIGNED NOT NULL DEFAULT 0,
-	PRIMARY KEY (`character_id`, `achievement_id`),
-	KEY `character_achievements_achievement` (`achievement_id`, `character_id`)
+	PRIMARY KEY (`character_id`, `achievement_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS `character_achievement_progress` (
@@ -7453,8 +7436,7 @@ CREATE TABLE IF NOT EXISTS `character_achievement_progress` (
 	`completed` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
 	`version` INT(10) UNSIGNED NOT NULL DEFAULT 0,
 	`updated_at` INT(10) UNSIGNED NOT NULL DEFAULT 0,
-	PRIMARY KEY (`character_id`, `achievement_id`, `component_type`, `component_id`),
-	KEY `character_achievement_progress_achievement` (`achievement_id`, `component_type`, `component_sequence`, `component_id`)
+	PRIMARY KEY (`character_id`, `achievement_id`, `component_type`, `component_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- status: 0=claimed/in-flight, 1=granted, 2=explicit delivery failure.
@@ -7467,8 +7449,7 @@ CREATE TABLE IF NOT EXISTS `character_achievement_rewards` (
 	`granted_at` INT(10) UNSIGNED NOT NULL DEFAULT 0,
 	`last_attempt_at` INT(10) UNSIGNED NOT NULL DEFAULT 0,
 	`last_error` VARCHAR(255) NOT NULL DEFAULT '',
-	PRIMARY KEY (`character_id`, `achievement_id`, `reward_id`),
-	KEY `character_achievement_rewards_status` (`status`, `character_id`)
+	PRIMARY KEY (`character_id`, `achievement_id`, `reward_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- status: 0=pending/in progress, 1=fully granted, 2=retryable failure,
@@ -7526,13 +7507,12 @@ CREATE TABLE IF NOT EXISTS `character_task_rewards` (
 	`last_attempt_at` INT(10) UNSIGNED NOT NULL DEFAULT 0,
 	`last_error` VARCHAR(255) NOT NULL DEFAULT '',
 	PRIMARY KEY (`pending_reward_id`, `reward_id`),
-	KEY `character_task_rewards_character` (`character_id`, `pending_reward_id`),
-	KEY `character_task_rewards_status` (`status`, `character_id`)
+	KEY `character_task_rewards_character` (`character_id`, `pending_reward_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- status: 0=pending, 1=blocked, 2=processing under a bounded lease.
-CREATE TABLE IF NOT EXISTS `character_achievement_pending_mutations` (
-	`mutation_id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS `character_achievement_pending_updates` (
+	`update_id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 	`character_id` INT(10) UNSIGNED NOT NULL,
 	`source_target_type` TINYINT(3) UNSIGNED NOT NULL,
 	`source_target_id` BIGINT(20) UNSIGNED NOT NULL,
@@ -7547,9 +7527,9 @@ CREATE TABLE IF NOT EXISTS `character_achievement_pending_mutations` (
 	`created_at` INT(10) UNSIGNED NOT NULL,
 	`last_attempt_at` INT(10) UNSIGNED NOT NULL DEFAULT 0,
 	`last_error` VARCHAR(255) NOT NULL DEFAULT '',
-	PRIMARY KEY (`mutation_id`),
-	KEY `character_achievement_pending_character` (`character_id`, `status`, `mutation_id`),
-	KEY `character_achievement_pending_status` (`status`, `character_id`)
+	PRIMARY KEY (`update_id`),
+	KEY `character_achievement_updates_character` (`character_id`, `status`, `update_id`),
+	KEY `character_achievement_updates_status` (`status`, `character_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 )SQL",
 		.content_schema_update = false

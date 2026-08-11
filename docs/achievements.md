@@ -48,7 +48,7 @@ The next client process boundary reads the durable final rows, so a multi-step
 move is never evaluated while an item temporarily exists in both source and
 destination.
 
-All other achievement mutations, including Lua or Perl progress/completion
+All other achievement state updates, including Lua or Perl progress/completion
 calls made by equip and unequip events, queue behind a dirty ownership fact or
 an active inventory transaction. They replay only after authoritative
 ownership succeeds; a failed read retains both the dirty flag and the queue for
@@ -61,7 +61,7 @@ persistence where a partial relocation could otherwise create false ownership.
 No statement reconnects or retries after a strict transaction starts. A failed
 statement rolls the transaction back. A lost COMMIT response remains
 ambiguous, so runtime inventory is disconnected and reloaded rather than being
-used for another achievement-sensitive mutation.
+used for another achievement-sensitive operation.
 
 Achievement state is available to quest events during connect, but RoF2
 incremental packets and queued rewards remain suppressed until the initial
@@ -348,11 +348,11 @@ Owned-item evaluation reads persisted inventory, shared-bank, keyring, cursor,
 bag, and augment state. A fresh ownership pass guards any completion whose
 required, visibility, unlock, or blocker policy depends on item ownership. This
 prevents stale shared-bank state from granting a reward. Periodic reconciliation
-also makes another character's shared-bank mutation visible without adding a
+also makes another character's shared-bank change visible without adding a
 cross-zone achievement protocol.
 
 Scripted group, raid, expedition, and shared-task updates are expanded by world
-into durable per-character mutations, including members in other zones or
+into durable per-character state updates, including members in other zones or
 offline. Progress requests are monotonic floors and completion requests are
 idempotent. Version mismatches or invalid components remain blocked for
 diagnosis; processing leases recover rows abandoned by a stopped zone.
@@ -368,7 +368,7 @@ already have committed.
 Lua and Perl expose player reads and progress/completion writes plus
 world-routed group, raid, expedition, and shared-task operations. A successful
 remote call confirms handoff to world, not that every recipient has already
-applied the mutation. See the authoring guide's
+applied the update. See the authoring guide's
 [quest scripting recipes](achievement_authoring.md#quest-scripting) for the
 complete API and return-value contract.
 ## Spell restrictions
@@ -754,7 +754,7 @@ used by the runtime implementation;
 - `#achievement` is an online-player administration command. It targets the
   selected player, or the issuing GM when no player is selected. `find`,
   `list`, and `inspect` report loaded definitions and current component state;
-  `set`, `add`, and `complete` use the normal persistent mutation path.
+  `set`, `add`, and `complete` use the normal persistent state-update path.
   `reset <achievement_id>` removes completion and progress while preserving
   reward ledgers. `reset <achievement_id> rewards` explicitly clears those
   ledgers too, allowing the rewards to be granted again after recompletion.
@@ -788,5 +788,7 @@ used by the runtime implementation;
 - Content update `9329` installs achievement definitions, evaluation criteria,
   cast requirements, and the shared reward catalog.
 - Character update `9330` installs achievement progress, reward-delivery state,
-  task-reward occurrence state, and the durable pending-mutation queue used by
+  task-reward occurrence state, and the durable pending state-update queue used by
   cross-zone group, raid, dynamic-zone, and shared-task scripting.
+  The updates remain separate because EQEmu may place content and character
+  state on different database connections.

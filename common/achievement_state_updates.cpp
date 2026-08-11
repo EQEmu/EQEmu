@@ -1,9 +1,9 @@
-#include "common/achievement_mutations.h"
+#include "common/achievement_state_updates.h"
 
 #include <cstring>
 #include <limits>
 
-namespace AchievementMutations {
+namespace AchievementStateUpdates {
 
 static constexpr std::size_t kTargetIdOffset = 0;
 static constexpr std::size_t kAchievementIdOffset = 8;
@@ -158,4 +158,4 @@ bool DecodeRequest(
 	return true;
 }
 
-} // namespace AchievementMutations
+} // namespace AchievementStateUpdates

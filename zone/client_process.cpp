@@ -745,7 +745,7 @@ void Client::OnDisconnect(bool hard_disconnect) {
 	}
 
 	RecordStats();
-	// Finish any ownership-gated achievement mutations while the client state
+	// Finish any ownership-gated achievement state updates while the client state
 	// still exists. Completions are durable; reward delivery remains recoverable
 	// from the ledger on the next login.
 	FlushAchievementInventoryUpdate();

@@ -1,4 +1,4 @@
-#include "zone/achievement_mutations.h"
+#include "zone/achievement_state_updates.h"
 
 #include "common/eq_packet.h"
 #include "common/rulesys.h"
@@ -8,7 +8,7 @@
 
 extern WorldServer worldserver;
 
-namespace AchievementMutations {
+namespace AchievementStateUpdates {
 
 static bool Send(const Request &request)
 {
@@ -16,7 +16,7 @@ static bool Send(const Request &request)
 		return false;
 	}
 
-	ServerPacket packet(ServerOP_CZAchievementMutationRequest, RequestWireSize);
+	ServerPacket packet(ServerOP_CZAchievementStateUpdateRequest, RequestWireSize);
 	if (!EncodeRequest(request, packet.pBuffer, packet.size)) {
 		return false;
 	}
@@ -219,4 +219,4 @@ bool QueueSharedTaskCompletion(
 		);
 }
 
-} // namespace AchievementMutations
+} // namespace AchievementStateUpdates

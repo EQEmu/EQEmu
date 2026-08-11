@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace AchievementMutations {
+namespace AchievementStateUpdates {
 
 enum class TargetType : uint8_t {
 	Character = 0,
@@ -65,4 +65,4 @@ bool DecodeRequest(
 	Request &request
 );
 
-} // namespace AchievementMutations
+} // namespace AchievementStateUpdates

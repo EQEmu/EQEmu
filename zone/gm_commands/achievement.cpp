@@ -27,7 +27,7 @@ void SendAchievementCommandHelp(Client *client)
 	client->Message(Chat::White, "Usage: #achievement add <achievement_id> <component_type> <component_id> <amount>");
 	client->Message(Chat::White, "Usage: #achievement complete <achievement_id>");
 	client->Message(Chat::White, "Usage: #achievement reset <achievement_id> [rewards]");
-	client->Message(Chat::White, "Mutations affect your selected player, or yourself when no player is selected.");
+	client->Message(Chat::White, "Set, add, and complete target your selected player, or yourself when no player is selected.");
 	client->Message(Chat::White, "Reset preserves reward ledgers unless the explicit rewards argument is supplied.");
 }
 

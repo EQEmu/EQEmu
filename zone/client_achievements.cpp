@@ -1,6 +1,6 @@
 #include "zone/client_achievements.h"
 
-#include "common/achievement_mutations.h"
+#include "common/achievement_state_updates.h"
 #include "common/eq_packet.h"
 #include "common/eqemu_logsys.h"
 #include "common/rulesys.h"
@@ -37,19 +37,19 @@ uint64_t ParseUInt64(const char *value)
 	return value ? static_cast<uint64_t>(std::strtoull(value, nullptr, 10)) : 0;
 }
 
-class AchievementMutationCharacterLock
+class AchievementStateUpdateCharacterLock
 {
 public:
-	explicit AchievementMutationCharacterLock(uint32_t character_id)
+	explicit AchievementStateUpdateCharacterLock(uint32_t character_id)
 		: m_character_id(character_id)
 	{
 	}
 
-	~AchievementMutationCharacterLock()
+	~AchievementStateUpdateCharacterLock()
 	{
 		if (m_acquired) {
 			database.QueryDatabase(fmt::format(
-				"SELECT RELEASE_LOCK('eqemu_achievement_mutation_{}')",
+				"SELECT RELEASE_LOCK('eqemu_achievement_state_update_{}')",
 				m_character_id
 			));
 		}
@@ -58,7 +58,7 @@ public:
 	bool TryAcquire()
 	{
 		auto result = database.QueryDatabase(fmt::format(
-			"SELECT GET_LOCK('eqemu_achievement_mutation_{}', 0)",
+			"SELECT GET_LOCK('eqemu_achievement_state_update_{}', 0)",
 			m_character_id
 		));
 		if (!result.Success() || result.RowCount() != 1) {
@@ -70,8 +70,8 @@ public:
 		return m_acquired;
 	}
 
-	AchievementMutationCharacterLock(const AchievementMutationCharacterLock &) = delete;
-	AchievementMutationCharacterLock &operator=(const AchievementMutationCharacterLock &) = delete;
+	AchievementStateUpdateCharacterLock(const AchievementStateUpdateCharacterLock &) = delete;
+	AchievementStateUpdateCharacterLock &operator=(const AchievementStateUpdateCharacterLock &) = delete;
 
 private:
 	uint32_t m_character_id;
@@ -433,9 +433,9 @@ bool ClientAchievementState::Load(bool allow_disabled)
 	}
 
 	const auto character_id = m_client.CharacterID();
-	AchievementMutationCharacterLock mutation_lock(character_id);
-	if (!mutation_lock.TryAcquire()) {
-		m_client.NotifyAchievementMutationPending();
+	AchievementStateUpdateCharacterLock state_update_lock(character_id);
+	if (!state_update_lock.TryAcquire()) {
+		m_client.NotifyAchievementStateUpdatePending();
 		return false;
 	}
 
@@ -607,9 +607,9 @@ bool ClientAchievementState::Load(bool allow_disabled)
 	}
 
 	m_loaded = true;
-	if (!DrainPendingMutationsLocked(true)) {
+	if (!DrainPendingStateUpdatesLocked(true)) {
 		LogError(
-			"Failed to drain one or more pending achievement mutations for character [{}]",
+			"Failed to drain one or more pending achievement state updates for character [{}]",
 			character_id
 		);
 	}
@@ -632,29 +632,29 @@ bool ClientAchievementState::Load(bool allow_disabled)
 	return true;
 }
 
-bool ClientAchievementState::DrainPendingMutations(bool retry_blocked)
+bool ClientAchievementState::DrainPendingStateUpdates(bool retry_blocked)
 {
 	if (!m_loaded) {
 		return false;
 	}
 	if (!m_client.Connected() || m_client.IsLD() || m_client.IsZoning()) {
-		m_client.NotifyAchievementMutationPending();
+		m_client.NotifyAchievementStateUpdatePending();
 		return true;
 	}
 
-	AchievementMutationCharacterLock mutation_lock(m_client.CharacterID());
-	if (!mutation_lock.TryAcquire()) {
-		m_client.NotifyAchievementMutationPending();
+	AchievementStateUpdateCharacterLock state_update_lock(m_client.CharacterID());
+	if (!state_update_lock.TryAcquire()) {
+		m_client.NotifyAchievementStateUpdatePending();
 		return true;
 	}
 
-	return DrainPendingMutationsLocked(retry_blocked);
+	return DrainPendingStateUpdatesLocked(retry_blocked);
 }
 
-bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
+bool ClientAchievementState::DrainPendingStateUpdatesLocked(bool retry_blocked)
 {
-	using AchievementMutations::Operation;
-	using AchievementMutations::Status;
+	using AchievementStateUpdates::Operation;
+	using AchievementStateUpdates::Status;
 
 	if (!m_loaded) {
 		return false;
@@ -663,7 +663,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 	const auto character_id = m_client.CharacterID();
 	if (retry_blocked) {
 		const auto reset = database.QueryDatabase(fmt::format(
-			"UPDATE character_achievement_pending_mutations "
+			"UPDATE character_achievement_pending_updates "
 			"SET status = {}, last_attempt_at = 0, last_error = '' "
 			"WHERE character_id = {} AND status = {}",
 			static_cast<uint32_t>(Status::Pending),
@@ -677,39 +677,39 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 
 	constexpr uint32_t batch_size = 64;
 	auto results = database.QueryDatabase(fmt::format(
-		"SELECT mutation_id, operation, achievement_id, component_type, "
+		"SELECT update_id, operation, achievement_id, component_type, "
 		"component_id, requested_value, `version`, status, attempt_count "
-		"FROM character_achievement_pending_mutations "
+		"FROM character_achievement_pending_updates "
 		"WHERE character_id = {} AND (status = {} "
 		"OR (status = {} AND last_attempt_at + {} <= UNIX_TIMESTAMP())) "
-		"ORDER BY mutation_id LIMIT {}",
+		"ORDER BY update_id LIMIT {}",
 		character_id,
 		static_cast<uint32_t>(Status::Pending),
 		static_cast<uint32_t>(Status::Processing),
-		AchievementMutations::ProcessingLeaseSeconds,
+		AchievementStateUpdates::ProcessingLeaseSeconds,
 		batch_size
 	));
 	if (!results.Success()) {
 		return false;
 	}
 	if (results.RowCount() == batch_size) {
-		m_client.NotifyAchievementMutationPending();
+		m_client.NotifyAchievementStateUpdatePending();
 	}
 
 	auto set_status = [character_id](
-		uint64_t mutation_id,
+		uint64_t update_id,
 		Status status,
 		const std::string &last_error,
 		uint32_t claim_token
 	) {
 		const auto result = database.QueryDatabase(fmt::format(
-			"UPDATE character_achievement_pending_mutations "
+			"UPDATE character_achievement_pending_updates "
 			"SET status = {}, last_error = '{}' "
-			"WHERE mutation_id = {} AND character_id = {} "
+			"WHERE update_id = {} AND character_id = {} "
 			"AND status = {} AND attempt_count = {}",
 			static_cast<uint32_t>(status),
 			database.Escape(last_error),
-			mutation_id,
+			update_id,
 			character_id,
 			static_cast<uint32_t>(Status::Processing),
 			claim_token
@@ -720,7 +720,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 	bool succeeded = true;
 	auto &manager = AchievementManager::Instance();
 	for (auto row : results) {
-		const auto mutation_id = ParseUInt64(row[0]);
+		const auto update_id = ParseUInt64(row[0]);
 		const auto operation_value = ParseUInt32(row[1]);
 		const auto achievement_id = ParseUInt32(row[2]);
 		const auto component_type = ParseUInt32(row[3]);
@@ -737,20 +737,20 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 
 		const auto claim_token = previous_attempt_count + 1;
 		const auto attempt = database.QueryDatabase(fmt::format(
-			"UPDATE character_achievement_pending_mutations "
+			"UPDATE character_achievement_pending_updates "
 			"SET status = {}, attempt_count = attempt_count + 1, "
 			"last_attempt_at = UNIX_TIMESTAMP(), last_error = '' "
-			"WHERE mutation_id = {} AND character_id = {} "
+			"WHERE update_id = {} AND character_id = {} "
 			"AND status = {} AND attempt_count = {}{}",
 			static_cast<uint32_t>(Status::Processing),
-			mutation_id,
+			update_id,
 			character_id,
 			status_value,
 			previous_attempt_count,
 			status_value == static_cast<uint32_t>(Status::Processing)
 				? fmt::format(
 					" AND last_attempt_at + {} <= UNIX_TIMESTAMP()",
-					AchievementMutations::ProcessingLeaseSeconds
+					AchievementStateUpdates::ProcessingLeaseSeconds
 				)
 				: ""
 		));
@@ -765,7 +765,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 		if (operation_value > static_cast<uint32_t>(Operation::Complete)) {
 			succeeded =
 				set_status(
-					mutation_id,
+					update_id,
 					Status::Blocked,
 					"invalid operation",
 					claim_token
@@ -778,7 +778,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 		if (!definition_index) {
 			succeeded =
 				set_status(
-					mutation_id,
+					update_id,
 					Status::Blocked,
 					"achievement definition is disabled or unavailable",
 					claim_token
@@ -791,7 +791,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 		if (version != definition.version) {
 			succeeded =
 				set_status(
-					mutation_id,
+					update_id,
 					Status::Blocked,
 					fmt::format(
 						"definition version {} does not match loaded version {}",
@@ -815,7 +815,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 		if (!completion_results.Success()) {
 			succeeded =
 				set_status(
-					mutation_id,
+					update_id,
 					Status::Pending,
 					"failed to refresh durable achievement completion",
 					claim_token
@@ -834,7 +834,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 			) {
 				succeeded =
 					set_status(
-						mutation_id,
+						update_id,
 						Status::Blocked,
 						fmt::format(
 							"durable completion version {} does not match loaded version {}",
@@ -893,7 +893,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 			) {
 				succeeded =
 					set_status(
-						mutation_id,
+						update_id,
 						Status::Blocked,
 						"invalid progress component or requested value",
 						claim_token
@@ -910,7 +910,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 			if (!component_index) {
 				succeeded =
 					set_status(
-						mutation_id,
+						update_id,
 						Status::Blocked,
 						"achievement component is unavailable",
 						claim_token
@@ -931,7 +931,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 			if (!progress_results.Success()) {
 				succeeded =
 					set_status(
-						mutation_id,
+						update_id,
 						Status::Pending,
 						"failed to refresh durable achievement progress",
 						claim_token
@@ -980,7 +980,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 				) {
 					succeeded =
 						set_status(
-							mutation_id,
+							update_id,
 							Status::Blocked,
 							fmt::format(
 								"durable progress version {} does not match loaded version {}",
@@ -1090,9 +1090,9 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 			if (component_type || component_id || requested_value) {
 				succeeded =
 					set_status(
-						mutation_id,
+						update_id,
 						Status::Blocked,
-						"completion mutation contains progress fields",
+						"completion state update contains progress fields",
 						claim_token
 					) &&
 					succeeded;
@@ -1107,7 +1107,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 		if (!applied) {
 			succeeded =
 				set_status(
-					mutation_id,
+					update_id,
 					Status::Pending,
 					"achievement persistence did not complete",
 					claim_token
@@ -1117,10 +1117,10 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 		}
 
 		const auto removed = database.QueryDatabase(fmt::format(
-			"DELETE FROM character_achievement_pending_mutations "
-			"WHERE mutation_id = {} AND character_id = {} "
+			"DELETE FROM character_achievement_pending_updates "
+			"WHERE update_id = {} AND character_id = {} "
 			"AND status = {} AND attempt_count = {}",
-			mutation_id,
+			update_id,
 			character_id,
 			static_cast<uint32_t>(Status::Processing),
 			claim_token
@@ -1131,7 +1131,7 @@ bool ClientAchievementState::DrainPendingMutationsLocked(bool retry_blocked)
 	}
 
 	if (!succeeded) {
-		m_client.NotifyAchievementMutationPending();
+		m_client.NotifyAchievementStateUpdatePending();
 	}
 	return succeeded;
 }
@@ -2057,8 +2057,8 @@ bool ClientAchievementState::Reset(uint32_t achievement_id, bool reset_rewards)
 		return false;
 	}
 
-	AchievementMutationCharacterLock mutation_lock(m_client.CharacterID());
-	if (!mutation_lock.TryAcquire() || !database.TransactionBeginStrict().Success()) {
+	AchievementStateUpdateCharacterLock state_update_lock(m_client.CharacterID());
+	if (!state_update_lock.TryAcquire() || !database.TransactionBeginStrict().Success()) {
 		return false;
 	}
 
@@ -2073,7 +2073,7 @@ bool ClientAchievementState::Reset(uint32_t achievement_id, bool reset_rewards)
 	};
 
 	bool succeeded =
-		remove_rows("character_achievement_pending_mutations") &&
+		remove_rows("character_achievement_pending_updates") &&
 		remove_rows("character_achievement_progress") &&
 		remove_rows("character_achievements");
 	if (succeeded && reset_rewards) {
@@ -3013,11 +3013,11 @@ bool Client::LoadAchievements()
 bool Client::ReloadAchievements()
 {
 	const auto achievements_enabled = RuleB(Achievements, EnableAchievements);
-	if (!achievements_enabled) {
-		// Deferred IDs belong to the snapshot being removed.
-		m_deferred_achievement_mutations.clear();
+	// Deferred events were observed against the previous definition snapshot.
+	m_deferred_achievement_state_updates.clear();
+	m_achievement_inventory_transaction_update_checkpoint = 0;
+	if (!achievements_enabled && !m_achievement_inventory_transaction_depth) {
 		m_achievement_inventory_update_pending = false;
-		m_achievement_inventory_transaction_mutation_checkpoint = 0;
 		m_achievement_inventory_transaction_failed = false;
 	}
 
@@ -3047,6 +3047,12 @@ bool Client::ReplaceAchievementState(bool send_initial, bool allow_disabled)
 		else {
 			m_achievement_state_load_pending = false;
 			m_achievement_state_load_retry_timer.Disable();
+			m_deferred_achievement_state_updates.clear();
+			m_achievement_inventory_transaction_update_checkpoint = 0;
+			if (!m_achievement_inventory_transaction_depth) {
+				m_achievement_inventory_update_pending = false;
+				m_achievement_inventory_transaction_failed = false;
+			}
 		}
 		return false;
 	}
@@ -3112,16 +3118,16 @@ void Client::ProcessAchievementRewards()
 		Connected() && m_achievement_ownership_reconcile_timer.Check();
 	const auto foreground_work_pending =
 		m_achievement_inventory_update_pending ||
-		!m_deferred_achievement_mutations.empty();
+		!m_deferred_achievement_state_updates.empty();
 
 	if (
-		(m_achievement_inventory_update_pending || !m_deferred_achievement_mutations.empty()) &&
+		(m_achievement_inventory_update_pending || !m_deferred_achievement_state_updates.empty()) &&
 		!FlushAchievementInventoryUpdate()
 	) {
 		return;
 	}
 
-	ProcessPendingAchievementMutations();
+	ProcessPendingAchievementStateUpdates();
 
 	if (periodic_ownership_due && !foreground_work_pending) {
 		if (m_achievement_state->NeedsOwnershipReconciliation()) {
@@ -3141,26 +3147,26 @@ void Client::ProcessAchievementRewards()
 	m_achievement_state->ProcessPendingRewards();
 }
 
-void Client::NotifyAchievementMutationPending()
+void Client::NotifyAchievementStateUpdatePending()
 {
-	m_achievement_pending_mutations = true;
+	m_achievement_pending_state_updates = true;
 }
 
-void Client::ProcessPendingAchievementMutations()
+void Client::ProcessPendingAchievementStateUpdates()
 {
 	if (
-		!m_achievement_pending_mutations ||
+		!m_achievement_pending_state_updates ||
 		!m_achievement_state ||
-		ShouldDeferAchievementMutation() ||
+		ShouldDeferAchievementStateUpdate() ||
 		!RuleB(Achievements, EnableAchievements)
 	) {
 		return;
 	}
 
-	m_achievement_pending_mutations = false;
-	if (!m_achievement_state->DrainPendingMutations(false)) {
+	m_achievement_pending_state_updates = false;
+	if (!m_achievement_state->DrainPendingStateUpdates(false)) {
 		LogError(
-			"Failed to process one or more pending achievement mutations for character [{}]",
+			"Failed to process one or more pending achievement state updates for character [{}]",
 			CharacterID()
 		);
 	}
@@ -3268,16 +3274,22 @@ RewardSelectionDeliveryResult Client::ClaimAchievementReward(
 		: RewardSelectionDeliveryResult::RetryableFailure;
 }
 
-bool Client::ShouldDeferAchievementMutation() const
+bool Client::ShouldDeferAchievementStateUpdate() const
 {
 	return
-		m_achievement_inventory_transaction_depth ||
-		m_achievement_inventory_update_pending;
+		m_achievement_state_load_pending ||
+		(
+			m_achievement_state &&
+			(
+				m_achievement_inventory_transaction_depth ||
+				m_achievement_inventory_update_pending
+			)
+		);
 }
 
-void Client::QueueAchievementMutation(const DeferredAchievementMutation &mutation)
+void Client::QueueAchievementStateUpdate(const DeferredAchievementStateUpdate &update)
 {
-	m_deferred_achievement_mutations.push_back(mutation);
+	m_deferred_achievement_state_updates.push_back(update);
 }
 
 bool Client::FlushAchievementInventoryUpdate()
@@ -3293,66 +3305,66 @@ bool Client::FlushAchievementInventoryUpdate()
 			0,
 			0
 		)) {
-			// Keep dependent mutations queued until the ownership read succeeds.
+			// Keep dependent state updates queued until the ownership read succeeds.
 			return false;
 		}
 		m_achievement_inventory_update_pending = false;
 	}
 
-	ReplayDeferredAchievementMutations();
+	ReplayDeferredAchievementStateUpdates();
 	return true;
 }
 
-void Client::ReplayDeferredAchievementMutations()
+void Client::ReplayDeferredAchievementStateUpdates()
 {
-	if (ShouldDeferAchievementMutation() || m_deferred_achievement_mutations.empty()) {
+	if (ShouldDeferAchievementStateUpdate() || m_deferred_achievement_state_updates.empty()) {
 		return;
 	}
 
-	auto mutations = std::move(m_deferred_achievement_mutations);
-	m_deferred_achievement_mutations.clear();
-	for (const auto &mutation : mutations) {
-		switch (mutation.type) {
-		case DeferredAchievementMutationType::Kill:
+	auto updates = std::move(m_deferred_achievement_state_updates);
+	m_deferred_achievement_state_updates.clear();
+	for (const auto &update : updates) {
+		switch (update.type) {
+		case DeferredAchievementStateUpdateType::Kill:
 			UpdateAchievementForKill(
-				mutation.value1,
-				mutation.value2,
-				mutation.value3,
-				mutation.value4
+				update.value1,
+				update.value2,
+				update.value3,
+				update.value4
 			);
 			break;
-		case DeferredAchievementMutationType::Level:
-			UpdateAchievementForLevel(mutation.value1);
+		case DeferredAchievementStateUpdateType::Level:
+			UpdateAchievementForLevel(update.value1);
 			break;
-		case DeferredAchievementMutationType::Task:
-			UpdateAchievementForTask(mutation.value1);
+		case DeferredAchievementStateUpdateType::Task:
+			UpdateAchievementForTask(update.value1);
 			break;
-		case DeferredAchievementMutationType::Zone:
-			UpdateAchievementForZone(mutation.value1);
+		case DeferredAchievementStateUpdateType::Zone:
+			UpdateAchievementForZone(update.value1);
 			break;
-		case DeferredAchievementMutationType::Loot:
-			UpdateAchievementForLoot(mutation.value1, mutation.value2);
+		case DeferredAchievementStateUpdateType::Loot:
+			UpdateAchievementForLoot(update.value1, update.value2);
 			break;
-		case DeferredAchievementMutationType::Tradeskill:
-			UpdateAchievementForTradeskill(mutation.value1);
+		case DeferredAchievementStateUpdateType::Tradeskill:
+			UpdateAchievementForTradeskill(update.value1);
 			break;
-		case DeferredAchievementMutationType::Skill:
-			UpdateAchievementForSkill(mutation.value1, mutation.value2);
+		case DeferredAchievementStateUpdateType::Skill:
+			UpdateAchievementForSkill(update.value1, update.value2);
 			break;
-		case DeferredAchievementMutationType::AlternateAdvancement:
-			UpdateAchievementForAA(mutation.value1);
+		case DeferredAchievementStateUpdateType::AlternateAdvancement:
+			UpdateAchievementForAA(update.value1);
 			break;
-		case DeferredAchievementMutationType::SetProgress:
+		case DeferredAchievementStateUpdateType::SetProgress:
 			SetAchievementProgress(
-				mutation.value1,
-				static_cast<uint8>(mutation.value2),
-				mutation.value3,
-				mutation.value4,
-				mutation.flag
+				update.value1,
+				static_cast<uint8>(update.value2),
+				update.value3,
+				update.value4,
+				update.flag
 			);
 			break;
-		case DeferredAchievementMutationType::Complete:
-			CompleteAchievement(mutation.value1);
+		case DeferredAchievementStateUpdateType::Complete:
+			CompleteAchievement(update.value1);
 			break;
 		}
 	}
@@ -3365,17 +3377,17 @@ void Client::UpdateAchievementForKill(
 	uint32 zone_id
 )
 {
-	if (!m_achievement_state) {
-		return;
-	}
-	if (ShouldDeferAchievementMutation()) {
-		QueueAchievementMutation({
-			DeferredAchievementMutationType::Kill,
+	if (ShouldDeferAchievementStateUpdate()) {
+		QueueAchievementStateUpdate({
+			DeferredAchievementStateUpdateType::Kill,
 			npc_type_id,
 			race_id,
 			npc_name_identity,
 			zone_id
 		});
+		return;
+	}
+	if (!m_achievement_state) {
 		return;
 	}
 	m_achievement_state->ProcessEvent(EQ::Achievements::EventType::NpcKill, npc_type_id);
@@ -3391,11 +3403,11 @@ void Client::UpdateAchievementForKill(
 
 void Client::UpdateAchievementForLevel(uint32 level)
 {
-	if (!m_achievement_state) {
+	if (ShouldDeferAchievementStateUpdate()) {
+		QueueAchievementStateUpdate({DeferredAchievementStateUpdateType::Level, level});
 		return;
 	}
-	if (ShouldDeferAchievementMutation()) {
-		QueueAchievementMutation({DeferredAchievementMutationType::Level, level});
+	if (!m_achievement_state) {
 		return;
 	}
 	m_achievement_state->ProcessEvent(EQ::Achievements::EventType::Level, 0, 0, level);
@@ -3407,11 +3419,11 @@ void Client::UpdateAchievementForLevel(uint32 level)
 
 void Client::UpdateAchievementForTask(uint32 task_id)
 {
-	if (!m_achievement_state) {
+	if (ShouldDeferAchievementStateUpdate()) {
+		QueueAchievementStateUpdate({DeferredAchievementStateUpdateType::Task, task_id});
 		return;
 	}
-	if (ShouldDeferAchievementMutation()) {
-		QueueAchievementMutation({DeferredAchievementMutationType::Task, task_id});
+	if (!m_achievement_state) {
 		return;
 	}
 	m_achievement_state->ProcessEvent(EQ::Achievements::EventType::TaskComplete, task_id);
@@ -3419,11 +3431,11 @@ void Client::UpdateAchievementForTask(uint32 task_id)
 
 void Client::UpdateAchievementForZone(uint32 zone_id)
 {
-	if (!m_achievement_state) {
+	if (ShouldDeferAchievementStateUpdate()) {
+		QueueAchievementStateUpdate({DeferredAchievementStateUpdateType::Zone, zone_id});
 		return;
 	}
-	if (ShouldDeferAchievementMutation()) {
-		QueueAchievementMutation({DeferredAchievementMutationType::Zone, zone_id});
+	if (!m_achievement_state) {
 		return;
 	}
 	m_achievement_state->ProcessEvent(EQ::Achievements::EventType::ZoneEnter, zone_id);
@@ -3431,15 +3443,15 @@ void Client::UpdateAchievementForZone(uint32 zone_id)
 
 void Client::UpdateAchievementForLoot(uint32 item_id, uint32 quantity)
 {
-	if (!m_achievement_state) {
-		return;
-	}
-	if (ShouldDeferAchievementMutation()) {
-		QueueAchievementMutation({
-			DeferredAchievementMutationType::Loot,
+	if (ShouldDeferAchievementStateUpdate()) {
+		QueueAchievementStateUpdate({
+			DeferredAchievementStateUpdateType::Loot,
 			item_id,
 			quantity
 		});
+		return;
+	}
+	if (!m_achievement_state) {
 		return;
 	}
 	m_achievement_state->ProcessEvent(EQ::Achievements::EventType::LootItem, item_id, 0, quantity);
@@ -3455,8 +3467,8 @@ void Client::UpdateAchievementForOwnItem(uint32 item_id)
 void Client::BeginAchievementInventoryTransaction()
 {
 	if (!m_achievement_inventory_transaction_depth) {
-		m_achievement_inventory_transaction_mutation_checkpoint =
-			m_deferred_achievement_mutations.size();
+		m_achievement_inventory_transaction_update_checkpoint =
+			m_deferred_achievement_state_updates.size();
 		m_achievement_inventory_transaction_failed = false;
 	}
 	m_achievement_inventory_update_pending = true;
@@ -3478,26 +3490,26 @@ void Client::EndAchievementInventoryTransaction(bool committed)
 
 	if (
 		m_achievement_inventory_transaction_failed &&
-		m_achievement_inventory_transaction_mutation_checkpoint <
-			m_deferred_achievement_mutations.size()
+		m_achievement_inventory_transaction_update_checkpoint <
+			m_deferred_achievement_state_updates.size()
 	) {
-		m_deferred_achievement_mutations.erase(
-			m_deferred_achievement_mutations.begin() +
-				m_achievement_inventory_transaction_mutation_checkpoint,
-			m_deferred_achievement_mutations.end()
+		m_deferred_achievement_state_updates.erase(
+			m_deferred_achievement_state_updates.begin() +
+				m_achievement_inventory_transaction_update_checkpoint,
+			m_deferred_achievement_state_updates.end()
 		);
 	}
-	m_achievement_inventory_transaction_mutation_checkpoint = 0;
+	m_achievement_inventory_transaction_update_checkpoint = 0;
 	m_achievement_inventory_transaction_failed = false;
 }
 
 void Client::UpdateAchievementForTradeskill(uint32 recipe_id)
 {
-	if (!m_achievement_state) {
+	if (ShouldDeferAchievementStateUpdate()) {
+		QueueAchievementStateUpdate({DeferredAchievementStateUpdateType::Tradeskill, recipe_id});
 		return;
 	}
-	if (ShouldDeferAchievementMutation()) {
-		QueueAchievementMutation({DeferredAchievementMutationType::Tradeskill, recipe_id});
+	if (!m_achievement_state) {
 		return;
 	}
 	m_achievement_state->ProcessEvent(EQ::Achievements::EventType::TradeskillSuccess, recipe_id);
@@ -3505,15 +3517,15 @@ void Client::UpdateAchievementForTradeskill(uint32 recipe_id)
 
 void Client::UpdateAchievementForSkill(uint32 skill_id, uint32 value)
 {
-	if (!m_achievement_state) {
-		return;
-	}
-	if (ShouldDeferAchievementMutation()) {
-		QueueAchievementMutation({
-			DeferredAchievementMutationType::Skill,
+	if (ShouldDeferAchievementStateUpdate()) {
+		QueueAchievementStateUpdate({
+			DeferredAchievementStateUpdateType::Skill,
 			skill_id,
 			value
 		});
+		return;
+	}
+	if (!m_achievement_state) {
 		return;
 	}
 	m_achievement_state->ProcessEvent(
@@ -3530,14 +3542,14 @@ void Client::UpdateAchievementForSkill(uint32 skill_id, uint32 value)
 
 void Client::UpdateAchievementForAA(uint32 spent_points)
 {
-	if (!m_achievement_state) {
-		return;
-	}
-	if (ShouldDeferAchievementMutation()) {
-		QueueAchievementMutation({
-			DeferredAchievementMutationType::AlternateAdvancement,
+	if (ShouldDeferAchievementStateUpdate()) {
+		QueueAchievementStateUpdate({
+			DeferredAchievementStateUpdateType::AlternateAdvancement,
 			spent_points
 		});
+		return;
+	}
+	if (!m_achievement_state) {
 		return;
 	}
 	m_achievement_state->ProcessEvent(
@@ -3576,7 +3588,6 @@ bool Client::SetAchievementProgress(
 )
 {
 	if (
-		!m_achievement_state ||
 		component_type > 2 ||
 		!AchievementManager::Instance().FindDefinitionIndex(achievement_id) ||
 		!AchievementManager::Instance().FindComponentIndex(
@@ -3587,9 +3598,9 @@ bool Client::SetAchievementProgress(
 	) {
 		return false;
 	}
-	if (ShouldDeferAchievementMutation()) {
-		QueueAchievementMutation({
-			DeferredAchievementMutationType::SetProgress,
+	if (ShouldDeferAchievementStateUpdate()) {
+		QueueAchievementStateUpdate({
+			DeferredAchievementStateUpdateType::SetProgress,
 			achievement_id,
 			component_type,
 			component_id,
@@ -3597,6 +3608,9 @@ bool Client::SetAchievementProgress(
 			additive
 		});
 		return true;
+	}
+	if (!m_achievement_state) {
+		return false;
 	}
 	return m_achievement_state->SetProgress(
 		achievement_id,
@@ -3609,19 +3623,21 @@ bool Client::SetAchievementProgress(
 
 bool Client::CompleteAchievement(uint32 achievement_id)
 {
-	if (
-		!m_achievement_state ||
-		!AchievementManager::Instance().FindDefinitionIndex(achievement_id) ||
-		m_achievement_state->HasCompleted(achievement_id)
-	) {
+	if (!AchievementManager::Instance().FindDefinitionIndex(achievement_id)) {
 		return false;
 	}
-	if (ShouldDeferAchievementMutation()) {
-		QueueAchievementMutation({
-			DeferredAchievementMutationType::Complete,
+	if (m_achievement_state && m_achievement_state->HasCompleted(achievement_id)) {
+		return false;
+	}
+	if (ShouldDeferAchievementStateUpdate()) {
+		QueueAchievementStateUpdate({
+			DeferredAchievementStateUpdateType::Complete,
 			achievement_id
 		});
 		return true;
+	}
+	if (!m_achievement_state) {
+		return false;
 	}
 	return m_achievement_state->Complete(achievement_id);
 }

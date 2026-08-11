@@ -33,7 +33,7 @@ namespace DatabaseSchema {
 		return {
 			{"adventure_stats",                "player_id"},
 			{"char_recipe_list",               "char_id"},
-			{"character_achievement_pending_mutations", "character_id"},
+			{"character_achievement_pending_updates", "character_id"},
 			{"character_achievement_progress", "character_id"},
 			{"character_achievement_reward_selections", "character_id"},
 			{"character_achievement_rewards",  "character_id"},
@@ -115,7 +115,7 @@ namespace DatabaseSchema {
 			"buyer_buy_lines",
 			"buyer_trade_items",
 			"char_recipe_list",
-			"character_achievement_pending_mutations",
+			"character_achievement_pending_updates",
 			"character_achievement_progress",
 			"character_achievement_reward_selections",
 			"character_achievement_rewards",

@@ -9,17 +9,17 @@
  * @docs https://docs.eqemu.io/developer/repositories
  */
 
-#ifndef EQEMU_BASE_CHARACTER_ACHIEVEMENT_PENDING_MUTATIONS_REPOSITORY_H
-#define EQEMU_BASE_CHARACTER_ACHIEVEMENT_PENDING_MUTATIONS_REPOSITORY_H
+#ifndef EQEMU_BASE_CHARACTER_ACHIEVEMENT_PENDING_UPDATES_REPOSITORY_H
+#define EQEMU_BASE_CHARACTER_ACHIEVEMENT_PENDING_UPDATES_REPOSITORY_H
 
 #include "../../database.h"
 #include "../../strings.h"
 #include <ctime>
 
-class BaseCharacterAchievementPendingMutationsRepository {
+class BaseCharacterAchievementPendingUpdatesRepository {
 public:
-	struct CharacterAchievementPendingMutations {
-		uint64_t    mutation_id;
+	struct CharacterAchievementPendingUpdates {
+		uint64_t    update_id;
 		uint32_t    character_id;
 		uint8_t     source_target_type;
 		uint64_t    source_target_id;
@@ -38,13 +38,13 @@ public:
 
 	static std::string PrimaryKey()
 	{
-		return std::string("mutation_id");
+		return std::string("update_id");
 	}
 
 	static std::vector<std::string> Columns()
 	{
 		return {
-			"mutation_id",
+			"update_id",
 			"character_id",
 			"source_target_type",
 			"source_target_id",
@@ -65,7 +65,7 @@ public:
 	static std::vector<std::string> SelectColumns()
 	{
 		return {
-			"mutation_id",
+			"update_id",
 			"character_id",
 			"source_target_type",
 			"source_target_id",
@@ -95,7 +95,7 @@ public:
 
 	static std::string TableName()
 	{
-		return std::string("character_achievement_pending_mutations");
+		return std::string("character_achievement_pending_updates");
 	}
 
 	static std::string BaseSelect()
@@ -116,11 +116,11 @@ public:
 		);
 	}
 
-	static CharacterAchievementPendingMutations NewEntity()
+	static CharacterAchievementPendingUpdates NewEntity()
 	{
-		CharacterAchievementPendingMutations e{};
+		CharacterAchievementPendingUpdates e{};
 
-		e.mutation_id        = 0;
+		e.update_id          = 0;
 		e.character_id       = 0;
 		e.source_target_type = 0;
 		e.source_target_id   = 0;
@@ -139,23 +139,23 @@ public:
 		return e;
 	}
 
-	static CharacterAchievementPendingMutations GetCharacterAchievementPendingMutations(
-		const std::vector<CharacterAchievementPendingMutations> &character_achievement_pending_mutationss,
-		int character_achievement_pending_mutations_id
+	static CharacterAchievementPendingUpdates GetCharacterAchievementPendingUpdates(
+		const std::vector<CharacterAchievementPendingUpdates> &character_achievement_pending_updatess,
+		int character_achievement_pending_updates_id
 	)
 	{
-		for (auto &character_achievement_pending_mutations : character_achievement_pending_mutationss) {
-			if (character_achievement_pending_mutations.mutation_id == character_achievement_pending_mutations_id) {
-				return character_achievement_pending_mutations;
+		for (auto &character_achievement_pending_updates : character_achievement_pending_updatess) {
+			if (character_achievement_pending_updates.update_id == character_achievement_pending_updates_id) {
+				return character_achievement_pending_updates;
 			}
 		}
 
 		return NewEntity();
 	}
 
-	static CharacterAchievementPendingMutations FindOne(
+	static CharacterAchievementPendingUpdates FindOne(
 		Database& db,
-		int character_achievement_pending_mutations_id
+		int character_achievement_pending_updates_id
 	)
 	{
 		auto results = db.QueryDatabase(
@@ -163,15 +163,15 @@ public:
 				"{} WHERE {} = {} LIMIT 1",
 				BaseSelect(),
 				PrimaryKey(),
-				character_achievement_pending_mutations_id
+				character_achievement_pending_updates_id
 			)
 		);
 
 		auto row = results.begin();
 		if (results.RowCount() == 1) {
-			CharacterAchievementPendingMutations e{};
+			CharacterAchievementPendingUpdates e{};
 
-			e.mutation_id        = row[0] ? strtoull(row[0], nullptr, 10) : 0;
+			e.update_id          = row[0] ? strtoull(row[0], nullptr, 10) : 0;
 			e.character_id       = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
 			e.source_target_type = row[2] ? static_cast<uint8_t>(strtoul(row[2], nullptr, 10)) : 0;
 			e.source_target_id   = row[3] ? strtoull(row[3], nullptr, 10) : 0;
@@ -195,7 +195,7 @@ public:
 
 	static int DeleteOne(
 		Database& db,
-		int character_achievement_pending_mutations_id
+		int character_achievement_pending_updates_id
 	)
 	{
 		auto results = db.QueryDatabase(
@@ -203,7 +203,7 @@ public:
 				"DELETE FROM {} WHERE {} = {}",
 				TableName(),
 				PrimaryKey(),
-				character_achievement_pending_mutations_id
+				character_achievement_pending_updates_id
 			)
 		);
 
@@ -212,7 +212,7 @@ public:
 
 	static int UpdateOne(
 		Database& db,
-		const CharacterAchievementPendingMutations &e
+		const CharacterAchievementPendingUpdates &e
 	)
 	{
 		std::vector<std::string> v;
@@ -240,21 +240,21 @@ public:
 				TableName(),
 				Strings::Implode(", ", v),
 				PrimaryKey(),
-				e.mutation_id
+				e.update_id
 			)
 		);
 
 		return (results.Success() ? results.RowsAffected() : 0);
 	}
 
-	static CharacterAchievementPendingMutations InsertOne(
+	static CharacterAchievementPendingUpdates InsertOne(
 		Database& db,
-		CharacterAchievementPendingMutations e
+		CharacterAchievementPendingUpdates e
 	)
 	{
 		std::vector<std::string> v;
 
-		v.push_back(std::to_string(e.mutation_id));
+		v.push_back(std::to_string(e.update_id));
 		v.push_back(std::to_string(e.character_id));
 		v.push_back(std::to_string(e.source_target_type));
 		v.push_back(std::to_string(e.source_target_id));
@@ -279,7 +279,7 @@ public:
 		);
 
 		if (results.Success()) {
-			e.mutation_id = results.LastInsertedID();
+			e.update_id = results.LastInsertedID();
 			return e;
 		}
 
@@ -290,7 +290,7 @@ public:
 
 	static int InsertMany(
 		Database& db,
-		const std::vector<CharacterAchievementPendingMutations> &entries
+		const std::vector<CharacterAchievementPendingUpdates> &entries
 	)
 	{
 		std::vector<std::string> insert_chunks;
@@ -298,7 +298,7 @@ public:
 		for (auto &e: entries) {
 			std::vector<std::string> v;
 
-			v.push_back(std::to_string(e.mutation_id));
+			v.push_back(std::to_string(e.update_id));
 			v.push_back(std::to_string(e.character_id));
 			v.push_back(std::to_string(e.source_target_type));
 			v.push_back(std::to_string(e.source_target_id));
@@ -330,9 +330,9 @@ public:
 		return (results.Success() ? results.RowsAffected() : 0);
 	}
 
-	static std::vector<CharacterAchievementPendingMutations> All(Database& db)
+	static std::vector<CharacterAchievementPendingUpdates> All(Database& db)
 	{
-		std::vector<CharacterAchievementPendingMutations> all_entries;
+		std::vector<CharacterAchievementPendingUpdates> all_entries;
 
 		auto results = db.QueryDatabase(
 			fmt::format(
@@ -344,9 +344,9 @@ public:
 		all_entries.reserve(results.RowCount());
 
 		for (auto row = results.begin(); row != results.end(); ++row) {
-			CharacterAchievementPendingMutations e{};
+			CharacterAchievementPendingUpdates e{};
 
-			e.mutation_id        = row[0] ? strtoull(row[0], nullptr, 10) : 0;
+			e.update_id          = row[0] ? strtoull(row[0], nullptr, 10) : 0;
 			e.character_id       = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
 			e.source_target_type = row[2] ? static_cast<uint8_t>(strtoul(row[2], nullptr, 10)) : 0;
 			e.source_target_id   = row[3] ? strtoull(row[3], nullptr, 10) : 0;
@@ -368,9 +368,9 @@ public:
 		return all_entries;
 	}
 
-	static std::vector<CharacterAchievementPendingMutations> GetWhere(Database& db, const std::string &where_filter)
+	static std::vector<CharacterAchievementPendingUpdates> GetWhere(Database& db, const std::string &where_filter)
 	{
-		std::vector<CharacterAchievementPendingMutations> all_entries;
+		std::vector<CharacterAchievementPendingUpdates> all_entries;
 
 		auto results = db.QueryDatabase(
 			fmt::format(
@@ -383,9 +383,9 @@ public:
 		all_entries.reserve(results.RowCount());
 
 		for (auto row = results.begin(); row != results.end(); ++row) {
-			CharacterAchievementPendingMutations e{};
+			CharacterAchievementPendingUpdates e{};
 
-			e.mutation_id        = row[0] ? strtoull(row[0], nullptr, 10) : 0;
+			e.update_id          = row[0] ? strtoull(row[0], nullptr, 10) : 0;
 			e.character_id       = row[1] ? static_cast<uint32_t>(strtoul(row[1], nullptr, 10)) : 0;
 			e.source_target_type = row[2] ? static_cast<uint8_t>(strtoul(row[2], nullptr, 10)) : 0;
 			e.source_target_id   = row[3] ? strtoull(row[3], nullptr, 10) : 0;
@@ -469,12 +469,12 @@ public:
 
 	static int ReplaceOne(
 		Database& db,
-		const CharacterAchievementPendingMutations &e
+		const CharacterAchievementPendingUpdates &e
 	)
 	{
 		std::vector<std::string> v;
 
-		v.push_back(std::to_string(e.mutation_id));
+		v.push_back(std::to_string(e.update_id));
 		v.push_back(std::to_string(e.character_id));
 		v.push_back(std::to_string(e.source_target_type));
 		v.push_back(std::to_string(e.source_target_id));
@@ -503,7 +503,7 @@ public:
 
 	static int ReplaceMany(
 		Database& db,
-		const std::vector<CharacterAchievementPendingMutations> &entries
+		const std::vector<CharacterAchievementPendingUpdates> &entries
 	)
 	{
 		std::vector<std::string> insert_chunks;
@@ -511,7 +511,7 @@ public:
 		for (auto &e: entries) {
 			std::vector<std::string> v;
 
-			v.push_back(std::to_string(e.mutation_id));
+			v.push_back(std::to_string(e.update_id));
 			v.push_back(std::to_string(e.character_id));
 			v.push_back(std::to_string(e.source_target_type));
 			v.push_back(std::to_string(e.source_target_id));
@@ -544,4 +544,4 @@ public:
 	}
 };
 
-#endif //EQEMU_BASE_CHARACTER_ACHIEVEMENT_PENDING_MUTATIONS_REPOSITORY_H
+#endif //EQEMU_BASE_CHARACTER_ACHIEVEMENT_PENDING_UPDATES_REPOSITORY_H

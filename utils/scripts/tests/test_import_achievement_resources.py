@@ -2419,7 +2419,7 @@ class ReviewedDonCoverageTests(unittest.TestCase):
         self.assertIn("presentation-only: 500980610/2/59806101", sql)
         self.assertIn("unavailable: 600050/1/600050", sql)
         self.assertIn("SetAchievementProgress(achievement_id,", sql)
-        self.assertIn("world mutation path", sql)
+        self.assertIn("world state-update path", sql)
 
         reset_output = []
         IMPORTER._emit_reviewed_own_item_reset(

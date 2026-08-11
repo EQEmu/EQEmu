@@ -466,12 +466,15 @@ bool AchievementManager::LoadSnapshot()
 			target_id && effective_event_type == EventType::TaskComplete;
 		const auto replayed_achievement_event =
 			effective_event_type == EventType::AchievementComplete;
+		const auto replayed_zone_event =
+			effective_event_type == EventType::ZoneEnter;
 		if (
 			effective_progress_mode == ProgressMode::Increment &&
 			(
 				absolute_fact_event ||
 				replayed_specific_event ||
-				replayed_achievement_event
+				replayed_achievement_event ||
+				replayed_zone_event
 			)
 		) {
 			LogError(

@@ -1,4 +1,4 @@
-#include "world/achievement_mutation_manager.h"
+#include "world/achievement_state_update_manager.h"
 
 #include "common/eq_packet.h"
 #include "common/eqemu_logsys.h"
@@ -18,14 +18,15 @@
 #include <fmt/format.h>
 #include <string>
 #include <utility>
+
 static uint32_t ParseUInt32(const char *value)
 {
 	return value ? static_cast<uint32_t>(std::strtoul(value, nullptr, 10)) : 0;
 }
 
 static bool SameRequest(
-	const AchievementMutations::Request &left,
-	const AchievementMutations::Request &right
+	const AchievementStateUpdates::Request &left,
+	const AchievementStateUpdates::Request &right
 )
 {
 	return
@@ -39,10 +40,10 @@ static bool SameRequest(
 		left.component_type == right.component_type;
 }
 
-bool AchievementMutationManager::Queue(const AchievementMutations::Request &request)
+bool AchievementStateUpdateManager::Queue(const AchievementStateUpdates::Request &request)
 {
-	if (!AchievementMutations::IsValidRequest(request)) {
-		LogError("Rejected an invalid achievement mutation request");
+	if (!AchievementStateUpdates::IsValidRequest(request)) {
+		LogError("Rejected an invalid achievement state update request");
 		return false;
 	}
 
@@ -54,7 +55,7 @@ bool AchievementMutationManager::Queue(const AchievementMutations::Request &requ
 	);
 	if (resolution == TargetResolution::RetryableFailure) {
 		LogError(
-			"Deferring achievement mutation after target type [{}], ID [{}] "
+			"Deferring achievement state update after target type [{}], ID [{}] "
 			"could not be resolved",
 			static_cast<uint32_t>(request.target_type),
 			request.target_id
@@ -68,7 +69,7 @@ bool AchievementMutationManager::Queue(const AchievementMutations::Request &requ
 		character_ids.empty()
 	) {
 		LogError(
-			"Achievement mutation target type [{}], ID [{}] has no player members",
+			"Achievement state update target type [{}], ID [{}] has no player members",
 			static_cast<uint32_t>(request.target_type),
 			request.target_id
 		);
@@ -83,14 +84,14 @@ bool AchievementMutationManager::Queue(const AchievementMutations::Request &requ
 	return true;
 }
 
-AchievementMutationManager::TargetResolution
-AchievementMutationManager::ResolveTargets(
-	AchievementMutations::TargetType target_type,
+AchievementStateUpdateManager::TargetResolution
+AchievementStateUpdateManager::ResolveTargets(
+	AchievementStateUpdates::TargetType target_type,
 	uint64_t target_id,
 	std::vector<uint32_t> &character_ids
 ) const
 {
-	using AchievementMutations::TargetType;
+	using AchievementStateUpdates::TargetType;
 
 	switch (target_type) {
 	case TargetType::Character: {
@@ -190,7 +191,7 @@ AchievementMutationManager::ResolveTargets(
 		: TargetResolution::Resolved;
 }
 
-void AchievementMutationManager::NormalizeTargets(
+void AchievementStateUpdateManager::NormalizeTargets(
 	std::vector<uint32_t> &character_ids
 )
 {
@@ -201,8 +202,8 @@ void AchievementMutationManager::NormalizeTargets(
 	);
 }
 
-bool AchievementMutationManager::RetainForRetry(
-	const AchievementMutations::Request &request,
+bool AchievementStateUpdateManager::RetainForRetry(
+	const AchievementStateUpdates::Request &request,
 	std::vector<uint32_t> character_ids,
 	bool targets_resolved
 )
@@ -225,7 +226,7 @@ bool AchievementMutationManager::RetainForRetry(
 	constexpr size_t retry_capacity = 1024;
 	if (m_retry_requests.size() >= retry_capacity) {
 		LogError(
-			"Achievement mutation retry queue is full; dropping target type [{}], ID [{}]",
+			"Achievement state update retry queue is full; dropping target type [{}], ID [{}]",
 			static_cast<uint32_t>(request.target_type),
 			request.target_id
 		);
@@ -240,7 +241,7 @@ bool AchievementMutationManager::RetainForRetry(
 	return true;
 }
 
-void AchievementMutationManager::ProcessRetries()
+void AchievementStateUpdateManager::ProcessRetries()
 {
 	constexpr size_t retry_batch_size = 64;
 	const auto request_count = std::min(
@@ -269,7 +270,7 @@ void AchievementMutationManager::ProcessRetries()
 				pending.character_ids.empty()
 			) {
 				LogError(
-					"Discarding deferred achievement mutation because target type "
+					"Discarding deferred achievement state update because target type "
 					"[{}], ID [{}] no longer has player members",
 					static_cast<uint32_t>(pending.request.target_type),
 					pending.request.target_id
@@ -292,8 +293,8 @@ void AchievementMutationManager::ProcessRetries()
 	}
 }
 
-bool AchievementMutationManager::Persist(
-	const AchievementMutations::Request &request,
+bool AchievementStateUpdateManager::Persist(
+	const AchievementStateUpdates::Request &request,
 	const std::vector<uint32_t> &character_ids
 ) const
 {
@@ -313,17 +314,17 @@ bool AchievementMutationManager::Persist(
 			request.component_id,
 			request.value,
 			request.version,
-			static_cast<uint32_t>(AchievementMutations::Status::Pending)
+			static_cast<uint32_t>(AchievementStateUpdates::Status::Pending)
 		);
 	}
 
 	if (!database.TransactionBeginStrict().Success()) {
-		LogError("Failed to begin achievement mutation transaction");
+		LogError("Failed to begin achievement state update transaction");
 		return false;
 	}
 
 	const auto insert = database.QueryDatabase(fmt::format(
-		"INSERT INTO character_achievement_pending_mutations "
+		"INSERT INTO character_achievement_pending_updates "
 		"(character_id, source_target_type, source_target_id, operation, "
 		"achievement_id, component_type, component_id, requested_value, "
 		"`version`, status, attempt_count, created_at, last_attempt_at, "
@@ -333,7 +334,7 @@ bool AchievementMutationManager::Persist(
 	if (!insert.Success()) {
 		database.TransactionRollbackStrict();
 		LogError(
-			"Failed to persist achievement mutation for target type [{}], ID [{}]",
+			"Failed to persist achievement state update for target type [{}], ID [{}]",
 			static_cast<uint32_t>(request.target_type),
 			request.target_id
 		);
@@ -342,7 +343,7 @@ bool AchievementMutationManager::Persist(
 
 	if (!database.TransactionCommitStrict().Success()) {
 		LogError(
-			"Failed to commit achievement mutation for target type [{}], ID [{}]",
+			"Failed to commit achievement state update for target type [{}], ID [{}]",
 			static_cast<uint32_t>(request.target_type),
 			request.target_id
 		);
@@ -352,12 +353,12 @@ bool AchievementMutationManager::Persist(
 	return true;
 }
 
-void AchievementMutationManager::Wake(
+void AchievementStateUpdateManager::Wake(
 	const std::vector<uint32_t> &character_ids
 ) const
 {
 	ServerPacket packet(
-		ServerOP_CZAchievementMutationWake,
+		ServerOP_CZAchievementStateUpdateWake,
 		sizeof(ServerCharacterID_Struct)
 	);
 	for (const auto character_id : character_ids) {
@@ -376,7 +377,7 @@ void AchievementMutationManager::Wake(
 	}
 }
 
-void AchievementMutationManager::Process()
+void AchievementStateUpdateManager::Process()
 {
 	if (
 		!m_retry_timer.Check() ||
@@ -390,19 +391,19 @@ void AchievementMutationManager::Process()
 	constexpr uint32_t batch_size = 256;
 	auto result = database.QueryDatabase(fmt::format(
 		"SELECT DISTINCT character_id "
-		"FROM character_achievement_pending_mutations "
+		"FROM character_achievement_pending_updates "
 		"WHERE (status = {} OR (status = {} "
 		"AND last_attempt_at + {} <= UNIX_TIMESTAMP())) "
 		"AND character_id > {} "
 		"ORDER BY character_id LIMIT {}",
-		static_cast<uint32_t>(AchievementMutations::Status::Pending),
-		static_cast<uint32_t>(AchievementMutations::Status::Processing),
-		AchievementMutations::ProcessingLeaseSeconds,
+		static_cast<uint32_t>(AchievementStateUpdates::Status::Pending),
+		static_cast<uint32_t>(AchievementStateUpdates::Status::Processing),
+		AchievementStateUpdates::ProcessingLeaseSeconds,
 		m_retry_cursor,
 		batch_size
 	));
 	if (!result.Success()) {
-		LogError("Failed to scan pending achievement mutations");
+		LogError("Failed to scan pending achievement state updates");
 		return;
 	}
 

@@ -34,7 +34,7 @@
 #include "common/strings.h"
 #include "common/zone_store.h"
 #include "world/adventure_manager.h"
-#include "world/achievement_mutation_manager.h"
+#include "world/achievement_state_update_manager.h"
 #include "world/client.h"
 #include "world/cliententry.h"
 #include "world/clientlist.h"
@@ -56,7 +56,7 @@ extern GroupLFPList LFPGroupList;
 extern volatile bool RunLoops;
 extern volatile bool UCSServerAvailable_;
 extern AdventureManager adventure_manager;
-extern AchievementMutationManager achievement_mutation_manager;
+extern AchievementStateUpdateManager achievement_state_update_manager;
 
 void CatchSignal(int sig_num);
 
@@ -1358,21 +1358,21 @@ void ZoneServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p) {
 			safe_delete(outapp);
 			break;
 		}
-		case ServerOP_CZAchievementMutationRequest: {
-			if (pack->size != AchievementMutations::RequestWireSize) {
+		case ServerOP_CZAchievementStateUpdateRequest: {
+			if (pack->size != AchievementStateUpdates::RequestWireSize) {
 				LogError(
-					"Received achievement mutation packet with invalid size [{}]",
+					"Received achievement state update packet with invalid size [{}]",
 					pack->size
 				);
 				break;
 			}
 
-			AchievementMutations::Request request;
-			if (!AchievementMutations::DecodeRequest(pack->pBuffer, pack->size, request)) {
-				LogError("Received an invalid achievement mutation packet");
+			AchievementStateUpdates::Request request;
+			if (!AchievementStateUpdates::DecodeRequest(pack->pBuffer, pack->size, request)) {
+				LogError("Received an invalid achievement state update packet");
 				break;
 			}
-			achievement_mutation_manager.Queue(request);
+			achievement_state_update_manager.Queue(request);
 			break;
 		}
 		case ServerOP_QueryServGeneric: {

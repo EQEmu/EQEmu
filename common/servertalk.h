@@ -279,8 +279,8 @@
 #define ServerOP_CZSpell 0x4507
 #define ServerOP_CZTaskUpdate 0x4508
 #define ServerOP_CZClientMessageString 0x4509
-#define ServerOP_CZAchievementMutationRequest 0x450A
-#define ServerOP_CZAchievementMutationWake 0x450B
+#define ServerOP_CZAchievementStateUpdateRequest 0x450A
+#define ServerOP_CZAchievementStateUpdateWake 0x450B
 
 #define ServerOP_WWDialogueWindow 0x4750
 #define ServerOP_WWLDoNUpdate 0x4751
