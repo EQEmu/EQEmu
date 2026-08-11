@@ -656,10 +656,10 @@ void ZoneGuildManager::ProcessWorldPacket(ServerPacket *pack)
 			break;
 		}
 		case ServerOP_GuildAchievement: {
-			constexpr auto header_size = ServerGuildAchievementHeaderSize;
 			if (
-				pack->size <= header_size ||
-				pack->size > header_size + ServerGuildAchievementMaxLinkDataLength + 1
+				pack->size <= sizeof(ServerGuildAchievement_Struct) ||
+				pack->size >
+					sizeof(ServerGuildAchievement_Struct) + ServerGuildAchievementMaxLinkDataLength + 1
 			) {
 				LogGuilds(
 					"Received ServerOP_GuildAchievement of invalid size [{}]",
@@ -668,35 +668,19 @@ void ZoneGuildManager::ProcessWorldPacket(ServerPacket *pack)
 				return;
 			}
 
-			uint32 guild_id = 0;
-			uint32 achievement_id = 0;
-			std::memcpy(
-				&guild_id,
-				pack->pBuffer + ServerGuildAchievementGuildIdOffset,
-				sizeof(guild_id)
-			);
-			std::memcpy(
-				&achievement_id,
-				pack->pBuffer + ServerGuildAchievementIdOffset,
-				sizeof(achievement_id)
-			);
-			const auto player_name = reinterpret_cast<const char *>(
-				pack->pBuffer + ServerGuildAchievementPlayerNameOffset
-			);
-			const auto link_data_size = pack->size - header_size;
-			const auto link_data =
-				reinterpret_cast<const char *>(pack->pBuffer + header_size);
+			const auto in = reinterpret_cast<const ServerGuildAchievement_Struct *>(pack->pBuffer);
+			const auto link_data_size = pack->size - sizeof(ServerGuildAchievement_Struct);
 			if (
-				guild_id == 0 ||
-				guild_id == GUILD_NONE ||
-				achievement_id == 0 ||
-				player_name[0] == '\0' ||
-				player_name[ServerGuildAchievementPlayerNameLength - 1] != '\0' ||
+				in->guild_id == 0 ||
+				in->guild_id == GUILD_NONE ||
+				in->achievement_id == 0 ||
+				in->player_name[0] == '\0' ||
+				in->player_name[sizeof(in->player_name) - 1] != '\0' ||
 				link_data_size < 2 ||
-				link_data[0] == '\0' ||
-				link_data[link_data_size - 1] != '\0' ||
-				link_data[link_data_size - 2] != '^' ||
-				std::memchr(link_data, '\0', link_data_size - 1) != nullptr ||
+				in->achievement_link_data[0] == '\0' ||
+				in->achievement_link_data[link_data_size - 1] != '\0' ||
+				in->achievement_link_data[link_data_size - 2] != '^' ||
+				std::memchr(in->achievement_link_data, '\0', link_data_size - 1) != nullptr ||
 				!is_zone_loaded
 			) {
 				return;
@@ -715,17 +699,17 @@ void ZoneGuildManager::ProcessWorldPacket(ServerPacket *pack)
 			strn0cpy(
 				reinterpret_cast<char *>(outapp.pBuffer) +
 					kGuildAchievementUpdatePlayerNameOffset,
-				player_name,
+				in->player_name,
 				kGuildAchievementUpdatePlayerNameLength
 			);
 			std::memcpy(
 				outapp.pBuffer + kGuildAchievementUpdateAchievementIdOffset,
-				&achievement_id,
-				sizeof(achievement_id)
+				&in->achievement_id,
+				sizeof(in->achievement_id)
 			);
 			std::memcpy(
 				outapp.pBuffer + kGuildAchievementUpdateHeaderSize,
-				link_data,
+				in->achievement_link_data,
 				link_data_size
 			);
 
@@ -734,9 +718,9 @@ void ZoneGuildManager::ProcessWorldPacket(ServerPacket *pack)
 				if (
 					client &&
 					client->Connected() &&
-					client->IsInGuild(guild_id) &&
+					client->IsInGuild(in->guild_id) &&
 					client->ClientVersion() == EQ::versions::ClientVersion::RoF2 &&
-					!Strings::EqualFold(client->GetName(), player_name)
+					!Strings::EqualFold(client->GetName(), in->player_name)
 				) {
 					client->QueuePacket(&outapp);
 				}
@@ -768,28 +752,19 @@ void ZoneGuildManager::SendAchievementAnnouncement(
 	}
 
 	const auto packet_size = static_cast<uint32>(
-		ServerGuildAchievementHeaderSize + achievement_link_data.size() + 1
+		sizeof(ServerGuildAchievement_Struct) + achievement_link_data.size() + 1
 	);
 	auto pack = new ServerPacket(ServerOP_GuildAchievement, packet_size);
-	std::memset(pack->pBuffer, 0, ServerGuildAchievementHeaderSize);
-	std::memcpy(
-		pack->pBuffer + ServerGuildAchievementGuildIdOffset,
-		&guild_id,
-		sizeof(guild_id)
-	);
-	std::memcpy(
-		pack->pBuffer + ServerGuildAchievementIdOffset,
-		&achievement_id,
-		sizeof(achievement_id)
-	);
+	auto out = reinterpret_cast<ServerGuildAchievement_Struct *>(pack->pBuffer);
+	out->guild_id = guild_id;
+	out->achievement_id = achievement_id;
 	strn0cpy(
-		reinterpret_cast<char *>(pack->pBuffer) +
-			ServerGuildAchievementPlayerNameOffset,
+		out->player_name,
 		player_name,
-		ServerGuildAchievementPlayerNameLength
+		sizeof(out->player_name)
 	);
 	std::memcpy(
-		pack->pBuffer + ServerGuildAchievementHeaderSize,
+		out->achievement_link_data,
 		achievement_link_data.c_str(),
 		achievement_link_data.size() + 1
 	);

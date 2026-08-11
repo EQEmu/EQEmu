@@ -1,6 +1,7 @@
 #include "common/achievement_state_updates.h"
+#include "common/net/packet.h"
 
-#include <cstring>
+#include <cstddef>
 #include <limits>
 
 namespace AchievementStateUpdates {
@@ -13,21 +14,10 @@ static constexpr std::size_t kVersionOffset = 20;
 static constexpr std::size_t kTargetTypeOffset = 24;
 static constexpr std::size_t kOperationOffset = 25;
 static constexpr std::size_t kComponentTypeOffset = 26;
-static constexpr std::size_t kReservedOffset = 27;
-
-template <typename T>
-static void Write(uint8_t *buffer, std::size_t offset, T value)
-{
-	std::memcpy(buffer + offset, &value, sizeof(value));
-}
-
-template <typename T>
-static T Read(const uint8_t *buffer, std::size_t offset)
-{
-	T value{};
-	std::memcpy(&value, buffer + offset, sizeof(value));
-	return value;
-}
+static constexpr std::size_t kSerializedRequestSize =
+	sizeof(uint64_t) +
+	(4 * sizeof(uint32_t)) +
+	(3 * sizeof(uint8_t));
 
 static bool IsValidTarget(TargetType target_type, uint64_t target_id)
 {
@@ -103,53 +93,39 @@ bool IsValidRequest(const Request &request)
 	return false;
 }
 
-bool EncodeRequest(
-	const Request &request,
-	uint8_t *buffer,
-	std::size_t buffer_size
-)
+SerializeBuffer SerializeRequest(const Request &request)
 {
-	if (!buffer || buffer_size != RequestWireSize || !IsValidRequest(request)) {
-		return false;
+	if (!IsValidRequest(request)) {
+		return {};
 	}
 
-	std::memset(buffer, 0, RequestWireSize);
-	Write(buffer, kTargetIdOffset, request.target_id);
-	Write(buffer, kAchievementIdOffset, request.achievement_id);
-	Write(buffer, kComponentIdOffset, request.component_id);
-	Write(buffer, kValueOffset, request.value);
-	Write(buffer, kVersionOffset, request.version);
-	Write(buffer, kTargetTypeOffset, request.target_type);
-	Write(buffer, kOperationOffset, request.operation);
-	Write(buffer, kComponentTypeOffset, request.component_type);
-	return true;
+	SerializeBuffer buffer(kSerializedRequestSize);
+	buffer.WriteUInt64(request.target_id);
+	buffer.WriteUInt32(request.achievement_id);
+	buffer.WriteUInt32(request.component_id);
+	buffer.WriteUInt32(request.value);
+	buffer.WriteUInt32(request.version);
+	buffer.WriteUInt8(static_cast<uint8_t>(request.target_type));
+	buffer.WriteUInt8(static_cast<uint8_t>(request.operation));
+	buffer.WriteUInt8(static_cast<uint8_t>(request.component_type));
+	return buffer;
 }
 
-bool DecodeRequest(
-	const uint8_t *buffer,
-	std::size_t buffer_size,
-	Request &request
-)
+bool DeserializeRequest(const EQ::Net::Packet &packet, Request &request)
 {
-	if (!buffer || buffer_size != RequestWireSize) {
+	if (packet.Length() != kSerializedRequestSize) {
 		return false;
-	}
-
-	for (std::size_t offset = kReservedOffset; offset < RequestWireSize; ++offset) {
-		if (buffer[offset] != 0) {
-			return false;
-		}
 	}
 
 	Request decoded;
-	decoded.target_id = Read<uint64_t>(buffer, kTargetIdOffset);
-	decoded.achievement_id = Read<uint32_t>(buffer, kAchievementIdOffset);
-	decoded.component_id = Read<uint32_t>(buffer, kComponentIdOffset);
-	decoded.value = Read<uint32_t>(buffer, kValueOffset);
-	decoded.version = Read<uint32_t>(buffer, kVersionOffset);
-	decoded.target_type = Read<TargetType>(buffer, kTargetTypeOffset);
-	decoded.operation = Read<Operation>(buffer, kOperationOffset);
-	decoded.component_type = Read<ComponentType>(buffer, kComponentTypeOffset);
+	decoded.target_id = packet.GetUInt64(kTargetIdOffset);
+	decoded.achievement_id = packet.GetUInt32(kAchievementIdOffset);
+	decoded.component_id = packet.GetUInt32(kComponentIdOffset);
+	decoded.value = packet.GetUInt32(kValueOffset);
+	decoded.version = packet.GetUInt32(kVersionOffset);
+	decoded.target_type = static_cast<TargetType>(packet.GetUInt8(kTargetTypeOffset));
+	decoded.operation = static_cast<Operation>(packet.GetUInt8(kOperationOffset));
+	decoded.component_type = static_cast<ComponentType>(packet.GetUInt8(kComponentTypeOffset));
 	if (!IsValidRequest(decoded)) {
 		return false;
 	}

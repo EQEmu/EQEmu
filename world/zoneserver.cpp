@@ -1359,16 +1359,8 @@ void ZoneServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p) {
 			break;
 		}
 		case ServerOP_CZAchievementStateUpdateRequest: {
-			if (pack->size != AchievementStateUpdates::RequestWireSize) {
-				LogError(
-					"Received achievement state update packet with invalid size [{}]",
-					pack->size
-				);
-				break;
-			}
-
 			AchievementStateUpdates::Request request;
-			if (!AchievementStateUpdates::DecodeRequest(pack->pBuffer, pack->size, request)) {
+			if (!AchievementStateUpdates::DeserializeRequest(p, request)) {
 				LogError("Received an invalid achievement state update packet");
 				break;
 			}

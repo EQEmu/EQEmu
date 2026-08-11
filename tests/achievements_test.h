@@ -3,13 +3,13 @@
 #include "common/achievement_state_updates.h"
 #include "common/achievements.h"
 #include "common/compression.h"
+#include "common/net/packet.h"
 #include "common/reward_selection.h"
 #include "common/rulesys.h"
 #include "common/skills.h"
 #include "common/types.h"
 #include "cppunit/cpptest.h"
 
-#include <array>
 #include <cstring>
 #include <limits>
 #include <stdexcept>
@@ -69,14 +69,20 @@ private:
 		TEST_ASSERT(IsValidRequest(advance));
 		advance.component_id = 7;
 
-		std::array<uint8_t, RequestWireSize> wire{};
-		TEST_ASSERT(EncodeRequest(advance, wire.data(), wire.size()));
+		auto serialized = SerializeRequest(advance);
+		TEST_ASSERT(serialized.size() != 0);
+		EQ::Net::StaticPacket wire(
+			const_cast<unsigned char *>(serialized.buffer()),
+			serialized.size()
+		);
 		Request decoded;
-		TEST_ASSERT(DecodeRequest(wire.data(), wire.size(), decoded));
+		TEST_ASSERT(DeserializeRequest(wire, decoded));
 		TEST_ASSERT(decoded.target_id == advance.target_id);
 		TEST_ASSERT(decoded.component_type == ComponentType::Required);
-		wire.back() = 1;
-		TEST_ASSERT(!DecodeRequest(wire.data(), wire.size(), decoded));
+		static_cast<uint8_t *>(wire.Data())[wire.Length() - 1] = 0xff;
+		TEST_ASSERT(!DeserializeRequest(wire, decoded));
+		EQ::Net::StaticPacket truncated(wire.Data(), wire.Length() - 1);
+		TEST_ASSERT(!DeserializeRequest(truncated, decoded));
 
 		advance.target_type = TargetType::SharedTask;
 		advance.target_id = std::numeric_limits<uint64_t>::max();

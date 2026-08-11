@@ -1041,11 +1041,13 @@ struct ServerGuildMemberUpdate_Struct {
 	uint32 last_seen;
 };
 
-inline constexpr uint32 ServerGuildAchievementGuildIdOffset = 0;
-inline constexpr uint32 ServerGuildAchievementIdOffset = 4;
-inline constexpr uint32 ServerGuildAchievementPlayerNameOffset = 8;
-inline constexpr uint32 ServerGuildAchievementPlayerNameLength = 64;
-inline constexpr uint32 ServerGuildAchievementHeaderSize = 72;
+struct ServerGuildAchievement_Struct {
+	uint32 guild_id;
+	uint32 achievement_id;
+	char   player_name[64];
+	char   achievement_link_data[0];
+};
+
 inline constexpr uint32 ServerGuildAchievementMaxLinkDataLength = 4096;
 
 struct ServerGuildPermissionUpdate_Struct {

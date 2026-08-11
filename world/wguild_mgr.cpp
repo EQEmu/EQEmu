@@ -234,10 +234,10 @@ void WorldGuildManager::ProcessZonePacket(ServerPacket *pack) {
 	}
 	case ServerOP_GuildAchievement:
 	{
-		constexpr auto header_size = ServerGuildAchievementHeaderSize;
 		if (
-			pack->size <= header_size ||
-			pack->size > header_size + ServerGuildAchievementMaxLinkDataLength + 1
+			pack->size <= sizeof(ServerGuildAchievement_Struct) ||
+			pack->size >
+				sizeof(ServerGuildAchievement_Struct) + ServerGuildAchievementMaxLinkDataLength + 1
 		) {
 			LogGuilds(
 				"Received ServerOP_GuildAchievement of invalid size [{}]",
@@ -246,45 +246,29 @@ void WorldGuildManager::ProcessZonePacket(ServerPacket *pack) {
 			return;
 		}
 
-		uint32 guild_id = 0;
-		uint32 achievement_id = 0;
-		std::memcpy(
-			&guild_id,
-			pack->pBuffer + ServerGuildAchievementGuildIdOffset,
-			sizeof(guild_id)
-		);
-		std::memcpy(
-			&achievement_id,
-			pack->pBuffer + ServerGuildAchievementIdOffset,
-			sizeof(achievement_id)
-		);
-		const auto player_name = reinterpret_cast<const char *>(
-			pack->pBuffer + ServerGuildAchievementPlayerNameOffset
-		);
-		const auto link_data_size = pack->size - header_size;
-		const auto link_data =
-			reinterpret_cast<const char *>(pack->pBuffer + header_size);
+		const auto in = reinterpret_cast<const ServerGuildAchievement_Struct *>(pack->pBuffer);
+		const auto link_data_size = pack->size - sizeof(ServerGuildAchievement_Struct);
 		if (
-			guild_id == 0 ||
-			guild_id == GUILD_NONE ||
-			achievement_id == 0 ||
-			player_name[0] == '\0' ||
-			player_name[ServerGuildAchievementPlayerNameLength - 1] != '\0' ||
+			in->guild_id == 0 ||
+			in->guild_id == GUILD_NONE ||
+			in->achievement_id == 0 ||
+			in->player_name[0] == '\0' ||
+			in->player_name[sizeof(in->player_name) - 1] != '\0' ||
 			link_data_size < 2 ||
-			link_data[0] == '\0' ||
-			link_data[link_data_size - 1] != '\0' ||
-			link_data[link_data_size - 2] != '^' ||
-			std::memchr(link_data, '\0', link_data_size - 1) != nullptr
+			in->achievement_link_data[0] == '\0' ||
+			in->achievement_link_data[link_data_size - 1] != '\0' ||
+			in->achievement_link_data[link_data_size - 2] != '^' ||
+			std::memchr(in->achievement_link_data, '\0', link_data_size - 1) != nullptr
 		) {
 			LogGuilds(
 				"Received invalid ServerOP_GuildAchievement for guild [{}], achievement [{}]",
-				guild_id,
-				achievement_id
+				in->guild_id,
+				in->achievement_id
 			);
 			return;
 		}
 
-		ZSList::Instance()->SendPacketToZonesWithGuild(guild_id, pack);
+		ZSList::Instance()->SendPacketToZonesWithGuild(in->guild_id, pack);
 		break;
 	}
     case ServerOP_GuildMemberAdd:

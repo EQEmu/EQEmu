@@ -6,6 +6,8 @@
 #include "zone/achievement_manager.h"
 #include "zone/worldserver.h"
 
+#include <cstring>
+
 extern WorldServer worldserver;
 
 namespace AchievementStateUpdates {
@@ -16,10 +18,13 @@ static bool Send(const Request &request)
 		return false;
 	}
 
-	ServerPacket packet(ServerOP_CZAchievementStateUpdateRequest, RequestWireSize);
-	if (!EncodeRequest(request, packet.pBuffer, packet.size)) {
+	auto serialized = SerializeRequest(request);
+	if (!serialized.size()) {
 		return false;
 	}
+
+	ServerPacket packet(ServerOP_CZAchievementStateUpdateRequest, serialized.size());
+	memcpy(packet.pBuffer, serialized.buffer(), serialized.size());
 	return worldserver.SendPacket(&packet);
 }
 

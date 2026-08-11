@@ -1,7 +1,12 @@
 #pragma once
 
-#include <cstddef>
+#include "common/serialize_buffer.h"
+
 #include <cstdint>
+
+namespace EQ::Net {
+class Packet;
+}
 
 namespace AchievementStateUpdates {
 
@@ -43,10 +48,6 @@ struct Request {
 	ComponentType component_type = ComponentType::Completion;
 };
 
-// Zone and world exchange a fixed-width representation rather than the
-// compiler-dependent layout of Request.
-inline constexpr std::size_t RequestWireSize = 32;
-
 bool IsValidCharacterTarget(uint32_t character_id);
 bool IsValidGroupTarget(uint32_t group_id);
 bool IsValidRaidTarget(int32_t raid_id);
@@ -54,15 +55,7 @@ bool IsValidDynamicZoneTarget(uint32_t dynamic_zone_id);
 bool IsValidSharedTaskTarget(int64_t shared_task_id);
 bool IsValidRequest(const Request &request);
 
-bool EncodeRequest(
-	const Request &request,
-	uint8_t *buffer,
-	std::size_t buffer_size
-);
-bool DecodeRequest(
-	const uint8_t *buffer,
-	std::size_t buffer_size,
-	Request &request
-);
+SerializeBuffer SerializeRequest(const Request &request);
+bool DeserializeRequest(const EQ::Net::Packet &packet, Request &request);
 
 } // namespace AchievementStateUpdates
