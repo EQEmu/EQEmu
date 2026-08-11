@@ -58,9 +58,9 @@ public:
 					? static_cast<uint32_t>(strtoul(row[0], nullptr, 10))
 					: 0,
 				.title = row[1] ? row[1] : "",
-				.enabled = row[2]
-					? static_cast<uint8_t>(strtoul(row[2], nullptr, 10))
-					: 1
+				.enabled = static_cast<uint8_t>(
+					row[2] ? strtoul(row[2], nullptr, 10) : 1
+				)
 			});
 		}
 		return true;

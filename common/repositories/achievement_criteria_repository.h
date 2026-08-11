@@ -58,24 +58,24 @@ public:
 				.achievement_id = row[1]
 					? static_cast<uint32_t>(strtoul(row[1], nullptr, 10))
 					: 0,
-				.component_type = row[2]
-					? static_cast<uint8_t>(strtoul(row[2], nullptr, 10))
-					: 0,
+				.component_type = static_cast<uint8_t>(
+					row[2] ? strtoul(row[2], nullptr, 10) : 0
+				),
 				.component_sequence = row[3]
 					? static_cast<uint32_t>(strtoul(row[3], nullptr, 10))
 					: 0,
 				.component_id = row[4]
 					? static_cast<uint32_t>(strtoul(row[4], nullptr, 10))
 					: 0,
-				.event_type = row[5]
-					? static_cast<uint8_t>(strtoul(row[5], nullptr, 10))
-					: 0,
-				.progress_mode = row[6]
-					? static_cast<uint8_t>(strtoul(row[6], nullptr, 10))
-					: 0,
-				.behavior = row[7]
-					? static_cast<uint8_t>(strtoul(row[7], nullptr, 10))
-					: 0,
+				.event_type = static_cast<uint8_t>(
+					row[5] ? strtoul(row[5], nullptr, 10) : 0
+				),
+				.progress_mode = static_cast<uint8_t>(
+					row[6] ? strtoul(row[6], nullptr, 10) : 0
+				),
+				.behavior = static_cast<uint8_t>(
+					row[7] ? strtoul(row[7], nullptr, 10) : 0
+				),
 				.target_id = row[8]
 					? static_cast<uint32_t>(strtoul(row[8], nullptr, 10))
 					: 0,
@@ -86,9 +86,9 @@ public:
 				.required_count = row[11]
 					? static_cast<uint32_t>(strtoul(row[11], nullptr, 10))
 					: 1,
-				.enabled = row[12]
-					? static_cast<uint8_t>(strtoul(row[12], nullptr, 10))
-					: 1
+				.enabled = static_cast<uint8_t>(
+					row[12] ? strtoul(row[12], nullptr, 10) : 1
+				)
 			});
 		}
 		return true;

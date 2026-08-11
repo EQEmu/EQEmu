@@ -59,13 +59,13 @@ public:
 				.description = row[2] ? row[2] : "",
 				.icon_id = row[3] ? static_cast<uint32_t>(strtoul(row[3], nullptr, 10)) : 0,
 				.points = row[4] ? static_cast<uint32_t>(strtoul(row[4], nullptr, 10)) : 0,
-				.has_reward = row[5] ? static_cast<uint8_t>(strtoul(row[5], nullptr, 10)) : 0,
-				.client_flag = row[6] ? static_cast<uint8_t>(strtoul(row[6], nullptr, 10)) : 0,
+				.has_reward = static_cast<uint8_t>(row[5] ? strtoul(row[5], nullptr, 10) : 0),
+				.client_flag = static_cast<uint8_t>(row[6] ? strtoul(row[6], nullptr, 10) : 0),
 				.version = row[7] ? static_cast<uint32_t>(strtoul(row[7], nullptr, 10)) : 0,
-				.reset_on_version_change = row[8]
-					? static_cast<uint8_t>(strtoul(row[8], nullptr, 10))
-					: 1,
-				.enabled = row[9] ? static_cast<uint8_t>(strtoul(row[9], nullptr, 10)) : 1
+				.reset_on_version_change = static_cast<uint8_t>(
+					row[8] ? strtoul(row[8], nullptr, 10) : 1
+				),
+				.enabled = static_cast<uint8_t>(row[9] ? strtoul(row[9], nullptr, 10) : 1)
 			});
 		}
 		return true;

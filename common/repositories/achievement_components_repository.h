@@ -57,9 +57,9 @@ public:
 				.achievement_id = row[0]
 					? static_cast<uint32_t>(strtoul(row[0], nullptr, 10))
 					: 0,
-				.component_type = row[1]
-					? static_cast<uint8_t>(strtoul(row[1], nullptr, 10))
-					: 0,
+				.component_type = static_cast<uint8_t>(
+					row[1] ? strtoul(row[1], nullptr, 10) : 0
+				),
 				.sequence = row[2]
 					? static_cast<uint32_t>(strtoul(row[2], nullptr, 10))
 					: 0,

@@ -57,17 +57,17 @@ public:
 				.reward_id = row[0]
 					? static_cast<uint32_t>(strtoul(row[0], nullptr, 10))
 					: 0,
-				.reward_type = row[1]
-					? static_cast<uint8_t>(strtoul(row[1], nullptr, 10))
-					: 0,
+				.reward_type = static_cast<uint8_t>(
+					row[1] ? strtoul(row[1], nullptr, 10) : 0
+				),
 				.reward_data_id = row[2]
 					? static_cast<uint32_t>(strtoul(row[2], nullptr, 10))
 					: 0,
 				.amount = row[3] ? strtoull(row[3], nullptr, 10) : 1,
 				.description = row[4] ? row[4] : "",
-				.enabled = row[5]
-					? static_cast<uint8_t>(strtoul(row[5], nullptr, 10))
-					: 1
+				.enabled = static_cast<uint8_t>(
+					row[5] ? strtoul(row[5], nullptr, 10) : 1
+				)
 			});
 		}
 		return true;

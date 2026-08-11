@@ -64,15 +64,15 @@ public:
 					? static_cast<uint32_t>(strtoul(row[2], nullptr, 10))
 					: 0,
 				.label = row[3] ? row[3] : "",
-				.common_to_all = row[4]
-					? static_cast<uint8_t>(strtoul(row[4], nullptr, 10))
-					: 0,
-				.flags = row[5]
-					? static_cast<uint8_t>(strtoul(row[5], nullptr, 10))
-					: 0,
-				.enabled = row[6]
-					? static_cast<uint8_t>(strtoul(row[6], nullptr, 10))
-					: 1
+				.common_to_all = static_cast<uint8_t>(
+					row[4] ? strtoul(row[4], nullptr, 10) : 0
+				),
+				.flags = static_cast<uint8_t>(
+					row[5] ? strtoul(row[5], nullptr, 10) : 0
+				),
+				.enabled = static_cast<uint8_t>(
+					row[6] ? strtoul(row[6], nullptr, 10) : 1
+				)
 			});
 		}
 		return true;

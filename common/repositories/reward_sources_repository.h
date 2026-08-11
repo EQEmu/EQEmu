@@ -54,16 +54,16 @@ public:
 		entries.reserve(results.RowCount());
 		for (auto row = results.begin(); row != results.end(); ++row) {
 			entries.push_back({
-				.source_type = row[0]
-					? static_cast<uint8_t>(strtoul(row[0], nullptr, 10))
-					: 0,
+				.source_type = static_cast<uint8_t>(
+					row[0] ? strtoul(row[0], nullptr, 10) : 0
+				),
 				.source_id = row[1] ? strtoull(row[1], nullptr, 10) : 0,
 				.reward_set_id = row[2]
 					? static_cast<uint32_t>(strtoul(row[2], nullptr, 10))
 					: 0,
-				.enabled = row[3]
-					? static_cast<uint8_t>(strtoul(row[3], nullptr, 10))
-					: 1
+				.enabled = static_cast<uint8_t>(
+					row[3] ? strtoul(row[3], nullptr, 10) : 1
+				)
 			});
 		}
 		return true;

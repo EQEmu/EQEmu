@@ -63,9 +63,9 @@ public:
 				.achievement_id = row[1]
 					? static_cast<uint32_t>(strtoul(row[1], nullptr, 10))
 					: 0,
-				.requires_completed = row[2]
-					? static_cast<uint8_t>(strtoul(row[2], nullptr, 10))
-					: 1
+				.requires_completed = static_cast<uint8_t>(
+					row[2] ? strtoul(row[2], nullptr, 10) : 1
+				)
 			});
 		}
 		return true;
