@@ -515,6 +515,7 @@ public:
 
 	void	SaveAllClientsTaskState();
 	void	ReloadAllClientsTaskState(int task_id=0);
+	bool	ReloadAchievements(uint32 &failed_client_count);
 	uint16	CreateGroundObject(uint32 itemid, const glm::vec4& position, uint32 decay_time = 300000);
 	uint16	CreateGroundObjectFromModel(const char *model, const glm::vec4& position, uint8 type = 0x00, uint32 decay_time = 0);
 	uint16	CreateDoor(const char *model, const glm::vec4& position, uint8 type = 0, uint16 size = 100);

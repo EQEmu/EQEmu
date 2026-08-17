@@ -19,6 +19,7 @@
 
 #include "lua_client.h"
 
+#include "zone/achievement_state_updates.h"
 #include "zone/client.h"
 #include "zone/dialogue_window.h"
 #include "zone/dynamic_zone.h"
@@ -1430,6 +1431,124 @@ bool Lua_Client::IsTaskActive(int task) {
 bool Lua_Client::IsTaskActivityActive(int task, int activity) {
 	Lua_Safe_Call_Bool();
 	return self->IsTaskActivityActive(task, activity);
+}
+
+bool Lua_Client::HasCompletedAchievement(uint32 achievement_id)
+{
+	Lua_Safe_Call_Bool();
+	return self->HasCompletedAchievement(achievement_id);
+}
+
+int Lua_Client::GetAchievementStatus(uint32 achievement_id)
+{
+	if (!d_) {
+		return -1;
+	}
+	auto self = reinterpret_cast<NativeType*>(d_);
+	return self->GetAchievementStatus(achievement_id);
+}
+
+int64 Lua_Client::GetAchievementProgress(
+	uint32 achievement_id,
+	uint32 component_type,
+	uint32 component_id
+)
+{
+	if (!d_ || component_type > 2) {
+		return -1;
+	}
+	auto self = reinterpret_cast<NativeType*>(d_);
+	return self->GetAchievementProgress(
+		achievement_id,
+		static_cast<uint8>(component_type),
+		component_id
+	);
+}
+
+bool Lua_Client::SetAchievementProgress(
+	uint32 achievement_id,
+	uint32 component_type,
+	uint32 component_id,
+	uint32 value
+)
+{
+	Lua_Safe_Call_Bool();
+	if (component_type > 2) {
+		return false;
+	}
+	return self->SetAchievementProgress(
+		achievement_id,
+		static_cast<uint8>(component_type),
+		component_id,
+		value
+	);
+}
+
+bool Lua_Client::SetAchievementProgress(
+	uint32 achievement_id,
+	uint32 component_type,
+	uint32 component_id,
+	uint32 value,
+	bool additive
+)
+{
+	Lua_Safe_Call_Bool();
+	if (component_type > 2) {
+		return false;
+	}
+	return self->SetAchievementProgress(
+		achievement_id,
+		static_cast<uint8>(component_type),
+		component_id,
+		value,
+		additive
+	);
+}
+
+bool Lua_Client::CompleteAchievement(uint32 achievement_id)
+{
+	Lua_Safe_Call_Bool();
+	return self->CompleteAchievement(achievement_id);
+}
+
+bool Lua_Client::AdvanceSharedTaskAchievementProgress(
+	uint32 achievement_id,
+	uint32 component_type,
+	uint32 component_id,
+	uint32 value
+)
+{
+	Lua_Safe_Call_Bool();
+	if (component_type > 2) {
+		return false;
+	}
+
+	const auto shared_task_id = self->GetSharedTaskId();
+	if (shared_task_id <= 0) {
+		return false;
+	}
+
+	return AchievementStateUpdates::QueueSharedTaskAdvance(
+		shared_task_id,
+		achievement_id,
+		static_cast<AchievementStateUpdates::ComponentType>(component_type),
+		component_id,
+		value
+	);
+}
+
+bool Lua_Client::CompleteSharedTaskAchievement(uint32 achievement_id)
+{
+	Lua_Safe_Call_Bool();
+	const auto shared_task_id = self->GetSharedTaskId();
+	if (shared_task_id <= 0) {
+		return false;
+	}
+
+	return AchievementStateUpdates::QueueSharedTaskCompletion(
+		shared_task_id,
+		achievement_id
+	);
 }
 
 void Lua_Client::LockSharedTask(bool lock) {
@@ -3672,6 +3791,7 @@ luabind::scope lua_register_client() {
 	.def("AddRadiantCrystals", (void(Lua_Client::*)(uint32))&Lua_Client::AddRadiantCrystals)
 	.def("AddSkill", (void(Lua_Client::*)(int,int))&Lua_Client::AddSkill)
 	.def("Admin", (int16(Lua_Client::*)(void))&Lua_Client::Admin)
+	.def("AdvanceSharedTaskAchievementProgress", &Lua_Client::AdvanceSharedTaskAchievementProgress)
 	.def("ApplySpell", (void(Lua_Client::*)(int))&Lua_Client::ApplySpell)
 	.def("ApplySpell", (void(Lua_Client::*)(int,int))&Lua_Client::ApplySpell)
 	.def("ApplySpell", (void(Lua_Client::*)(int,int,int))&Lua_Client::ApplySpell)
@@ -3721,6 +3841,8 @@ luabind::scope lua_register_client() {
 	.def("ClearPEQZoneFlag", (void(Lua_Client::*)(uint32))&Lua_Client::ClearPEQZoneFlag)
 	.def("ClearXTargets", (void(Lua_Client::*)(void))&Lua_Client::ClearXTargets)
 	.def("ClearZoneFlag", (void(Lua_Client::*)(uint32))&Lua_Client::ClearZoneFlag)
+	.def("CompleteAchievement", (bool(Lua_Client::*)(uint32))&Lua_Client::CompleteAchievement)
+	.def("CompleteSharedTaskAchievement", &Lua_Client::CompleteSharedTaskAchievement)
 	.def("CompleteTask", (bool(Lua_Client::*)(int))&Lua_Client::CompleteTask)
 	.def("Connected", (bool(Lua_Client::*)(void))&Lua_Client::Connected)
 	.def("CountAugmentEquippedByID", (uint32(Lua_Client::*)(uint32))&Lua_Client::CountAugmentEquippedByID)
@@ -3782,6 +3904,8 @@ luabind::scope lua_register_client() {
 	.def("GetAccountAge", (int(Lua_Client::*)(void))&Lua_Client::GetAccountAge)
 	.def("GetAccountFlag", (std::string(Lua_Client::*)(const std::string&))&Lua_Client::GetAccountFlag)
 	.def("GetAccountFlags", (luabind::object(Lua_Client::*)(lua_State*))&Lua_Client::GetAccountFlags)
+	.def("GetAchievementProgress", (int64(Lua_Client::*)(uint32,uint32,uint32))&Lua_Client::GetAchievementProgress)
+	.def("GetAchievementStatus", (int(Lua_Client::*)(uint32))&Lua_Client::GetAchievementStatus)
 	.def("GetAggroCount", (uint32(Lua_Client::*)(void))&Lua_Client::GetAggroCount)
 	.def("GetAllMoney", (uint64(Lua_Client::*)(void))&Lua_Client::GetAllMoney)
 	.def("GetAlternateCurrencyValue", (uint32(Lua_Client::*)(uint32))&Lua_Client::GetAlternateCurrencyValue)
@@ -3935,6 +4059,7 @@ luabind::scope lua_register_client() {
 	.def("GuildID", (uint32(Lua_Client::*)(void))&Lua_Client::GuildID)
 	.def("GuildRank", (int(Lua_Client::*)(void))&Lua_Client::GuildRank)
 	.def("HasAugmentEquippedByID", (bool(Lua_Client::*)(uint32))&Lua_Client::HasAugmentEquippedByID)
+	.def("HasCompletedAchievement", (bool(Lua_Client::*)(uint32))&Lua_Client::HasCompletedAchievement)
 	.def("HasDisciplineLearned", (bool(Lua_Client::*)(uint16))&Lua_Client::HasDisciplineLearned)
 	.def("HasExpeditionLockout", (bool(Lua_Client::*)(std::string, std::string))&Lua_Client::HasExpeditionLockout)
 	.def("HasItemEquippedByID", (bool(Lua_Client::*)(uint32))&Lua_Client::HasItemEquippedByID)
@@ -4103,6 +4228,8 @@ luabind::scope lua_register_client() {
 	.def("SetAFK", (void(Lua_Client::*)(uint8))&Lua_Client::SetAFK)
 	.def("SetAccountFlag", (void(Lua_Client::*)(const std::string&,const std::string&))&Lua_Client::SetAccountFlag)
 	.def("SetAlternateCurrencyValue", (void(Lua_Client::*)(uint32,uint32))&Lua_Client::SetAlternateCurrencyValue)
+	.def("SetAchievementProgress", (bool(Lua_Client::*)(uint32,uint32,uint32,uint32))&Lua_Client::SetAchievementProgress)
+	.def("SetAchievementProgress", (bool(Lua_Client::*)(uint32,uint32,uint32,uint32,bool))&Lua_Client::SetAchievementProgress)
 	.def("SetAnon", (void(Lua_Client::*)(uint8))&Lua_Client::SetAnon)
 	.def("SetAutoLoginCharacterName", (bool(Lua_Client::*)(void))&Lua_Client::SetAutoLoginCharacterName)
 	.def("SetAutoLoginCharacterName", (bool(Lua_Client::*)(std::string))&Lua_Client::SetAutoLoginCharacterName)

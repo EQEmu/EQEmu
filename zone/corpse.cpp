@@ -394,12 +394,21 @@ Corpse::Corpse(Client *c, int32 rez_exp, KilledByTypes in_killed_by) : Mob(
 		database.SaveCursor(c->CharacterID(), start, finish);
 
 		c->CalcBonuses();
-		c->Save();
+		const auto character_saved = c->Save(0, false);
 
 		IsRezzed(false);
 		Save();
 
-		database.TransactionCommit();
+		const bool inventory_committed = database.TransactionCommit().Success();
+		// Reconcile from durable rows after the complete death relocation.
+		// Queue this before level/AA facts so a mixed achievement cannot use
+		// pre-death ownership while evaluating its other criteria.
+		c->UpdateAchievementForOwnItem(0);
+		if (inventory_committed) {
+			if (character_saved) {
+				c->UpdateAchievementForLevel(c->GetLevel());
+			}
+		}
 
 		UpdateEquipmentLight();
 		UpdateActiveLight();
@@ -1700,6 +1709,9 @@ void Corpse::LootCorpseItem(Client *c, const EQApplicationPacket *app)
 		/* Update any tasks that have an activity to loot this item */
 		if (RuleB(TaskSystem, EnableTaskSystem) && IsNPCCorpse()) {
 			c->UpdateTasksOnLoot(this, item->ID, count);
+		}
+		if (IsNPCCorpse()) {
+			c->UpdateAchievementForLoot(item->ID, count);
 		}
 
 		/* Remove it from Corpse */

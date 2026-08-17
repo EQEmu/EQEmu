@@ -61,6 +61,7 @@ namespace ServerReload {
 		WorldWithRespawn,
 		ZoneData,
 		ZonePoints,
+		Achievements,
 		Max
 	};
 
@@ -100,7 +101,8 @@ namespace ServerReload {
 		"World Repop",
 		"World Repop Timers (Clear Respawn Timers)",
 		"Zone Data",
-		"Zone Points"
+		"Zone Points",
+		"Achievements"
 	};
 
 	inline std::string GetName(int reload_type)

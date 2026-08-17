@@ -20,8 +20,39 @@
 #ifdef EMBPERL_XS_CLASSES
 
 #include "common/data_verification.h"
+
+#include "zone/achievement_state_updates.h"
 #include "zone/embperl.h"
 #include "zone/groups.h"
+
+bool Perl_Group_AdvanceAchievementProgress(
+	Group* self,
+	uint32 achievement_id,
+	uint32 component_type,
+	uint32 component_id,
+	uint32 value
+) // @categories Achievements, Group
+{
+	if (component_type > 2) {
+		return false;
+	}
+
+	return AchievementStateUpdates::QueueGroupAdvance(
+		self->GetID(),
+		achievement_id,
+		static_cast<AchievementStateUpdates::ComponentType>(component_type),
+		component_id,
+		value
+	);
+}
+
+bool Perl_Group_CompleteAchievement(Group* self, uint32 achievement_id) // @categories Achievements, Group
+{
+	return AchievementStateUpdates::QueueGroupCompletion(
+		self->GetID(),
+		achievement_id
+	);
+}
 
 void Perl_Group_DisbandGroup(Group* self) // @categories Script Utility, Group
 {
@@ -178,7 +209,9 @@ void perl_register_group()
 	perl::interpreter perl(PERL_GET_THX);
 
 	auto package = perl.new_class<Group>("Group");
+	package.add("AdvanceAchievementProgress", &Perl_Group_AdvanceAchievementProgress);
 	package.add("CastGroupSpell", &Perl_Group_CastGroupSpell);
+	package.add("CompleteAchievement", &Perl_Group_CompleteAchievement);
 	package.add("DisbandGroup", &Perl_Group_DisbandGroup);
 	package.add("DoesAnyMemberHaveExpeditionLockout", (bool(*)(Group*, std::string, std::string))&Perl_Group_DoesAnyMemberHaveExpeditionLockout);
 	package.add("DoesAnyMemberHaveExpeditionLockout", (bool(*)(Group*, std::string, std::string, int))&Perl_Group_DoesAnyMemberHaveExpeditionLockout);

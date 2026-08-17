@@ -15,7 +15,9 @@
 	You should have received a copy of the GNU General Public License
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
+
 #include "common/data_verification.h"
+#include "common/achievements.h"
 #include "common/eq_constants.h"
 #include "common/eq_packet_structs.h"
 #include "common/events/player_event_logs.h"
@@ -2469,6 +2471,9 @@ void NPC::Damage(Mob* other, int64 damage, int32 spell_id, EQ::skills::SkillType
 
 bool NPC::Death(Mob* killer_mob, int64 damage, int32 spell, EQ::skills::SkillType attack_skill, KilledByTypes killed_by, bool is_buff_tic)
 {
+	const auto achievement_npc_name_identity =
+		EQ::Achievements::NpcNameIdentityHash(GetOrigName());
+
 	LogCombat(
 		"Fatal blow dealt by [{}] with [{}] damage, spell [{}], skill [{}]",
 		(killer_mob ? killer_mob->GetName() : "[nullptr]"),
@@ -2980,8 +2985,15 @@ bool NPC::Death(Mob* killer_mob, int64 damage, int32 spell, EQ::skills::SkillTyp
 
 	if (give_exp_client && !IsCorpse()) {
 		const auto& v = give_exp_client->GetRaidOrGroupOrSelf(true);
+		const auto base_zone_id = zone ? zone->GetZoneID() : 0;
 		for (const auto& m : v) {
 			m->CastToClient()->RecordKilledNPCEvent(this);
+			m->CastToClient()->UpdateAchievementForKill(
+				GetNPCTypeID(),
+				GetBaseRace(),
+				achievement_npc_name_identity,
+				base_zone_id
+			);
 
 			if (parse->HasQuestSub(GetNPCTypeID(), EVENT_KILLED_MERIT)) {
 				parse->EventNPC(EVENT_KILLED_MERIT, this, m, "killed", 0);

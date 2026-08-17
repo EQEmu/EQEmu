@@ -37,6 +37,7 @@
 #include "common/spdat.h"
 #include "common/strings.h"
 #include "common/timer.h"
+#include "zone/achievement_manager.h"
 #include "zone/api_service.h"
 #include "zone/bot_command.h"
 #include "zone/command.h"
@@ -423,6 +424,11 @@ int main(int argc, char **argv)
 
 	if (RuleB(TaskSystem, EnableTaskSystem)) {
 		TaskManager::Instance()->LoadTasks();
+	}
+
+	if (!AchievementManager::Instance().Load()) {
+		LogError("Achievement system failed to load; refusing to start the zone");
+		return 1;
 	}
 
 	parse = new QuestParserCollection();

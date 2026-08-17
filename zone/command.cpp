@@ -97,6 +97,7 @@ int command_init(void)
 	if (
 		command_add("acceptrules", "[acceptrules] - Accept the EQEmu Agreement", AccountStatus::Player, command_acceptrules) ||
 		command_add("advnpcspawn", "[maketype|makegroup|addgroupentry|addgroupspawn][removegroupspawn|movespawn|editgroupbox|cleargroupbox]", AccountStatus::GMLeadAdmin, command_advnpcspawn) ||
+		command_add("achievement", "Manage achievement state for yourself or a targeted player", AccountStatus::GMLeadAdmin, command_achievement) ||
 		command_add("aggrozone", "[aggro] - Aggro every mob in the zone with X aggro. Default is 0. Not recommend if you're not invulnerable.", AccountStatus::GMAdmin, command_aggrozone) ||
 		command_add("ai", "[factionid/spellslist/con/guard/roambox/stop/start] - Modify AI on NPC target", AccountStatus::GMAdmin, command_ai) ||
 		command_add("appearance", "[type] [value] - Send an appearance packet for you or your target", AccountStatus::GMLeadAdmin, command_appearance) ||

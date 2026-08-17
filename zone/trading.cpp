@@ -1181,6 +1181,7 @@ void Client::NukeTraderItem(
 	//
 	const EQ::ItemInstance *Inst = m_inv[slot];
 	database.SaveInventory(CharacterID(), Inst, slot);
+	UpdateAchievementForOwnItem(static_cast<uint32>(item_id));
 
 	EQApplicationPacket *outapp2;
 

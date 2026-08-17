@@ -30,6 +30,7 @@
 #include "common/path_manager.h"
 #include "common/races.h"
 #include "common/raid.h"
+#include "common/reward_selection.h"
 #include "common/rulesys.h"
 #include "common/strings.h"
 
@@ -1971,6 +1972,97 @@ namespace RoF2
 
 		FINISH_ENCODE();
 	}
+
+	ENCODE(OP_AchievementReward)
+	{
+		constexpr size_t inspect_header_size = sizeof(uint32) * 2;
+		constexpr size_t inspect_internal_size =
+			inspect_header_size + sizeof(EQ::InternalSerializedItem_Struct);
+
+		if ((*p)->size < sizeof(uint32)) {
+			LogNetcode(
+				"Wrong size on outbound OP_AchievementReward: Got [{}], expected at least [{}]",
+				(*p)->size,
+				sizeof(uint32)
+			);
+			safe_delete(*p);
+			return;
+		}
+
+		EQ::RewardSelection::Action action{};
+		memcpy(&action, (*p)->pBuffer, sizeof(action));
+		if (action != EQ::RewardSelection::Action::InspectItem) {
+			// List, claim, and bulk payloads are already serialized for RoF2.
+			dest->FastQueuePacket(p, ack_req);
+			return;
+		}
+
+		if ((*p)->size != inspect_internal_size) {
+			LogNetcode(
+				"Wrong size on outbound OP_AchievementReward item inspection: "
+				"Got [{}], expected [{}]",
+				(*p)->size,
+				inspect_internal_size
+			);
+			safe_delete(*p);
+			return;
+		}
+
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+		uchar *internal_buffer = in->pBuffer;
+
+		uint32 item_id = 0;
+		memcpy(
+			&item_id,
+			internal_buffer + sizeof(action),
+			sizeof(item_id)
+		);
+		auto internal_item = reinterpret_cast<EQ::InternalSerializedItem_Struct *>(
+			internal_buffer + inspect_header_size
+		);
+		auto instance =
+			static_cast<const EQ::ItemInstance *>(internal_item->inst);
+		if (
+			!instance ||
+			!instance->GetItem() ||
+			instance->GetItem()->ID != item_id
+		) {
+			LogNetcode(
+				"Refusing invalid OP_AchievementReward item inspection for item [{}]",
+				item_id
+			);
+			safe_delete_array(internal_buffer);
+			safe_delete(in);
+			return;
+		}
+
+		EQ::OutBuffer out;
+		out.write(reinterpret_cast<const char *>(&action), sizeof(action));
+		out.write(reinterpret_cast<const char *>(&item_id), sizeof(item_id));
+		const auto item_start = out.tellp();
+		SerializeItem(out, instance, 0, 0, ItemPacketViewLink);
+		if (out.tellp() == item_start) {
+			LogNetcode(
+				"RoF2::ENCODE(OP_AchievementReward) failed to serialize item [{}]",
+				item_id
+			);
+			safe_delete_array(internal_buffer);
+			safe_delete(in);
+			return;
+		}
+
+		in->size = out.size();
+		in->pBuffer = out.detach();
+		safe_delete_array(internal_buffer);
+		dest->FastQueuePacket(&in, ack_req);
+	}
+
+	// RoF2 uses the same Select Reward payloads on two independent managers:
+	// OP_AchievementReward (0x6411) is claim-capable, while
+	// OP_RewardSelection (0x6471) is a read-only preview. Reward providers may
+	// use either manager according to the display's authorization state.
+	ENCODE(OP_RewardSelection) { ENCODE_FORWARD(OP_AchievementReward); }
 
 	ENCODE(OP_ItemLinkResponse) { ENCODE_FORWARD(OP_ItemPacket); }
 

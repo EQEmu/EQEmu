@@ -20,11 +20,41 @@
 #include "lua_expedition.h"
 
 #include "common/zone_store.h"
+#include "zone/achievement_state_updates.h"
 #include "zone/dynamic_zone.h"
 
 #include "lua.hpp"
 #include "luabind/luabind.hpp"
 #include "luabind/object.hpp"
+
+bool Lua_Expedition::AdvanceAchievementProgress(
+	uint32_t achievement_id,
+	uint32_t component_type,
+	uint32_t component_id,
+	uint32_t value
+) {
+	Lua_Safe_Call_Bool();
+	if (component_type > 2) {
+		return false;
+	}
+
+	return AchievementStateUpdates::QueueDynamicZoneAdvance(
+		self->GetID(),
+		achievement_id,
+		static_cast<AchievementStateUpdates::ComponentType>(component_type),
+		component_id,
+		value
+	);
+}
+
+bool Lua_Expedition::CompleteAchievement(uint32_t achievement_id)
+{
+	Lua_Safe_Call_Bool();
+	return AchievementStateUpdates::QueueDynamicZoneCompletion(
+		self->GetID(),
+		achievement_id
+	);
+}
 
 void Lua_Expedition::AddLockout(std::string event_name, uint32_t seconds) {
 	Lua_Safe_Call_Void();
@@ -258,6 +288,8 @@ luabind::scope lua_register_expedition() {
 	.def("AddReplayLockout", (void(Lua_Expedition::*)(uint32_t))&Lua_Expedition::AddReplayLockout)
 	.def("AddReplayLockoutDuration", (void(Lua_Expedition::*)(int))&Lua_Expedition::AddReplayLockoutDuration)
 	.def("AddReplayLockoutDuration", (void(Lua_Expedition::*)(int, bool))&Lua_Expedition::AddReplayLockoutDuration)
+	.def("AdvanceAchievementProgress", &Lua_Expedition::AdvanceAchievementProgress)
+	.def("CompleteAchievement", &Lua_Expedition::CompleteAchievement)
 	.def("GetDynamicZoneID", &Lua_Expedition::GetID)
 	.def("GetID", (uint32_t(Lua_Expedition::*)(void))&Lua_Expedition::GetID)
 	.def("GetInstanceID", (int(Lua_Expedition::*)(void))&Lua_Expedition::GetInstanceID)

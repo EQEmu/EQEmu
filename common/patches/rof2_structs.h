@@ -4249,6 +4249,7 @@ struct TaskDescriptionData2_Struct {
 struct TaskDescriptionTrailer_Struct {
 	//uint16  unknown1; // 0x0012
 	uint32	Points;
+	uint8	has_reward_selection;
 };
 
 struct TaskActivityHeader_Struct {

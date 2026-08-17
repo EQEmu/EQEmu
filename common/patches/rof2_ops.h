@@ -18,6 +18,8 @@
 // out-going packets that require an ENCODE translation:
 // Begin RoF2 Encodes
 
+E(OP_AchievementReward)
+E(OP_RewardSelection)
 E(OP_SendMembershipDetails)
 E(OP_TraderShop)
 E(OP_TraderDelItem)
