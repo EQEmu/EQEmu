@@ -2,7 +2,6 @@
 
 #include "common/classes.h"
 #include "common/eqemu_logsys.h"
-#include "common/repositories/achievement_associations_repository.h"
 #include "common/repositories/achievement_cast_requirements_repository.h"
 #include "common/repositories/achievement_categories_repository.h"
 #include "common/repositories/achievement_category_associations_repository.h"
@@ -246,34 +245,11 @@ bool AchievementManager::LoadSnapshot()
 		return false;
 	}
 
-	std::vector<AchievementComponentsRepository::AchievementComponents> component_rows;
-	std::vector<AchievementAssociationsRepository::AchievementAssociations> component_count_rows;
-	if (
-		!AchievementComponentsRepository::GetAll(content_db, component_rows) ||
-		!AchievementAssociationsRepository::GetAll(content_db, component_count_rows)
-	) {
+	std::vector<AchievementComponentsRepository::ComponentWithDisplayCount> component_rows;
+	if (!AchievementComponentsRepository::GetAllWithDisplayCount(content_db, component_rows)) {
 		LogError("Failed to load achievement components");
 		Clear();
 		return false;
-	}
-	std::sort(component_rows.begin(), component_rows.end(), [](const auto &left, const auto &right) {
-		return std::tie(
-			left.achievement_id,
-			left.component_type,
-			left.sequence,
-			left.component_id
-		) < std::tie(
-			right.achievement_id,
-			right.component_type,
-			right.sequence,
-			right.component_id
-		);
-	});
-
-	std::unordered_map<uint32_t, uint32_t> component_counts;
-	component_counts.reserve(component_count_rows.size());
-	for (const auto &row : component_count_rows) {
-		component_counts[row.component_id] = std::max<uint32_t>(row.required_count, 1);
 	}
 
 	for (const auto &row : component_rows) {
@@ -316,8 +292,7 @@ bool AchievementManager::LoadSnapshot()
 		component.component_id = row.component_id;
 		component.name = row.name;
 		component.description = row.description;
-		const auto required_count = component_counts.find(component.component_id);
-		component.required_count = required_count != component_counts.end() ? required_count->second : 1;
+		component.required_count = std::max<uint32_t>(row.display_required_count, 1);
 		component.display_order = static_cast<uint8_t>(std::min<uint32_t>(component.sequence, 255));
 		m_definitions[definition->second].components[component_type].emplace_back(std::move(component));
 	}
