@@ -489,6 +489,10 @@ public:
 	void WorldKick();
 	inline uint8 GetAnon() const { return m_pp.anon; }
 	inline uint8 GetAFK() const { return m_is_afk; }
+	inline bool IsAdvancedLooting() const { return m_advanced_looting; }
+	inline void SetAdvancedLooting(bool enabled) { m_advanced_looting = enabled; }
+	// re-announce the master looter shortly, after group/raid roster packets have reached the client
+	inline void QueueAdvancedLootMasterLooterRefresh() { m_advloot_master_looter_refresh.Start(1500); }
 	void SetAnon(uint8 anon_flag);
 	inline Client* ResetAFKTimer() {
 		if (!RuleB(Character, EnableAutoAFK)) {
@@ -2069,6 +2073,8 @@ private:
 	char LFGComments[64];
 	bool m_is_afk = false;
 	bool m_is_manual_afk = false;
+	bool m_advanced_looting = false;          // TOB+ Loot Settings, sent by the client only when it changes
+	Timer  m_advloot_master_looter_refresh;
 	bool auto_attack;
 	bool auto_fire;
 	bool runmode;

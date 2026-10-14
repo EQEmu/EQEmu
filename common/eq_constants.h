@@ -63,6 +63,8 @@ namespace AppearanceType {
 	constexpr uint32 AntiCheat             = 51; // Sent by the client randomly telling the server how long since last action has occurred
 	constexpr uint32 GuildShow             = 52;
 	constexpr uint32 OfflineMode           = 53; // Offline Mode
+	constexpr uint32 AdvancedLooting       = 54; // TOB+: Loot Settings "Use Advanced Looting", 0 = Off, 1 = On
+	constexpr uint32 MasterLooterCandidate = 55; // TOB+: Loot Settings "Master Looter Candidate", 0 = Off, 1 = On
 }
 
 namespace Animation {

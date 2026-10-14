@@ -273,7 +273,7 @@ namespace TOB {
 			AFK,
 			Pet,
 			Summoned,
-			Unknown18,
+			Split, // Loot Settings "Auto Split Coin"
 			Unknown19,
 			SetType,
 			NPCName,
@@ -295,8 +295,8 @@ namespace TOB {
 			GuildShow,
 			OfflineMode,
 			Unknown39,
-			Unknown40,
-			Unknown41,
+			AdvancedLooting, // Loot Settings "Use Advanced Looting"
+			MasterLooterCandidate, // Loot Settings "Master Looter Candidate"
 			Birthdate,
 			EncounterLock
 		};

@@ -62,6 +62,22 @@ bool Client::Process() {
 			SendAllPackets();
 		}
 
+		if (m_advloot_master_looter_refresh.Enabled() && m_advloot_master_looter_refresh.Check()) {
+			m_advloot_master_looter_refresh.Disable();
+
+			Mob *master_looter = nullptr;
+			if (GetRaid()) {
+				master_looter = GetRaid()->GetAdvancedLootMasterLooter();
+			}
+			else if (GetGroup()) {
+				master_looter = GetGroup()->GetAdvancedLootMasterLooter();
+			}
+
+			if (master_looter && master_looter->IsClient()) {
+				Corpse::AnnounceAdvancedLootMasterLooter(this, master_looter->GetCleanName());
+			}
+		}
+
 		if (adventure_request_timer) {
 			if (adventure_request_timer->Check()) {
 				safe_delete(adventure_request_timer);

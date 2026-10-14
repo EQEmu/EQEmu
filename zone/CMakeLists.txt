@@ -29,6 +29,7 @@ set(zone_sources
 	client_version.cpp
 	combat_record.cpp
 	corpse.cpp
+	corpse_advloot.cpp
 	dialogue_window.cpp
 	doors.cpp
 	dynamic_zone.cpp

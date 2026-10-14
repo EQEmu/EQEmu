@@ -115,6 +115,8 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_AdventureMerchantSell] = &Client::Handle_OP_AdventureMerchantSell;
 	ConnectedOpcodes[OP_AdventureRequest] = &Client::Handle_OP_AdventureRequest;
 	ConnectedOpcodes[OP_AdventureStatsRequest] = &Client::Handle_OP_AdventureStatsRequest;
+	ConnectedOpcodes[OP_AdvLoot] = &Client::Handle_OP_AdvLoot;
+	ConnectedOpcodes[OP_AdvLootMisc] = &Client::Handle_OP_AdvLootMisc;
 	ConnectedOpcodes[OP_AggroMeterLockTarget] = &Client::Handle_OP_AggroMeterLockTarget;
 	ConnectedOpcodes[OP_AltCurrencyMerchantRequest] = &Client::Handle_OP_AltCurrencyMerchantRequest;
 	ConnectedOpcodes[OP_AltCurrencyPurchase] = &Client::Handle_OP_AltCurrencyPurchase;
@@ -519,6 +521,29 @@ int Client::HandlePacket(const EQApplicationPacket *app)
 // Finish client connecting state
 void Client::CompleteConnect()
 {
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+		// the default for a new TOB character is set before the player profile goes out (Handle_Connect_OP_ZoneEntry)
+		SetAdvancedLooting(GetBucket("advanced_looting") == "1");
+
+		// tell the client so its Loot Settings checkboxes match the server
+		SendAppearancePacket(AppearanceType::AdvancedLooting, IsAdvancedLooting() ? 1 : 0, false, false, this);
+		SendAppearancePacket(AppearanceType::Split, m_pp.autosplit ? 1 : 0, false, false, this);
+
+		// Advanced Loot timings: ask length (the client draws an ask's countdown against it), an unknown value, and
+		// the corpse reservation, all in seconds
+		if (RuleB(Character, EnableAdvancedLoot)) {
+			const int unlock_seconds = RuleI(Character, AdvancedLootUnlockSeconds) > 0 ?
+				RuleI(Character, AdvancedLootUnlockSeconds) : RuleI(NPC, CorpseUnlockTimer) / 1000;
+
+			auto settings = new EQApplicationPacket(OP_AdvLootSettings, 12);
+			settings->WriteUInt32(std::max(1, RuleI(Character, AdvancedLootAskSeconds)));
+			settings->WriteUInt32(120); // meaning unknown
+			settings->WriteUInt32(std::max(0, unlock_seconds));
+			QueuePacket(settings);
+			safe_delete(settings);
+		}
+	}
+
 	UpdateWho();
 	client_state = CLIENT_CONNECTED;
 	SendAllPackets();
@@ -1701,6 +1726,13 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	if ((m_pp.RestTimer > RuleI(Character, RestRegenTimeToActivate)) && (m_pp.RestTimer > RuleI(Character, RestRegenRaidTimeToActivate)))
 		m_pp.RestTimer = 0;
 
+	/* TOB characters start with Use Advanced Looting and Auto Split Coin on; after that the player's own Loot Settings
+	   choice wins. The client takes the Auto Split checkbox from the profile, so this has to happen before it is sent. */
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB && GetBucket("advanced_looting").empty()) {
+		SetBucket("advanced_looting", "1");
+		m_pp.autosplit = 1;
+	}
+
 	SendMembership();
 	
 	outapp = new EQApplicationPacket(OP_PlayerProfile, sizeof(PlayerProfile_Struct));
@@ -1957,6 +1989,131 @@ void Client::Handle_OP_AcceptNewTask(const EQApplicationPacket *app)
 			task_state->AcceptNewTask(this, ant->task_id, ant->task_master_id, std::time(nullptr));
 		}
 		task_state->ClearLastOffers();
+	}
+}
+
+void Client::Handle_OP_AdvLoot(const EQApplicationPacket *app)
+{
+	if (app->size < sizeof(uint16)) {
+		return;
+	}
+
+	const uint16 subtype = *(const uint16 *)app->pBuffer;
+	LogLootDetail("[{}] OP_AdvLoot subtype [{}] size [{}]", GetCleanName(), subtype, app->size);
+
+	// Loot: u16, u64 item, u32 corpse, u32 quantity, u32 sequence, u8 flag
+	// Leave: u16, u64 item, u32 corpse, u32 quantity
+	const uint32 item_id   = app->size >= 10 ? (uint32) *(const uint64 *)(app->pBuffer + 2) : 0;
+	uint32 corpse_id = app->size >= 14 ? *(const uint32 *)(app->pBuffer + 10) : 0;
+
+	if (subtype == AdvLootSync) {
+		Corpse::SendAdvancedLootSync(this);
+		return;
+	}
+
+	if (subtype == AdvLootLeave && app->size >= 18) {
+		Corpse *corpse = entity_list.GetCorpseByID(corpse_id);
+		if (corpse) {
+			corpse->AdvancedLeaveItem(this, item_id);
+		}
+		return;
+	}
+
+	if (subtype == AdvLootLoot && app->size >= 23) {
+		const uint32 sequence = *(const uint32 *)(app->pBuffer + 18);
+		Corpse *corpse = entity_list.GetCorpseByID(corpse_id);
+		if (corpse) {
+			corpse->AdvancedLootItem(this, item_id, sequence);
+		}
+		else {
+			SendAdvLootResult(this, AdvLootResultGone, sequence); // lets the window drop the request
+		}
+		return;
+	}
+
+	// Choice (0xb): u16, u32 transaction, u32 corpse, u64 item, u16 count, {u32 choice, cstr}
+	if (subtype == AdvLootChoice && app->size >= 24) {
+		const uint32 transaction_id = *(const uint32 *)(app->pBuffer + 2);
+		const uint32 choice_corpse  = *(const uint32 *)(app->pBuffer + 6);
+		const uint32 choice_item    = (uint32) *(const uint64 *)(app->pBuffer + 10);
+		const uint32 choice         = *(const uint32 *)(app->pBuffer + 20);
+		Corpse *corpse = entity_list.GetCorpseByID(choice_corpse);
+		if (corpse) {
+			corpse->AdvancedChoice(this, transaction_id, choice_item, choice);
+		}
+		return;
+	}
+
+	// Ask (0xa, master looter): u16, u32 transaction, u64 item, u32 state, u8, u32 time, u32 count, {u32 corpse, u32 qty}
+	if (subtype == AdvLootAsk && app->size >= 35) {
+		const uint32 transaction_id = *(const uint32 *)(app->pBuffer + 2);
+		const uint32 ask_item       = (uint32) *(const uint64 *)(app->pBuffer + 6);
+		const uint32 state          = *(const uint32 *)(app->pBuffer + 14);
+		const uint32 ask_corpse     = *(const uint32 *)(app->pBuffer + 27);
+		Corpse *corpse = entity_list.GetCorpseByID(ask_corpse);
+		if (corpse) {
+			corpse->AdvancedAsk(this, transaction_id, ask_item, state);
+		}
+		return;
+	}
+
+	// Give / grab (0xe, master looter): u16, u32 transaction, u32 corpse, u64 item, u16 qty, u8, cstr player
+	if (subtype == AdvLootGive && app->size >= 22) {
+		const uint32 give_ask    = *(const uint32 *)(app->pBuffer + 2); // the row's ask id, 0 when it was never asked
+		const uint32 give_corpse = *(const uint32 *)(app->pBuffer + 6);
+		const uint32 give_item   = (uint32) *(const uint64 *)(app->pBuffer + 10);
+		const uint16 quantity    = *(const uint16 *)(app->pBuffer + 18);
+		const bool   leave       = app->pBuffer[20] != 0; // 1 = Leave On Corpse / Leave All, 0 = give
+		const std::string name((const char *)app->pBuffer + 21, strnlen((const char *)app->pBuffer + 21, std::min<size_t>(64, app->size - 21)));
+		Corpse *corpse = entity_list.GetCorpseByID(give_corpse);
+		if (corpse) {
+			corpse->AdvancedGiveItem(this, give_ask, give_item, quantity, leave, name);
+		}
+		return;
+	}
+
+	// State change (0x11, master looter): u16, u32 transaction, u32 time, u32 state, u8
+	if (subtype == AdvLootState && app->size >= 14) {
+		const uint32 transaction_id = *(const uint32 *)(app->pBuffer + 2);
+		const uint32 state          = *(const uint32 *)(app->pBuffer + 10);
+		Corpse *corpse = Corpse::FindAdvancedLootTransaction(transaction_id, this);
+		if (corpse) {
+			corpse->AdvancedSetState(this, transaction_id, state);
+		}
+		return;
+	}
+
+	// Roll (0x12, master looter, after the ask completed): u16, u32 transaction
+	if (subtype == AdvLootRoll && app->size >= 6) {
+		const uint32 transaction_id = *(const uint32 *)(app->pBuffer + 2);
+		Corpse *corpse = Corpse::FindAdvancedLootTransaction(transaction_id, this);
+		if (corpse) {
+			corpse->AdvancedRoll(this, transaction_id);
+		}
+		return;
+	}
+}
+
+void Client::Handle_OP_AdvLootMisc(const EQApplicationPacket *app)
+{
+	if (app->size < sizeof(uint16)) {
+		return;
+	}
+
+	const uint16 subtype = *(const uint16 *)app->pBuffer;
+	LogLootDetail("[{}] OP_AdvLootMisc subtype [{}] size [{}]", GetCleanName(), subtype, app->size);
+
+	// Free Grab: u16, u32 ask, u32 corpse, cstr
+	if (subtype == AdvLootMiscFreeGrab && app->size >= 10) {
+		const uint32 transaction_id = *(const uint32 *)(app->pBuffer + 2);
+		Corpse *corpse = entity_list.GetCorpseByID(*(const uint32 *)(app->pBuffer + 6));
+		if (!corpse || !corpse->HasAdvancedLootTransaction(transaction_id)) {
+			corpse = Corpse::FindAdvancedLootTransaction(transaction_id, nullptr, this);
+		}
+
+		if (corpse) {
+			corpse->AdvancedFreeGrab(this, transaction_id);
+		}
 	}
 }
 
@@ -7666,6 +7823,31 @@ void Client::Handle_OP_GroupRoles(const EQApplicationPacket *app)
 			g->DelegatePuller(grs->Name1, grs->Toggle);
 		else
 			g->UnDelegatePuller(grs->Name1, grs->Toggle);
+		break;
+	}
+	case 5: // Master Looter (TOB+ Advanced Loot): only the leader hands it out; unset goes back to the leader
+	{
+		if (!g->IsLeader(this) || ClientVersion() < EQ::versions::ClientVersion::TOB) {
+			break;
+		}
+
+		grs->Name1[sizeof(grs->Name1) - 1] = '\0';
+		if (grs->Toggle && !g->IsGroupMember(grs->Name1)) {
+			break;
+		}
+
+		g->SetAdvancedLootMasterLooter(grs->Toggle ? grs->Name1 : "");
+
+		auto outapp = new EQApplicationPacket(OP_GroupRoles, sizeof(GroupRole_Struct));
+		memcpy(outapp->pBuffer, grs, sizeof(GroupRole_Struct));
+		for (Mob *m : g->members) {
+			if (m && m->IsClient() && m->CastToClient()->ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+				m->CastToClient()->QueuePacket(outapp);
+			}
+		}
+		safe_delete(outapp);
+
+		g->AnnounceAdvancedLootMasterLooter();
 		break;
 	}
 	default:
@@ -15133,6 +15315,16 @@ void Client::Handle_OP_SpawnAppearance(const EQApplicationPacket *app)
 			entity_list.QueueClients(this, app, true);
 		}
 	}
+	else if (sa->type == AppearanceType::AdvancedLooting) {
+		if (ClientVersion() >= EQ::versions::ClientVersion::TOB && IsAdvancedLooting() != (sa->parameter != 0)) {
+			SetAdvancedLooting(sa->parameter != 0);
+			SetBucket("advanced_looting", IsAdvancedLooting() ? "1" : "0");
+			LogLoot("[{}] Advanced Looting [{}]", GetCleanName(), IsAdvancedLooting() ? "on" : "off");
+		}
+	}
+	else if (sa->type == AppearanceType::MasterLooterCandidate) {
+		// TOB Loot Settings "Master Looter Candidate": nothing on the server uses it yet
+	}
 	else if (sa->type == AppearanceType::Split) {
 		m_pp.autosplit = (sa->parameter == 1);
 	}
@@ -17082,6 +17274,13 @@ void Client::Handle_OP_RaidDelegateAbility(const EQApplicationPacket *app)
 			auto r = GetRaid();
 			if (r) {
 				r->DelegateAbilityMark(this, das->Name);
+			}
+			break;
+		}
+		case RaidDelegateMasterLooter: {
+			auto r = GetRaid();
+			if (r) {
+				r->DelegateAdvancedLootMasterLooter(this, das->Name);
 			}
 			break;
 		}

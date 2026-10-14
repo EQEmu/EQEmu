@@ -2529,7 +2529,8 @@ struct GroupUpdate2_Struct {
 /*0452*/	GroupLeadershipAA_Struct leader_aas;
 /*0580*/	uint8	unknown580[196];
 /*0766*/	uint32	NPCMarkerID;	// EntityID of player delegated MarkNPC ability
-/*0780*/	uint8	unknown780[56];
+/*0780*/	uint32	group_id;		// TOB+: sent first in the roster; the client needs it non-zero
+/*0784*/	uint8	unknown784[52];
 /*0836*/
 };
 struct GroupJoin_Struct {

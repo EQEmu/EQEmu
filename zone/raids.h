@@ -30,7 +30,8 @@ enum {
 	FindNextMarkerSlot     = 1,
 	FindNextAssisterSlot   = 2,
 	RaidDelegateMainAssist = 3,
-	RaidDelegateMainMarker = 4
+	RaidDelegateMainMarker = 4,
+	RaidDelegateMasterLooter = 100 // TOB+ Advanced Loot (no RoF2 equivalent)
 };
 
 typedef enum {
@@ -107,6 +108,9 @@ public:
 	bool IsLeader(Client* c) { return c == leader; }
 	bool IsLeader(const char* name) { return !strcmp(leadername, name); }
 	void SetRaidLeader(const char *wasLead, const char *name);
+	void AnnounceAdvancedLootMasterLooter();
+	void DelegateAdvancedLootMasterLooter(Client *delegator, const char *delegatee);
+	Client *GetAdvancedLootMasterLooter();
 
 	bool	Process();
 
@@ -280,6 +284,7 @@ public:
 	void HandleOfflineBots(uint32 owner);
 
 	RaidMember members[MAX_RAID_MEMBERS];
+	std::string m_advloot_master_looter; // delegated Raid Master Looter; empty = the raid leader
 	char leadername[64];
 	char main_assister_pcs[MAX_NO_RAID_MAIN_ASSISTERS][64];
 	char main_marker_pcs[MAX_NO_RAID_MAIN_MARKERS][64];
