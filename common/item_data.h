@@ -121,6 +121,11 @@ namespace EQ
 			/*----*/ ItemTypeCount,
 			/*----*/ ItemTypeCollectible,
 			/*----*/ ItemTypeContainer,
+			/*----*/ ItemTypeMount = 68,          // Live types the TOB key rings take
+			/*----*/ ItemTypeIllusion,
+			/*----*/ ItemTypeFamiliar,            // 70
+			/*----*/ ItemTypeHeroForgeOrnament,
+			/*----*/ ItemTypeTeleportation,
 			/*----*/ ItemTypeAll     = 0xFF
 
 /*

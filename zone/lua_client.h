@@ -543,6 +543,15 @@ public:
 	bool CompleteTask(int task_id);
 	bool UncompleteTask(int task_id);
 	luabind::object GetKeyRing(lua_State* L);
+	bool IsKeyRingUnlocked(int ring);
+	void UnlockKeyRing(int ring);
+	void LockKeyRing(int ring);
+	bool AddItemToKeyRing(uint32 item_id);
+	bool RemoveItemFromKeyRing(uint32 item_id);
+	luabind::object GetKeyRingItems(lua_State* L, int ring);
+	bool AddItemToOverflow(uint32 item_id);
+	bool AddItemToOverflow(uint32 item_id, int16 charges);
+	int GetItemOverflowCount();
 
 	// account data buckets
 	void SetAccountBucket(std::string bucket_name, std::string bucket_value);

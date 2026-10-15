@@ -1151,6 +1151,23 @@ public:
 	void SendItemOverflowList();
 	void SendItemOverflowAction(uint32 action, uint64 item_index = 0);
 	bool RetrieveOverflowItem(uint64 item_index);
+	bool IsKeyRingEnabled();
+	int GetKeyRingCapacity(int ring);
+	bool CanAddToKeyRing(int ring, const EQ::ItemInstance *inst);
+	bool MoveKeyRingItem(MoveItem_Struct *move_in);
+	bool AddToKeyRing(int16 src_slot_id, int16 ring_slot_id);
+	bool RemoveFromKeyRing(int16 ring_slot_id, int16 dst_slot_id);
+	// key ring unlocks (data bucket keyring_unlocked_<ring>; rule Character:KeyRingsUnlockedByDefault when unset)
+	bool IsKeyRingUnlocked(int ring);
+	void SetKeyRingUnlocked(int ring, bool unlocked);
+	uint8 GetKeyRingUnlockMask();
+	// quest API: put an item straight onto the ring that takes it, take one off, list a ring
+	bool AddItemToKeyRing(uint32 item_id);
+	bool RemoveItemFromKeyRing(uint32 item_id);
+	std::vector<uint32> GetKeyRingItemIDs(int ring);
+	// quest API: deliver an item to the cursor, or the Item Overflow window when the cursor is taken
+	bool AddItemToOverflow(uint32 item_id, int16 charges = 0);
+	int GetItemOverflowCount();
 	void DeleteItemInInventory(int16 slot_id, int16 quantity = 0, bool client_update = false, bool update_db = true);
 	uint32 CountItem(uint32 item_id);
 	void ResetItemCooldown(uint32 item_id);

@@ -1758,6 +1758,7 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 
 	/* The entityid field in the Player Profile is used by the Client in relation to Group Leadership AA */
 	m_pp.entityid = GetID();
+	m_pp.tob_keyring_unlocks = GetKeyRingUnlockMask();
 	memcpy(outapp->pBuffer, &m_pp, outapp->size);
 	outapp->priority = 6;
 	FastQueuePacket(&outapp);

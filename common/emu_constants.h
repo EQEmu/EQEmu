@@ -205,6 +205,26 @@ namespace EQ
 		const int16 OVERFLOW_BEGIN = 20000;
 		const int16 OVERFLOW_END   = 20999;
 
+		// TOB+ only: key ring r, index i is KEYRING_BEGIN + r * KEYRING_STRIDE + i (kept in the inventory table).
+		// Rings: 0 mount, 1 illusion, 2 familiar, 3 Hero's Forge, 4 teleportation, 5 activated items.
+		const int16 KEYRING_BEGIN     = 22000;
+		const int16 KEYRING_STRIDE    = 1000;
+		const int16 KEYRING_RING_SIZE = 500; // most the client holds in one ring
+		const int16 KEYRING_APPEND    = 999; // offset meaning "first free index" (client sends index -1)
+		const int16 KEYRING_COUNT     = 6;
+		const int16 KEYRING_END       = KEYRING_BEGIN + KEYRING_COUNT * KEYRING_STRIDE - 1;
+
+		// client array caps per ring (illusion 300, familiar 450, teleportation 250)
+		inline constexpr int16 KEYRING_CLIENT_SIZE[KEYRING_COUNT] = { 500, 300, 450, 500, 250, 500 };
+
+		constexpr bool IsKeyRingRange(int32 slot_id) { return slot_id >= KEYRING_BEGIN && slot_id <= KEYRING_END; }
+		constexpr int KeyRingFromSlot(int32 slot_id) { return (slot_id - KEYRING_BEGIN) / KEYRING_STRIDE; }
+		constexpr int KeyRingIndexFromSlot(int32 slot_id) { return (slot_id - KEYRING_BEGIN) % KEYRING_STRIDE; }
+		constexpr bool IsKeyRingSlot(int32 slot_id) { return IsKeyRingRange(slot_id) && KeyRingIndexFromSlot(slot_id) < KEYRING_RING_SIZE; }
+		constexpr bool IsKeyRingAppendSlot(int32 slot_id) { return IsKeyRingRange(slot_id) && KeyRingIndexFromSlot(slot_id) == KEYRING_APPEND; }
+		constexpr int16 KeyRingSlot(int ring, int index) { return static_cast<int16>(KEYRING_BEGIN + ring * KEYRING_STRIDE + index); }
+		constexpr int16 KeyRingAppendSlot(int ring) { return KeyRingSlot(ring, KEYRING_APPEND); }
+
 		using RoF2::invslot::EQUIPMENT_BITMASK;
 		using RoF2::invslot::GENERAL_BITMASK;
 		using RoF2::invslot::CURSOR_BITMASK;

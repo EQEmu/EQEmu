@@ -64,6 +64,8 @@ namespace TOB
 				typeViewModHeroForgeKeyRingItems,
 				typeTeleportationKeyRingItems,
 				typeViewModTeleportationKeyRingItems,
+				typeActivatedKeyRingItems,
+				typeViewModActivatedKeyRingItems,
 				typeOverflow,
 				typeDragonHoard,
 				typeTradeskillDepot,
@@ -105,6 +107,14 @@ namespace TOB
 		const int16 TYPE_BEGIN = typePossessions;
 		const int16 TYPE_END = typeOther;
 		const int16 TYPE_COUNT = (TYPE_END - TYPE_BEGIN) + 1;
+
+		// the six key rings use the odd types 27..37, the even ones are their one-slot "stat" containers
+		inline bool IsKeyRingType(int16 inv_type) {
+			return inv_type >= typeMountKeyRingItems && inv_type <= typeActivatedKeyRingItems &&
+				((inv_type - typeMountKeyRingItems) % 2) == 0;
+		}
+		inline int KeyRingIndexFromType(int16 inv_type) { return (inv_type - typeMountKeyRingItems) / 2; }
+		inline int16 KeyRingTypeFromIndex(int ring) { return static_cast<int16>(typeMountKeyRingItems + ring * 2); }
 
 		int16 GetInvTypeSize(int16 inv_type);
 		const char* GetInvTypeName(int16 inv_type);

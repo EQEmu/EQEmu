@@ -117,6 +117,9 @@ namespace EQ
 		inline int CursorSize() { return m_cursor.size(); }
 		inline bool CursorEmpty() { return m_cursor.empty(); }
 
+		// TOB+ key ring items, keyed by their KEYRING_BEGIN slot
+		inline const std::map<int16, ItemInstance*>& GetKeyRingItems() const { return m_keyring; }
+
 		// Retrieve a read-only item from inventory
 		inline const ItemInstance* operator[](int16 slot_id) const { return GetItem(slot_id); }
 
@@ -244,6 +247,7 @@ namespace EQ
 		std::map<int16, ItemInstance*>	m_bank;		// Items in character bank
 		std::map<int16, ItemInstance*>	m_shbank;	// Items in character shared bank
 		std::map<int16, ItemInstance*>	m_trade;	// Items in a trade session
+		std::map<int16, ItemInstance*>	m_keyring;	// TOB+ key ring items
 		::ItemInstQueue					m_cursor;	// Items on cursor: FIFO
 
 	private:

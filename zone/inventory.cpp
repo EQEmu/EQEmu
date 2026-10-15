@@ -1077,7 +1077,7 @@ void Client::DeleteItemInInventory(int16 slot_id, int16 quantity, bool client_up
 	// - cursor queue slots were slipping through and crashing client
 	if(!m_inv[slot_id]) {
 		// Make sure the client deletes anything in this slot to match the server.
-		if(client_update && IsValidSlot(slot_id)) {
+		if(client_update && (IsValidSlot(slot_id) || EQ::invslot::IsKeyRingSlot(slot_id))) {
 			EQApplicationPacket* outapp;
 			outapp = new EQApplicationPacket(OP_DeleteItem, sizeof(DeleteItem_Struct));
 			DeleteItem_Struct* delitem	= (DeleteItem_Struct*)outapp->pBuffer;
@@ -1109,7 +1109,7 @@ void Client::DeleteItemInInventory(int16 slot_id, int16 quantity, bool client_up
 			database.SaveInventory(character_id, inst, slot_id);
 	}
 
-	if(client_update && IsValidSlot(slot_id)) {
+	if(client_update && (IsValidSlot(slot_id) || EQ::invslot::IsKeyRingSlot(slot_id))) {
 		EQApplicationPacket* outapp = nullptr;
 		if(inst) {
 			if (!inst->IsStackable() && !isDeleted) {
@@ -1710,6 +1710,11 @@ bool Client::IsBankSlot(uint32 slot)
 // Moves items around both internally and in the database
 // In the future, this can be optimized by pushing all changes through one database REPLACE call
 bool Client::SwapItem(MoveItem_Struct* move_in) {
+
+	// TOB+ key rings are not inventory slots
+	if (EQ::invslot::IsKeyRingRange(move_in->from_slot) || EQ::invslot::IsKeyRingRange(move_in->to_slot)) {
+		return MoveKeyRingItem(move_in);
+	}
 
 	uint32 src_slot_check = move_in->from_slot;
 	uint32 dst_slot_check = move_in->to_slot;

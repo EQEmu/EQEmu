@@ -827,6 +827,23 @@ void Client::BulkSendInventoryItems()
 		}
 	}
 
+	// TOB+ key ring items go in the same list, with their ring as the slot type
+	if (IsKeyRingEnabled()) {
+		for (const auto &[slot_id, inst] : m_inv.GetKeyRingItems()) {
+			if (!inst) {
+				continue;
+			}
+
+			inst->Serialize(ob, slot_id);
+
+			if (ob.tellp() == last_pos) {
+				LogInventory("Serialization failed on key ring slot [{}] during BulkSendInventoryItems. Item skipped", slot_id);
+			}
+
+			last_pos = ob.tellp();
+		}
+	}
+
 	auto outapp = new EQApplicationPacket(OP_CharInventory);
 
 	outapp->size    = ob.size();

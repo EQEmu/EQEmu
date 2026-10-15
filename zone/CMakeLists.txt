@@ -52,6 +52,7 @@ set(zone_sources
 	heal_rotation.cpp
 	horse.cpp
 	inventory.cpp
+	key_rings.cpp
 	loot.cpp
 	main.cpp
 	map.cpp

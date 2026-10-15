@@ -168,6 +168,26 @@ namespace TOB
 	// Item packet types
 	static item::ItemPacketType ServerToTOBItemPacketType(ItemPacketType tob_type);
 
+	// key ring size the client shows and enforces, 0 when key rings are off
+	static inline int32 TOBKeyRingSlots(int ring)
+	{
+		if (!RuleB(Character, EnableKeyRings)) {
+			return 0;
+		}
+
+		return std::clamp(RuleI(Character, KeyRingSlots), 0, static_cast<int>(EQ::invslot::KEYRING_CLIENT_SIZE[ring]));
+	}
+
+	// Store-feature claims the client checks before a key ring takes an item. The mount ring is always available;
+	// the others need their claim id with a value above 0 in the player profile claims array.
+	static constexpr uint32 TOB_KEYRING_CLAIMS[] = {
+		2008511, // illusion
+		2010564, // familiar
+		2011970, // Hero's Forge
+		2016968, // teleportation
+		2071519, // activated items
+	};
+
 	// casting slots
 	static inline spells::CastingSlot ServerToTOBCastingSlot(EQ::spells::CastingSlot slot);
 	static inline EQ::spells::CastingSlot TOBToServerCastingSlot(spells::CastingSlot slot);
@@ -3115,6 +3135,8 @@ namespace TOB
 		out.WriteUInt32(0);
 
 		//ItemIndex keyring_item_index[6];
+		// TODO: Stat Mount / Stat Illusion / Stat Familiar. This is the selected stat item per ring, but the
+		// packet the Key Ring window sends to pick one is not known yet (needs a Live capture), so send none.
 		for (int i = 0; i < 6; ++i) {
 			/*
 			s16 slot1;
@@ -3232,8 +3254,24 @@ namespace TOB
 		out.WriteUInt32(emu->platinum_shared);
 
 		//u32 claim_count;
-		out.WriteUInt32(0);
-		//Claim claims[claim_count];
+		//Claim claims[claim_count]; { u32 claim_id, s32 value }
+		{
+			// TOB_KEYRING_CLAIMS[i] belongs to ring i + 1 (the mount ring needs no claim)
+			std::vector<uint32> claims;
+			if (RuleB(Character, EnableKeyRings)) {
+				for (size_t i = 0; i < std::size(TOB_KEYRING_CLAIMS); ++i) {
+					if (emu->tob_keyring_unlocks & (1 << (i + 1))) {
+						claims.push_back(TOB_KEYRING_CLAIMS[i]);
+					}
+				}
+			}
+
+			out.WriteUInt32(static_cast<uint32>(claims.size()));
+			for (const auto claim_id : claims) {
+				out.WriteUInt32(claim_id);
+				out.WriteInt32(1);
+			}
+		}
 
 		//Tribute tribute;
 		/*
@@ -6787,13 +6825,14 @@ namespace TOB
 		eq->entries[21] = 1;  // Ornament
 		eq->entries[22] = 0;  // HeroicCharacter
 		eq->entries[23] = 0;  // AutoGrantAA
-		eq->entries[24] = 0;  // MountKeyRingSlots
-		eq->entries[25] = 0;  // IllusionKeyRingSlots
-		eq->entries[26] = 0;  // FamiliarKeyRingSlots
+		eq->entries[24] = TOBKeyRingSlots(0); // MountKeyRingSlots
+		eq->entries[25] = TOBKeyRingSlots(1); // IllusionKeyRingSlots
+		eq->entries[26] = TOBKeyRingSlots(2); // FamiliarKeyRingSlots
 		eq->entries[27] = 0;  // FamiliarAutoLeave
-		eq->entries[28] = 0;  // HeroForgeKeyRingSlots
+		eq->entries[28] = TOBKeyRingSlots(3); // HeroForgeKeyRingSlots
 		eq->entries[29] = 0;  // DragonHoardSlots
-		eq->entries[30] = 0;  // TeleportKeyRingSlots
+		eq->entries[30] = TOBKeyRingSlots(4); // TeleportKeyRingSlots
+		// the activated items ring has no entry here; if its tab refuses items, capture this packet on Live
 		eq->entries[31] = 0;  // PersonalDepotSlots
 		eq->entries[32] = 0;
 
@@ -9701,8 +9740,14 @@ namespace TOB
 				(s.Slot == invslot::slotGeneral11 || s.Slot == invslot::slotGeneral12);
 		};
 
-		emu->from_slot = tob_extra_general(eq->from_slot) ? invslot::SLOT_REJECT : TOBToServerSlot(eq->from_slot);
-		emu->to_slot   = tob_extra_general(eq->to_slot) ? invslot::SLOT_REJECT : TOBToServerSlot(eq->to_slot);
+		// key ring and stat slots that do not map (stat selection, bad index) must not read as "destroy" either
+		auto tob_unmapped_ring = [](const structs::InventorySlot_Struct &s) {
+			return s.Type >= invtype::typeMountKeyRingItems && s.Type <= invtype::typeViewModActivatedKeyRingItems &&
+				TOBToServerSlot(s) == static_cast<uint32>(EQ::invslot::SLOT_INVALID);
+		};
+
+		emu->from_slot = (tob_extra_general(eq->from_slot) || tob_unmapped_ring(eq->from_slot)) ? invslot::SLOT_REJECT : TOBToServerSlot(eq->from_slot);
+		emu->to_slot   = (tob_extra_general(eq->to_slot) || tob_unmapped_ring(eq->to_slot)) ? invslot::SLOT_REJECT : TOBToServerSlot(eq->to_slot);
 		IN(number_in_stack);
 
 		FINISH_DIRECT_DECODE();
@@ -11352,6 +11397,11 @@ namespace TOB
 			TOBSlot.Slot = server_slot - EQ::invslot::WORLD_BEGIN;
 		}
 
+		else if (EQ::invslot::IsKeyRingSlot(server_slot)) {
+			TOBSlot.Type = invtype::KeyRingTypeFromIndex(EQ::invslot::KeyRingFromSlot(server_slot));
+			TOBSlot.Slot = EQ::invslot::KeyRingIndexFromSlot(server_slot);
+		}
+
 		Log(Logs::Detail, Logs::Netcode, fmt::format("Convert Server Slot {} to TOB Slot [{}, {}, {}, {}]",
 			server_slot, TOBSlot.Type, TOBSlot.Slot, TOBSlot.SubIndex, TOBSlot.AugIndex).c_str());
 
@@ -11525,6 +11575,25 @@ namespace TOB
 		case invtype::typeGuildTribute: {
 			if (tob_slot.Slot >= invslot::SLOT_BEGIN && tob_slot.Slot < invtype::GUILD_TRIBUTE_SIZE) {
 				server_slot = EQ::invslot::GUILD_TRIBUTE_BEGIN + tob_slot.Slot;
+			}
+
+			break;
+		}
+		case invtype::typeMountKeyRingItems:
+		case invtype::typeIllusionKeyRingItems:
+		case invtype::typeFamiliarKeyRingItems:
+		case invtype::typeHeroForgeKeyRingItems:
+		case invtype::typeTeleportationKeyRingItems:
+		case invtype::typeActivatedKeyRingItems: {
+			// adding to a ring sends index -1: the server picks the first free index
+			const int ring = invtype::KeyRingIndexFromType(tob_slot.Type);
+			if (tob_slot.SubIndex == invbag::SLOT_INVALID) {
+				if (tob_slot.Slot == invslot::SLOT_INVALID) {
+					server_slot = EQ::invslot::KeyRingAppendSlot(ring);
+				}
+				else if (tob_slot.Slot >= 0 && tob_slot.Slot < EQ::invslot::KEYRING_RING_SIZE) {
+					server_slot = EQ::invslot::KeyRingSlot(ring, tob_slot.Slot);
+				}
 			}
 
 			break;
