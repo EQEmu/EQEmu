@@ -2078,6 +2078,19 @@ void Group::DelegateMarkNPC(const char *NewNPCMarkerName)
 		LogError("Unable to set group mark npc: [{}]\n", results.ErrorMessage().c_str());
 }
 
+// TOB+ has no OP_DelegateAbility; the group NPC marker is group role 4
+static void SendMarkNPCRole(Client *c, const char *member_name, const std::string &leader_name, uint8 toggle)
+{
+	auto outapp = new EQApplicationPacket(OP_GroupRoles, sizeof(GroupRole_Struct));
+	auto grs = (GroupRole_Struct *) outapp->pBuffer;
+	strn0cpy(grs->Name1, member_name, sizeof(grs->Name1));
+	strn0cpy(grs->Name2, leader_name.c_str(), sizeof(grs->Name2));
+	grs->RoleNumber = 4;
+	grs->Toggle = toggle;
+	c->QueuePacket(outapp);
+	safe_delete(outapp);
+}
+
 void Group::NotifyMarkNPC(Client *c)
 {
 	// Notify the specified client who the group member is who has been delgated the Mark NPC ability.
@@ -2087,6 +2100,11 @@ void Group::NotifyMarkNPC(Client *c)
 
 	if(!NPCMarkerName.size())
 		return;
+
+	if (c->ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+		SendMarkNPCRole(c, NPCMarkerName.c_str(), GetLeaderName(), 1);
+		return;
+	}
 
 	auto outapp = new EQApplicationPacket(OP_DelegateAbility, sizeof(DelegateAbility_Struct));
 
@@ -2145,8 +2163,13 @@ void Group::UnDelegateMarkNPC(const char *OldNPCMarkerName)
 	strn0cpy(das->Name, OldNPCMarkerName, sizeof(das->Name));
 
 	for(uint32 i = 0; i < MAX_GROUP_MEMBERS; ++i)
-		if(members[i] && members[i]->IsClient())
-			members[i]->CastToClient()->QueuePacket(outapp);
+		if(members[i] && members[i]->IsClient()) {
+			Client *c = members[i]->CastToClient();
+			if (c->ClientVersion() >= EQ::versions::ClientVersion::TOB)
+				SendMarkNPCRole(c, OldNPCMarkerName, GetLeaderName(), 0);
+			else
+				c->QueuePacket(outapp);
+		}
 
 	safe_delete(outapp);
 

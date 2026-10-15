@@ -134,6 +134,7 @@ public:
 	void	NotifyPuller(Client *c, uint8 toggle = 0);
 	void	NotifyMarkNPC(Client *c);
 	inline	uint32 GetNPCMarkerID() { return NPCMarkerID; }
+	const char *GetNPCMarkerName() { return NPCMarkerName.c_str(); }
 	void	SetMainTank(const char *NewMainTankName);
 	void	SetMainAssist(const char *NewMainAssistName);
 	void	SetPuller(const char *NewPullerName);

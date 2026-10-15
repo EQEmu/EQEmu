@@ -4858,12 +4858,13 @@ namespace TOB
 		EQApplicationPacket* in = *p;
 		*p = nullptr;
 
-		if (in->size != sizeof(InspectBuffs_Struct)) {
+		if (in->size != sizeof(InspectBuffs_Struct) && in->size != sizeof(InspectBuffsTOB_Struct)) {
 			LogNetcode("TOB::ENCODE(OP_InspectBuffs) wrong size [{}]", in->size);
 			delete in;
 			return;
 		}
 		auto emu = reinterpret_cast<InspectBuffs_Struct*>(in->pBuffer);
+		auto ext = in->size == sizeof(InspectBuffsTOB_Struct) ? reinterpret_cast<InspectBuffsTOB_Struct*>(in->pBuffer) : nullptr;
 		constexpr size_t slots = sizeof(emu->spell_id) / sizeof(emu->spell_id[0]);
 
 		uint32 count = 0;
@@ -4875,15 +4876,15 @@ namespace TOB
 
 		SerializeBuffer buf;
 		buf.WriteUInt32(count);
-		buf.WriteUInt32(0);  // target spawn id: 0 -> client uses its current target's name
-		buf.WriteUInt8(0);   // "cast by you" header flag
+		buf.WriteUInt32(ext ? ext->target_id : 0);  // target spawn id: 0 -> client uses its current target's name
+		buf.WriteUInt8(ext ? ext->cast_by_you : 0);  // "cast by you" header flag (/inspectbuffs mine)
 		for (size_t i = 0; i < slots; ++i) {
 			if (emu->spell_id[i] <= 0) {
 				continue;
 			}
 			buf.WriteUInt32(emu->spell_id[i]);
 			buf.WriteInt32(emu->tics_remaining[i]); // client: seconds = ticks * 6, < 0 = permanent
-			buf.WriteUInt64(0);                     // caster id (0 = no " [caster]" suffix)
+			buf.WriteUInt64(ext ? ext->caster_id[i] : 0); // caster id (0 = no " [caster]" suffix)
 		}
 
 		auto outapp = new EQApplicationPacket(OP_InspectBuffs, buf.size());
@@ -9062,6 +9063,25 @@ namespace TOB
 
 	DECODE(OP_MarkRaidNPC) { TOBMarkToLeadershipAbility(__packet, RaidLeadershipAbility_MarkNPC); }
 	DECODE(OP_MarkNPC) { TOBMarkToLeadershipAbility(__packet, GroupLeadershipAbility_MarkNPC); }
+
+	// /inspectbuffs [mine] sends one byte (1 = only buffs I cast) on 0x3d34. The server handles inspect buffs
+	// through OP_DoGroupLeadershipAbility, so convert; the parameter carries the "mine" flag.
+	DECODE(OP_InspectBuffs)
+	{
+		if (__packet->size < sizeof(uint8)) {
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+		uint8 mine = __packet->pBuffer[0];
+		unsigned char *__eq_buffer = __packet->pBuffer;
+		__packet->size    = sizeof(DoGroupLeadershipAbility_Struct);
+		__packet->pBuffer = new unsigned char[__packet->size] {};
+		auto emu = reinterpret_cast<DoGroupLeadershipAbility_Struct *>(__packet->pBuffer);
+		emu->Ability   = groupAAInspectBuffs;
+		emu->Parameter = mine ? 1 : 0;
+		__packet->SetOpcode(OP_DoGroupLeadershipAbility);
+		delete[] __eq_buffer;
+	}
 
 	DECODE(OP_FindPersonRequest)
 	{

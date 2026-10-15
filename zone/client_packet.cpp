@@ -6138,6 +6138,9 @@ void Client::Handle_OP_DoGroupLeadershipAbility(const EQApplicationPacket *app)
 		if (!Target || !Target->IsClient())
 			return;
 
+		// TOB+: Parameter 1 = /inspectbuffs mine (older clients always send 1 with no filter meaning)
+		bool only_mine = ClientVersion() >= EQ::versions::ClientVersion::TOB && dglas->Parameter == 1;
+
 		if (IsRaidGrouped()) {
 			Raid *raid = GetRaid();
 			if (!raid)
@@ -6145,7 +6148,7 @@ void Client::Handle_OP_DoGroupLeadershipAbility(const EQApplicationPacket *app)
 			uint32 group_id = raid->GetGroup(this);
 			if (group_id > 11 || raid->GroupCount(group_id) < 3)
 				return;
-			Target->CastToClient()->InspectBuffs(this, raid->GetLeadershipAA(groupAAInspectBuffs, group_id));
+			Target->CastToClient()->InspectBuffs(this, raid->GetLeadershipAA(groupAAInspectBuffs, group_id), only_mine);
 			return;
 		}
 
@@ -6154,7 +6157,7 @@ void Client::Handle_OP_DoGroupLeadershipAbility(const EQApplicationPacket *app)
 		if (!g || (g->GroupCount() < 3))
 			return;
 
-		Target->CastToClient()->InspectBuffs(this, g->GetLeadershipAA(groupAAInspectBuffs));
+		Target->CastToClient()->InspectBuffs(this, g->GetLeadershipAA(groupAAInspectBuffs), only_mine);
 
 		break;
 	}
@@ -7819,6 +7822,22 @@ void Client::Handle_OP_GroupRoles(const EQApplicationPacket *app)
 			g->DelegatePuller(grs->Name1, grs->Toggle);
 		else
 			g->UnDelegatePuller(grs->Name1, grs->Toggle);
+		break;
+	}
+	case 4: // Mark NPC (TOB+ delegates it here; older clients use OP_DelegateAbility)
+	{
+		if (!g->IsLeader(this) || ClientVersion() < EQ::versions::ClientVersion::TOB) {
+			break;
+		}
+
+		grs->Name1[sizeof(grs->Name1) - 1] = '\0';
+		if (grs->Toggle) {
+			if (g->IsGroupMember(grs->Name1)) {
+				g->DelegateMarkNPC(grs->Name1);
+			}
+		} else if (!strcasecmp(g->GetNPCMarkerName(), grs->Name1)) {
+			g->UnDelegateMarkNPC(grs->Name1);
+		}
 		break;
 	}
 	case 5: // Master Looter (TOB+ Advanced Loot): only the leader hands it out; unset goes back to the leader

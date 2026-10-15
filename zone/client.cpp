@@ -4249,12 +4249,33 @@ float Client::CalcPriceMod(Mob* other, bool reverse)
 	return price_mod;
 }
 
+// TOB+ clients cannot buy leadership AAs, so groups and raids they lead get every ability at max rank.
+// Only the copies handed out here change; the player profile keeps what was bought.
+static uint32 LeadershipAAMaxRank(int aa)
+{
+	uint32 rank = 0;
+	while (rank < MAX_LEADERSHIP_TIERS && LeadershipAACosts[aa][rank]) {
+		++rank;
+	}
+	return rank;
+}
+
 void Client::GetGroupAAs(GroupLeadershipAA_Struct *into) const {
 	memcpy(into, &m_pp.leader_abilities.group, sizeof(GroupLeadershipAA_Struct));
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB && RuleB(Character, ToBLeadershipAlwaysOn)) {
+		for (int i = 0; i < MAX_GROUP_LEADERSHIP_AA_ARRAY; ++i) {
+			into->ranks[i] = LeadershipAAMaxRank(groupAAMarkNPC + i);
+		}
+	}
 }
 
 void Client::GetRaidAAs(RaidLeadershipAA_Struct *into) const {
 	memcpy(into, &m_pp.leader_abilities.raid, sizeof(RaidLeadershipAA_Struct));
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB && RuleB(Character, ToBLeadershipAlwaysOn)) {
+		for (int i = 0; i < MAX_RAID_LEADERSHIP_AA_ARRAY; ++i) {
+			into->ranks[i] = LeadershipAAMaxRank(raidAAMarkNPC + i);
+		}
+	}
 }
 
 void Client::EnteringMessages(Client* client)

@@ -5043,6 +5043,14 @@ struct InspectBuffs_Struct {
 /*100*/ int32 tics_remaining[BUFF_COUNT];
 };
 
+// TOB+ inspectors: the same lists plus the target, the caster of each buff and the "mine" filter flag
+struct InspectBuffsTOB_Struct {
+	InspectBuffs_Struct buffs;
+	uint32 target_id;
+	uint32 caster_id[BUFF_COUNT];
+	uint8  cast_by_you;
+};
+
 struct RaidGeneral_Struct {
 /*00*/	uint32		action;	//=10
 /*04*/	char		player_name[64];	//should both be the player's name
