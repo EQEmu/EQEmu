@@ -1177,6 +1177,74 @@ namespace TOB
 		FINISH_ENCODE();
 	}
 
+	ENCODE(OP_EvolveItem)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		if (in->size < sizeof(uint32)) {
+			LogNetcode("TOB::ENCODE(OP_EvolveItem) packet too small [{}]", in->size);
+			delete in;
+			return;
+		}
+
+		auto action = *reinterpret_cast<uint32 *>(in->pBuffer);
+
+		switch (action) {
+			case EvolvingItems::Actions::TRANSFER_WINDOW_DETAILS: {
+				auto emu = reinterpret_cast<EvolveItemMessaging *>(in->pBuffer);
+
+				EvolveXPWindowSend           e{};
+				EQ::Util::MemoryStreamReader ss(emu->serialized_data, in->size - sizeof(emu->action));
+				cereal::BinaryInputArchive   ar(ss);
+				ar(e);
+
+				const EQ::ItemInstance *item_1 = nullptr;
+				const EQ::ItemInstance *item_2 = nullptr;
+				if (e.item1_present && e.serialize_item_1.size() >= sizeof(EQ::InternalSerializedItem_Struct)) {
+					item_1 = static_cast<const EQ::ItemInstance *>(
+						reinterpret_cast<EQ::InternalSerializedItem_Struct *>(e.serialize_item_1.data())->inst);
+				}
+				if (e.item2_present && e.serialize_item_2.size() >= sizeof(EQ::InternalSerializedItem_Struct)) {
+					item_2 = static_cast<const EQ::ItemInstance *>(
+						reinterpret_cast<EQ::InternalSerializedItem_Struct *>(e.serialize_item_2.data())->inst);
+				}
+
+				// same header as RoF2 (packed), then the TOB-serialized previews of both items
+				SerializeBuffer buf;
+				buf.WriteUInt32(e.action);
+				buf.WriteUInt64(e.item1_unique_id);
+				buf.WriteUInt64(e.item2_unique_id);
+				buf.WriteUInt32(e.compatibility);
+				buf.WriteUInt32(e.max_transfer_level);
+				buf.WriteUInt8(item_1 ? 1 : 0);
+				buf.WriteUInt8(item_2 ? 1 : 0);
+				if (item_1) {
+					SerializeItem(buf, item_1, 0, 0, ItemPacketMerchant);
+				}
+				if (item_2) {
+					SerializeItem(buf, item_2, 0, 0, ItemPacketMerchant);
+				}
+
+				auto outapp = new EQApplicationPacket(OP_EvolveItem, buf.size());
+				outapp->WriteData(buf.buffer(), buf.size());
+				dest->FastQueuePacket(&outapp, ack_req);
+				delete in;
+				break;
+			}
+			default: {
+				// 0 (progress update) and 1 (open the transfer window): EvolveItemToggle is the TOB layout
+				if (in->size != sizeof(EvolveItemToggle)) {
+					LogNetcode("TOB::ENCODE(OP_EvolveItem) action [{}] wrong size [{}]", action, in->size);
+					delete in;
+					return;
+				}
+				dest->FastQueuePacket(&in, ack_req);
+				break;
+			}
+		}
+	}
+
 	ENCODE(OP_ExpansionInfo)
 	{
 		ENCODE_LENGTH_EXACT(ExpansionInfo_Struct);
@@ -1599,6 +1667,41 @@ namespace TOB
 
 	ENCODE(OP_ItemLinkResponse) { ENCODE_FORWARD(OP_ItemPacket); }
 
+	ENCODE(OP_ItemOverflow)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		if (in->size != sizeof(ItemOverflow_Struct)) {
+			LogNetcode("TOB::ENCODE(OP_ItemOverflow) wrong size [{}]", in->size);
+			delete in;
+			return;
+		}
+
+		auto emu = reinterpret_cast<ItemOverflow_Struct *>(in->pBuffer);
+
+		// {u8 4, u64 item index} = row removed, {u8 7} = list cleared
+		SerializeBuffer buf;
+		switch (emu->action) {
+			case ItemOverflowRemoved:
+				buf.WriteUInt8(static_cast<uint8>(emu->action));
+				buf.WriteUInt64(emu->item_index);
+				break;
+			case ItemOverflowClear:
+				buf.WriteUInt8(static_cast<uint8>(emu->action));
+				break;
+			default:
+				LogNetcode("TOB::ENCODE(OP_ItemOverflow) unknown action [{}]", emu->action);
+				delete in;
+				return;
+		}
+
+		auto outapp = new EQApplicationPacket(OP_ItemOverflow, buf.size());
+		outapp->WriteData(buf.buffer(), buf.size());
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+
 	ENCODE(OP_ItemPacket)
 	{
 		EQApplicationPacket* in = *p;
@@ -1725,6 +1828,38 @@ namespace TOB
 		memcpy(emu->unknown004, eq->unknown004, sizeof(emu->unknown004));
 		strncpy(emu->item_name, eq->item_name, sizeof(emu->item_name) - 1);
 		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_ItemOverflow)
+	{
+		// C2S: {u16 0} list, {u16 1, u64 item index} retrieve, {u16 2} retrieve all
+		const unsigned char *buf  = __packet->pBuffer;
+		const uint32         size = __packet->size;
+
+		if (buf == nullptr || size < sizeof(uint16)) {
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+
+		uint16 action = 0;
+		uint64 index  = 0;
+		memcpy(&action, buf, sizeof(action));
+
+		if (action == ItemOverflowRetrieve && size == sizeof(uint16) + sizeof(uint64)) {
+			memcpy(&index, buf + sizeof(uint16), sizeof(index));
+		} else if ((action != ItemOverflowList && action != ItemOverflowRetrieveAll) || size != sizeof(uint16)) {
+			LogNetcode("TOB OP_ItemOverflow C2S action [{}] size [{}] not handled", action, size);
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+
+		unsigned char *__eq_buffer = __packet->pBuffer;
+		__packet->size    = sizeof(ItemOverflow_Struct);
+		__packet->pBuffer = new unsigned char[__packet->size] {};
+		auto emu = reinterpret_cast<ItemOverflow_Struct *>(__packet->pBuffer);
+		emu->action     = action;
+		emu->item_index = index;
+		delete[] __eq_buffer;
 	}
 
 	DECODE(OP_ItemPreviewRequest)
@@ -9086,14 +9221,19 @@ namespace TOB
 	DECODE(OP_FindPersonRequest)
 	{
 		DECODE_LENGTH_EXACT(structs::FindPersonRequest_Struct);
-		SETUP_DIRECT_DECODE(FindPersonRequest_Struct, structs::FindPersonRequest_Struct);
+		SETUP_DIRECT_DECODE(FindPersonRequestTOB_Struct, structs::FindPersonRequest_Struct);
 
-		// Only request_type 1 refers to a spawn from OP_SendFindableNPCs (client sends id & 0xffff). Other
-		// types (find-list ids, zone connections, locations) aren't supported yet: id 0 gives an empty reply.
-		emu->npc_id = (eq->request_type == 1) ? static_cast<uint32>(eq->id) : 0;
-		IN(client_pos.x);
-		IN(client_pos.y);
-		IN(client_pos.z);
+		// Only request_type 1 refers to a spawn from OP_SendFindableNPCs (client sends id & 0xffff).
+		// 6 and 7 are zone connection rows (zone point number / destination); other types give an empty reply.
+		emu->request.npc_id = (eq->request_type == 1) ? static_cast<uint32>(eq->id) : 0;
+		emu->request.client_pos.x = eq->client_pos.x;
+		emu->request.client_pos.y = eq->client_pos.y;
+		emu->request.client_pos.z = eq->client_pos.z;
+		IN(request_type);
+		IN(id);
+		IN(dest.x);
+		IN(dest.y);
+		IN(dest.z);
 
 		FINISH_DIRECT_DECODE();
 	}
@@ -10319,34 +10459,50 @@ namespace TOB
 		case ItemPacketLoot:
 			slot_id = ServerToTOBCorpseSlot(slot_id_in);
 			break;
+		case ItemPacketOverflow:
+			// the window does not read the slot, it lists everything sent with this packet type
+			slot_id.Type     = invtype::typeOverflow;
+			slot_id.Slot     = (slot_id_in >= EQ::invslot::OVERFLOW_BEGIN && slot_id_in <= EQ::invslot::OVERFLOW_END)
+				? slot_id_in - EQ::invslot::OVERFLOW_BEGIN : invslot::SLOT_INVALID;
+			slot_id.SubIndex = invbag::SLOT_INVALID;
+			slot_id.AugIndex = invaug::SOCKET_INVALID;
+			break;
 		default:
 			slot_id = ServerToTOBSlot(slot_id_in);
 			break;
 		}
 
+		// window items are found by the index below, so they never carry a merchant slot
+		const bool window_item   = packet_type == ItemPacketOverflow;
+		const bool merchant_item = inst->GetMerchantSlot() && !window_item;
+
 		//u32 slot_type;
-		buffer.WriteUInt32(inst->GetMerchantSlot() ? invtype::typeMerchant : slot_id.Type);
+		buffer.WriteUInt32(merchant_item ? invtype::typeMerchant : slot_id.Type);
 		//s16 main_slot;
 		//s16 sub_slot;
 		//s16 aug_slot;
-		buffer.WriteInt16(inst->GetMerchantSlot() ? inst->GetMerchantSlot() : slot_id.Slot);
-		buffer.WriteInt16(inst->GetMerchantSlot() ? 0xffff : slot_id.SubIndex);
-		buffer.WriteInt16(inst->GetMerchantSlot() ? 0xffff : slot_id.AugIndex);
+		buffer.WriteInt16(merchant_item ? inst->GetMerchantSlot() : slot_id.Slot);
+		buffer.WriteInt16(merchant_item ? 0xffff : slot_id.SubIndex);
+		buffer.WriteInt16(merchant_item ? 0xffff : slot_id.AugIndex);
 
 		//u64 price;
 		buffer.WriteUInt64(inst->GetPrice());
 
 		//u32 MerchantQuantity;
-		buffer.WriteUInt32(inst->GetMerchantSlot() ? inst->GetMerchantCount() : 1);
+		buffer.WriteUInt32(merchant_item ? inst->GetMerchantCount() : 1);
 
 		//u32 ScriptIndex;
 		buffer.WriteUInt32(inst->IsScaling() ? (inst->GetExp() / 100) : 0);
 
 		//u64 MerchantSlot; = u32 instance_id + u32 parcel_item_id. The client echoes the high dword as
 		// ParcelRetrieve_Struct::parcel_item_id, so parcels need the item id there (was 0: retrieve failed)
-		uint64 merchant_slot = static_cast<uint32>(inst->GetMerchantSlot() ? inst->GetMerchantSlot() : inst->GetSerialNumber());
+		uint64 merchant_slot = static_cast<uint32>(merchant_item ? inst->GetMerchantSlot() : inst->GetSerialNumber());
 		if (packet_type == ItemPacketParcel) {
 			merchant_slot |= static_cast<uint64>(inst->GetID()) << 32;
+		}
+		// evolving items are found by their evolve unique id here (OP_EvolveItem updates, xp transfer window)
+		if (item->EvolvingItem && inst->GetEvolveUniqueID() && packet_type != ItemPacketParcel && packet_type != ItemPacketMerchant && !window_item) {
+			merchant_slot = inst->GetEvolveUniqueID();
 		}
 		buffer.WriteUInt64(merchant_slot);
 
@@ -10388,6 +10544,8 @@ namespace TOB
 
 		//EvoData evoData;
 		if (item->EvolvingItem > 0) {
+			inst->CalculateEvolveProgression();
+
 			//s32 GroupId;
 			buffer.WriteInt32(0);
 
@@ -10395,7 +10553,7 @@ namespace TOB
 			buffer.WriteInt32(item->EvolvingLevel);
 
 			//double EvolvingExpPct;
-			buffer.WriteDouble(0.0);
+			buffer.WriteDouble(inst->GetEvolveProgression());
 			
 			//s32 EvolvingMaxLevel;
 			buffer.WriteInt32(item->EvolvingMax);
@@ -11249,6 +11407,8 @@ namespace TOB
 			return item::ItemPacketType::ItemPacketCharmUpdate;
 		case ItemPacketType::ItemPacketParcel:
 			return item::ItemPacketType::ItemPacketParcel;
+		case ItemPacketType::ItemPacketOverflow:
+			return item::ItemPacketType::ItemPacketOverflow;
 		default:
 			return item::ItemPacketType::ItemPacketInvalid;
 		}

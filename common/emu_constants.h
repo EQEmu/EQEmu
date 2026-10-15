@@ -201,6 +201,10 @@ namespace EQ
 		const int16 CORPSE_BEGIN = invslot::slotGeneral1;
 		const int16 CORPSE_END   = CORPSE_BEGIN + invslot::slotCursor;
 
+		// TOB+ only: positions for Item Overflow window item packets, not inventory slots
+		const int16 OVERFLOW_BEGIN = 20000;
+		const int16 OVERFLOW_END   = 20999;
+
 		using RoF2::invslot::EQUIPMENT_BITMASK;
 		using RoF2::invslot::GENERAL_BITMASK;
 		using RoF2::invslot::CURSOR_BITMASK;

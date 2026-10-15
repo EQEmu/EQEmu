@@ -8148,8 +8148,11 @@ FACTION_VALUE Client::GetReverseFactionCon(Mob* iOther) {
 
 bool Client::ReloadCharacterFaction(Client *c, uint32 facid, uint32 charid)
 {
-	if (database.SetCharacterFactionLevel(charid, facid, 0, 0, factionvalues))
+	if (database.SetCharacterFactionLevel(charid, facid, 0, 0, factionvalues)) {
+		// TOB+ keeps its own copy of the values for the Faction window
+		SendFactionList();
 		return true;
+	}
 	else
 		return false;
 }
@@ -8531,6 +8534,34 @@ void Client::SendFactionMessage(int32 tmpvalue, int32 faction_id, int32 faction_
 		faction_value = faction_before_hit;
 	}
 
+	// TOB+ prints the standing line itself from the update packet and refreshes its Faction window
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+		if (tmpvalue == 0) {
+			return;
+		}
+
+		int32 message_type = 2;
+		int32 direction    = tmpvalue;
+		if (faction_value >= this_faction_max) {
+			message_type = 1;
+			direction    = 1;
+		} else if (faction_value <= this_faction_min) {
+			message_type = 1;
+			direction    = -1;
+		} else if (totalvalue == faction_before_hit) {
+			message_type = 0;
+		}
+
+		// temp factions stay silent, same as the text below
+		SendFactionUpdate(faction_id, faction_before_hit, totalvalue, message_type, direction, temp != 1 && temp != 2);
+
+		// the client ignores updates for factions it has no row for, so a first value needs the whole list
+		if (faction_before_hit == 0 && totalvalue != 0) {
+			SendFactionList();
+		}
+		return;
+	}
+
 	// default to Faction# if we couldn't get the name from the ID
 	if (!content_db.GetFactionName(faction_id, name, sizeof(name))) {
 		snprintf(name, sizeof(name), "Faction%i", faction_id);
@@ -8556,6 +8587,54 @@ void Client::SendFactionMessage(int32 tmpvalue, int32 faction_id, int32 faction_
 			).c_str()
 		);
 	} //New Live faction message (14261)
+}
+
+void Client::SendFactionList()
+{
+	if (ClientVersion() < EQ::versions::ClientVersion::TOB) {
+		return;
+	}
+
+	std::vector<FactionListEntry_Struct> entries;
+	entries.reserve(factionvalues.size());
+	for (const auto &[faction_id, value] : factionvalues) {
+		if (faction_id > 0) {
+			entries.push_back(FactionListEntry_Struct{ faction_id, value });
+		}
+	}
+
+	auto outapp = new EQApplicationPacket(
+		OP_FactionList,
+		sizeof(FactionList_Struct) + entries.size() * sizeof(FactionListEntry_Struct)
+	);
+	auto fl   = reinterpret_cast<FactionList_Struct *>(outapp->pBuffer);
+	fl->count = static_cast<uint32>(entries.size());
+	if (!entries.empty()) {
+		memcpy(fl->entries, entries.data(), entries.size() * sizeof(FactionListEntry_Struct));
+	}
+
+	QueuePacket(outapp);
+	safe_delete(outapp);
+}
+
+void Client::SendFactionUpdate(int32 faction_id, int32 old_value, int32 new_value, int32 message_type, int32 direction, bool show_message)
+{
+	if (ClientVersion() < EQ::versions::ClientVersion::TOB || faction_id <= 0) {
+		return;
+	}
+
+	auto outapp = new EQApplicationPacket(OP_FactionUpdate, sizeof(FactionUpdate_Struct));
+	auto fu     = reinterpret_cast<FactionUpdate_Struct *>(outapp->pBuffer);
+
+	fu->show_message = show_message ? 1 : 0;
+	fu->message_type = message_type;
+	fu->faction_id   = static_cast<uint32>(faction_id);
+	fu->direction    = direction;
+	fu->old_value    = old_value;
+	fu->new_value    = new_value;
+
+	QueuePacket(outapp);
+	safe_delete(outapp);
 }
 
 void Client::LoadAccountFlags()
@@ -12214,6 +12293,11 @@ void Client::SendPath(Mob* target)
 		return;
 	}
 
+	SendPathToLocation(glm::vec3(target->GetX(), target->GetY(), target->GetZ()), target->GetSize());
+}
+
+void Client::SendPathToLocation(const glm::vec3 &destination, float destination_size)
+{
 	std::vector<FindPerson_Point> points;
 
 	if (!RuleB(Pathing, Find) || !zone->pathing) {
@@ -12224,9 +12308,9 @@ void Client::SendPath(Mob* target)
 		a.x = GetX();
 		a.y = GetY();
 		a.z = GetZ();
-		b.x = target->GetX();
-		b.y = target->GetY();
-		b.z = target->GetZ();
+		b.x = destination.x;
+		b.y = destination.y;
+		b.z = destination.z;
 
 		points.push_back(a);
 		points.push_back(b);
@@ -12239,9 +12323,9 @@ void Client::SendPath(Mob* target)
 		);
 
 		glm::vec3 path_end(
-			target->GetX(),
-			target->GetY(),
-			target->GetZ() + (target->GetSize() < 6.0 ? 6 : target->GetSize()) * HEAD_POSITION
+			destination.x,
+			destination.y,
+			destination.z + (destination_size < 6.0 ? 6 : destination_size) * HEAD_POSITION
 		);
 
 		bool partial   = false;
@@ -12293,15 +12377,64 @@ void Client::SendPath(Mob* target)
 		}
 
 		if (!leads_to_teleporter) {
-			p.x = target->GetX();
-			p.y = target->GetY();
-			p.z = target->GetZ();
+			p.x = destination.x;
+			p.y = destination.y;
+			p.z = destination.z;
 
 			points.push_back(p);
 		}
 	}
 
 	SendPathPacket(points);
+}
+
+// TOB+ Find window: one "Zone Connection" row per zone point this client can use
+void Client::SendFindZoneConnections()
+{
+	if (ClientVersion() < EQ::versions::ClientVersion::TOB || !zone) {
+		return;
+	}
+
+	std::vector<FindZoneConnection_Struct> rows;
+
+	LinkedListIterator<ZonePoint *> iterator(zone->zone_point_list);
+	iterator.Reset();
+	while (iterator.MoreElements() && rows.size() < 200) {
+		ZonePoint *zp = iterator.GetData();
+		iterator.Advance();
+		if (!zp || !(zp->client_version_mask & ClientVersionBit()) || !zp->target_zone_id) {
+			continue;
+		}
+
+		// 999999 means "anywhere on this axis", so there is no spot to path to
+		if (std::fabs(zp->x) >= 999999.0f || std::fabs(zp->y) >= 999999.0f) {
+			continue;
+		}
+
+		FindZoneConnection_Struct r{};
+		r.row_type = 7; // the client sends the loc back as the path destination
+		r.id       = zp->number;
+		r.zone_id  = zp->target_zone_id;
+		r.number   = zp->number;
+		r.loc.x    = zp->x;
+		r.loc.y    = zp->y;
+		r.loc.z    = zp->z;
+		rows.push_back(r);
+	}
+
+	auto outapp = new EQApplicationPacket(OP_FindZoneConnections, sizeof(uint32) + rows.size() * sizeof(FindZoneConnection_Struct));
+	auto out = (FindZoneConnections_Struct *) outapp->pBuffer;
+	out->count = static_cast<uint32>(rows.size());
+	if (!rows.empty()) {
+		memcpy(out->entries, rows.data(), rows.size() * sizeof(FindZoneConnection_Struct));
+	}
+	QueuePacket(outapp);
+	safe_delete(outapp);
+
+	// the window also has a "find list"; we have nothing for it, so send it empty
+	auto list = new EQApplicationPacket(OP_FindLocationList, sizeof(uint32));
+	QueuePacket(list);
+	safe_delete(list);
 }
 
 void Client::UseAugmentContainer(int container_slot)

@@ -926,6 +926,11 @@ void Client::SendCursorBuffer()
 	auto test_item = test_inst->GetItem();
 	if (test_item == nullptr) { return; }
 
+	// TOB+: the new cursor item leaves the Item Overflow window
+	if (IsItemOverflowEnabled()) {
+		SendItemOverflowAction(ItemOverflowRemoved, static_cast<uint32>(test_inst->GetSerialNumber()));
+	}
+
 	bool lore_pass = true;
 	if (test_item->LoreGroup == -1) {
 		lore_pass = (m_inv.HasItem(test_item->ID, 0, ~(invWhereSharedBank | invWhereCursor)) == INVALID_INDEX);
@@ -954,6 +959,112 @@ void Client::SendCursorBuffer()
 	else {
 		SendItemPacket(EQ::invslot::slotCursor, test_inst, ItemPacketLimbo);
 	}
+}
+
+bool Client::IsItemOverflowEnabled()
+{
+	return ClientVersion() >= EQ::versions::ClientVersion::TOB && RuleB(Character, EnableItemOverflow);
+}
+
+void Client::SendItemOverflowAction(uint32 action, uint64 item_index)
+{
+	if (ClientVersion() < EQ::versions::ClientVersion::TOB) {
+		return;
+	}
+
+	auto outapp = new EQApplicationPacket(OP_ItemOverflow, sizeof(ItemOverflow_Struct));
+	auto o      = reinterpret_cast<ItemOverflow_Struct *>(outapp->pBuffer);
+
+	o->action     = action;
+	o->item_index = item_index;
+
+	QueuePacket(outapp);
+	safe_delete(outapp);
+}
+
+// Item Overflow (TOB+) is the cursor queue behind the cursor item itself
+void Client::SendItemOverflowList()
+{
+	if (!IsItemOverflowEnabled()) {
+		return;
+	}
+
+	// the client appends every overflow item packet to its list, so start from an empty one
+	SendItemOverflowAction(ItemOverflowClear);
+
+	int position = 0;
+	for (auto it = m_inv.cursor_cbegin(); it != m_inv.cursor_cend(); ++it, ++position) {
+		if (it == m_inv.cursor_cbegin() || !*it) {
+			continue;
+		}
+
+		if (position > EQ::invslot::OVERFLOW_END - EQ::invslot::OVERFLOW_BEGIN) {
+			break;
+		}
+
+		SendItemPacket(EQ::invslot::OVERFLOW_BEGIN + position, *it, ItemPacketOverflow);
+	}
+}
+
+bool Client::RetrieveOverflowItem(uint64 item_index)
+{
+	EQ::ItemInstance *inst = nullptr;
+	for (auto it = m_inv.cursor_cbegin(); it != m_inv.cursor_cend(); ++it) {
+		if (it != m_inv.cursor_cbegin() && *it && static_cast<uint32>((*it)->GetSerialNumber()) == item_index) {
+			inst = *it;
+			break;
+		}
+	}
+
+	if (!inst || !inst->GetItem()) {
+		// the client has a row we do not, drop it
+		SendItemOverflowAction(ItemOverflowRemoved, item_index);
+		return false;
+	}
+
+	const auto item = inst->GetItem();
+
+	// the queued copy itself counts as on the cursor, so leave the cursor out of the lore check
+	bool lore_conflict = false;
+	if (item->LoreFlag && item->LoreGroup == -1) {
+		lore_conflict = m_inv.HasItem(item->ID, 0, ~(invWhereSharedBank | invWhereCursor)) != INVALID_INDEX;
+	} else if (item->LoreFlag && item->LoreGroup != 0) {
+		lore_conflict = m_inv.HasItemByLoreGroup(item->LoreGroup, ~(invWhereSharedBank | invWhereCursor)) != INVALID_INDEX;
+	}
+
+	if (lore_conflict) {
+		MessageString(Chat::Red, DUP_LORE);
+		return false;
+	}
+
+	const int16 free_slot = m_inv.FindFreeSlot(
+		inst->IsClassBag(),
+		false,
+		item->Size,
+		item->ItemType == EQ::item::ItemTypeArrow
+	);
+	if (free_slot == INVALID_INDEX) {
+		MessageString(Chat::Red, TRANSACTION_INVENTORY_FULL);
+		return false;
+	}
+
+	inst = m_inv.PopCursorQueueItem(inst);
+	if (!inst) {
+		return false;
+	}
+
+	auto s = m_inv.cursor_cbegin(), e = m_inv.cursor_cend();
+	database.SaveCursor(CharacterID(), s, e);
+
+	const std::string item_name = item->Name;
+	const int16       count     = inst->IsStackable() ? std::max<int16>(inst->GetCharges(), 1) : 1;
+
+	PutItemInInventory(free_slot, *inst, true);
+	safe_delete(inst);
+
+	SendItemOverflowAction(ItemOverflowRemoved, item_index);
+	MessageString(Chat::Yellow, ITEM_OVERFLOW_RETRIEVED, item_name.c_str(), std::to_string(count).c_str());
+	return true;
 }
 
 // Remove item from inventory
@@ -2975,6 +3086,28 @@ void Client::SendItemPacket(int16 slot_id, const EQ::ItemInstance* inst, ItemPac
 
 	if (!eqs) {
 		return;
+	}
+
+	// TOB+: an item queued behind the cursor shows up in the Item Overflow window instead
+	if (
+		packet_type == ItemPacketLimbo &&
+		slot_id == EQ::invslot::slotCursor &&
+		m_inv.CursorSize() > 1 &&
+		IsItemOverflowEnabled()
+	) {
+		const auto head = m_inv.GetCursorItem();
+		if (head && head != inst && head->GetSerialNumber() != inst->GetSerialNumber()) {
+			const int position = std::min(
+				m_inv.CursorSize() - 1,
+				static_cast<int>(EQ::invslot::OVERFLOW_END - EQ::invslot::OVERFLOW_BEGIN)
+			);
+
+			SendItemPacket(EQ::invslot::OVERFLOW_BEGIN + position, inst, ItemPacketOverflow);
+			if (inst->GetItem()) {
+				MessageString(Chat::Yellow, ITEM_OVERFLOW_ADDED, inst->GetItem()->Name);
+			}
+			return;
+		}
 	}
 
 	if (packet_type != ItemPacketMerchant) {

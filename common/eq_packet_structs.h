@@ -1561,6 +1561,7 @@ enum ItemPacketType {
     ItemPacketCharmUpdate    = 0x6E, // noted as incorrect
     ItemPacketRecovery       = 0x71,
     ItemPacketParcel         = 0x73,
+    ItemPacketOverflow       = 0x75, // TOB+ Item Overflow window
     ItemPacketInvalid        = 0xFF
 };
 
@@ -4582,6 +4583,72 @@ struct FindPerson_Point {
 struct FindPersonRequest_Struct {
 	uint32	npc_id;
 	FindPerson_Point client_pos;
+};
+
+// TOB+ request: also carries the row type and the destination of Find window zone connection rows
+struct FindPersonRequestTOB_Struct {
+	FindPersonRequest_Struct request;
+	uint32 request_type; // 1 = findable NPC, 6 = zone point by id, 7 = path to dest
+	uint32 id;
+	FindPerson_Point dest;
+};
+
+// TOB+ Find window "Zone Connection" rows (same layout on the wire)
+struct FindZoneConnection_Struct {
+/*00*/ uint32 row_type;     // 7 = client asks for a path to loc, 6 = client asks by id
+/*04*/ uint32 id;
+/*08*/ uint32 unknown08;
+/*12*/ uint32 zone_id;      // row text is this zone's name
+/*16*/ uint32 number;       // != 0 adds " - N" to the row text
+/*20*/ FindPerson_Point loc;
+/*32*/
+};
+static_assert(sizeof(FindZoneConnection_Struct) == 32, "FindZoneConnection_Struct is sent as is to TOB clients");
+
+struct FindZoneConnections_Struct {
+	uint32 count;
+	FindZoneConnection_Struct entries[0];
+};
+
+// TOB+ Faction window list (same layout on the wire). Raw personal values: the client adds
+// the race/class/deity modifiers itself from Resources/Faction/FactionAssociations.txt
+struct FactionListEntry_Struct {
+/*00*/ uint32 faction_id;
+/*04*/ int32  value;
+/*08*/
+};
+
+struct FactionList_Struct {
+	uint32 count;
+	FactionListEntry_Struct entries[0];
+};
+
+// TOB+ standing change (same layout on the wire). The client applies new_value - old_value
+// to its copy and, if show_message is set, prints the standing line itself
+struct FactionUpdate_Struct {
+/*00*/ uint8  show_message;
+/*01*/ int32  message_type; // 0 = did not change (14526), 1 = at the cap (469/471 by direction), 2 = adjusted by (14261)
+/*05*/ uint32 faction_id;
+/*09*/ int32  direction;    // sign only, used by message_type 1
+/*13*/ int32  old_value;
+/*17*/ int32  new_value;
+/*21*/
+};
+static_assert(sizeof(FactionUpdate_Struct) == 21, "FactionUpdate_Struct is sent as is to TOB clients");
+
+// TOB+ Item Overflow window (0x1bd5); the TOB patch converts to and from the wire layout
+enum ItemOverflowAction : uint32 {
+	ItemOverflowList        = 0, // C2S
+	ItemOverflowRetrieve    = 1, // C2S, item_index
+	ItemOverflowRetrieveAll = 2, // C2S
+	ItemOverflowRemoved     = 4, // S2C, item_index
+	ItemOverflowClear       = 7  // S2C
+};
+
+struct ItemOverflow_Struct {
+/*00*/ uint32 action;
+/*04*/ uint64 item_index; // the 8-byte id in the serialized item (the item's serial number)
+/*12*/
 };
 
 //variable length packet of points

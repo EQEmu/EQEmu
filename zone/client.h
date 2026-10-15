@@ -829,6 +829,8 @@ public:
 	int32 GetModCharacterFactionLevel(int32 faction_id);
 	void MerchantRejectMessage(Mob *merchant, int primaryfaction);
 	void SendFactionMessage(int32 tmpvalue, int32 faction_id, int32 faction_before_hit, int32 totalvalue, uint8 temp,  int32 this_faction_min, int32 this_faction_max);
+	void SendFactionList();
+	void SendFactionUpdate(int32 faction_id, int32 old_value, int32 new_value, int32 message_type, int32 direction, bool show_message);
 
 	void UpdatePersonalFaction(int32 char_id, int32 npc_value, int32 faction_id, int32 *current_value, int32 temp, int32 this_faction_min, int32 this_faction_max);
 	void SetFactionLevel(uint32 char_id, uint32 npc_faction_id, uint8 char_class, uint8 char_race, uint8 char_deity, bool quest = false);
@@ -917,6 +919,8 @@ public:
 	int GetAccountAge();
 
 	void SendPath(Mob* target);
+	void SendPathToLocation(const glm::vec3 &destination, float destination_size = 0.0f);
+	void SendFindZoneConnections();
 
 	bool IsDiscovered(uint32 itemid);
 	void DiscoverItem(uint32 itemid);
@@ -1141,6 +1145,10 @@ public:
 	bool FindNumberOfFreeInventorySlotsWithSizeCheck(std::vector<BuyerLineTradeItems_Struct> items);
 	bool PushItemOnCursor(const EQ::ItemInstance& inst, bool client_update = false);
 	void SendCursorBuffer();
+	bool IsItemOverflowEnabled();
+	void SendItemOverflowList();
+	void SendItemOverflowAction(uint32 action, uint64 item_index = 0);
+	bool RetrieveOverflowItem(uint64 item_index);
 	void DeleteItemInInventory(int16 slot_id, int16 quantity = 0, bool client_update = false, bool update_db = true);
 	uint32 CountItem(uint32 item_id);
 	void ResetItemCooldown(uint32 item_id);

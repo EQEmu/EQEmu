@@ -200,8 +200,11 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_EnvDamage] = &Client::Handle_OP_EnvDamage;
 	ConnectedOpcodes[OP_EvolveItem] = &Client::Handle_OP_EvolveItem;
 	ConnectedOpcodes[OP_FaceChange] = &Client::Handle_OP_FaceChange;
+	ConnectedOpcodes[OP_FactionList] = &Client::Handle_OP_FactionList;
 	ConnectedOpcodes[OP_FeignDeath] = &Client::Handle_OP_FeignDeath;
 	ConnectedOpcodes[OP_FindPersonRequest] = &Client::Handle_OP_FindPersonRequest;
+	ConnectedOpcodes[OP_FindZoneConnectionsRequest] = &Client::Handle_OP_FindZoneConnectionsRequest;
+	ConnectedOpcodes[OP_FindLocationListRequest] = &Client::Handle_OP_FindZoneConnectionsRequest;
 	ConnectedOpcodes[OP_Fishing] = &Client::Handle_OP_Fishing;
 	ConnectedOpcodes[OP_FloatListThing] = &Client::Handle_OP_MovementHistoryList;
 	ConnectedOpcodes[OP_Forage] = &Client::Handle_OP_Forage;
@@ -275,6 +278,7 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_ItemLinkClick] = &Client::Handle_OP_ItemLinkClick;
 	ConnectedOpcodes[OP_ItemLinkResponse] = &Client::Handle_OP_ItemLinkResponse;
 	ConnectedOpcodes[OP_ItemName] = &Client::Handle_OP_ItemName;
+	ConnectedOpcodes[OP_ItemOverflow] = &Client::Handle_OP_ItemOverflow;
 	ConnectedOpcodes[OP_ItemPreview] = &Client::Handle_OP_ItemPreview;
 	ConnectedOpcodes[OP_ItemPreviewRequest] = &Client::Handle_OP_ItemPreviewRequest;
 	ConnectedOpcodes[OP_ItemVerifyRequest] = &Client::Handle_OP_ItemVerifyRequest;
@@ -907,6 +911,14 @@ void Client::CompleteConnect()
 
 	if (ClientVersion() >= EQ::versions::ClientVersion::SoD)
 		entity_list.SendFindableNPCList(this);
+
+	// TOB+ only asks for the zone connections the first time the Find window opens, so push them every zone
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB)
+		SendFindZoneConnections();
+
+	// TOB+ login notice for items waiting in the Item Overflow window (not on every zone)
+	if (!ingame && IsItemOverflowEnabled() && m_inv.CursorSize() > 1)
+		MessageString(Chat::Yellow, ITEM_OVERFLOW_COUNT, std::to_string(m_inv.CursorSize() - 1).c_str());
 
 	if (IsInAGuild()) {
 		if (ingame) {
@@ -6612,6 +6624,16 @@ void Client::Handle_OP_FaceChange(const EQApplicationPacket *app)
 	return;
 }
 
+void Client::Handle_OP_FactionList(const EQApplicationPacket *app)
+{
+	// TOB+ sends an empty request when its Faction window has no data yet
+	if (ClientVersion() < EQ::versions::ClientVersion::TOB) {
+		return;
+	}
+
+	SendFactionList();
+}
+
 void Client::Handle_OP_FeignDeath(const EQApplicationPacket *app)
 {
 	if (!HasSkill(EQ::skills::SkillFeignDeath)) {
@@ -6658,6 +6680,38 @@ void Client::Handle_OP_FeignDeath(const EQApplicationPacket *app)
 
 void Client::Handle_OP_FindPersonRequest(const EQApplicationPacket *app)
 {
+	// TOB+: zone connection rows ask for a path to a spot (7) or to a zone point by number (6)
+	if (app->size == sizeof(FindPersonRequestTOB_Struct) && ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+		auto *t = (FindPersonRequestTOB_Struct *) app->pBuffer;
+
+		if (t->request_type == 7) {
+			if (!std::isfinite(t->dest.x) || !std::isfinite(t->dest.y) || !std::isfinite(t->dest.z)) {
+				SendPath(nullptr);
+				return;
+			}
+			SendPathToLocation(glm::vec3(t->dest.x, t->dest.y, t->dest.z));
+			return;
+		}
+
+		if (t->request_type == 6) {
+			LinkedListIterator<ZonePoint *> iterator(zone->zone_point_list);
+			iterator.Reset();
+			while (iterator.MoreElements()) {
+				ZonePoint *zp = iterator.GetData();
+				iterator.Advance();
+				if (zp && zp->number == t->id && (zp->client_version_mask & ClientVersionBit())) {
+					SendPathToLocation(glm::vec3(zp->x, zp->y, zp->z));
+					return;
+				}
+			}
+			SendPath(nullptr);
+			return;
+		}
+
+		SendPath(entity_list.GetMob(t->request.npc_id));
+		return;
+	}
+
 	if (app->size != sizeof(FindPersonRequest_Struct))
 		printf("Error in FindPersonRequest_Struct. Expected size of: %zu, but got: %i\n", sizeof(FindPersonRequest_Struct), app->size);
 	else {
@@ -6667,6 +6721,15 @@ void Client::Handle_OP_FindPersonRequest(const EQApplicationPacket *app)
 
 		SendPath(m);
 	}
+}
+
+void Client::Handle_OP_FindZoneConnectionsRequest(const EQApplicationPacket *app)
+{
+	if (ClientVersion() < EQ::versions::ClientVersion::TOB) {
+		return;
+	}
+
+	SendFindZoneConnections();
 }
 
 void Client::Handle_OP_Fishing(const EQApplicationPacket *app)
@@ -9479,6 +9542,42 @@ void Client::Handle_OP_ItemName(const EQApplicationPacket *app)
 		FastQueuePacket(&outapp);
 	}
 	return;
+}
+
+void Client::Handle_OP_ItemOverflow(const EQApplicationPacket *app)
+{
+	if (!IsItemOverflowEnabled() || app->size != sizeof(ItemOverflow_Struct)) {
+		return;
+	}
+
+	auto in = reinterpret_cast<const ItemOverflow_Struct *>(app->pBuffer);
+
+	switch (in->action) {
+		case ItemOverflowList:
+			SendItemOverflowList();
+			break;
+		case ItemOverflowRetrieve:
+			RetrieveOverflowItem(in->item_index);
+			break;
+		case ItemOverflowRetrieveAll: {
+			// like Live, retrieve until a placement fails
+			std::vector<uint64> indexes;
+			for (auto it = m_inv.cursor_cbegin(); it != m_inv.cursor_cend(); ++it) {
+				if (it != m_inv.cursor_cbegin() && *it) {
+					indexes.push_back(static_cast<uint32>((*it)->GetSerialNumber()));
+				}
+			}
+
+			for (const auto index : indexes) {
+				if (!RetrieveOverflowItem(index)) {
+					break;
+				}
+			}
+			break;
+		}
+		default:
+			break;
+	}
 }
 
 void Client::Handle_OP_ItemPreview(const EQApplicationPacket *app)
