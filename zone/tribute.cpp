@@ -425,10 +425,19 @@ void Client::SendGuildTributes()
 		//guild tribute has an unknown uint32 at its begining, guild ID?
 		int len = t.second.name.length() + 1;
 
+		// tiers above the level cap are left out, and the rest are packed so tier_count matches what is sent
+		std::vector<uint32> tiers;
+		for (uint32 ti = 0; ti < t.second.tier_count && ti < MAX_TRIBUTE_TIERS; ti++) {
+			if (RuleB(Guild, UseCharacterMaxLevelForGuildTributes) && t.second.tiers[ti].level > RuleI(Character, MaxLevel)) {
+				continue;
+			}
+			tiers.push_back(ti);
+		}
+
 		// ToB names the tiers from full item data: append the item instances after the name
 		std::vector<EQ::ItemInstance *> tob_items;
 		if (ClientVersion() >= EQ::versions::ClientVersion::TOB) {
-			for (uint32 ti = 0; ti < t.second.tier_count && ti < MAX_TRIBUTE_TIERS; ti++) {
+			for (auto ti : tiers) {
 				tob_items.push_back(database.CreateItem(t.second.tiers[ti].tribute_item_id, 1));
 			}
 		}
@@ -437,18 +446,14 @@ void Client::SendGuildTributes()
 		EQApplicationPacket* outapp = new EQApplicationPacket(OP_SendGuildTributes, sizeof(GuildTributeAbility_Struct) + len + trailer);
 		GuildTributeAbility_Struct* gtas = (GuildTributeAbility_Struct*)outapp->pBuffer;
 
-		auto tier_count = t.second.tier_count;
-		for (int ti = 0; ti < t.second.tier_count; ti++) {
-			if (RuleB(Guild, UseCharacterMaxLevelForGuildTributes) && t.second.tiers[ti].level > RuleI(Character, MaxLevel)) {
-				tier_count -= 1;
-				continue;
-			}
-			gtas->guild_id = GuildID();
-			gtas->ability.tier_count = htonl(tier_count);
-			gtas->ability.tribute_id = htonl(t.first);
-			gtas->ability.tiers[ti].cost = htonl(t.second.tiers[ti].cost);
-			gtas->ability.tiers[ti].tribute_item_id = htonl(t.second.tiers[ti].tribute_item_id);
-			gtas->ability.tiers[ti].level = htonl(t.second.tiers[ti].level);
+		gtas->guild_id           = GuildID();
+		gtas->ability.tier_count = htonl(tiers.size());
+		gtas->ability.tribute_id = htonl(t.first);
+		for (size_t i = 0; i < tiers.size(); i++) {
+			const auto &tier = t.second.tiers[tiers[i]];
+			gtas->ability.tiers[i].cost            = htonl(tier.cost);
+			gtas->ability.tiers[i].tribute_item_id = htonl(tier.tribute_item_id);
+			gtas->ability.tiers[i].level           = htonl(tier.level);
 		}
 		strn0cpy(gtas->ability.name, t.second.name.data(), len);
 
