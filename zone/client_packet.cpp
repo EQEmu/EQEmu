@@ -973,7 +973,7 @@ void Client::CompleteConnect()
 		delete pack;
 	}
 
-	ClientPatch::SendFullBuffRefresh(this);
+	ClientPatch::SendFullBuffRefresh(this, false, true, true);
 
 	// TODO: load these states
 	// We at least will set them to the correct state for now
@@ -6690,7 +6690,7 @@ void Client::Handle_OP_FindPersonRequest(const EQApplicationPacket *app)
 				SendPath(nullptr);
 				return;
 			}
-			SendPathToLocation(glm::vec3(t->dest.x, t->dest.y, t->dest.z));
+			SendPathToLocation(glm::vec3(t->dest.x, t->dest.y, t->dest.z), 0.0f, true);
 			return;
 		}
 
@@ -6701,7 +6701,7 @@ void Client::Handle_OP_FindPersonRequest(const EQApplicationPacket *app)
 				ZonePoint *zp = iterator.GetData();
 				iterator.Advance();
 				if (zp && zp->number == t->id && (zp->client_version_mask & ClientVersionBit())) {
-					SendPathToLocation(glm::vec3(zp->x, zp->y, zp->z));
+					SendPathToLocation(glm::vec3(zp->x, zp->y, zp->z), 0.0f, true);
 					return;
 				}
 			}

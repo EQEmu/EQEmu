@@ -2712,11 +2712,13 @@ namespace TOB
 		out.WriteUInt8(0);
 
 		//u32 buff_count;
-		out.WriteUInt32(42);
+		// the client copies 62 entries into its long buff slots 0..61, so send all of them
+		out.WriteUInt32(spells::CLIENT_LONG_BUFFS);
 
 		//PackedEQAffect buffs[buff_count];
-		//todo: fix
-		for (int i = 0; i < 42; ++i) {
+		// these fill the client's local affect array, which the buff window checks before it will send
+		// a remove request. Server long slots map 1:1; client long slots past ours stay empty.
+		for (int i = 0; i < spells::CLIENT_LONG_BUFFS; ++i) {
 			/*
 			struct EQAffect
 			{
@@ -2734,16 +2736,35 @@ namespace TOB
 			};
 
 			*/
-			out.WriteFloat(1.0f);
-			out.WriteUInt64(0);
-			out.WriteUInt32(0);
-			out.WriteUInt32(0);
-			out.WriteUInt8(0);
-			out.WriteUInt32(0xFFFFFFFF);
-			out.WriteUInt32(0);
-			out.WriteUInt32(0);
-			out.WriteUInt32(0);
-			out.WriteUInt8(0);
+			const bool has_buff = i < EQ::spells::LONG_BUFFS && i < static_cast<int>(BUFF_COUNT) &&
+				emu->buffs[i].spellid != 0 && emu->buffs[i].spellid != SPELL_UNKNOWN; // no IsValidSpell: world links this file without spells[]
+			if (has_buff) {
+				const auto& buff = emu->buffs[i];
+				// the client multiplies most effect values by this; 0 would zero the buff
+				out.WriteFloat(buff.bard_modifier > 0 ? static_cast<float>(buff.bard_modifier) / 10.f : 1.0f);
+				out.WriteUInt32(buff.player_id);
+				out.WriteUInt16(static_cast<uint16>(RuleI(World, Id)));
+				out.WriteUInt16(0);
+				out.WriteUInt32(buff.duration);
+				out.WriteUInt32(buff.duration); // the profile has no initial duration
+				out.WriteUInt8(buff.level > 0 ? buff.level : emu->level);
+				out.WriteInt32(buff.spellid);
+				out.WriteInt32(buff.num_hits);
+				out.WriteUInt32(0);
+				out.WriteUInt32(0);
+				out.WriteUInt8(0); // any non-zero type reverses the buff
+			} else {
+				out.WriteFloat(1.0f);
+				out.WriteUInt64(0);
+				out.WriteUInt32(0);
+				out.WriteUInt32(0);
+				out.WriteUInt8(0);
+				out.WriteUInt32(0xFFFFFFFF);
+				out.WriteUInt32(0);
+				out.WriteUInt32(0);
+				out.WriteUInt32(0);
+				out.WriteUInt8(0);
+			}
 			//SlotData slots[6];
 			for (int j = 0; j < 6; ++j) {
 				/*
@@ -11679,7 +11700,10 @@ std::unique_ptr<EQApplicationPacket> BuffComponent::BuffDefinition(Mob* mob, con
 	affect->entity_id = mob->GetID();
 	affect->unknown004 = 0;
 	affect->slot_id = ServerToPatchBuffSlot(slot);
-	affect->buff_fade = fade ? 1 : 2; // 1 is remove, 2 is modify, 3 is add (only seen 1 and 2 sent)
+	// 1 is remove (by spell id), 2 only updates a slot that already has this spell, 3 writes the affect at
+	// slot_id (add or update). Use 3 so the client's local affect array matches our slots; the buff window
+	// won't send a remove request for a slot it has nothing in.
+	affect->buff_fade = fade ? 1 : 3;
 
 	memset(&affect->affect, 0, sizeof(affect->affect));
 
@@ -11769,6 +11793,34 @@ std::unique_ptr<EQApplicationPacket> BuffComponent::RefreshBuffs(EmuOpcode opcod
 }
 
 bool BuffComponent::NeedsWearMessage() const { return false; }
+
+bool BuffComponent::NeedsBuffDefinitionsOnRefresh() const { return true; }
+
+// The client only rewrites a buff button's tooltip while the button is listed in the window, and it unlists
+// the button before clearing it, so a removed buff leaves its last "<spell> (<time>)" tooltip on the empty
+// button. Sending the slot once more with the spell and 0 time first makes the client blank the tooltip.
+std::unique_ptr<EQApplicationPacket> BuffComponent::BuffRemovePrelude(Mob* mob, const Buffs_Struct& buff,
+	uint32_t slot) const
+{
+	if (buff.spellid <= 1 || slot >= mob->GetMaxTotalSlots())
+		return nullptr;
+
+	SerializeBuffer buffer(13 + 17 + strlen(buff.caster_name));
+
+	buffer.WriteUInt32(mob->GetID());
+	buffer.WriteInt32(0);								// tic timer must be 0, the client adds it to the time left
+	buffer.WriteUInt8(0);								// single buff
+	buffer.WriteUInt16(1);
+	buffer.WriteUInt32(ServerToPatchBuffSlot(slot));
+	buffer.WriteInt32(buff.spellid);					// still valid, so the button stays listed
+	buffer.WriteUInt32(0);								// no time left, so the tooltip is cleared
+	buffer.WriteUInt32(buff.hit_number);
+	buffer.WriteString(buff.caster_name);
+	buffer.WriteUInt8(0);								// self buff window
+	buffer.WriteUInt8(0);								// bBuffTimersOnHold
+
+	return std::make_unique<EQApplicationPacket>(OP_RefreshBuffs, std::move(buffer));
+}
 
 // 0 = self buff window, 1 = self target window, 2 = pet buff or target window, 4 = group, 5 = PC, 7 = NPC
 void BuffComponent::SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, uint8_t refresh_type) const

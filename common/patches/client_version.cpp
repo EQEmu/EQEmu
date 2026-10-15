@@ -19,6 +19,7 @@
 #include "client_version.h"
 
 #include "common/emu_constants.h"
+#include "common/eq_packet.h"
 
 #include "common/patches/titanium.h"
 #include "common/patches/titanium_limits.h"
@@ -107,6 +108,12 @@ template<>
 const std::unique_ptr<ClientPatch::IMessage>& GetComponent(Version version)
 {
 	return s_patches.at(static_cast<uint32_t>(version)).messageComponent;
+}
+
+std::unique_ptr<EQApplicationPacket> ClientPatch::IBuff::BuffRemovePrelude(Mob* mob, const Buffs_Struct& buff,
+	uint32_t slot) const
+{
+	return nullptr;
 }
 
 uint32_t ClientPatch::IBuff::ServerToPatchBuffSlot(uint32_t slot) const

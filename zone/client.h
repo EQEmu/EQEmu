@@ -919,7 +919,7 @@ public:
 	int GetAccountAge();
 
 	void SendPath(Mob* target);
-	void SendPathToLocation(const glm::vec3 &destination, float destination_size = 0.0f);
+	void SendPathToLocation(const glm::vec3 &destination, float destination_size = 0.0f, bool allow_partial = false);
 	void SendFindZoneConnections();
 
 	bool IsDiscovered(uint32 itemid);

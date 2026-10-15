@@ -12296,7 +12296,7 @@ void Client::SendPath(Mob* target)
 	SendPathToLocation(glm::vec3(target->GetX(), target->GetY(), target->GetZ()), target->GetSize());
 }
 
-void Client::SendPathToLocation(const glm::vec3 &destination, float destination_size)
+void Client::SendPathToLocation(const glm::vec3 &destination, float destination_size, bool allow_partial)
 {
 	std::vector<FindPerson_Point> points;
 
@@ -12332,7 +12332,9 @@ void Client::SendPathToLocation(const glm::vec3 &destination, float destination_
 		bool stuck     = false;
 		auto path_list = zone->pathing->FindRoute(path_start, path_end, partial, stuck);
 
-		if (path_list.empty() || partial) {
+		// zone lines often sit off the nav mesh (edge of the map, z of 0), so for those a path that gets
+		// close is better than none
+		if (path_list.empty() || (partial && !allow_partial)) {
 			EQApplicationPacket outapp(OP_FindPersonReply, 0);
 			QueuePacket(&outapp);
 			return;
