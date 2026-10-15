@@ -667,7 +667,7 @@ enum aaID {	//AA IDs
 	aaSelosEnduringCadence					=1627,//implemented as bonus
 
 
-	aaThroneofHeroes						=4655,
+	aaThroneofHeroes						=4665,//from dbstr_us.txt
 	aaTinkeringMastery						=4672,
 	aaCombatMedic							=4688,//implemented as bonus
 	aaQuickDraw								=4698,

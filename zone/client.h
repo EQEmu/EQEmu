@@ -1080,6 +1080,7 @@ public:
 	int GetSpentAA() { return m_pp.aapoints_spent; }
 	uint32 GetRequiredAAExperience();
 	void AutoGrantAAPoints();
+	void GrantVeteranAAs();
 	void GrantAllAAPoints(uint8 unlock_level = 0, bool skip_grant_only = false);
 	bool HasAlreadyPurchasedRank(AA::Rank* rank);
 	void ListPurchasedAAs(Client *to, std::string search_criteria = std::string());

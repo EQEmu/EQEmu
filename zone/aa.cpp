@@ -2170,6 +2170,72 @@ void Client::AutoGrantAAPoints() {
 	SendAlternateAdvancementStats();
 }
 
+// Veteran reward AAs by account age, keyed by the title string of their first rank so the
+// aa_ability ids can differ between databases. Years are Live's reward schedule.
+void Client::GrantVeteranAAs()
+{
+	if (!RuleB(AA, GrantVeteranAAs)) {
+		return;
+	}
+
+	static const std::map<int, int> veteran_aa_years = {
+		{ 1371, 1 }, // Lesson of the Devoted
+		{ 1372, 2 }, // Infusion of the Faithful
+		{ 1373, 3 }, // Chaotic Jester
+		{ 1374, 4 }, // Expedient Recovery
+		{ 1375, 5 }, // Steadfast Servant
+		{ 1376, 6 }, // Staunch Recovery
+		{ 1377, 7 }, // Intensity of the Resolute
+		{ 4665, 8 }, // Throne of Heroes
+		{ 1037, 9 }, // Armor of Experience
+	};
+
+	int years = RuleI(AA, VeteranAAYearsOverride);
+	if (years < 0) {
+		years = GetAccountAge() / (365 * 24 * 60 * 60);
+	}
+
+	bool granted = false;
+	for (auto &iter : zone->aa_abilities) {
+		auto ability = iter.second.get();
+		auto rank    = ability ? ability->first : nullptr;
+		if (!rank || !ability->grant_only) {
+			continue;
+		}
+
+		auto v = veteran_aa_years.find(rank->title_sid);
+		if (v == veteran_aa_years.end() || v->second > years) {
+			continue;
+		}
+
+		if (!CanUseAlternateAdvancementRank(rank) || HasAlreadyPurchasedRank(rank)) {
+			continue;
+		}
+
+		FinishAlternateAdvancementPurchase(rank, true, false);
+		MessageString(
+			Chat::Yellow,
+			AA_GAIN_ABILITY,
+			std::to_string(rank->title_sid).c_str(),
+			"0",
+			std::to_string(AA_POINTS).c_str()
+		);
+
+		granted = true;
+	}
+
+	if (!granted) {
+		return;
+	}
+
+	SaveAA();
+	SendClearLeadershipAA();
+	SendClearPlayerAA();
+	SendAlternateAdvancementTable();
+	SendAlternateAdvancementPoints();
+	SendAlternateAdvancementStats();
+}
+
 void Client::GrantAllAAPoints(uint8 unlock_level, bool skip_grant_only)
 {
 	//iterate through every AA

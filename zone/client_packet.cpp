@@ -1031,6 +1031,7 @@ void Client::CompleteConnect()
 
 	RecordStats();
 	AutoGrantAAPoints();
+	GrantVeteranAAs();
 
 	// set initial position for mob tracking
 	m_last_seen_mob_position.reserve(entity_list.GetMobList().size());
