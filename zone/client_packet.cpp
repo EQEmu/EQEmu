@@ -6908,7 +6908,10 @@ void Client::Handle_OP_GMGoto(const EQApplicationPacket *app)
 
 void Client::Handle_OP_GMHideMe(const EQApplicationPacket *app)
 {
-	if (app->size != sizeof(SpawnAppearance_Struct)) {
+	// TOB sends /hideme as an empty toggle (its SpawnAppearance invisibility follow-up is ignored for GMs)
+	const bool tob_toggle = app->size == 0 && ClientVersion() >= EQ::versions::ClientVersion::TOB;
+
+	if (!tob_toggle && app->size != sizeof(SpawnAppearance_Struct)) {
 		LogError("Wrong size: OP_GMHideMe, size=[{}], expected [{}]", app->size, sizeof(SpawnAppearance_Struct));
 		return;
 	}
@@ -6916,6 +6919,11 @@ void Client::Handle_OP_GMHideMe(const EQApplicationPacket *app)
 	if (!GetGM()) {
 		Message(Chat::Red, "Your account has been reported for hacking.");
 		RecordPlayerEventLog(PlayerEvent::POSSIBLE_HACK, PlayerEvent::PossibleHackEvent{.message = "Used /hideme"});
+		return;
+	}
+
+	if (tob_toggle) {
+		SetHideMe(!GetHideMe());
 		return;
 	}
 
@@ -7368,7 +7376,11 @@ void Client::Handle_OP_GroupCancelInvite(const EQApplicationPacket *app)
 		safe_delete(pack);
 	}
 
-	if (!GetMerc())
+	// ToB sends this on its own (toggle 1) for every repeat invite while one is pending,
+	// so only treat an actual decline as a reason to clear group state
+	const bool tob_ignore = ClientVersion() >= EQ::versions::ClientVersion::TOB && (gf->toggle != 3 || GetGroup());
+
+	if (!GetMerc() && !tob_ignore)
 	{
 		Group::RemoveFromGroup(this);
 	}

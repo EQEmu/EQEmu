@@ -1313,6 +1313,19 @@ namespace TOB
 		delete in;
 	}
 
+	ENCODE(OP_GroupCancelInvite)
+	{
+		ENCODE_LENGTH_EXACT(GroupCancel_Struct);
+		SETUP_DIRECT_ENCODE(GroupCancel_Struct, structs::GroupCancel_Struct);
+
+		memcpy(eq->name1, emu->name1, sizeof(eq->name1));
+		memcpy(eq->name2, emu->name2, sizeof(eq->name2));
+		eq->unknown160 = 0x0100;
+		OUT(toggle);
+
+		FINISH_ENCODE();
+	}
+
 	ENCODE(OP_GroupInvite)
 	{
 		ENCODE_LENGTH_EXACT(GroupInvite_Struct);
@@ -2343,14 +2356,14 @@ namespace TOB
 		out.WriteUInt32(9); //body_tint_count
 		//u32 body_tints[body_tint_count];
 		for (int i = 0; i < 9; ++i) {
-			out.WriteUInt32(0);
+			out.WriteUInt32(i < EQ::textures::materialCount ? emu->item_tint.Slot[i].Color : 0);
 		}
 
 		//u32 equip_tint_count;
 		out.WriteUInt32(9); //equip_tint_count
 		//u32 equip_tints[equip_tint_count];
 		for (int i = 0; i < 9; ++i) {
-			out.WriteUInt32(0);
+			out.WriteUInt32(i < EQ::textures::materialCount ? emu->item_tint.Slot[i].Color : 0);
 		}
 
 		/*
@@ -5948,6 +5961,18 @@ namespace TOB
 		FINISH_ENCODE();
 	}
 
+	// The client renames its own spawn by the name at +0 and only when byte +0xc1 is set
+	ENCODE(OP_MobRename)
+	{
+		ENCODE_LENGTH_EXACT(MobRename_Struct);
+		SETUP_DIRECT_ENCODE(MobRename_Struct, MobRename_Struct);
+
+		memcpy(eq, emu, sizeof(MobRename_Struct));
+		eq->unknown192 = 0x00000100;
+
+		FINISH_ENCODE();
+	}
+
 	ENCODE(OP_PetitionUpdate)
 	{
 		ENCODE_LENGTH_EXACT(PetitionUpdate_Struct);
@@ -6307,7 +6332,7 @@ namespace TOB
 		SETUP_DIRECT_ENCODE(MaxCharacters_Struct, structs::MaxCharacters_Struct);
 
 		*eq = {0};
-		eq->total_character_slots = 8;
+		eq->total_character_slots = emu->max_chars; // server limit (CharacterCreationLimit), as RoF2
 		eq->marketplace_character_slots = 0;
 		eq->unknown008 = -1;
 		eq->head_start_button = 0;
@@ -7646,7 +7671,7 @@ namespace TOB
 			*/
 
 			buffer.WriteUInt32(emu->PlayerState);
-			buffer.WriteUInt32(0);
+			buffer.WriteUInt32(emu->npc_tint_id); // NpcTintIndex (npc_types.armortint_id), as RoF2
 			buffer.WriteUInt32(0);
 			buffer.WriteUInt32(0);
 
@@ -8241,16 +8266,33 @@ namespace TOB
 	DECODE(OP_ChannelMessage)
 	{
 		unsigned char* __eq_buffer = __packet->pBuffer;
+		const uint32 in_size = __packet->size;
+		uint32 pos = 0;
 
-		char* InBuffer = (char*)__eq_buffer;
+		// bounded string read: copies at most dst_len - 1 chars, always terminates, false if no NUL in the packet
+		auto read_str = [&](char *dst, size_t dst_len) -> bool {
+			if (pos >= in_size) { return false; }
+			const char *src = reinterpret_cast<const char *>(__eq_buffer + pos);
+			const size_t len = strnlen(src, in_size - pos);
+			if (len == in_size - pos) { return false; }
+			strn0cpy(dst, src, std::min(dst_len, len + 1));
+			pos += static_cast<uint32>(len) + 1;
+			return true;
+		};
 
-		char Sender[64];
-		char Target[64];
+		char Sender[64] = {};
+		char Target[64] = {};
 
-		VARSTRUCT_DECODE_STRING(Sender, InBuffer);
-		VARSTRUCT_DECODE_STRING(Target, InBuffer);
+		// 4 empty bytes before the language
+		// 8 skipped + language + channel + 5 skipped + skill
+		const uint32 fixed_len = 8 + 4 + 4 + 5 + 4;
+		if (!read_str(Sender, sizeof(Sender)) || !read_str(Target, sizeof(Target)) || in_size - pos < fixed_len) {
+			LogNetcode("TOB::DECODE(OP_ChannelMessage) malformed packet size [{}]", in_size);
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
 
-		//4 empty bytes before language
+		char *InBuffer = reinterpret_cast<char *>(__eq_buffer + pos);
 		InBuffer += 8;
 
 		uint32 Language = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
@@ -8259,9 +8301,10 @@ namespace TOB
 		InBuffer += 5;
 
 		uint32 Skill = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
+		pos += fixed_len;
 
 		// this has a size limit of 11k in the client
-		std::string old_message = InBuffer;
+		std::string old_message(InBuffer, strnlen(InBuffer, in_size - pos));
 		std::string new_message;
 		TOBToServerConvertLinks(new_message, old_message);
 
@@ -9046,6 +9089,35 @@ namespace TOB
 		for (int i = 0; i < 100; ++i) {
 			IN(skills[i]);
 		}
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_GMSummon)
+	{
+		DECODE_LENGTH_EXACT(structs::GMSummon_Struct);
+		SETUP_DIRECT_DECODE(GMSummon_Struct, structs::GMSummon_Struct);
+
+		strn0cpy(emu->charname, eq->charname, sizeof(emu->charname));
+		strn0cpy(emu->gmname, eq->gmname, sizeof(emu->gmname));
+		emu->success = eq->success;
+		IN(zoneID);
+		IN(y);
+		IN(x);
+		IN(z);
+		IN(unknown2);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_GroupCancelInvite)
+	{
+		DECODE_LENGTH_EXACT(structs::GroupCancel_Struct);
+		SETUP_DIRECT_DECODE(GroupCancel_Struct, structs::GroupCancel_Struct);
+
+		memcpy(emu->name1, eq->name1, sizeof(emu->name1));
+		memcpy(emu->name2, eq->name2, sizeof(emu->name2));
+		IN(toggle);
 
 		FINISH_DIRECT_DECODE();
 	}
@@ -11241,13 +11313,20 @@ namespace TOB
 
 	static inline int TOBToServerBuffSlot(int index)
 	{
+		// anything the server has no slot for maps past the end so server range checks reject it
+		const int invalid = EQ::spells::LONG_BUFFS + EQ::spells::SHORT_BUFFS + EQ::spells::DISC_BUFFS;
+		if (index < 0)
+			return invalid;
 		// we're a disc
-		if (index >= spells::CLIENT_LONG_BUFFS + spells::CLIENT_SHORT_BUFFS)
-			return index - spells::CLIENT_LONG_BUFFS - spells::CLIENT_SHORT_BUFFS + EQ::spells::LONG_BUFFS +
-			EQ::spells::SHORT_BUFFS;
+		if (index >= spells::CLIENT_LONG_BUFFS + spells::CLIENT_SHORT_BUFFS) {
+			const int disc = index - spells::CLIENT_LONG_BUFFS - spells::CLIENT_SHORT_BUFFS;
+			return disc < EQ::spells::DISC_BUFFS ? disc + EQ::spells::LONG_BUFFS + EQ::spells::SHORT_BUFFS : invalid;
+		}
 		// we're a song
-		if (index >= spells::CLIENT_LONG_BUFFS)
-			return index - spells::CLIENT_LONG_BUFFS + EQ::spells::LONG_BUFFS;
+		if (index >= spells::CLIENT_LONG_BUFFS) {
+			const int song = index - spells::CLIENT_LONG_BUFFS;
+			return song < EQ::spells::SHORT_BUFFS ? song + EQ::spells::LONG_BUFFS : invalid;
+		}
 		// a long slot the server doesn't have (42..61): map past the end so server range checks reject it
 		if (index >= spells::LONG_BUFFS)
 			return EQ::spells::LONG_BUFFS + EQ::spells::SHORT_BUFFS + EQ::spells::DISC_BUFFS;

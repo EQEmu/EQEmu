@@ -1156,6 +1156,33 @@ namespace TOB {
 			/*176*/
 		};
 
+		// C2S 0x7b49 /summon: GMSummon_Struct written field by field, names as u32 length (64) + 64 bytes
+		struct GMSummon_Struct {
+			/*000*/ uint32 charname_len;
+			/*004*/ char   charname[64];
+			/*068*/ uint32 gmname_len;
+			/*072*/ char   gmname[64];
+			/*136*/ uint8  success;
+			/*137*/ uint32 zoneID;
+			/*141*/ float  y;
+			/*145*/ float  x;
+			/*149*/ float  z;
+			/*153*/ uint32 unknown2;
+			/*157*/
+		};
+
+		// 0x354a both directions. toggle: 1 considering another group, 2 already grouped, 3 declined, 4/5 raid
+		struct GroupCancel_Struct {
+			/*000*/ char   name1[64]; // inviter
+			/*064*/ char   name2[64]; // invitee
+			/*128*/ uint8  unknown128[32];
+			/*160*/ uint16 unknown160; // client sends 0x0100
+			/*162*/ uint8  unknown162[6];
+			/*168*/ uint8  toggle;
+			/*169*/ uint8  unknown169[7];
+			/*176*/
+		};
+
 // -----------------------------------------------------------------------------------------------------
 		// S2C 0x13ff
 		struct GuildMemberAdd_Struct {
