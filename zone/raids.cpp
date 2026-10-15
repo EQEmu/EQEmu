@@ -117,6 +117,8 @@ void Raid::AddMember(Client *c, uint32 group, bool rleader, bool groupleader, bo
 		return;
 	}
 
+	c->ClearSoloNPCMarks(true);
+
 	const auto query = fmt::format(
 		"REPLACE INTO raid_members SET raidid = {}, charid = {}, bot_id = 0, "
 		"groupid = {}, _class = {}, level = {}, name = '{}', "

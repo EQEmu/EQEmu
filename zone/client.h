@@ -1756,6 +1756,12 @@ public:
 	void LeaveGroupXTargets(Group *g);
 	void LeaveRaidXTargets(Raid *r);
 	void ClearXTargets();
+	// rule Character:SoloMarkNPC: NPC marks of an ungrouped player, shown only to them
+	void SoloMarkNPC(Mob *target, int number);
+	void UnMarkSoloNPC(uint16 entity_id);
+	void ClearSoloNPCMarks(bool notify);
+	// rank of a group leadership AA for a player in no group or raid, when Character:LeadershipMinGroupSize <= 1
+	int GetSoloLeadershipAA(int aa);
 	bool GroupFollow(Client* inviter);
 	inline bool  GetRunMode() const { return runmode; }
 
@@ -2442,4 +2448,6 @@ public:
 	bool IsFilteredAFKPacket(const EQApplicationPacket *p);
 	void CheckAutoIdleAFK(PlayerPositionUpdateClient_Struct *p);
 	void SyncWorldPositionsToClient(bool ignore_idle = false);
+private:
+	uint16 m_solo_marked_npcs[3] = {}; // MAX_MARKED_NPCS (groups.h)
 };

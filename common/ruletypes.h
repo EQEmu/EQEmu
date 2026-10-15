@@ -237,6 +237,8 @@ RULE_INT(Character, BandolierSwapDelay, 0, "Bandolier swap delay in milliseconds
 RULE_BOOL(Character, EnableHackedFastCampForGM, false, "Enables hacked fast camp for GM clients, if the GM doesn't have a hacked client they'll camp like normal")
 RULE_BOOL(Character, EnableFastCamp, true, "ToB+ clients get the 'Fast camp now?' prompt (and instant /camp fast) in cities, no-combat zones and Character:FastCampZones")
 RULE_STRING(Character, FastCampZones, "", "Comma-separated zone short names that also allow fast camp for ToB+ clients")
+RULE_INT(Character, LeadershipMinGroupSize, 3, "Group (or raid group) size leadership abilities need: inspect buffs and the leadership AA bonuses, and a group's NPC marks are cleared when it drops below this. Live: 3")
+RULE_BOOL(Character, SoloMarkNPC, false, "Let an ungrouped player /mark NPCs (TOB+ clients send /mark when ungrouped). The marks are shown only to that player")
 RULE_BOOL(Character, ToBLeadershipAlwaysOn, true, "ToB+ clients cannot buy leadership AAs: groups and raids led by one get every leadership ability at max rank (the player profile is not changed)")
 RULE_BOOL(Character, AlwaysAllowNameChange, false, "Enable this option to allow /changename to work without enabling a name change via scripts.")
 RULE_BOOL(Character, EnableAutoAFK, false, "Enable or disable the auto AFK feature, cuts down on packet spam")

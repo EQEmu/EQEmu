@@ -57,17 +57,19 @@ static bool ShouldSendTargetBuffs(Client* c) {
 		Raid* raid = c->GetRaid();
 		if (raid) {
 			uint32 gid = raid->GetGroup(c);
-			if (gid < MAX_RAID_GROUPS && raid->GroupCount(gid) >= 3) {
+			if (gid < MAX_RAID_GROUPS && raid->GroupCount(gid) >= RuleI(Character, LeadershipMinGroupSize)) {
 				if (raid->GetLeadershipAA(groupAAInspectBuffs, gid))
 					return true;
 			}
 		}
 	} else {
 		Group* group = c->GetGroup();
-		if (group && group->GroupCount() >= 3) {
+		if (group && group->GroupCount() >= RuleI(Character, LeadershipMinGroupSize)) {
 			if (group->GetLeadershipAA(groupAAInspectBuffs)) {
 				return true;
 			}
+		} else if (!group && c->GetSoloLeadershipAA(groupAAInspectBuffs)) {
+			return true;
 		}
 	}
 

@@ -240,6 +240,7 @@ bool Group::AddMember(Mob* new_member, std::string new_member_name, uint32 chara
 		new_member_name = new_member->GetCleanName();
 
 		if (new_member->IsClient()) {
+			new_member->CastToClient()->ClearSoloNPCMarks(true);
 			character_id = new_member->CastToClient()->CharacterID();
 		}
 
@@ -631,7 +632,7 @@ bool Group::DelMemberOOZ(const char *Name) {
 
 				memset(membername[i], 0, 64);
 				MemberRoles[i] = 0;
-				if(GroupCount() < 3)
+				if(GroupCount() < RuleI(Character, LeadershipMinGroupSize))
 				{
 					UnDelegateMarkNPC(NPCMarkerName.c_str());
 					if (GetLeader() && GetLeader()->IsClient() && GetLeader()->CastToClient()->ClientVersion() < EQ::versions::ClientVersion::SoD) {
@@ -796,7 +797,7 @@ bool Group::DelMember(Mob* oldmember, bool ignoresender)
 		oldmember->CastToClient()->LeaveGroupXTargets(this);
 	}
 
-	if(GroupCount() < 3)
+	if(GroupCount() < RuleI(Character, LeadershipMinGroupSize))
 	{
 		UnDelegateMarkNPC(NPCMarkerName.c_str());
 		if (GetLeader() && GetLeader()->IsClient() && GetLeader()->CastToClient()->ClientVersion() < EQ::versions::ClientVersion::SoD) {

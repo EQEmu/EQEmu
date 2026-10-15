@@ -696,6 +696,7 @@ Client::Client(EQStreamInterface *ieqs) : Mob(
 }
 
 Client::~Client() {
+	ClearSoloNPCMarks(false);
 	entity_list.RemoveMobFromCloseLists(this);
 	m_close_mobs.clear();
 
@@ -4267,6 +4268,22 @@ void Client::GetGroupAAs(GroupLeadershipAA_Struct *into) const {
 			into->ranks[i] = LeadershipAAMaxRank(groupAAMarkNPC + i);
 		}
 	}
+}
+
+int Client::GetSoloLeadershipAA(int aa)
+{
+	if (RuleI(Character, LeadershipMinGroupSize) > 1 || IsRaidGrouped() || GetGroup()) {
+		return 0;
+	}
+
+	if (aa < groupAAMarkNPC || aa >= groupAAMarkNPC + MAX_GROUP_LEADERSHIP_AA_ARRAY) {
+		return 0;
+	}
+
+	// the player leads their own one-person group: the same ranks a group they led would get
+	GroupLeadershipAA_Struct ranks{};
+	GetGroupAAs(&ranks);
+	return ranks.ranks[aa - groupAAMarkNPC];
 }
 
 void Client::GetRaidAAs(RaidLeadershipAA_Struct *into) const {
@@ -13471,4 +13488,90 @@ bool Client::UncompleteTask(int task_id)
 	);
 
 	return task_state->UncompleteTask(task_id);
+}
+
+static void SendSoloMarkNPC(Client *c, uint16 entity_id, int number, Mob *m)
+{
+	auto outapp = new EQApplicationPacket(OP_MarkNPC, sizeof(MarkNPC_Struct));
+	auto mark   = reinterpret_cast<MarkNPC_Struct *>(outapp->pBuffer);
+
+	mark->TargetID = entity_id;
+	mark->Number   = number;
+	if (m) {
+		strn0cpy(mark->Name, m->GetCleanName(), sizeof(mark->Name));
+	}
+
+	c->QueuePacket(outapp);
+	safe_delete(outapp);
+}
+
+void Client::SoloMarkNPC(Mob *target, int number)
+{
+	static_assert(sizeof(m_solo_marked_npcs) / sizeof(m_solo_marked_npcs[0]) == MAX_MARKED_NPCS);
+
+	if (!target || target->IsClient() || target->IsMerc() || number < 0 || number > MAX_MARKED_NPCS) {
+		return;
+	}
+
+	const uint16 entity_id = target->GetID();
+
+	// the client sends 0 to unmark, and a new number moves a marked NPC
+	for (int i = 0; i < MAX_MARKED_NPCS; ++i) {
+		if (m_solo_marked_npcs[i] == entity_id) {
+			if (i == number - 1) {
+				return;
+			}
+
+			m_solo_marked_npcs[i] = 0;
+			target->IsTargeted(-1);
+			SendSoloMarkNPC(this, entity_id, 0, target);
+		}
+	}
+
+	if (number == 0) {
+		return;
+	}
+
+	if (const uint16 old_id = m_solo_marked_npcs[number - 1]) {
+		Mob *old = entity_list.GetMob(old_id);
+		if (old) {
+			old->IsTargeted(-1);
+		}
+
+		SendSoloMarkNPC(this, old_id, 0, old);
+	}
+
+	m_solo_marked_npcs[number - 1] = entity_id;
+	target->IsTargeted(1);
+	SendSoloMarkNPC(this, entity_id, number, target);
+}
+
+void Client::UnMarkSoloNPC(uint16 entity_id)
+{
+	// the mob is going away; the client drops its mark with the spawn
+	for (auto &id : m_solo_marked_npcs) {
+		if (id == entity_id) {
+			id = 0;
+		}
+	}
+}
+
+void Client::ClearSoloNPCMarks(bool notify)
+{
+	for (auto &id : m_solo_marked_npcs) {
+		if (!id) {
+			continue;
+		}
+
+		Mob *m = entity_list.GetMob(id);
+		if (m) {
+			m->IsTargeted(-1);
+		}
+
+		if (notify) {
+			SendSoloMarkNPC(this, id, 0, m);
+		}
+
+		id = 0;
+	}
 }

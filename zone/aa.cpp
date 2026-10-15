@@ -576,7 +576,7 @@ int Client::GroupLeadershipAAHealthEnhancement()
 		if (!raid)
 			return 0;
 		uint32 group_id = raid->GetGroup(this);
-		if (group_id < 12 && raid->GroupCount(group_id) >= 3) {
+		if (group_id < 12 && raid->GroupCount(group_id) >= RuleI(Character, LeadershipMinGroupSize)) {
 			switch (raid->GetLeadershipAA(groupAAHealthEnhancement, group_id)) {
 			case 1:
 				bonus = 30;
@@ -607,10 +607,13 @@ int Client::GroupLeadershipAAHealthEnhancement()
 
 	Group *g = GetGroup();
 
-	if(!g || (g->GroupCount() < 3))
-		return 0;
+	int rank = 0;
+	if (g && g->GroupCount() >= RuleI(Character, LeadershipMinGroupSize))
+		rank = g->GetLeadershipAA(groupAAHealthEnhancement);
+	else if (!g)
+		rank = GetSoloLeadershipAA(groupAAHealthEnhancement);
 
-	switch(g->GetLeadershipAA(groupAAHealthEnhancement))
+	switch(rank)
 	{
 		case 0:
 			return 0;
@@ -633,7 +636,7 @@ int Client::GroupLeadershipAAManaEnhancement()
 		if (!raid)
 			return 0;
 		uint32 group_id = raid->GetGroup(this);
-		if (group_id < 12 && raid->GroupCount(group_id) >= 3) {
+		if (group_id < 12 && raid->GroupCount(group_id) >= RuleI(Character, LeadershipMinGroupSize)) {
 			switch (raid->GetLeadershipAA(groupAAManaEnhancement, group_id)) {
 			case 1:
 				bonus = 30;
@@ -664,10 +667,13 @@ int Client::GroupLeadershipAAManaEnhancement()
 
 	Group *g = GetGroup();
 
-	if(!g || (g->GroupCount() < 3))
-		return 0;
+	int rank = 0;
+	if (g && g->GroupCount() >= RuleI(Character, LeadershipMinGroupSize))
+		rank = g->GetLeadershipAA(groupAAManaEnhancement);
+	else if (!g)
+		rank = GetSoloLeadershipAA(groupAAManaEnhancement);
 
-	switch(g->GetLeadershipAA(groupAAManaEnhancement))
+	switch(rank)
 	{
 		case 0:
 			return 0;
@@ -690,7 +696,7 @@ int Client::GroupLeadershipAAHealthRegeneration()
 		if (!raid)
 			return 0;
 		uint32 group_id = raid->GetGroup(this);
-		if (group_id < 12 && raid->GroupCount(group_id) >= 3) {
+		if (group_id < 12 && raid->GroupCount(group_id) >= RuleI(Character, LeadershipMinGroupSize)) {
 			switch (raid->GetLeadershipAA(groupAAHealthRegeneration, group_id)) {
 			case 1:
 				bonus = 4;
@@ -721,10 +727,13 @@ int Client::GroupLeadershipAAHealthRegeneration()
 
 	Group *g = GetGroup();
 
-	if(!g || (g->GroupCount() < 3))
-		return 0;
+	int rank = 0;
+	if (g && g->GroupCount() >= RuleI(Character, LeadershipMinGroupSize))
+		rank = g->GetLeadershipAA(groupAAHealthRegeneration);
+	else if (!g)
+		rank = GetSoloLeadershipAA(groupAAHealthRegeneration);
 
-	switch(g->GetLeadershipAA(groupAAHealthRegeneration))
+	switch(rank)
 	{
 		case 0:
 			return 0;
@@ -747,7 +756,7 @@ int Client::GroupLeadershipAAOffenseEnhancement()
 		if (!raid)
 			return 0;
 		uint32 group_id = raid->GetGroup(this);
-		if (group_id < 12 && raid->GroupCount(group_id) >= 3) {
+		if (group_id < 12 && raid->GroupCount(group_id) >= RuleI(Character, LeadershipMinGroupSize)) {
 			switch (raid->GetLeadershipAA(groupAAOffenseEnhancement, group_id)) {
 			case 1:
 				bonus = 10;
@@ -790,10 +799,13 @@ int Client::GroupLeadershipAAOffenseEnhancement()
 
 	Group *g = GetGroup();
 
-	if(!g || (g->GroupCount() < 3))
-		return 0;
+	int rank = 0;
+	if (g && g->GroupCount() >= RuleI(Character, LeadershipMinGroupSize))
+		rank = g->GetLeadershipAA(groupAAOffenseEnhancement);
+	else if (!g)
+		rank = GetSoloLeadershipAA(groupAAOffenseEnhancement);
 
-	switch(g->GetLeadershipAA(groupAAOffenseEnhancement))
+	switch(rank)
 	{
 		case 0:
 			return 0;
