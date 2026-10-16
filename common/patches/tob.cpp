@@ -9148,26 +9148,27 @@ namespace TOB
 
 	DECODE(OP_VetClaimRequest)
 	{
-		// ToB: lenstr name, u32 claim_id, u8, u32 n, n x {u32,u32}, u32 action  (same object as VetClaimReply)
+		// ToB: lenstr name, u32 unknown, u8 claim, u32 n, n x {u32 claim_id, u32 count}, u32 action  (same object as
+		// VetClaimReply). unknown is not the claim id (Live sends 0): the claim is pairs[0]; n == 0 is a list refresh.
 		const uint32 size = __packet->size;
 		__packet->SetReadPosition(0);
 
-		uint32 claim_id = 0, action = 0;
+		uint32 claim_id = 0xFFFFFFFF, action = 0;
 		std::string name;
 		__packet->ReadLengthString(name);
 		if (name.size() > TOB_NAME_MAX_CHARS) {
 			name.resize(TOB_NAME_MAX_CHARS);
 		}
+		__packet->ReadUInt32(); // unknown
 		bool ok = !__packet->ReadError();
-		if (ok) {
-			claim_id = __packet->ReadUInt32();
-			ok       = !__packet->ReadError();
-		}
 		if (ok && __packet->ReadRemaining() > 0) {
 			__packet->ReadSkip(1); // u8
 			const uint32 n = __packet->ReadUInt32();
 			if (!__packet->ReadError() && n <= __packet->ReadRemaining() / 8) {
-				__packet->ReadSkip(n * 8);
+				if (n >= 1) {
+					claim_id = __packet->ReadUInt32();
+					__packet->ReadSkip((n * 8) - sizeof(uint32));
+				}
 				action = __packet->ReadUInt32();
 			}
 		}
@@ -9505,13 +9506,12 @@ namespace TOB
 		DECODE_LENGTH_EXACT(structs::RecipeAutoCombine_CS_Struct);
 		SETUP_DIRECT_DECODE(RecipeAutoCombine_Struct, structs::RecipeAutoCombine_CS_Struct);
 
-		// For world containers the recipe id arrives at eq[+32] and eq[+4] is 0. Use eq[+4] when the client
-		// fills it, otherwise eq[+32]; container type comes from con_type (eq[+0]).
-		const bool recipe_at_32 = eq->recipe_id == 0;
-		emu->object_type = recipe_at_32 ? eq->con_type : eq->object_type;
+		// The recipe id is always at eq[+32] (struct field object_type); eq[+4] (recipe_id) is the container
+		// object's id, 0 for a world container. Container type comes from con_type (eq[+0]).
+		emu->object_type = eq->con_type;
 		IN(some_id);
 		emu->unknown1   = TOBToServerSlot(eq->container_slot);
-		emu->recipe_id  = recipe_at_32 ? eq->object_type : eq->recipe_id;
+		emu->recipe_id  = eq->object_type;
 		emu->reply_code = 0;  // junk in client request; server overwrites in reply
 
 		FINISH_DIRECT_DECODE();
