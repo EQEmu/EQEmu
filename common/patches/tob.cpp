@@ -3282,6 +3282,7 @@ namespace TOB
 		out.WriteUInt32(emu->PVPLastKill.Time);
 		out.WriteUInt32(emu->PVPLastKill.Points);
 		out.WriteUInt32(emu->PVPLastKill.Level);
+		out.WriteUInt32(0); // the client reads 6 x u32 then a u64 after the name: 32 bytes
 
 		//PvPDeath last_death;
 		/*
@@ -3331,6 +3332,7 @@ namespace TOB
 			out.WriteUInt32(emu->PVPRecentKills[i].Time);
 			out.WriteUInt32(emu->PVPRecentKills[i].Points);
 			out.WriteUInt32(emu->PVPRecentKills[i].Level);
+			out.WriteUInt32(0); // u64 tail, see last_kill
 		}
 
 		/*
