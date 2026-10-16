@@ -570,6 +570,11 @@ void Client::SendClearLeadershipAA()
 
 int Client::GroupLeadershipAAHealthEnhancement()
 {
+	// Live removed the leadership stat bonuses and the ToB client does not count them in its own HP/mana/regen
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB && !RuleB(Character, LeadershipStatBonusesForToB)) {
+		return 0;
+	}
+
 	if (IsRaidGrouped()) {
 		int bonus = 0;
 		Raid *raid = GetRaid();
@@ -630,6 +635,11 @@ int Client::GroupLeadershipAAHealthEnhancement()
 
 int Client::GroupLeadershipAAManaEnhancement()
 {
+	// Live removed the leadership stat bonuses and the ToB client does not count them in its own HP/mana/regen
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB && !RuleB(Character, LeadershipStatBonusesForToB)) {
+		return 0;
+	}
+
 	if (IsRaidGrouped()) {
 		int bonus = 0;
 		Raid *raid = GetRaid();
@@ -690,6 +700,11 @@ int Client::GroupLeadershipAAManaEnhancement()
 
 int Client::GroupLeadershipAAHealthRegeneration()
 {
+	// Live removed the leadership stat bonuses and the ToB client does not count them in its own HP/mana/regen
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB && !RuleB(Character, LeadershipStatBonusesForToB)) {
+		return 0;
+	}
+
 	if (IsRaidGrouped()) {
 		int bonus = 0;
 		Raid *raid = GetRaid();
@@ -750,6 +765,11 @@ int Client::GroupLeadershipAAHealthRegeneration()
 
 int Client::GroupLeadershipAAOffenseEnhancement()
 {
+	// Live removed the leadership stat bonuses and the ToB client does not count them in its own HP/mana/regen
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB && !RuleB(Character, LeadershipStatBonusesForToB)) {
+		return 0;
+	}
+
 	if (IsRaidGrouped()) {
 		int bonus = 0;
 		Raid *raid = GetRaid();
