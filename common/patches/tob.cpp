@@ -1613,8 +1613,10 @@ namespace TOB
 		SETUP_DIRECT_ENCODE(SpawnHPUpdate_Struct, structs::SpawnHPUpdate_Struct);
 
 		OUT(spawn_id);
-		OUT(cur_hp);
-		OUT(max_hp);
+		// self updates carry HP minus item HP (the client adds item HP back), which goes negative below that
+		// amount: sign-extend, or it reaches ToB as ~4 billion and the bar sits at 100% until death
+		eq->cur_hp = static_cast<int32>(emu->cur_hp);
+		eq->max_hp = static_cast<int32>(emu->max_hp);
 
 		FINISH_ENCODE();
 	}
