@@ -1392,7 +1392,7 @@ namespace TOB {
 			/*136*/
 		};
 
-		// OP_InspectRequest 0x5564: writes {target spawn id, own spawn id} as u32s
+		// OP_InspectRequest: {target spawn id, own spawn id}
 		struct Inspect_Struct {
 			/*00*/ uint32 TargetID;
 			/*04*/ uint32 PlayerID;
@@ -1495,6 +1495,18 @@ namespace TOB {
 		/*224*/
 		};
 
+		// OP_AltCurrencyReclaim C2S, Alternate Currency window: reclaim items into currency, or create items from it
+		struct AltCurrencyReclaim_Struct
+		{
+		/*000*/ uint32 currency_id;
+		/*004*/ uint32 unknown004;
+		/*008*/ uint32 count;          // create: how many items; 0 on reclaim
+		/*012*/ uint8  reclaim_flag;   // 1 = reclaim items into currency, 0 = create items
+		/*013*/ uint8  unknown013;
+		/*014*/ uint16 unknown014;
+		/*016*/
+		};
+
 		// OP_AltCurrencySell 0x58ca, both directions
 		struct AltCurrencySellItem_Struct
 		{
@@ -1547,6 +1559,32 @@ namespace TOB {
 		/*180*/	uint32	unknown180; // 0 -> client uses senttime
 		/*184*/
 		};
+
+		// OP_PetitionCheckout / OP_PetitionCheckIn record: 32-bit senttime, no padding, 2220 bytes (server 2224).
+		// The client copies the S2C body without a size check, so it must be exactly this size.
+		struct Petition_Struct {
+		/*0000*/	uint32	petnumber;
+		/*0004*/	uint32	urgency;
+		/*0008*/	char	accountid[32];
+		/*0040*/	char	lastgm[32];
+		/*0072*/	uint32	zone;
+		/*0076*/	char	charname[64];
+		/*0140*/	uint32	charlevel;
+		/*0144*/	uint32	charclass;
+		/*0148*/	uint32	charrace;
+		/*0152*/	uint32	unknown152;
+		/*0156*/	uint32	checkouts;
+		/*0160*/	uint32	unavail;
+		/*0164*/	uint32	senttime;
+		/*0168*/	uint32	unknown168;
+		/*0172*/	char	petitiontext[1024];
+		/*1196*/	char	gmtext[1024];
+		/*2220*/
+		};
+		static_assert(sizeof(Petition_Struct) == 2220, "TOB Petition_Struct must be 2220 bytes");
+
+		// OP_PetitionCheckIn sends the record up to gmtext, then gmtext as a C string
+		constexpr size_t PetitionCheckInHeaderSize = offsetof(Petition_Struct, gmtext);
 
 		// OP_GuildTributeFavorAndTimer (S2C 0x009e) reads favor/timers at +8/+12/+16
 		struct GuildTributeFavorTimer_Struct {
@@ -1859,6 +1897,82 @@ namespace TOB {
 			/*0152*/ uint16	unknown0152;
 			/*0154*/ uint8	unknown0154[14];
 			/*0168*/
+		};
+
+		// OP_PVPLeaderBoardDetailsReply: GuildID is 64-bit
+		struct PVPLeaderBoardDetailsReply_Struct {
+			/*000*/ char   Name[64];
+			/*064*/ uint8  Unknown064[64];
+			/*128*/ uint32 Level;
+			/*132*/ uint32 Race;
+			/*136*/ uint32 Class;
+			/*140*/ uint32 Unknown140;
+			/*144*/ uint64 GuildID;
+			/*152*/ uint32 TotalAA;
+			/*156*/ uint32 Unknown156;
+			/*160*/ uint32 Kills;
+			/*164*/ uint32 Deaths;
+			/*168*/ uint32 Infamy;
+			/*172*/ uint32 Points;
+			/*176*/
+		};
+
+		// OP_PVPStats entries: LastDeath keeps the 88-byte layout, LastKill and the
+		// 24-hour list use 96 bytes, with Time as a u64. PvP stats are untested in game.
+		struct PVPStatsEntry88_Struct {
+			/*00*/ char   Name[64];
+			/*64*/ uint32 Level;
+			/*68*/ uint32 Race;
+			/*72*/ uint32 Class;
+			/*76*/ uint32 Zone;
+			/*80*/ uint32 Time;
+			/*84*/ uint32 Points;
+			/*88*/
+		};
+
+		struct PVPStatsEntry96_Struct {
+			/*00*/ char   Name[64];
+			/*64*/ uint32 Level;
+			/*68*/ uint32 Race;
+			/*72*/ uint32 Class;
+			/*76*/ uint32 Zone;
+			/*80*/ uint64 Time;
+			/*88*/ uint32 Points;
+			/*92*/ uint32 Unknown92;
+			/*96*/
+		};
+
+		struct PVPStats_Struct {
+			/*0000*/ uint32 Kills;
+			/*0004*/ uint32 Deaths;
+			/*0008*/ uint32 PVPPointsAvailable;
+			/*0012*/ uint32 TotalPVPPoints;
+			/*0016*/ uint32 BestKillStreak;
+			/*0020*/ uint32 WorstDeathStreak;
+			/*0024*/ uint32 CurrentKillStreak;
+			/*0028*/ uint32 Infamy;
+			/*0032*/ uint32 Vitality;
+			/*0036*/ PVPStatsEntry88_Struct LastDeath;
+			/*0124*/ uint32 Padding124;
+			/*0128*/ PVPStatsEntry96_Struct LastKill;
+			/*0224*/ PVPStatsEntry96_Struct KillsLast24Hours[50];
+			/*5024*/
+		};
+
+		// C->S OP_PickZone (9 bytes): u8, u32, u32
+		struct PickZone_Struct {
+			/*00*/ uint8  group_leader;  // MIZ_GroupLeaderCheckBox
+			/*01*/ uint32 session_id;    // echo of OP_PickZoneWindow session_id
+			/*05*/ uint32 selection_id;  // selected row = entry index
+			/*09*/
+		};
+
+		// C->S OP_TradeSkillRecipeInspect (80 bytes)
+		struct TradeSkillRecipeInspect_Struct {
+			/*00*/ uint32 recipe_id;
+			/*04*/ uint32 flags;
+			/*08*/ uint8  unknown008[72];
+			/*80*/
 		};
 
 		// TOB pick pocket wire format (S→C and C→S identical layout).

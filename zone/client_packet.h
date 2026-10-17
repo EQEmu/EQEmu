@@ -53,6 +53,7 @@
 	void Handle_OP_AltCurrencyMerchantRequest(const EQApplicationPacket *app);
 	void Handle_OP_AltCurrencyPurchase(const EQApplicationPacket *app);
 	void Handle_OP_AltCurrencyReclaim(const EQApplicationPacket *app);
+	void Handle_OP_AltCurrencyReclaimAll(const EQApplicationPacket *app);
 	void Handle_OP_AltCurrencySell(const EQApplicationPacket *app);
 	void Handle_OP_AltCurrencySellSelection(const EQApplicationPacket *app);
 	void Handle_OP_Animation(const EQApplicationPacket *app);

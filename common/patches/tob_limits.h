@@ -321,7 +321,7 @@ namespace TOB
 			AltAbility = 0xFF
 		};
 
-		const int SPELL_ID_MAX = 71999;
+		const int SPELL_ID_MAX = 75000;
 		const int SPELLBOOK_SIZE = 1120;
 		const int SPELL_GEM_COUNT = static_cast<uint32>(CastingSlot::MaxGems);
 		const int SPELL_GEM_RECAST_TIMER = 15;

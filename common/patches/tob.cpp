@@ -1704,6 +1704,107 @@ namespace TOB
 		delete in;
 	}
 
+	ENCODE(OP_PVPLeaderBoardDetailsReply)
+	{
+		ENCODE_LENGTH_EXACT(PVPLeaderBoardDetailsReply_Struct);
+		SETUP_DIRECT_ENCODE(PVPLeaderBoardDetailsReply_Struct, structs::PVPLeaderBoardDetailsReply_Struct);
+
+		strn0cpy(eq->Name, emu->Name, sizeof(eq->Name));
+		memcpy(eq->Unknown064, emu->Unknown064, sizeof(eq->Unknown064));
+		OUT(Level);
+		OUT(Race);
+		OUT(Class);
+		eq->GuildID = emu->GuildID;
+		OUT(TotalAA);
+		OUT(Kills);
+		OUT(Deaths);
+		OUT(Infamy);
+		OUT(Points);
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_PVPStats)
+	{
+		ENCODE_LENGTH_EXACT(PVPStats_Struct);
+		SETUP_DIRECT_ENCODE(PVPStats_Struct, structs::PVPStats_Struct);
+
+		OUT(Kills);
+		OUT(Deaths);
+		OUT(PVPPointsAvailable);
+		OUT(TotalPVPPoints);
+		OUT(BestKillStreak);
+		OUT(WorstDeathStreak);
+		OUT(CurrentKillStreak);
+		OUT(Infamy);
+		OUT(Vitality);
+
+		static_assert(sizeof(eq->LastDeath) == sizeof(emu->LastDeath), "PvP entry size");
+		memcpy(&eq->LastDeath, &emu->LastDeath, sizeof(eq->LastDeath));
+
+		auto copy_entry = [](structs::PVPStatsEntry96_Struct &d, const PVPStatsEntry_Struct &e) {
+			strn0cpy(d.Name, e.Name, sizeof(d.Name));
+			d.Level  = e.Level;
+			d.Race   = e.Race;
+			d.Class  = e.Class;
+			d.Zone   = e.Zone;
+			d.Time   = e.Time;
+			d.Points = e.Points;
+		};
+
+		copy_entry(eq->LastKill, emu->LastKill);
+		constexpr size_t n_eq  = sizeof(eq->KillsLast24Hours) / sizeof(eq->KillsLast24Hours[0]);
+		constexpr size_t n_emu = sizeof(emu->KillsLast24Hours) / sizeof(emu->KillsLast24Hours[0]);
+		for (size_t i = 0; i < std::min(n_eq, n_emu); ++i) {
+			copy_entry(eq->KillsLast24Hours[i], emu->KillsLast24Hours[i]);
+		}
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_PickZoneWindow)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		if (in->size < sizeof(PickZoneWindow_Struct)) {
+			LogNetcode("TOB::ENCODE(OP_PickZoneWindow) wrong size [{}]", in->size);
+			delete in;
+			return;
+		}
+
+		auto emu = reinterpret_cast<PickZoneWindow_Struct *>(in->pBuffer);
+
+		int count = emu->option_count;
+		const int max_entries = static_cast<int>(sizeof(emu->entries) / sizeof(emu->entries[0]));
+		count = std::clamp(count, 0, max_entries);
+
+		// serialized: u8 show, u32 session, current zone header (u32 zone, u32 players, u8 locked),
+		// u32 count, count x {u32 instance, u32 zone, u32 players, u8 unknown}, 6 x u32 group member zones
+		SerializeBuffer buf;
+		buf.WriteUInt8(1);
+		buf.WriteUInt32(static_cast<uint32>(emu->session_id));
+		buf.WriteUInt32(count > 0 ? static_cast<uint16>(emu->entries[0].zone_id) : 0); // header only
+		buf.WriteUInt32(0);
+		buf.WriteUInt8(0);
+		buf.WriteUInt32(static_cast<uint32>(count));
+		for (int i = 0; i < count; ++i) {
+			const auto &e = emu->entries[i];
+			buf.WriteUInt32(static_cast<uint32>(e.instance_id));
+			buf.WriteUInt32(static_cast<uint16>(e.zone_id));
+			buf.WriteUInt32(static_cast<uint32>(e.player_count));
+			buf.WriteUInt8(0);
+		}
+		for (int i = 0; i < 6; ++i) {
+			buf.WriteUInt32(0);
+		}
+
+		auto outapp = new EQApplicationPacket(OP_PickZoneWindow, buf.size());
+		outapp->WriteData(buf.buffer(), buf.size());
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+
 	ENCODE(OP_ItemPacket)
 	{
 		EQApplicationPacket* in = *p;
@@ -6152,6 +6253,48 @@ namespace TOB
 		FINISH_ENCODE();
 	}
 
+	// GM petition queue: the client copies the body into the
+	// window record without a size check, so it must be exactly the 2220-byte TOB record
+	ENCODE(OP_PetitionCheckout)
+	{
+		ENCODE_LENGTH_EXACT(Petition_Struct);
+		SETUP_DIRECT_ENCODE(Petition_Struct, structs::Petition_Struct);
+
+		OUT(petnumber);
+		OUT(urgency);
+		strn0cpy(eq->accountid, emu->accountid, sizeof(eq->accountid));
+		strn0cpy(eq->lastgm, emu->lastgm, sizeof(eq->lastgm));
+		OUT(zone);
+		strn0cpy(eq->charname, emu->charname, sizeof(eq->charname));
+		OUT(charlevel);
+		OUT(charclass);
+		OUT(charrace);
+		OUT(checkouts);
+		OUT(unavail);
+		eq->senttime = static_cast<uint32>(emu->senttime);
+		strn0cpy(eq->petitiontext, emu->petitiontext, sizeof(eq->petitiontext));
+		strn0cpy(eq->gmtext, emu->gmtext, sizeof(eq->gmtext));
+
+		FINISH_ENCODE();
+	}
+
+	// the client prints the body as a C string; the server sends strlen(message) bytes, so add the NUL
+	ENCODE(OP_MultiLineMsg)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		size_t len = strnlen(reinterpret_cast<const char *>(in->pBuffer), in->size);
+		auto outapp = new EQApplicationPacket(OP_MultiLineMsg, len + 1);
+		if (len) {
+			memcpy(outapp->pBuffer, in->pBuffer, len);
+		}
+		outapp->pBuffer[len] = '\0';
+
+		dest->FastQueuePacket(&outapp, ack_req);
+		safe_delete(in);
+	}
+
 	// guild tribute: S2C layouts grew a u64 guild id / 4 bytes of padding
 	ENCODE(OP_GuildTributeFavorAndTimer)
 	{
@@ -9027,6 +9170,19 @@ namespace TOB
 		FINISH_DIRECT_DECODE();
 	}
 
+	DECODE(OP_AltCurrencyReclaim)
+	{
+		DECODE_LENGTH_EXACT(structs::AltCurrencyReclaim_Struct);
+		SETUP_DIRECT_DECODE(AltCurrencyReclaim_Struct, structs::AltCurrencyReclaim_Struct);
+
+		IN(currency_id);
+		IN(unknown004);
+		IN(count);
+		IN(reclaim_flag);
+
+		FINISH_DIRECT_DECODE();
+	}
+
 	DECODE(OP_AltCurrencySell)
 	{
 		DECODE_LENGTH_EXACT(structs::AltCurrencySellItem_Struct);
@@ -9468,6 +9624,82 @@ namespace TOB
 		emu->from_slot = tob_extra_general(eq->from_slot) ? invslot::SLOT_REJECT : TOBToServerSlot(eq->from_slot);
 		emu->to_slot   = tob_extra_general(eq->to_slot) ? invslot::SLOT_REJECT : TOBToServerSlot(eq->to_slot);
 		IN(number_in_stack);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	// GM petition queue: check-in sends the record header + gmtext as a C string (variable length)
+	DECODE(OP_PetitionCheckIn)
+	{
+		const size_t wire_size = __packet->size;
+		if (wire_size <= structs::PetitionCheckInHeaderSize) {
+			LogNetcode("Wrong size on incoming [{}] (TOB petition check-in): Got [{}], expected more than [{}]",
+				opcodes->EmuToName(__packet->GetOpcode()), wire_size, structs::PetitionCheckInHeaderSize);
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+		SETUP_DIRECT_DECODE(Petition_Struct, structs::Petition_Struct);
+
+		IN(petnumber);
+		IN(urgency);
+		strn0cpy(emu->accountid, eq->accountid, sizeof(emu->accountid));
+		strn0cpy(emu->lastgm, eq->lastgm, sizeof(emu->lastgm));
+		IN(zone);
+		strn0cpy(emu->charname, eq->charname, sizeof(emu->charname));
+		IN(charlevel);
+		IN(charclass);
+		IN(charrace);
+		IN(checkouts);
+		IN(unavail);
+		emu->senttime = eq->senttime;
+		strn0cpy(emu->petitiontext, eq->petitiontext, sizeof(emu->petitiontext));
+
+		const char *gm = reinterpret_cast<const char *>(__eq_buffer) + structs::PetitionCheckInHeaderSize;
+		size_t gm_len = strnlen(gm, std::min(wire_size - structs::PetitionCheckInHeaderSize, sizeof(emu->gmtext) - 1));
+		memcpy(emu->gmtext, gm, gm_len);
+		emu->gmtext[gm_len] = '\0';
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	// delete / resolve send only the u32 petition id; the handler wants a PetitionUpdate_Struct
+	DECODE(OP_PetitionDelete)
+	{
+		DECODE_LENGTH_EXACT(uint32);
+		SETUP_DIRECT_DECODE(PetitionUpdate_Struct, uint32);
+
+		emu->petnumber = *eq;
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_PetitionResolve)
+	{
+		DECODE_LENGTH_EXACT(uint32);
+		SETUP_DIRECT_DECODE(PetitionUpdate_Struct, uint32);
+
+		emu->petnumber = *eq;
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_PickZone)
+	{
+		DECODE_LENGTH_EXACT(structs::PickZone_Struct);
+		SETUP_DIRECT_DECODE(PickZone_Struct, structs::PickZone_Struct);
+
+		emu->session_id   = static_cast<int64>(eq->session_id);
+		emu->selection_id = static_cast<int32>(eq->selection_id);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_TradeSkillRecipeInspect)
+	{
+		DECODE_LENGTH_EXACT(structs::TradeSkillRecipeInspect_Struct);
+		SETUP_DIRECT_DECODE(TradeSkillRecipeInspect_Struct, structs::TradeSkillRecipeInspect_Struct);
+
+		IN(recipe_id);
 
 		FINISH_DIRECT_DECODE();
 	}
@@ -9941,7 +10173,7 @@ namespace TOB
 		buffer.WriteUInt8(0); //unsupported atm
 
 		//bool Tradeskills;
-		buffer.WriteUInt8(0); //unsupported atm
+		buffer.WriteUInt8(item->Tradeskills ? 1 : 0);
 
 		//s8 SvCold;
 		//s8 SvDisease;

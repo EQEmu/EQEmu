@@ -121,6 +121,7 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_AltCurrencyMerchantRequest] = &Client::Handle_OP_AltCurrencyMerchantRequest;
 	ConnectedOpcodes[OP_AltCurrencyPurchase] = &Client::Handle_OP_AltCurrencyPurchase;
 	ConnectedOpcodes[OP_AltCurrencyReclaim] = &Client::Handle_OP_AltCurrencyReclaim;
+	ConnectedOpcodes[OP_AltCurrencyReclaimAll] = &Client::Handle_OP_AltCurrencyReclaimAll;
 	ConnectedOpcodes[OP_AltCurrencySell] = &Client::Handle_OP_AltCurrencySell;
 	ConnectedOpcodes[OP_AltCurrencySellSelection] = &Client::Handle_OP_AltCurrencySellSelection;
 	ConnectedOpcodes[OP_Animation] = &Client::Handle_OP_Animation;
@@ -2916,6 +2917,16 @@ void Client::Handle_OP_AltCurrencyReclaim(const EQApplicationPacket *app)
 
 	/* Item to Currency Storage */
 	if (reclaim->reclaim_flag == 1) {
+		// TOB+ has a separate Reclaim All button, so Reclaim takes the stack on the cursor when there is one
+		const auto cursor = m_inv.GetCursorItem();
+		if (ClientVersion() >= EQ::versions::ClientVersion::TOB && cursor && cursor->GetID() == item_id) {
+			const uint32 count = std::max<int16>(cursor->GetCharges(), 1);
+			DeleteItemInInventory(EQ::invslot::slotCursor, 0, true);
+			SendCursorBuffer();
+			AddAlternateCurrencyValue(reclaim->currency_id, count);
+			return;
+		}
+
 		uint32 removed = NukeItem(item_id, invWhereWorn | invWherePersonal | invWhereCursor);
 		if (removed > 0) {
 			AddAlternateCurrencyValue(reclaim->currency_id, removed);
@@ -2936,6 +2947,25 @@ void Client::Handle_OP_AltCurrencyReclaim(const EQApplicationPacket *app)
 		else {
 			SummonItem(item_id, reclaim->count, 0, 0, 0, 0, 0, 0, false, EQ::invslot::slotCursor);
 			AddAlternateCurrencyValue(reclaim->currency_id, -((int)reclaim->count));
+		}
+	}
+}
+
+// TOB+ Reclaim All button: every carried currency item goes back into its currency
+void Client::Handle_OP_AltCurrencyReclaimAll(const EQApplicationPacket *app)
+{
+	if (IsTrader()) {
+		TraderEndTrader();
+	}
+
+	if (IsBuyer()) {
+		ToggleBuyerMode(false);
+	}
+
+	for (const auto &currency : zone->AlternateCurrencies) {
+		const uint32 removed = NukeItem(currency.item_id, invWhereWorn | invWherePersonal | invWhereCursor);
+		if (removed > 0) {
+			AddAlternateCurrencyValue(currency.id, removed);
 		}
 	}
 }
@@ -9849,6 +9879,17 @@ void Client::Handle_OP_ItemVerifyRequest(const EQApplicationPacket *app)
 
 	spell_id = item->Click.Effect;
 	bool is_casting_bard_song = false;
+
+	// TOB+ sends no target for a single target beneficial click when nothing is targeted
+	if (
+		ClientVersion() >= EQ::versions::ClientVersion::TOB &&
+		target_id == 0 &&
+		IsValidSpell(spell_id) &&
+		spells[spell_id].target_type == ST_Target &&
+		IsBeneficialSpell(spell_id)
+	) {
+		target_id = GetID();
+	}
 
 	if (spell_id > 0) {
 
