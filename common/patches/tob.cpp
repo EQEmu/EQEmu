@@ -6832,9 +6832,8 @@ namespace TOB
 		eq->entries[28] = TOBKeyRingSlots(3); // HeroForgeKeyRingSlots
 		eq->entries[29] = 0;  // DragonHoardSlots
 		eq->entries[30] = TOBKeyRingSlots(4); // TeleportKeyRingSlots
-		// the activated items ring has no entry here; if its tab refuses items, capture this packet on Live
 		eq->entries[31] = 0;  // PersonalDepotSlots
-		eq->entries[32] = 0;
+		eq->entries[32] = TOBKeyRingSlots(5); // ActivatedKeyRingSlots
 
 		FINISH_ENCODE();
 	}
