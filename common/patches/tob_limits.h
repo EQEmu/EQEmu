@@ -171,9 +171,9 @@ namespace TOB
 		using namespace enum_;
 
 		const int16 SLOT_INVALID = IINVALID;
-		// ToB has general slots 11/12 (and bags in them) that the server doesn't. SLOT_INVALID would make
-		// Client::SwapItem destroy the cursor item, so moves into them are mapped to this value instead
-		// and rejected (the item stays on the cursor server-side).
+		// ToB has slots the server doesn't: general 11/12, shared bank past the second slot, and the bags
+		// in them. SLOT_INVALID would make Client::SwapItem destroy the cursor item, so moves into them are
+		// mapped to this value instead and rejected (the item stays on the cursor server-side).
 		const uint32 SLOT_REJECT = 0xFFFFFFFE;
 		const int16 SLOT_BEGIN = INULL;
 

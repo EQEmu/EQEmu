@@ -9734,10 +9734,15 @@ namespace TOB
 
 		Log(Logs::Detail, Logs::Netcode, "TOB::DECODE(OP_MoveItem)");
 
-		// general slots 11/12 (and bags in them) don't exist server-side: reject the move (invslot::SLOT_REJECT)
-		auto tob_extra_general = [](const structs::InventorySlot_Struct &s) {
-			return s.Type == invtype::typePossessions &&
+		// ToB has slots the server doesn't: general 11/12, shared bank past the second slot, and the bags in them.
+		// TOBToServerSlot maps them to SLOT_INVALID, which Client::SwapItem treats as "destroy the cursor item".
+		// Send SLOT_REJECT instead so the move is refused (the item stays on the cursor).
+		auto tob_extra_slot = [](const structs::InventorySlot_Struct &s) {
+			const bool extra_general = s.Type == invtype::typePossessions &&
 				(s.Slot == invslot::slotGeneral11 || s.Slot == invslot::slotGeneral12);
+			const bool unmapped_storage = (s.Type == invtype::typeBank || s.Type == invtype::typeSharedBank) &&
+				s.Slot != invslot::SLOT_INVALID && TOBToServerSlot(s) == static_cast<uint32>(EQ::invslot::SLOT_INVALID);
+			return extra_general || unmapped_storage;
 		};
 
 		// key ring and stat slots that do not map (stat selection, bad index) must not read as "destroy" either
@@ -9746,8 +9751,8 @@ namespace TOB
 				TOBToServerSlot(s) == static_cast<uint32>(EQ::invslot::SLOT_INVALID);
 		};
 
-		emu->from_slot = (tob_extra_general(eq->from_slot) || tob_unmapped_ring(eq->from_slot)) ? invslot::SLOT_REJECT : TOBToServerSlot(eq->from_slot);
-		emu->to_slot   = (tob_extra_general(eq->to_slot) || tob_unmapped_ring(eq->to_slot)) ? invslot::SLOT_REJECT : TOBToServerSlot(eq->to_slot);
+		emu->from_slot = (tob_extra_slot(eq->from_slot) || tob_unmapped_ring(eq->from_slot)) ? invslot::SLOT_REJECT : TOBToServerSlot(eq->from_slot);
+		emu->to_slot   = (tob_extra_slot(eq->to_slot) || tob_unmapped_ring(eq->to_slot)) ? invslot::SLOT_REJECT : TOBToServerSlot(eq->to_slot);
 		IN(number_in_stack);
 
 		FINISH_DIRECT_DECODE();
