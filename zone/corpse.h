@@ -44,6 +44,7 @@ namespace EQ {
 // OP_AdvLoot subtypes (u16, first in both directions)
 enum AdvLootSubtype : uint16 {
 	AdvLootSync         = 3,
+	AdvLootCoin         = 6,
 	AdvLootLeave        = 7,
 	AdvLootLoot         = 8,
 	AdvLootLootResult   = 9,

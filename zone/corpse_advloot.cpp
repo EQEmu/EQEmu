@@ -21,11 +21,9 @@
 #include "common/rulesys.h"
 #include "common/say_link.h"
 #include "common/serialize_buffer.h"
-#include "common/strings.h"
 #include "zone/entity.h"
 #include "zone/groups.h"
 #include "zone/raids.h"
-#include "zone/string_ids.h"
 #include "zone/zone.h"
 
 #include <algorithm>
@@ -100,6 +98,29 @@ void SendAdvLootMasterLooter(Client *c, const std::string &name)
 	auto outapp = new EQApplicationPacket(OP_AdvLootMasterLooter, std::move(buf));
 	c->QueuePacket(outapp);
 	safe_delete(outapp);
+}
+
+// u16 subtype, u8 split, u64 copper, u8 received, u32 bonus. The client plays the coin sound, prints its own "You
+// receive ..." line and adds the coin to what it shows when the coin is a split or it is the master looter.
+void SendAdvLootCoin(Client *c, uint64 copper, bool split)
+{
+	SerializeBuffer buf;
+	buf.WriteUInt16(AdvLootCoin);
+	buf.WriteUInt8(split ? 1 : 0);
+	buf.WriteUInt64(copper);
+	buf.WriteUInt8(1);
+	buf.WriteUInt32(0); // no bonus suffix
+
+	auto outapp = new EQApplicationPacket(OP_AdvLoot, std::move(buf));
+	c->QueuePacket(outapp);
+	safe_delete(outapp);
+}
+
+// the money update has to come after the coin message: it sets the real total over the client's own addition
+void GiveAdvLootCoin(Client *c, uint64 copper, bool split)
+{
+	SendAdvLootCoin(c, copper, split);
+	c->AddMoneyToPP(copper, true);
 }
 
 bool IsBagContent(const LootItem *item)
@@ -234,11 +255,11 @@ void Corpse::StartAdvancedLoot(Client *killer)
 	// coin: kept by the master looter when their Auto Split is off, otherwise split evenly over the group or raid;
 	// solo kills give it to the killer
 	if (GetCopper() || GetSilver() || GetGold() || GetPlatinum()) {
+		const uint64 total = static_cast<uint64>(GetCopper()) + GetSilver() * 10ULL + GetGold() * 100ULL + GetPlatinum() * 1000ULL;
+
 		Client *master_looter = GetAdvancedLootMasterLooter();
 		if (master_looter && !master_looter->AutoSplitEnabled()) {
-			const std::string money = Strings::Money(GetPlatinum(), GetGold(), GetSilver(), GetCopper());
-			master_looter->AddMoneyToPP(GetCopper(), GetSilver(), GetGold(), GetPlatinum(), true);
-			master_looter->MessageString(Chat::MoneySplit, YOU_RECEIVE, money.c_str());
+			GiveAdvLootCoin(master_looter, total, false);
 		}
 		else if (raid || group) {
 			// even split of the total value (Group::SplitMoney splits each coin type and gives the
@@ -263,28 +284,22 @@ void Corpse::StartAdvancedLoot(Client *killer)
 				sharers.push_back(killer);
 			}
 
-			const uint64 total = static_cast<uint64>(GetCopper()) + GetSilver() * 10ULL + GetGold() * 100ULL + GetPlatinum() * 1000ULL;
-			const uint64 share = total / sharers.size();
-			const uint64 extra = total - share * sharers.size(); // the remainder goes to the killer
+			const uint64 share         = total / sharers.size();
+			const uint64 extra         = total - share * sharers.size();
+			const bool   killer_shares = std::find(sharers.begin(), sharers.end(), killer) != sharers.end();
+			Client      *remainder_to  = killer_shares ? killer : sharers.front(); // the killer if they share, else the first member
 			for (Client *s : sharers) {
-				const uint64 amount = share + (s == killer ? extra : 0);
-				if (!amount) {
-					continue;
+				const uint64 amount = share + (s == remainder_to ? extra : 0);
+				if (amount) {
+					GiveAdvLootCoin(s, amount, true);
 				}
-
-				s->AddMoneyToPP(amount, true);
-				const std::string money = Strings::Money(amount / 1000, (amount / 100) % 10, (amount / 10) % 10, amount % 10);
-				s->MessageString(Chat::MoneySplit, YOU_RECEIVE_AS_SPLIT, money.c_str());
-			}
-
-			if (extra && std::find(sharers.begin(), sharers.end(), killer) == sharers.end()) {
-				sharers.front()->AddMoneyToPP(extra, true);
 			}
 		}
 		else {
-			const std::string money = Strings::Money(GetPlatinum(), GetGold(), GetSilver(), GetCopper());
-			killer->AddMoneyToPP(GetCopper(), GetSilver(), GetGold(), GetPlatinum(), true);
-			killer->MessageString(Chat::MoneySplit, YOU_RECEIVE, money.c_str());
+			// the client only takes unsplit coin as its own when it sees itself as master looter, and nothing tells
+			// it so after it leaves a group, so say it again for a solo kill
+			SendAdvLootMasterLooter(killer, killer->GetCleanName());
+			GiveAdvLootCoin(killer, total, false);
 		}
 
 		RemoveCash();
