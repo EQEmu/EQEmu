@@ -89,6 +89,14 @@ void SendAdvLootClearPending(Client *c, uint32 corpse_id, uint32 item_id)
 	safe_delete(outapp);
 }
 
+// a refused loot request: AdvLootClearPending alone leaves the client's request pending (it is keyed by sequence and only a
+// result frees it), so answer with a result the client takes as "nothing happened" as well
+void RefuseAdvLootRequest(Client *c, uint32 corpse_id, uint32 item_id, uint32 sequence)
+{
+	SendAdvLootResult(c, AdvLootResultRefused, sequence);
+	SendAdvLootClearPending(c, corpse_id, item_id);
+}
+
 void SendAdvLootMasterLooter(Client *c, const std::string &name)
 {
 	SerializeBuffer buf;
@@ -590,13 +598,13 @@ void Corpse::AdvancedLootItem(Client *c, uint32 item_id, uint32 sequence)
 
 	if (m_is_locked && c->Admin() < AccountStatus::GMAdmin) {
 		c->Message(Chat::Red, "Error: Corpse locked by GM.");
-		SendAdvLootClearPending(c, GetID(), item_id);
+		RefuseAdvLootRequest(c, GetID(), item_id, sequence);
 		return;
 	}
 
 	if (!IsAdvancedLootPresent(c)) {
 		c->Message(Chat::Red, "You were not near this corpse when it was looted. Go to the corpse and right-click it first.");
-		SendAdvLootClearPending(c, GetID(), item_id);
+		RefuseAdvLootRequest(c, GetID(), item_id, sequence);
 		return;
 	}
 
@@ -648,7 +656,7 @@ void Corpse::AdvancedLootItem(Client *c, uint32 item_id, uint32 sequence)
 	}
 
 	if (LootPreventedByEvents(c, inst.get())) {
-		SendAdvLootClearPending(c, GetID(), item_id);
+		RefuseAdvLootRequest(c, GetID(), item_id, sequence);
 		return;
 	}
 

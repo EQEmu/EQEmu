@@ -58,10 +58,11 @@ enum AdvLootSubtype : uint16 {
 };
 
 enum AdvLootResult : uint16 {
-	AdvLootResultLooted = 1,
-	AdvLootResultLore   = 3, // client prints 371
-	AdvLootResultNoRoom = 5, // client prints 372
-	AdvLootResultGone   = 7, // client prints 11318
+	AdvLootResultLooted  = 1,
+	AdvLootResultLore    = 3, // client prints 371
+	AdvLootResultNoRoom  = 5, // client prints 372
+	AdvLootResultRefused = 6, // no client handling: frees the request and the row, prints nothing
+	AdvLootResultGone    = 7, // client prints 11318
 };
 
 // OP_AdvLootMisc subtypes (client to server)
