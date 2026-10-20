@@ -27,6 +27,7 @@
 #include "common/zone_store.h"
 #include "world/client.h"
 #include "world/clientlist.h"
+#include "world/fellowship_manager.h"
 #include "world/web_interface.h"
 #include "world/wguild_mgr.h"
 #include "world/worlddb.h"
@@ -431,10 +432,12 @@ void ClientList::ClientUpdate(ZoneServer *zoneserver, ServerClientList_Struct *s
 			}
 			else if (scl->remove == 1) {
 				cle->LeavingZone(zoneserver, CLE_Status::Zoning);
+				WorldFellowshipManager::Instance()->OnClientListChange(cle->CharID());
 			}
 			else {
 				cle->Update(zoneserver, scl);
 				AddToZoneServerCaches(cle);
+				WorldFellowshipManager::Instance()->OnClientListChange(cle->CharID());
 			}
 			return;
 		}
@@ -511,6 +514,7 @@ void ClientList::ClientUpdate(ZoneServer *zoneserver, ServerClientList_Struct *s
 	clientlist.Insert(cle);
 	AddToZoneServerCaches(cle);
 	zoneserver->ChangeWID(scl->charid, cle->GetID());
+	WorldFellowshipManager::Instance()->OnClientListChange(scl->charid);
 }
 
 void ClientList::CLEKeepAlive(uint32 numupdates, uint32* wid) {

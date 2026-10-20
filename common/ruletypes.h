@@ -252,6 +252,10 @@ RULE_INT(Character, SecondsBeforeAFKNonCombatZone, 600, "Seconds before a player
 RULE_BOOL(Character, EnableItemOverflow, true, "TOB+ clients: items queued behind the cursor are shown in the Item Overflow window (/itemoverflow)")
 RULE_BOOL(Character, EnableKeyRings, true, "TOB+ clients: enable the key rings (mount, illusion, familiar, Hero's Forge, teleportation and activated items)")
 RULE_INT(Character, KeyRingSlots, 100, "TOB+ clients: slots in each key ring (the client caps illusion at 300, familiar at 450, teleportation at 250, the others at 500)")
+RULE_BOOL(Character, EnableFellowships, false, "TOB+ clients: fellowships (window, campsites, insignia teleport, fellowship chat)")
+RULE_INT(Character, FellowshipRejoinCooldownMinutes, 5, "Minutes after joining a fellowship before a character can create or join another (0 = no cooldown; Live is 1200, 20 hours)")
+RULE_INT(Character, FellowshipCampsiteMinutes, 360, "How long a fellowship campsite lasts (Live is 6 hours)")
+RULE_INT(Character, FellowshipCampsiteMinimumMembers, 3, "Fellowship members (the one placing it included) that must be near the member placing a campsite (Live is 3)")
 RULE_CATEGORY_END()
 
 RULE_CATEGORY(Mercs)

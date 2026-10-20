@@ -43,6 +43,8 @@ set(zone_sources
 	expedition_request.cpp
 	fastmath.cpp
 	fearpath.cpp
+	fellowship.cpp
+	fellowship_manager.cpp
 	forage.cpp
 	global_loot_manager.cpp
 	groups.cpp
@@ -146,6 +148,7 @@ set(zone_headers
 	event_codes.h
 	expedition_request.h
 	fastmath.h
+	fellowship_manager.h
 	forage.h
 	global_loot_manager.h
 	groups.h

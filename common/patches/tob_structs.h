@@ -2749,6 +2749,67 @@ namespace TOB {
 	constexpr uint32 ADVLOOT_TRAILER_UNKNOWN004 = 0xFFFF;
 	constexpr uint32 ADVLOOT_TRAILER_UNKNOWN008 = 0xFFFF;
 
+	// Fellowship window (OP_FellowshipUpdate, OP_FellowshipAction, OP_FellowshipInvite, campfire list request)
+	struct FellowshipMember_Struct {
+		/*000*/ EqGuid guid;            // {character_id, world_id, 0}
+		/*008*/ char   name[64];
+		/*072*/ uint32 zone;            // zone_id | instance_id << 16, 0 while zoning or offline
+		/*076*/ uint32 level;
+		/*080*/ uint32 class_;
+		/*084*/ uint32 last_on;
+		/*088*/
+	};
+
+	struct FellowshipCampsite_Struct {
+		/*000*/ float  x;
+		/*004*/ float  y;
+		/*008*/ float  z;
+		/*012*/ uint32 zone;            // zone_id | instance_id << 16
+		/*016*/ uint32 expires_at;      // non-zero = a campsite exists
+		/*020*/ uint32 unknown020;
+		/*024*/ EqGuid fellowship_id;
+		/*032*/ uint32 campfire_type;
+		/*036*/ uint32 is_present;      // 1 with a campsite
+		/*040*/
+	};
+
+	struct FellowshipUpdate_Struct {
+		/*0000*/ uint8  offline_mode[12];
+		/*0012*/ uint32 unknown012;
+		/*0016*/ EqGuid fellowship_id;  // {id, world_id, 0}
+		/*0024*/ char   motd[1024];
+		/*1048*/ uint32 member_count;
+		/*1052*/ uint32 unknown1052;
+		/*1056*/ FellowshipMember_Struct members[12];
+		/*2112*/ uint32 now;
+		/*2116*/ uint8  exp_sharing[12];
+		/*2128*/ uint8  exp_capped[12];
+		/*2140*/ uint32 unknown2140;    // Live sends 120; never read
+		/*2144*/ FellowshipCampsite_Struct campsite;
+		/*2184*/
+	};
+
+	struct FellowshipAction_Struct {    // C2S; OP_FellowshipInvite S2C has the same layout
+		/*0000*/ uint32 action;
+		/*0004*/ uint32 unknown004;
+		/*0008*/ EqGuid target_guid;
+		/*0016*/ uint8  unknown016[8];
+		/*0024*/ EqGuid inviter_guid;    // S2C invite only
+		/*0032*/ EqGuid fellowship_guid; // action 12 (C2S) and the invite (S2C)
+		/*0040*/ char   text[1024];      // action 2
+		/*1064*/ uint8  unknown1064[20];
+		/*1084*/ uint32 campfire_type;   // action 8
+		/*1088*/ uint8  unknown1088[8];
+		/*1096*/
+	};
+
+	struct FellowshipCampfireListRequest_Struct {
+		/*00*/ uint8 only_usable;
+		/*01*/ uint8 unknown01[3];
+		/*04*/ int32 category;          // -1 = all
+		/*08*/
+	};
+
 #pragma pack()
 
 

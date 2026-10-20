@@ -45,6 +45,7 @@ set(common_sources
 	evolving_items.cpp
 	extprofile.cpp
 	faction.cpp
+	fellowship_base.cpp
 	file.cpp
 	guild_base.cpp
 	inventory_profile.cpp
@@ -224,6 +225,9 @@ set(repositories
 	repositories/base/base_faction_list_mod_repository.h
 	repositories/base/base_faction_list_repository.h
 	repositories/base/base_faction_values_repository.h
+	repositories/base/base_fellowship_campsites_repository.h
+	repositories/base/base_fellowship_members_repository.h
+	repositories/base/base_fellowships_repository.h
 	repositories/base/base_fishing_repository.h
 	repositories/base/base_forage_repository.h
 	repositories/base/base_friends_repository.h
@@ -422,6 +426,9 @@ set(repositories
 	repositories/faction_list_mod_repository.h
 	repositories/faction_list_repository.h
 	repositories/faction_values_repository.h
+	repositories/fellowship_campsites_repository.h
+	repositories/fellowship_members_repository.h
+	repositories/fellowships_repository.h
 	repositories/fishing_repository.h
 	repositories/forage_repository.h
 	repositories/friends_repository.h
@@ -598,6 +605,8 @@ set(common_headers
 	extprofile.h
 	faction.h
 	features.h
+	fellowship.h
+	fellowship_base.h
 	file.h
 	fixed_memory_hash_set.h
 	fixed_memory_variable_hash_set.h

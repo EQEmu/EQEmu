@@ -51,6 +51,7 @@
 #include "zone/dialogue_window.h"
 #include "zone/dynamic_zone.h"
 #include "zone/expedition_request.h"
+#include "zone/fellowship_manager.h"
 #include "zone/guild_mgr.h"
 #include "zone/lua_parser.h"
 #include "zone/mob_movement_manager.h"
@@ -709,6 +710,9 @@ Client::~Client() {
 	DataBucket::DeleteCachedBuckets(DataBucketLoadType::Account, AccountID());
 	DataBucket::DeleteCachedBuckets(DataBucketLoadType::Client, CharacterID());
 
+	// TOB+ fellowships: a pending invite does not outlive the client
+	ZoneFellowshipManager::Instance()->ClearInvite(CharacterID());
+
 	if (RuleB(Bots, Enabled)) {
 		Bot::ProcessBotOwnerRefDelete(this);
 	}
@@ -1354,6 +1358,19 @@ void Client::ChannelMessageReceived(uint8 chan_num, uint8 language, uint8 lang_s
 		} else if (!guild_mgr.CheckPermission(GuildID(), GuildRank(), GUILD_ACTION_GUILD_CHAT_SPEAK_IN)) {
 			MessageString(Chat::EchoGuild, NO_PROPER_ACCESS);
 		} else if (!worldserver.SendChannelMessage(this, targetname, chan_num, GuildID(), language, lang_skill, message)) {
+			Message(Chat::White, "Error: World server disconnected");
+		}
+		break;
+	}
+	case ChatChannel_Fellowship: { /* TOB+ Fellowship Chat */
+		if (!IsFellowshipEnabled()) {
+			LogFellowshipsDetail("Dropping fellowship chat from [{}]: fellowships are not enabled for this client", GetCleanName());
+			break;
+		}
+
+		if (!GetFellowshipID()) {
+			MessageString(Chat::DefaultText, FELLOWSHIP_NOT_MEMBER);
+		} else if (!worldserver.SendChannelMessage(this, targetname, chan_num, GetFellowshipID(), language, lang_skill, message)) {
 			Message(Chat::White, "Error: World server disconnected");
 		}
 		break;

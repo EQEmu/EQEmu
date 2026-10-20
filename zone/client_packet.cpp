@@ -41,6 +41,7 @@
 #include "zone/dialogue_window.h"
 #include "zone/dynamic_zone.h"
 #include "zone/event_codes.h"
+#include "zone/fellowship_manager.h"
 #include "zone/gm_commands/door_manipulation.h"
 #include "zone/gm_commands/object_manipulation.h"
 #include "zone/guild_mgr.h"
@@ -203,6 +204,8 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_FaceChange] = &Client::Handle_OP_FaceChange;
 	ConnectedOpcodes[OP_FactionList] = &Client::Handle_OP_FactionList;
 	ConnectedOpcodes[OP_FeignDeath] = &Client::Handle_OP_FeignDeath;
+	ConnectedOpcodes[OP_FellowshipAction] = &Client::Handle_OP_FellowshipAction;
+	ConnectedOpcodes[OP_FellowshipCampfireListRequest] = &Client::Handle_OP_FellowshipCampfireListRequest;
 	ConnectedOpcodes[OP_FindPersonRequest] = &Client::Handle_OP_FindPersonRequest;
 	ConnectedOpcodes[OP_InspectBuffs] = &Client::Handle_OP_InspectBuffs;
 	ConnectedOpcodes[OP_FindZoneConnectionsRequest] = &Client::Handle_OP_FindZoneConnectionsRequest;
@@ -1331,6 +1334,9 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 
 	uint32 cid = CharacterID();
 	character_id = cid; /* Global character_id reference */
+
+	// TOB+ fellowships: from the zone's cache; every use checks IsFellowshipEnabled()
+	m_fellowship_id = ZoneFellowshipManager::Instance()->GetFellowshipIDByCharacterID(cid);
 
 	/* Flush and reload factions */
 	database.RemoveTempFactions(this);
@@ -9885,6 +9891,13 @@ void Client::Handle_OP_ItemVerifyRequest(const EQApplicationPacket *app)
 	}
 
 	spell_id = item->Click.Effect;
+
+	// TOB+ Fellowship Registration Insignia: teleport to the campsite instead of casting
+	if (spell_id == SPELL_FELLOWSHIP_CALLING && IsFellowshipEnabled()) {
+		UseFellowshipInsignia();
+		return;
+	}
+
 	bool is_casting_bard_song = false;
 
 	// TOB+ sends no target for a single target beneficial click when nothing is targeted

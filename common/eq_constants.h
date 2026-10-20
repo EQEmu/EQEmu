@@ -1016,6 +1016,7 @@ enum ChatChannelNames : uint16
 	ChatChannel_UNKNOWN_Guild = 17,
 	ChatChannel_UNKNOWN_GMSAY = 18,
 	ChatChannel_UCSRelay = 20,
+	ChatChannel_Fellowship = 21,
 	ChatChannel_Emotes = 22
 };
 

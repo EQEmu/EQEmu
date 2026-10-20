@@ -2313,6 +2313,14 @@ void EntityList::ChannelMessageFromWorld(const char *from, const char *to,
 			}
 			if (client->GetFilter(FilterGuildChat) == FilterHide)
 				continue;
+		} else if (chan_num == ChatChannel_Fellowship) {
+			// TOB+ fellowship chat: the guild id parameter carries the fellowship id
+			if (!guild_id || client->GetFellowshipID() != guild_id || !client->IsFellowshipEnabled()) {
+				continue;
+			}
+			if (client->GetFilter(FilterFellowshipChat) == FilterHide) {
+				continue;
+			}
 		} else if (chan_num == ChatChannel_OOC) {
 			if (client->GetFilter(FilterOOC) == FilterHide)
 				continue;

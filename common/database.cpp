@@ -1920,6 +1920,7 @@ bool Database::CopyCharacter(
 	};
 
 	std::vector<std::string> ignore_tables = {
+		"fellowship_members",
 		"guilds",
 	};
 

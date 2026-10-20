@@ -7265,6 +7265,44 @@ ALTER TABLE `character_pet_buffs`
 	CHANGE COLUMN `instrument_mod` `instrument_mod` INT(10) UNSIGNED NOT NULL DEFAULT 10 AFTER `ExtraDIChance`;
 )",
 	},
+	ManifestEntry{
+		.version = 9331,
+		.description = "2026_10_19_fellowships.sql",
+		.check = "SHOW TABLES LIKE 'fellowships'",
+		.condition = "empty",
+		.match = "",
+		.sql = R"(
+CREATE TABLE `fellowships` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `leader_id` int unsigned NOT NULL,
+  `motd` varchar(1023) NOT NULL DEFAULT '',
+  `created_at` int unsigned NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `leader_id` (`leader_id`)
+);
+CREATE TABLE `fellowship_members` (
+  `character_id` int unsigned NOT NULL,
+  `fellowship_id` int unsigned NOT NULL,
+  `joined_at` int unsigned NOT NULL,
+  `is_exp_sharing` tinyint unsigned NOT NULL DEFAULT 0,
+  PRIMARY KEY (`character_id`),
+  KEY `fellowship_id` (`fellowship_id`)
+);
+CREATE TABLE `fellowship_campsites` (
+  `fellowship_id` int unsigned NOT NULL,
+  `zone_id` smallint unsigned NOT NULL,
+  `instance_id` smallint unsigned NOT NULL,
+  `x` float NOT NULL,
+  `y` float NOT NULL,
+  `z` float NOT NULL,
+  `heading` float NOT NULL,
+  `campfire_type` int unsigned NOT NULL,
+  `placed_at` int unsigned NOT NULL,
+  `expires_at` int unsigned NOT NULL,
+  PRIMARY KEY (`fellowship_id`)
+);
+)",
+	},
 // -- template; copy/paste this when you need to create a new entry
 //	ManifestEntry{
 //		.version = 9228,

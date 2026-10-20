@@ -4667,6 +4667,79 @@ struct ItemOverflow_Struct {
 /*12*/
 };
 
+// TOB+ fellowships: client-neutral; the TOB patch adds the world id to the 64-bit ids
+struct FellowshipMember_Struct {
+/*000*/ uint32 character_id;
+/*004*/ char   name[64];
+/*068*/ uint16 zone_id;         // 0 while zoning or offline
+/*070*/ uint16 instance_id;
+/*072*/ uint32 level;
+/*076*/ uint32 class_;
+/*080*/ uint32 last_on;         // unix seconds
+/*084*/ uint8  is_exp_sharing;
+/*085*/ uint8  is_exp_capped;   // always 0: vitality is not implemented
+/*086*/ uint8  is_offline_mode; // always 0
+/*087*/ uint8  unused087;
+/*088*/
+};
+
+struct FellowshipCampsite_Struct {
+/*00*/ float  x;
+/*04*/ float  y;
+/*08*/ float  z;
+/*12*/ uint16 zone_id;
+/*14*/ uint16 instance_id;
+/*16*/ uint32 expires_at;       // 0 = no campsite
+/*20*/ uint32 campfire_type;
+/*24*/
+};
+
+struct FellowshipUpdate_Struct {
+/*0000*/ uint32                    fellowship_id;
+/*0004*/ char                      motd[1024];
+/*1028*/ uint32                    member_count;
+/*1032*/ FellowshipMember_Struct   members[12];  // the leader first
+/*2088*/ FellowshipCampsite_Struct campsite;
+/*2112*/
+};
+
+struct FellowshipAction_Struct {
+/*0000*/ uint32 action;              // FellowshipAction
+/*0004*/ uint32 target_character_id;
+/*0008*/ uint32 fellowship_id;       // toggle exp sharing only
+/*0012*/ uint32 campfire_type;       // create campsite only
+/*0016*/ char   motd[1024];          // set MOTD only, always terminated
+/*1040*/
+};
+
+struct FellowshipInvite_Struct {
+/*00*/ uint32 target_character_id;
+/*04*/ uint32 inviter_character_id;
+/*08*/ uint32 fellowship_id;
+/*12*/
+};
+
+struct FellowshipCampfireListRequest_Struct {
+/*00*/ uint8 only_usable;
+/*01*/ uint8 unused01[3];
+/*04*/ int32 category;               // -1 = all
+/*08*/
+};
+
+struct FellowshipCampfireListEntry_Struct {
+/*00*/ uint8  is_usable;
+/*01*/ uint8  unused01[3];
+/*04*/ uint32 campfire_type;         // create campsite sends it back
+/*08*/ uint32 description_id;        // dbstr id
+/*12*/ char   name[64];
+/*76*/
+};
+
+struct FellowshipCampfireList_Struct {
+/*00*/ uint32                             count;
+/*04*/ FellowshipCampfireListEntry_Struct entries[0];
+};
+
 //variable length packet of points
 struct FindPersonResult_Struct {
 	FindPerson_Point dest;

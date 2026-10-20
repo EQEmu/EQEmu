@@ -29,6 +29,7 @@
 #define SPELL_LIFEBURN 2755
 #define SPELL_LEECH_TOUCH 2766
 #define SPELL_LAY_ON_HANDS 87
+#define SPELL_FELLOWSHIP_CALLING 7618 // Fellowship Registration Insignia: teleport to the campsite
 #define SPELL_HARM_TOUCH 88
 #define SPELL_HARM_TOUCH2 2821
 #define SPELL_IMP_HARM_TOUCH 2774

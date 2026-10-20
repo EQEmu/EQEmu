@@ -22,6 +22,7 @@ Copyright (C) 2001-2026 EQEmu Development Team
 #include "common/global_define.h"
 #include "common/eqemu_config.h"
 #include "common/eqemu_logsys.h"
+#include "common/fellowship.h"
 #include "common/opcodemgr.h"
 
 #include "common/eq_stream_ident.h"
@@ -1393,6 +1394,106 @@ namespace TOB
 		auto outapp = new EQApplicationPacket(OP_FindZoneConnections, std::move(buf));
 		dest->FastQueuePacket(&outapp, ack_req);
 		delete in;
+	}
+
+	namespace {
+		// Live always sends it; the client never reads it
+		constexpr uint32 FellowshipUpdateUnknown2140 = 120;
+	}
+
+	ENCODE(OP_FellowshipCampfireList)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		const auto emu      = reinterpret_cast<const FellowshipCampfireList_Struct *>(in->pBuffer);
+		const bool has_head = in->size >= sizeof(FellowshipCampfireList_Struct);
+		if (!has_head || in->size != sizeof(FellowshipCampfireList_Struct) + emu->count * sizeof(FellowshipCampfireListEntry_Struct)) {
+			LogNetcode("TOB::ENCODE(OP_FellowshipCampfireList) wrong size [{}]", in->size);
+			delete in;
+			return;
+		}
+
+		SerializeBuffer buffer;
+		buffer.WriteUInt32(emu->count);
+		for (uint32 index = 0; index < emu->count; ++index) {
+			const auto &entry = emu->entries[index];
+
+			buffer.WriteUInt8(entry.is_usable);
+			buffer.WriteUInt32(entry.campfire_type);
+			buffer.WriteUInt32(entry.description_id);
+			buffer.WriteString(std::string(entry.name, strnlen(entry.name, sizeof(entry.name))));
+		}
+
+		auto outapp = new EQApplicationPacket(OP_FellowshipCampfireList, buffer.size());
+		outapp->WriteData(buffer.buffer(), buffer.size());
+		dest->FastQueuePacket(&outapp, ack_req);
+
+		delete in;
+	}
+
+	ENCODE(OP_FellowshipInvite)
+	{
+		ENCODE_LENGTH_EXACT(FellowshipInvite_Struct);
+		SETUP_DIRECT_ENCODE(FellowshipInvite_Struct, structs::FellowshipAction_Struct);
+
+		eq->action                  = FellowshipInvite;
+		eq->target_guid.Id          = emu->target_character_id;
+		eq->target_guid.WorldId     = RuleI(World, Id);
+		eq->inviter_guid.Id         = emu->inviter_character_id;
+		eq->inviter_guid.WorldId    = RuleI(World, Id);
+		eq->fellowship_guid.Id      = emu->fellowship_id;
+		eq->fellowship_guid.WorldId = RuleI(World, Id);
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_FellowshipUpdate)
+	{
+		ENCODE_LENGTH_EXACT(FellowshipUpdate_Struct);
+		SETUP_DIRECT_ENCODE(FellowshipUpdate_Struct, structs::FellowshipUpdate_Struct);
+
+		eq->fellowship_id.Id      = emu->fellowship_id;
+		eq->fellowship_id.WorldId = RuleI(World, Id);
+		strn0cpy(eq->motd, emu->motd, sizeof(eq->motd));
+
+		const uint32 count = std::min<uint32>(emu->member_count, Fellowship::MAX_MEMBERS);
+		eq->member_count   = count;
+		for (uint32 i = 0; i < count; ++i) {
+			const auto &member = emu->members[i];
+			auto       &out    = eq->members[i];
+
+			out.guid.Id      = member.character_id;
+			out.guid.WorldId = RuleI(World, Id);
+			strn0cpy(out.name, member.name, sizeof(out.name));
+			out.zone    = member.zone_id | (static_cast<uint32>(member.instance_id) << 16);
+			out.level   = member.level;
+			out.class_  = member.class_;
+			out.last_on = member.last_on;
+
+			eq->exp_sharing[i]  = member.is_exp_sharing;
+			eq->exp_capped[i]   = member.is_exp_capped;
+			eq->offline_mode[i] = member.is_offline_mode;
+		}
+
+		eq->now         = static_cast<uint32>(time(nullptr));
+		eq->unknown2140 = FellowshipUpdateUnknown2140;
+
+		if (emu->campsite.expires_at != 0) {
+			auto &campsite = eq->campsite;
+
+			campsite.x                     = emu->campsite.x;
+			campsite.y                     = emu->campsite.y;
+			campsite.z                     = emu->campsite.z;
+			campsite.zone                  = emu->campsite.zone_id | (static_cast<uint32>(emu->campsite.instance_id) << 16);
+			campsite.expires_at            = emu->campsite.expires_at;
+			campsite.fellowship_id.Id      = emu->fellowship_id;
+			campsite.fellowship_id.WorldId = RuleI(World, Id);
+			campsite.campfire_type         = emu->campsite.campfire_type;
+			campsite.is_present            = 1;
+		}
+
+		FINISH_ENCODE();
 	}
 
 	ENCODE(OP_Fling)
@@ -8962,6 +9063,39 @@ namespace TOB
 		emu->damage = static_cast<uint32>(eq->damage);
 		IN(dmgtype);
 		emu->constant = 0xFFFF;
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_FellowshipAction)
+	{
+		DECODE_LENGTH_EXACT(structs::FellowshipAction_Struct);
+
+		const auto in = reinterpret_cast<const structs::FellowshipAction_Struct *>(__packet->pBuffer);
+		if (strnlen(in->text, sizeof(in->text)) >= sizeof(in->text)) {
+			LogNetcode("TOB::DECODE(OP_FellowshipAction) unterminated text, action [{}]", in->action);
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+
+		SETUP_DIRECT_DECODE(FellowshipAction_Struct, structs::FellowshipAction_Struct);
+
+		IN(action);
+		emu->target_character_id = eq->target_guid.Id;
+		emu->fellowship_id       = eq->fellowship_guid.Id;
+		IN(campfire_type);
+		strn0cpy(emu->motd, eq->text, sizeof(emu->motd));
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_FellowshipCampfireListRequest)
+	{
+		DECODE_LENGTH_EXACT(structs::FellowshipCampfireListRequest_Struct);
+		SETUP_DIRECT_DECODE(FellowshipCampfireListRequest_Struct, structs::FellowshipCampfireListRequest_Struct);
+
+		IN(only_usable);
+		IN(category);
 
 		FINISH_DIRECT_DECODE();
 	}

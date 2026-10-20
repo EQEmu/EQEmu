@@ -136,6 +136,8 @@
 	void Handle_OP_FaceChange(const EQApplicationPacket *app);
 	void Handle_OP_FactionList(const EQApplicationPacket *app);
 	void Handle_OP_FeignDeath(const EQApplicationPacket *app);
+	void Handle_OP_FellowshipAction(const EQApplicationPacket *app);
+	void Handle_OP_FellowshipCampfireListRequest(const EQApplicationPacket *app);
 	void Handle_OP_FindPersonRequest(const EQApplicationPacket *app);
 	void Handle_OP_FindZoneConnectionsRequest(const EQApplicationPacket *app);
 	void Handle_OP_InspectBuffs(const EQApplicationPacket *app);

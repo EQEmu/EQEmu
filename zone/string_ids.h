@@ -624,3 +624,19 @@
 #define GAIN_XP_BONUS				14541	//You gain experience (with a bonus)! // TODO: TOB - 14541 You gain experience (with a bonus)!%1
 #define GAIN_XP_PENALTY				14542	//You gain experience (with a penalty)! // TODO: TOB - 14542 You gain experience (with a penalty)!%1
 #define GENERIC_MISS				15041	//%1 missed %2
+// TOB+ fellowships
+#define ACTION_NOT_NOW_TRY_AGAIN	643	//You cannot perform that action right now. Please try again in a moment.
+#define FELLOWSHIP_CAMPFIRE_FAILED	806	//You can't create a campfire for some reason. Perhaps your wood is wet?
+#define FELLOWSHIP_NOT_MEMBER	4573	//You are not a member of a fellowship.
+#define FELLOWSHIP_NO_LONGER_MEMBER	4590	//You are no longer in a fellowship.
+#define FELLOWSHIP_DISBANDED	4591	//Your fellowship has disbanded.
+#define FELLOWSHIP_MEMBER_LEFT	4592	//%1 has left the fellowship.
+#define FELLOWSHIP_TARGET_COOLDOWN	6480	//Cannot add %1 to your fellowship for another %2 hours and %3 minutes.
+#define FELLOWSHIP_SELF_COOLDOWN	6481	//You cannot create or join a fellowship for another %1 hours and %2 minutes.
+#define FELLOWSHIP_NOT_ENOUGH_NEARBY	9196	//You do not have enough nearby fellowship members to create the camp.
+#define FELLOWSHIP_TARGET_IN_FELLOWSHIP	11010	//Target is already in a fellowship.
+#define FELLOWSHIP_FULL	11011	//Fellowship is full
+#define FELLOWSHIP_ADD_FAILED	11012	//Player failed to add.
+#define FELLOWSHIP_ALREADY_LEADER	11013	//That player is already the fellowship leader.
+#define FELLOWSHIP_CAMPSITE_UNREACHABLE	11016	//Your campsite is in an area that cannot be teleported to.
+#define FELLOWSHIP_NO_CAMPSITE	11017	//Your Fellowship does not have a campsite.

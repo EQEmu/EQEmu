@@ -39,6 +39,7 @@
 #include "world/clientlist.h"
 #include "world/dynamic_zone_manager.h"
 #include "world/dynamic_zone.h"
+#include "world/fellowship_manager.h"
 #include "world/lfplist.h"
 #include "world/login_server_list.h"
 #include "world/login_server.h"
@@ -431,6 +432,12 @@ void ZoneServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p) {
 				break;
 			}
 
+			// the fellowship id rides in guilddbid, so this must come before the guild routing
+			if (scm->chan_num == ChatChannel_Fellowship) {
+				WorldFellowshipManager::Instance()->SendChannelMessage(pack, scm->guilddbid);
+				break;
+			}
+
 			if (scm->chan_num == ChatChannel_Tell || scm->chan_num == ChatChannel_TellEcho) {
 				if (scm->deliverto[0] == '*') {
 					if (console) {
@@ -757,6 +764,7 @@ void ZoneServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p) {
 		case ServerOP_ZoneBootup: {
 			auto *s = (ServerZoneStateChange_Struct*) pack->pBuffer;
 			ZSList::Instance()->SOPZoneBootup(s->admin_name, s->zone_server_id, ZoneName(s->zone_id), s->is_static);
+			WorldFellowshipManager::Instance()->OnZoneBootup(this);
 			break;
 		}
 		case ServerOP_ZoneStatus: {
@@ -995,6 +1003,10 @@ void ZoneServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p) {
 		case ServerOP_GuildMembersList:
 		{
 			guild_mgr.ProcessZonePacket(pack);
+			break;
+		}
+		case ServerOP_FellowshipAction: {
+			WorldFellowshipManager::Instance()->ProcessZonePacket(pack);
 			break;
 		}
 		case ServerOP_FlagUpdate: {

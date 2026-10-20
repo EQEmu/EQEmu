@@ -1168,6 +1168,11 @@ public:
 	// quest API: deliver an item to the cursor, or the Item Overflow window when the cursor is taken
 	bool AddItemToOverflow(uint32 item_id, int16 charges = 0);
 	int GetItemOverflowCount();
+	// TOB+ fellowships (rule Character:EnableFellowships); world owns the state, zones keep a copy
+	bool IsFellowshipEnabled() const;
+	inline uint32 GetFellowshipID() const { return m_fellowship_id; }
+	inline void SetFellowshipID(uint32 fellowship_id) { m_fellowship_id = fellowship_id; }
+	void UseFellowshipInsignia();
 	void DeleteItemInInventory(int16 slot_id, int16 quantity = 0, bool client_update = false, bool update_db = true);
 	uint32 CountItem(uint32 item_id);
 	void ResetItemCooldown(uint32 item_id);
@@ -2248,6 +2253,8 @@ private:
 	Timer parcel_timer;	//Used to limit the number of parcels to one every 30 seconds (default).  Changable via rule.
 	Timer lazy_load_bank_check_timer;
 	Timer bandolier_throttle_timer;
+	Timer m_fellowship_list_timer; // campfire list rate limit, disabled until the first request
+	uint32 m_fellowship_id{0};
 
 	bool m_lazy_load_bank            = false;
 	int  m_lazy_load_sent_bank_slots = 0;
