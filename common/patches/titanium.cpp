@@ -1022,7 +1022,7 @@ namespace Titanium
 		ALLOC_VAR_ENCODE(structs::GuildTributeAbility_Struct, sizeof(GuildTributeAbility_Struct) + strlen(emu->ability.name));
 
 		eq->guild_id = emu->guild_id;;
-		strncpy(eq->ability.name, emu->ability.name, strlen(emu->ability.name));
+		memcpy(eq->ability.name, emu->ability.name, strlen(emu->ability.name));
 		eq->ability.tribute_id = emu->ability.tribute_id;
 		eq->ability.tier_count = emu->ability.tier_count;
 		for (int i = 0; i < ntohl(emu->ability.tier_count); i++) {

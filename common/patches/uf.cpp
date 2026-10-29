@@ -1378,7 +1378,7 @@ namespace UF
 		eq->guild_id           = emu->guild_id;
 		eq->ability.tribute_id = emu->ability.tribute_id;
 		eq->ability.tier_count = emu->ability.tier_count;
-		strncpy(eq->ability.name, emu->ability.name, strlen(emu->ability.name));
+		memcpy(eq->ability.name, emu->ability.name, strlen(emu->ability.name));
 		for (int i = 0; i < ntohl(emu->ability.tier_count); i++) {
 			eq->ability.tiers[i].cost            = emu->ability.tiers[i].cost;
 			eq->ability.tiers[i].level           = emu->ability.tiers[i].level;
