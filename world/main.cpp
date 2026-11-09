@@ -350,6 +350,8 @@ int main(int argc, char **argv)
 			return;
 		}
 
+		ProcessPlayerSupportTells();
+
 		eqs = nullptr;
 
 		//give the stream identifier a chance to do its work....

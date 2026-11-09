@@ -19,6 +19,7 @@
 
 #include "common/eqemu_logsys.h"
 #include "common/net/websocket_server.h"
+#include "common/zone_store.h"
 #include "zone/client.h"
 #include "zone/corpse.h"
 #include "zone/doors.h"
@@ -27,6 +28,7 @@
 #include "zone/zone.h"
 #include "zone/zonedb.h"
 
+#include <cmath>
 #include <memory>
 
 extern Zone *zone;
@@ -890,6 +892,192 @@ void RegisterApiLogEvent(std::unique_ptr<EQ::Net::WebsocketServer> &server)
 	);
 }
 
+static bool IsLocalSupportRequest(EQ::Net::WebsocketServerConnection *connection)
+{
+	const auto address = connection->RemoteIP();
+	// Dual-stack listeners report IPv4 loopback as an IPv4-mapped address.
+	return zone && connection->GetAccountID() == 0 && (address == "127.0.0.1" || address == "::ffff:127.0.0.1");
+}
+
+static Client *GetSupportClient(const Json::Value &params)
+{
+	if (!params["character_id"].isUInt() || !params["account_id"].isUInt()) {
+		return nullptr;
+	}
+	auto *client = entity_list.GetClientByCharID(params["character_id"].asUInt());
+	return client && client->AccountID() == params["account_id"].asUInt() && client->Connected() ? client : nullptr;
+}
+
+// Corpse moves name the character and its account; both must match.
+static bool SupportCharacterOnAccount(uint32 character_id, uint32 account_id)
+{
+	if (!character_id || !account_id) {
+		return false;
+	}
+	if (auto *client = entity_list.GetClientByCharID(character_id)) {
+		return client->AccountID() == account_id;
+	}
+	const auto results = database.QueryDatabase(fmt::format(
+		"SELECT id FROM character_data WHERE id = {} AND account_id = {} LIMIT 1",
+		character_id,
+		account_id
+	));
+	return results.Success() && results.RowCount() == 1;
+}
+
+static Json::Value ApiGetSupportLocation(EQ::Net::WebsocketServerConnection *connection, Json::Value params)
+{
+	Json::Value response;
+	response["status"] = "offline";
+	if (!IsLocalSupportRequest(connection) || !params.isObject()) {
+		return response;
+	}
+	if (auto *client = GetSupportClient(params)) {
+		const auto &position = client->GetPosition();
+		response["status"] = "located";
+		auto &location = response["location"];
+		location["zone_id"] = zone->GetZoneID();
+		location["instance_id"] = zone->GetInstanceID();
+		location["x"] = position.x;
+		location["y"] = position.y;
+		location["z"] = position.z;
+		location["heading"] = position.w;
+	}
+	return response;
+}
+
+static Json::Value ApiFinishSupportCorpseMove(EQ::Net::WebsocketServerConnection *connection, Json::Value params)
+{
+	Json::Value response;
+	response["status"] = "stale";
+	if (!IsLocalSupportRequest(connection) || !params.isObject() || !params["corpse_id"].isUInt() ||
+		!params["character_id"].isUInt() || !params["account_id"].isUInt() || !params["player_position"].isObject()) {
+		return response;
+	}
+	const auto &location = params["player_position"];
+	if (!location["zone_id"].isUInt() || !location["instance_id"].isUInt() ||
+		location["zone_id"].asUInt() != zone->GetZoneID() || location["instance_id"].asUInt() != zone->GetInstanceID()) {
+		return response;
+	}
+	const auto corpse_id = params["corpse_id"].asUInt();
+	const auto character_id = params["character_id"].asUInt();
+	if (!corpse_id || !SupportCharacterOnAccount(character_id, params["account_id"].asUInt())) {
+		return response;
+	}
+	auto *corpse = entity_list.GetCorpseByDBID(corpse_id);
+	if (!corpse) {
+		const auto owned = database.QueryDatabase(fmt::format(
+			"SELECT id FROM character_corpses WHERE id = {} AND charid = {} "
+			"AND zone_id = {} AND instance_id = {} AND is_buried = 0",
+			corpse_id, character_id, zone->GetZoneID(), zone->GetInstanceID()
+		));
+		if (!owned.Success() || owned.RowCount() != 1) {
+			return response;
+		}
+		corpse = database.LoadCharacterCorpse(corpse_id, true);
+		if (corpse) {
+			corpse->Spawn();
+		}
+	}
+	if (corpse && corpse->GetCharID() == character_id) {
+		response["status"] = "spawned";
+		if (auto *client = GetSupportClient(params)) {
+			client->Message(Chat::Yellow, "A Game Master moved your corpse to your location.");
+			response["status"] = "notified";
+		}
+	}
+	return response;
+}
+
+static Json::Value ApiMoveSupportTarget(EQ::Net::WebsocketServerConnection *connection, Json::Value params)
+{
+	Json::Value response;
+	response["status"] = "stale";
+	if (!IsLocalSupportRequest(connection) || !params.isObject()) {
+		return response;
+	}
+	for (const auto *field : {"character_id", "account_id", "corpse_id", "source_zone", "source_instance", "destination"}) {
+		if (!params[field].isUInt()) {
+			return response;
+		}
+	}
+	if (params["source_zone"].asUInt() != zone->GetZoneID() ||
+		params["source_instance"].asUInt() != zone->GetInstanceID()) {
+		return response;
+	}
+	const auto character_id = params["character_id"].asUInt();
+	const auto account_id = params["account_id"].asUInt();
+	const auto corpse_id = params["corpse_id"].asUInt();
+	const auto destination = params["destination"].asUInt();
+	const auto *target = ZoneStore::Instance()->GetZone(destination);
+	if (!character_id || !account_id || !target || target->version != 0) {
+		return response;
+	}
+
+	if (corpse_id) {
+		auto *corpse = entity_list.GetCorpseByDBID(corpse_id);
+		if (!corpse || corpse->GetCharID() != character_id || !SupportCharacterOnAccount(character_id, account_id)) {
+			return response;
+		}
+		if (corpse->IsBeingLooted()) {
+			response["status"] = "busy";
+			return response;
+		}
+		glm::vec4 position(target->safe_x, target->safe_y, target->safe_z, target->safe_heading);
+		uint16 instance = 0;
+		const auto &location = params["player_position"];
+		const bool to_player = !location.isNull();
+		if (to_player) {
+			if (!location.isObject() || !location["zone_id"].isUInt() || location["zone_id"].asUInt() != destination ||
+				!location["instance_id"].isUInt() || location["instance_id"].asUInt() > UINT16_MAX) {
+				return response;
+			}
+			instance = location["instance_id"].asUInt();
+			for (const auto *field : {"x", "y", "z", "heading"}) {
+				if (!location[field].isNumeric() || !std::isfinite(location[field].asFloat())) {
+					return response;
+				}
+			}
+			position = glm::vec4(location["x"].asFloat(), location["y"].asFloat(), location["z"].asFloat(), location["heading"].asFloat());
+			if (destination == zone->GetZoneID() && instance == zone->GetInstanceID()) {
+				auto *client = GetSupportClient(params);
+				if (!client) {
+					response["status"] = "offline";
+					return response;
+				}
+				position = client->GetPosition();
+			}
+		}
+		if (corpse->MoveForSupport(destination, instance, position, !to_player)) {
+			response["status"] = "moved";
+		}
+	} else {
+		glm::vec4 position(target->safe_x, target->safe_y, target->safe_z, target->safe_heading);
+		const auto &location = params["player_position"];
+		if (!location.isNull()) {
+			// GM coordinates always target the base zone.
+			if (!location.isObject() || !location["zone_id"].isUInt() || location["zone_id"].asUInt() != destination ||
+				!location["instance_id"].isUInt() || location["instance_id"].asUInt() != 0) {
+				return response;
+			}
+			for (const auto *field : {"x", "y", "z", "heading"}) {
+				if (!location[field].isNumeric() || !std::isfinite(location[field].asFloat())) {
+					return response;
+				}
+			}
+			position = glm::vec4(location["x"].asFloat(), location["y"].asFloat(), location["z"].asFloat(), location["heading"].asFloat());
+		}
+		if (auto *client = GetSupportClient(params)) {
+			const bool same_zone = destination == zone->GetZoneID() && zone->GetInstanceID() == 0;
+			client->Message(Chat::Yellow, "You have been moved by a Game Master");
+			client->MovePC(destination, 0, position.x, position.y, position.z, position.w, 3,
+				same_zone ? SummonPC : ZoneSolicited);
+			response["status"] = same_zone ? "moved" : "requested";
+		}
+	}
+	return response;
+}
+
 void RegisterApiService(std::unique_ptr<EQ::Net::WebsocketServer> &server)
 {
 	server->SetLoginHandler(CheckLogin);
@@ -898,6 +1086,9 @@ void RegisterApiService(std::unique_ptr<EQ::Net::WebsocketServer> &server)
 	server->SetMethodHandler("get_npc_list_detail", &ApiGetNpcListDetail, 50);
 	server->SetMethodHandler("get_door_list_detail", &ApiGetDoorListDetail, 50);
 	server->SetMethodHandler("get_corpse_list_detail", &ApiGetCorpseListDetail, 50);
+	server->SetMethodHandler("move_support_target", &ApiMoveSupportTarget, 200);
+	server->SetMethodHandler("get_support_location", &ApiGetSupportLocation, 200);
+	server->SetMethodHandler("finish_support_corpse_move", &ApiFinishSupportCorpseMove, 200);
 	server->SetMethodHandler("get_object_list_detail", &ApiGetObjectListDetail, 50);
 	server->SetMethodHandler("get_mob_list_detail", &ApiGetMobListDetail, 50);
 	server->SetMethodHandler("get_client_list_detail", &ApiGetClientListDetail, 50);

@@ -37,6 +37,7 @@
 #include "world/client.h"
 #include "world/cliententry.h"
 #include "world/clientlist.h"
+#include "world/console.h"
 #include "world/dynamic_zone_manager.h"
 #include "world/dynamic_zone.h"
 #include "world/lfplist.h"
@@ -432,7 +433,18 @@ void ZoneServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p) {
 			}
 
 			if (scm->chan_num == ChatChannel_Tell || scm->chan_num == ChatChannel_TellEcho) {
-				if (scm->deliverto[0] == '*') {
+				const bool console_tell = scm->deliverto[0] == '*';
+				// The client strips the console prefix when it builds a /reply.
+				const auto *tell_target = scm->deliverto + (console_tell ? 1 : 0);
+				if (strcasecmp(tell_target, EQ::Net::PlayerSupportConsoleName) == 0) {
+					auto *sender = ClientList::Instance()->FindCharacter(scm->from);
+					if (scm->chan_num == ChatChannel_Tell && sender && sender->Server() == this && sender->CharID() && sender->AccountID()) {
+						auto *connection = console ? console->FindByAccountName(EQ::Net::PlayerSupportConsoleName) : nullptr;
+						QueuePlayerSupportTell(connection, *sender, *pack);
+					}
+					break;
+				}
+				if (console_tell) {
 					if (console) {
 						auto con = console->FindByAccountName(&scm->deliverto[1]);
 						if (

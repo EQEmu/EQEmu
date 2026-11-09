@@ -129,8 +129,27 @@ void EQ::Net::ConsoleServerConnection::QueueMessage(const std::string &msg)
 	}
 }
 
+bool EQ::Net::ConsoleServerConnection::IsLocalAdmin() const
+{
+	const auto address = m_connection->RemoteIP();
+	return m_user_id == 0 && (address == "127.0.0.1" || address == "::ffff:127.0.0.1");
+}
+
+bool EQ::Net::ConsoleServerConnection::EnableSupportChat()
+{
+	if (!IsLocalAdmin()) {
+		return false;
+	}
+	auto *current = m_parent->FindByAccountName(PlayerSupportConsoleName);
+	if (current && current != this) {
+		return false;
+	}
+	m_support_chat = true;
+	return true;
+}
+
 bool EQ::Net::ConsoleServerConnection::SendChannelMessage(const ServerChannelMessage_Struct* scm, std::function<void(void)> onTell) {
-	if (!m_accept_messages) {
+	if (!m_accept_messages || m_support_chat) {
 		return false;
 	}
 

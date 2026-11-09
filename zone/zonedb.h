@@ -515,7 +515,7 @@ public:
 	uint32 GetCharacterCorpseItemAt(uint32 corpse_id, uint16 slot_id);
 	bool GetDecayTimes(npcDecayTimes_Struct* npc_decay_times);
 	uint32 GetFirstCorpseID(uint32 character_id);
-	Corpse* LoadCharacterCorpse(uint32 corpse_id);
+	Corpse* LoadCharacterCorpse(uint32 corpse_id, bool require_local_location = false);
 	bool LoadCharacterCorpses(uint32 zone_id, uint16 instance_id);
 	void MarkCorpseAsResurrected(uint32 corpse_id);
 	uint32 SaveCharacterCorpse(uint32 character_id, const std::string& name, uint32 zone_id, uint16 instance_id, const CharacterCorpseEntry& c, const glm::vec4& position, uint32 guild_consent_id);
@@ -607,7 +607,7 @@ public:
 	/* Petitions   */
 	void	DeletePetitionFromDB(Petition* wpet);
 	void	UpdatePetitionToDB(Petition* wpet);
-	void	InsertPetitionToDB(Petition* wpet);
+	bool	InsertPetitionToDB(Petition* wpet);
 	void	RefreshPetitionsFromDB();
 
 	/* Merchants  */

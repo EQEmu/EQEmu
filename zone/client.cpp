@@ -1522,7 +1522,14 @@ void Client::ChannelMessageReceived(uint8 chan_num, uint8 language, uint8 lang_s
 				target_name[x] = '\0';
 			}
 
-			if(!worldserver.SendChannelMessage(this, target_name, chan_num, 0, language, lang_skill, message))
+			// The recipient's zone prints a tell with printf, so double any % in
+			// tells to players. Tells to GameMaster (Player Support) and to
+			// console sessions reach World as typed; World handles those.
+			const bool console_target = target_name[0] == '*';
+			const char *recipient = console_target ? target_name + 1 : target_name;
+			const bool literal = console_target || strcasecmp(recipient, "GameMaster") == 0;
+			const auto text = literal ? std::string(message) : Strings::Replace(message, "%", "%%");
+			if(!worldserver.SendChannelMessageRaw(this, target_name, chan_num, 0, language, lang_skill, text.c_str()))
 				Message(0, "Error: World server disconnected");
 		break;
 	}

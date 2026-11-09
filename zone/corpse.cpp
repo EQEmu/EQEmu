@@ -2170,6 +2170,35 @@ void Corpse::SendWorldSpawnPlayerCorpseInZone(uint32_t zone_id)
 	worldserver.SendPacket(pack.get());
 }
 
+bool Corpse::MoveForSupport(uint32 destination, uint16 instance, const glm::vec4 &position, bool world_spawn)
+{
+	const auto corpse_id = m_corpse_db_id;
+	if (!IsPlayerCorpse() || !corpse_id || IsBeingLooted() || !zone ||
+		!Save() || m_corpse_db_id != corpse_id) {
+		return false;
+	}
+
+	const auto result = database.QueryDatabase(fmt::format(
+		"UPDATE character_corpses SET zone_id = {}, instance_id = {}, x = {}, y = {}, z = {}, heading = {} "
+		"WHERE id = {} AND charid = {} AND zone_id = {} AND instance_id = {} AND is_buried = 0",
+		destination, instance, position.x, position.y, position.z, position.w, corpse_id, GetCharID(),
+		zone->GetZoneID(), zone->GetInstanceID()
+	));
+	if (!result.Success() || result.RowsAffected() != 1) {
+		return false;
+	}
+	if (destination == zone->GetZoneID() && zone->GetInstanceID() == instance) {
+		GMMove(position);
+	} else {
+		if (world_spawn) {
+			SendWorldSpawnPlayerCorpseInZone(destination);
+		}
+		m_corpse_db_id = 0;
+		m_player_corpse_depop = true;
+	}
+	return true;
+}
+
 bool Corpse::MovePlayerCorpseToGraveyard()
 {
 	if (IsPlayerCorpse() && zone && zone->HasGraveyard()) {

@@ -1631,7 +1631,10 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	}
 	case ServerOP_SpawnPlayerCorpse: {
 		auto   *s = (SpawnPlayerCorpse_Struct *) pack->pBuffer;
-		Corpse *c = database.LoadCharacterCorpse(s->player_corpse_id);
+		if (entity_list.GetCorpseByDBID(s->player_corpse_id)) {
+			break;
+		}
+		Corpse *c = database.LoadCharacterCorpse(s->player_corpse_id, true);
 		if (c) {
 			c->Spawn();
 		}
@@ -4155,6 +4158,16 @@ bool WorldServer::SendChannelMessage(Client* from, const char* to, uint8 chan_nu
 	va_end(argptr);
 	buffer[length - 1] = '\0';
 
+	const bool sent = SendChannelMessageRaw(from, to, chan_num, guilddbid, language, lang_skill, buffer);
+	safe_delete_array(buffer);
+	return sent;
+}
+
+bool WorldServer::SendChannelMessageRaw(Client* from, const char* to, uint8 chan_num, uint32 guilddbid, uint8 language, uint8 lang_skill, const char* message) {
+	if (!worldserver.Connected()) {
+		return false;
+	}
+	const auto length = strlen(message) + 1;
 	auto pack = new ServerPacket(ServerOP_ChannelMessage, sizeof(ServerChannelMessage_Struct) + length);
 	ServerChannelMessage_Struct* scm = (ServerChannelMessage_Struct*)pack->pBuffer;
 
@@ -4180,11 +4193,10 @@ bool WorldServer::SendChannelMessage(Client* from, const char* to, uint8 chan_nu
 	scm->language = language;
 	scm->lang_skill = lang_skill;
 	scm->queued = 0;
-	strcpy(scm->message, buffer);
+	strcpy(scm->message, message);
 
 	bool ret = SendPacket(pack);
 	safe_delete(pack);
-	safe_delete_array(buffer);
 	return ret;
 }
 
