@@ -1377,6 +1377,12 @@ void Client::ChannelMessageReceived(uint8 chan_num, uint8 language, uint8 lang_s
 		break;
 	}
 	case ChatChannel_Shout: { /* Shout */
+		if(GetRevoked())
+		{
+			Message(0, "You have been revoked. You may not talk on Shout.");
+			return;
+		}
+
 		Mob *sender = this;
 		if (GetPet() && GetTarget() == GetPet() && GetPet()->FindType(SpellEffect::VoiceGraft))
 			sender = GetPet();
@@ -1385,6 +1391,12 @@ void Client::ChannelMessageReceived(uint8 chan_num, uint8 language, uint8 lang_s
 		break;
 	}
 	case ChatChannel_Auction: { /* Auction */
+		if(GetRevoked())
+		{
+			Message(0, "You have been revoked. You may not talk on Auction.");
+			return;
+		}
+
 		if(RuleB(Chat, ServerWideAuction))
 		{
 			if(!global_channel_timer.Check())
@@ -1393,12 +1405,6 @@ void Client::ChannelMessageReceived(uint8 chan_num, uint8 language, uint8 lang_s
 					ChannelMessageReceived(chan_num, language, lang_skill, message, "discard"); //Fast typer or spammer??
 				else
 					return;
-			}
-
-			if(GetRevoked())
-			{
-				Message(0, "You have been revoked. You may not talk on Auction.");
-				return;
 			}
 
 			if(TotalKarma < RuleI(Chat, KarmaGlobalChatLimit))
@@ -1424,6 +1430,12 @@ void Client::ChannelMessageReceived(uint8 chan_num, uint8 language, uint8 lang_s
 		break;
 	}
 	case ChatChannel_OOC: { /* OOC */
+		if(GetRevoked())
+		{
+			Message(0, "You have been revoked. You may not talk on OOC.");
+			return;
+		}
+
 		if(RuleB(Chat, ServerWideOOC))
 		{
 			if(!global_channel_timer.Check())
@@ -1436,12 +1448,6 @@ void Client::ChannelMessageReceived(uint8 chan_num, uint8 language, uint8 lang_s
 			if(worldserver.IsOOCMuted() && admin < AccountStatus::GMAdmin)
 			{
 				Message(0,"OOC has been muted. Try again later.");
-				return;
-			}
-
-			if(GetRevoked())
-			{
-				Message(0, "You have been revoked. You may not talk on OOC.");
 				return;
 			}
 
@@ -1487,12 +1493,6 @@ void Client::ChannelMessageReceived(uint8 chan_num, uint8 language, uint8 lang_s
 					return;
 			}
 
-			if(GetRevoked())
-			{
-				Message(0, "You have been revoked. You may not send tells.");
-				return;
-			}
-
 			if(TotalKarma < RuleI(Chat, KarmaGlobalChatLimit))
 			{
 				if(GetLevel() < RuleI(Chat, GlobalChatLevelLimit))
@@ -1527,9 +1527,35 @@ void Client::ChannelMessageReceived(uint8 chan_num, uint8 language, uint8 lang_s
 			// console sessions reach World as typed; World handles those.
 			const bool console_target = target_name[0] == '*';
 			const char *recipient = console_target ? target_name + 1 : target_name;
+			// Player Support tells show as from "(GM) Game Master" or "(GM) <persona>",
+			// and tells from a GM with #gm on as "(GM) <name>". The client replies to
+			// the whole name. "(GM) Game Master", and a typed /tell (GM) Game Master
+			// that arrives as a tell to "(GM)" with "Game Master" leading the text,
+			// go to GameMaster here with only that name taken off; no character can
+			// be named (GM). Other "(GM)" tells go to World as tells to a player,
+			// and World sends them on to the persona's Player Support or to the
+			// character. A tell to "Game" with "Master" leading the text goes to
+			// GameMaster unless a character named Game exists. A text that is only
+			// the name goes to GameMaster empty and gets its usual answer.
+			const char *tell_text = message;
+			if (!console_target) {
+				if (strcasecmp(recipient, "(GM)") == 0 &&
+					(strncasecmp(message, "Game Master", 11) == 0 || strncasecmp(message, "Game_Master", 11) == 0) &&
+					(message[11] == '\0' || message[11] == ' ')) {
+					strn0cpy(target_name, "GameMaster", sizeof(target_name));
+					tell_text = message[11] ? message + 12 : message + 11;
+				} else if (strcasecmp(recipient, "(GM) Game Master") == 0 || strcasecmp(recipient, "Game Master") == 0 ||
+					strcasecmp(recipient, "Game_Master") == 0) {
+					strn0cpy(target_name, "GameMaster", sizeof(target_name));
+				} else if (strcasecmp(recipient, "Game") == 0 && strncasecmp(message, "Master", 6) == 0 &&
+					(message[6] == '\0' || message[6] == ' ') && !database.IsNameUsed("Game")) {
+					strn0cpy(target_name, "GameMaster", sizeof(target_name));
+					tell_text = message[6] ? message + 7 : message + 6;
+				}
+			}
 			const bool literal = console_target || strcasecmp(recipient, "GameMaster") == 0;
-			const auto text = literal ? std::string(message) : Strings::Replace(message, "%", "%%");
-			if(!worldserver.SendChannelMessageRaw(this, target_name, chan_num, 0, language, lang_skill, text.c_str()))
+			const auto text = literal ? std::string(tell_text) : Strings::Replace(tell_text, "%", "%%");
+			if(!worldserver.SendChannelMessageRaw(this, target_name, chan_num, GetGM() ? ServerTellFromGM : 0, language, lang_skill, text.c_str()))
 				Message(0, "Error: World server disconnected");
 		break;
 	}
@@ -1712,6 +1738,10 @@ void Client::ChannelMessageSend(
 		strcpy(cm->sender, "ZServer");
 	} else if (from[0] == 0) {
 		strcpy(cm->sender, "ZServer");
+	} else if (strncmp(from, "*(GM) ", 6) == 0) {
+		// "(GM) <name>": Player Support tells from World, and tells from a GM with
+		// #gm on. Only server code builds this; player names are letters only.
+		strn0cpy(cm->sender, from + 1, sizeof(cm->sender));
 	} else {
 		CleanMobName(from, message_sender);
 		strcpy(cm->sender, message_sender);

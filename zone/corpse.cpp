@@ -2179,8 +2179,8 @@ bool Corpse::MoveForSupport(uint32 destination, uint16 instance, const glm::vec4
 	}
 
 	const auto result = database.QueryDatabase(fmt::format(
-		"UPDATE character_corpses SET zone_id = {}, instance_id = {}, x = {}, y = {}, z = {}, heading = {} "
-		"WHERE id = {} AND charid = {} AND zone_id = {} AND instance_id = {} AND is_buried = 0",
+		"UPDATE character_corpses SET zone_id = {}, instance_id = {}, x = {}, y = {}, z = {}, heading = {}, is_buried = 0 "
+		"WHERE id = {} AND charid = {} AND zone_id = {} AND instance_id = {}",
 		destination, instance, position.x, position.y, position.z, position.w, corpse_id, GetCharID(),
 		zone->GetZoneID(), zone->GetInstanceID()
 	));

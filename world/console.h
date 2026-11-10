@@ -21,7 +21,9 @@
 
 class ClientListEntry;
 class ServerPacket;
+struct ServerChannelMessage_Struct;
 
 void RegisterConsoleFunctions(std::unique_ptr<EQ::Net::ConsoleServer> &console);
 void QueuePlayerSupportTell(EQ::Net::ConsoleServerConnection *connection, ClientListEntry &sender, ServerPacket &packet);
 void ProcessPlayerSupportTells();
+void ResolveGMAddressedTell(ServerChannelMessage_Struct &message);

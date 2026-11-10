@@ -558,9 +558,21 @@ void Clientlist::CheckForStaleConnectionsAll()
 {
 	LogDebug("Checking for stale connections");
 
+	// An idle mail connection was seen to drop after about five minutes, so
+	// every third run (about three minutes) each mail connection also gets its
+	// mail headers again, which also lists mail added since login. That costs
+	// one indexed query on the character's mailbox per connected mail client
+	// about every three minutes; each connection's remote port picks its run,
+	// so the queries are spread instead of all landing in the same run.
+	static uint32 runs = 0;
+	++runs;
+
 	auto it = ClientChatConnections.begin();
 	while (it != ClientChatConnections.end()) {
 		(*it)->SendKeepAlive();
+		if ((*it)->IsMailConnection() && (runs + (*it)->ClientStream->GetRemotePort()) % 3 == 0) {
+			database.SendHeaders(*it);
+		}
 		++it;
 	}
 }
@@ -977,6 +989,19 @@ void Client::SendMailBoxes() {
 	QueuePacket(outapp);
 
 	safe_delete(outapp);
+}
+
+// The character's mail connection; clients with separate chat and mail
+// sessions have two connections under the same name.
+Client *Clientlist::FindMailConnection(const std::string &character_name)
+{
+	for (auto *c : ClientChatConnections) {
+		if (c->IsMailConnection() && c->GetName() == character_name) {
+			return c;
+		}
+	}
+
+	return nullptr;
 }
 
 Client *Clientlist::FindCharacter(const std::string& CharacterName) {

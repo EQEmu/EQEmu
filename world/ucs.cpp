@@ -23,6 +23,7 @@
 #include "common/misc_functions.h"
 #include "common/packet_dump.h"
 #include "world/world_config.h"
+#include "world/zonelist.h"
 
 UCSConnection::UCSConnection()
 {
@@ -75,6 +76,13 @@ void UCSConnection::ProcessPacket(uint16 opcode, EQ::Net::Packet &p)
 		case ServerOP_ZAAuth:
 		{
 			LogInfo("Got authentication from UCS when they are already authenticated");
+			break;
+		}
+		// New mail notices for a character in game, relayed like a zone's.
+		case ServerOP_CZMarquee:
+		case ServerOP_CZMessage:
+		{
+			ZSList::Instance()->SendPacket(pack);
 			break;
 		}
 		default:

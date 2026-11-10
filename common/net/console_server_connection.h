@@ -39,6 +39,10 @@ namespace EQ
 		const int MaxConsoleLineLength = 512;
 		const int ConsoleLoginStatus = 50;
 		constexpr char PlayerSupportConsoleName[] = "GameMaster";
+		// The name Player Support tells show when Spire gives no persona. They are
+		// sent as "*(GM) <name>", which zones show as "(GM) <name>"; GameMaster
+		// stays the identity.
+		constexpr char PlayerSupportDisplayName[] = "Game Master";
 		class ConsoleServer;
 		class ConsoleServerConnection
 		{

@@ -25,9 +25,11 @@
 #include "zone/doors.h"
 #include "zone/entity.h"
 #include "zone/object.h"
+#include "zone/task_manager.h"
 #include "zone/zone.h"
 #include "zone/zonedb.h"
 
+#include <algorithm>
 #include <cmath>
 #include <memory>
 
@@ -1078,6 +1080,292 @@ static Json::Value ApiMoveSupportTarget(EQ::Net::WebsocketServerConnection *conn
 	return response;
 }
 
+static bool HasSupportIds(const Json::Value &params, std::initializer_list<const char *> fields)
+{
+	if (!params.isObject()) {
+		return false;
+	}
+	for (const auto *field : fields) {
+		if (!params[field].isUInt() || params[field].asUInt() == 0) {
+			return false;
+		}
+	}
+	return true;
+}
+
+static bool IsSupportText(const Json::Value &value, size_t max_bytes)
+{
+	if (!value.isString()) {
+		return false;
+	}
+	const auto text = value.asString();
+	return !text.empty() && text.size() <= max_bytes &&
+		std::none_of(text.begin(), text.end(), [](char c) { return static_cast<unsigned char>(c) < 32; });
+}
+
+static Json::Value ApiRestoreSupportCorpseExp(EQ::Net::WebsocketServerConnection *connection, Json::Value params)
+{
+	Json::Value response;
+	response["status"] = "stale";
+	if (!IsLocalSupportRequest(connection) || !HasSupportIds(params, {"character_id", "account_id", "corpse_id"})) {
+		return response;
+	}
+	const auto character_id = params["character_id"].asUInt();
+	const auto corpse_id = params["corpse_id"].asUInt();
+	auto *client = GetSupportClient(params);
+	if (!client) {
+		response["status"] = "offline";
+		return response;
+	}
+	auto *corpse = entity_list.GetCorpseByDBID(corpse_id);
+	if (!corpse) {
+		response["status"] = "elsewhere";
+		return response;
+	}
+	if (!corpse->IsPlayerCorpse() || corpse->GetCharID() != character_id) {
+		return response;
+	}
+	// A rez offer that is still open would pay the same experience again when accepted.
+	if (corpse->IsBeingLooted() || client->IsRezzPending()) {
+		response["status"] = "busy";
+		return response;
+	}
+	if (corpse->IsRezzed()) {
+		response["status"] = "already";
+		return response;
+	}
+	const auto exp = corpse->GetRezExp();
+	if (exp <= 0) {
+		response["status"] = "no_exp";
+		return response;
+	}
+
+	const auto claimed = database.QueryDatabase(fmt::format(
+		"UPDATE character_corpses SET is_rezzed = 1, exp = 0 WHERE id = {} AND charid = {} AND is_rezzed = 0",
+		corpse_id, character_id
+	));
+	if (!claimed.Success()) {
+		return response;
+	}
+	if (claimed.RowsAffected() != 1) {
+		// An accepted rez marks only the database row, so the loaded corpse can lag behind it.
+		auto state = database.QueryDatabase(fmt::format(
+			"SELECT is_rezzed FROM character_corpses WHERE id = {} AND charid = {}",
+			corpse_id, character_id
+		));
+		if (state.Success() && state.RowCount() == 1) {
+			auto row = state.begin();
+			if (row[0] && Strings::ToInt(row[0]) != 0) {
+				corpse->IsRezzed(true);
+				response["status"] = "already";
+			}
+		}
+		return response;
+	}
+
+	corpse->IsRezzed(true);
+	corpse->CompleteResurrection(false);
+	client->SetEXP(
+		ExpSource::Resurrection,
+		static_cast<uint64>(client->GetEXP()) + static_cast<uint64>(exp),
+		client->GetAAXP(),
+		true
+	);
+	// The claim above is already saved, so save the award now rather than at the next character save.
+	// The award stays in memory if this fails and is saved later; the claim is kept so it cannot pay twice.
+	if (!database.SaveCharacterData(client, &client->GetPP(), &client->GetEPP())) {
+		response["status"] = "unconfirmed";
+		return response;
+	}
+	client->Message(Chat::Yellow, "A Game Master restored the experience from your corpse.");
+	response["status"] = "restored";
+	response["exp"] = static_cast<Json::Int64>(exp);
+	return response;
+}
+
+static Json::Value ApiRemoveSupportLockout(EQ::Net::WebsocketServerConnection *connection, Json::Value params)
+{
+	Json::Value response;
+	response["status"] = "stale";
+	if (!IsLocalSupportRequest(connection) || !HasSupportIds(params, {"character_id", "account_id"}) ||
+		!IsSupportText(params["expedition"], 128) || !IsSupportText(params["event"], 256)) {
+		return response;
+	}
+	const auto expedition = params["expedition"].asString();
+	const auto event = params["event"].asString();
+	auto *client = GetSupportClient(params);
+	if (!client) {
+		response["status"] = "offline";
+		return response;
+	}
+
+	const auto removed = database.QueryDatabase(fmt::format(
+		"DELETE FROM character_expedition_lockouts WHERE character_id = {} "
+		"AND expedition_name = '{}' AND event_name = '{}'",
+		client->CharacterID(), Strings::Escape(expedition), Strings::Escape(event)
+	));
+	if (!removed.Success()) {
+		response["status"] = "unavailable";
+		return response;
+	}
+	if (removed.RowsAffected() == 0) {
+		response["status"] = "gone";
+		return response;
+	}
+	client->RemoveDzLockout(expedition, event);
+	client->Message(
+		Chat::Yellow,
+		"%s",
+		fmt::format("A Game Master removed your {} lockout ({}).", expedition, event).c_str()
+	);
+	response["status"] = "removed";
+	return response;
+}
+
+static Json::Value ApiUpdateSupportTask(EQ::Net::WebsocketServerConnection *connection, Json::Value params)
+{
+	Json::Value response;
+	response["status"] = "stale";
+	if (!IsLocalSupportRequest(connection) || !HasSupportIds(params, {"character_id", "account_id", "task_id"}) ||
+		params["task_id"].asUInt() > INT32_MAX || !params["action"].isString() || !params["activity_id"].isInt()) {
+		return response;
+	}
+	const auto task_id = static_cast<int>(params["task_id"].asUInt());
+	const auto action = params["action"].asString();
+	const auto activity_id = params["activity_id"].asInt();
+	const bool reset = action == "reset_activity";
+	const bool update = action == "update_activity";
+	const bool remove = action == "remove_task";
+	int expected_done = 0;
+	int count = 0;
+	if (remove) {
+		if (activity_id != -1) {
+			return response;
+		}
+	} else if (reset || update) {
+		if (activity_id < 0 || !params["expected_done"].isInt() || params["expected_done"].asInt() < 0) {
+			return response;
+		}
+		expected_done = params["expected_done"].asInt();
+		if (update) {
+			if (!params["count"].isInt() || params["count"].asInt() < 1 || params["count"].asInt() > 1000) {
+				return response;
+			}
+			count = params["count"].asInt();
+		}
+	} else {
+		return response;
+	}
+
+	auto *client = GetSupportClient(params);
+	if (!client) {
+		response["status"] = "offline";
+		return response;
+	}
+	if (!client->IsTaskStateLoaded()) {
+		response["status"] = "busy";
+		return response;
+	}
+	if (!client->IsTaskActive(task_id)) {
+		response["status"] = "gone";
+		return response;
+	}
+	const auto *task = TaskManager::Instance()->GetTaskData(task_id);
+	if (!task) {
+		return response;
+	}
+	if (task->type == TaskType::Shared) {
+		response["status"] = "shared";
+		return response;
+	}
+	if (!remove) {
+		// The client's done-count lookup does not check the activity index itself.
+		if (activity_id >= task->activity_count || activity_id >= MAXACTIVITIESPERTASK ||
+			client->GetTaskActivityDoneCountFromTaskID(task_id, activity_id) != expected_done) {
+			return response;
+		}
+		// Resetting a finished step would lower its count but leave it completed.
+		if (!client->IsTaskActivityActive(task_id, activity_id)) {
+			response["status"] = "inactive";
+			return response;
+		}
+	}
+
+	if (update) {
+		client->UpdateTaskActivity(task_id, activity_id, count, false);
+	} else if (reset) {
+		client->ResetTaskActivity(task_id, activity_id);
+	} else {
+		client->RemoveTaskByTaskID(task_id);
+	}
+	bool saved = client->SaveTaskState();
+	if (saved && !client->IsTaskActive(task_id)) {
+		// Removing a task, or an update that completes it, clears it in memory even when deleting its
+		// rows failed, and the save skips it. A completed task is recorded in completed_tasks, not here.
+		auto left = database.QueryDatabase(fmt::format(
+			"SELECT (SELECT COUNT(*) FROM character_tasks WHERE charid = {0} AND taskid = {1}) + "
+			"(SELECT COUNT(*) FROM character_activities WHERE charid = {0} AND taskid = {1})",
+			client->CharacterID(), task_id
+		));
+		auto row = left.begin();
+		saved = left.Success() && left.RowCount() == 1 && row[0] && Strings::ToInt(row[0]) == 0;
+	}
+	// The change already shows in the player's task window, so tell them even if it was not saved.
+	client->Message(Chat::Yellow, "A Game Master updated your tasks.");
+	if (!saved) {
+		response["status"] = "unavailable";
+		return response;
+	}
+
+	const bool active = client->IsTaskActive(task_id);
+	response["status"] = "updated";
+	if (!remove) {
+		int done = 0;
+		if (active) {
+			done = client->GetTaskActivityDoneCountFromTaskID(task_id, activity_id);
+		} else if (update) {
+			done = std::min(expected_done + count, task->activity_information[activity_id].goal_count);
+		}
+		response["done_count"] = done;
+	}
+	response["task_active"] = active;
+	// Completed tasks are listed only when the server records them, so a finished update also counts.
+	response["task_completed"] = client->IsTaskCompleted(task_id) || (update && !active);
+	return response;
+}
+
+static Json::Value ApiSetSupportRevoked(EQ::Net::WebsocketServerConnection *connection, Json::Value params)
+{
+	Json::Value response;
+	response["status"] = "stale";
+	if (!IsLocalSupportRequest(connection) || !HasSupportIds(params, {"character_id", "account_id"}) ||
+		!params["revoked"].isBool()) {
+		return response;
+	}
+	const bool revoked = params["revoked"].asBool();
+	auto *client = GetSupportClient(params);
+	if (!client) {
+		response["status"] = "offline";
+		return response;
+	}
+	const auto result = database.QueryDatabase(fmt::format(
+		"UPDATE account SET revoked = {} WHERE id = {}",
+		revoked ? 1 : 0, client->AccountID()
+	));
+	if (!result.Success()) {
+		response["status"] = "unavailable";
+		return response;
+	}
+	client->SetRevoked(revoked);
+	client->Message(
+		Chat::Yellow,
+		revoked ? "A Game Master has blocked your OOC, auction and shout channels. You can still send tells."
+		        : "A Game Master has restored your OOC, auction and shout channels."
+	);
+	response["status"] = "applied";
+	return response;
+}
+
 void RegisterApiService(std::unique_ptr<EQ::Net::WebsocketServer> &server)
 {
 	server->SetLoginHandler(CheckLogin);
@@ -1089,6 +1377,10 @@ void RegisterApiService(std::unique_ptr<EQ::Net::WebsocketServer> &server)
 	server->SetMethodHandler("move_support_target", &ApiMoveSupportTarget, 200);
 	server->SetMethodHandler("get_support_location", &ApiGetSupportLocation, 200);
 	server->SetMethodHandler("finish_support_corpse_move", &ApiFinishSupportCorpseMove, 200);
+	server->SetMethodHandler("restore_support_corpse_exp", &ApiRestoreSupportCorpseExp, 200);
+	server->SetMethodHandler("remove_support_lockout", &ApiRemoveSupportLockout, 200);
+	server->SetMethodHandler("update_support_task", &ApiUpdateSupportTask, 200);
+	server->SetMethodHandler("set_support_revoked", &ApiSetSupportRevoked, 200);
 	server->SetMethodHandler("get_object_list_detail", &ApiGetObjectListDetail, 50);
 	server->SetMethodHandler("get_mob_list_detail", &ApiGetMobListDetail, 50);
 	server->SetMethodHandler("get_client_list_detail", &ApiGetClientListDetail, 50);

@@ -510,6 +510,11 @@ struct ServerGroupFollowAck_Struct {
 };
 
 
+// Tells only (guild chat is the only channel that uses guilddbid): the sending
+// zone puts this in guilddbid when the sender had #gm on, and the receiving zone
+// shows the sender as "(GM) <name>". Zones that do not know it show the name.
+constexpr uint32 ServerTellFromGM = 0x474D0001;
+
 struct ServerChannelMessage_Struct {
 	char deliverto[64];
 	char to[64];

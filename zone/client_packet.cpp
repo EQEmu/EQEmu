@@ -813,6 +813,21 @@ void Client::CompleteConnect()
 
 		bool is_first_login = e.first_login == 0;
 
+		// UCS stores unread mail with status 1 (read is 3, trash is 4).
+		auto unread_mail = database.QueryDatabase(fmt::format(
+			"SELECT COUNT(*) FROM `mail` WHERE `charid` = {} AND `status` = 1",
+			CharacterID()
+		));
+		if (unread_mail.Success() && unread_mail.RowCount() == 1) {
+			auto row = unread_mail.begin();
+			const auto unread = row[0] ? Strings::ToUnsignedInt(row[0]) : 0;
+			if (unread > 0) {
+				const auto text = fmt::format("You have {} unread mail message{}.", unread, unread == 1 ? "" : "s");
+				Message(Chat::Yellow, "%s", text.c_str());
+				SendMarqueeMessage(Chat::Yellow, 510, 0, 3000, 6000, text);
+			}
+		}
+
 		RecordPlayerEventLog(PlayerEvent::WENT_ONLINE, PlayerEvent::EmptyEvent{});
 
 		if (parse->PlayerHasQuestSub(EVENT_CONNECT)) {
