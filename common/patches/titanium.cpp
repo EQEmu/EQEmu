@@ -3948,7 +3948,8 @@ std::unique_ptr<EQApplicationPacket> MessageComponent::InterruptSpellOther(Mob* 
 	auto ic = reinterpret_cast<InterruptCast_Struct*>(outapp->pBuffer);
 	ic->messageid = ResolveID(message);
 	ic->spawnid = spawn_id;
-	strcpy(ic->message, spell_link);
+	// the buffer is sized for the caster name; copying the spell link overflowed it
+	strcpy(ic->message, name);
 	return outapp;
 }
 

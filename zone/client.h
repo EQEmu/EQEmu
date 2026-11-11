@@ -953,6 +953,8 @@ public:
 	inline uint32 GetDuelTarget() const { return duel_target; }
 	inline bool IsDueling() const { return duelaccepted; }
 	inline void SetDuelTarget(uint32 set_id) { duel_target = set_id; }
+	inline bool IsDuelChallenger() const { return duel_challenger; }
+	inline void SetDuelChallenger(bool v) { duel_challenger = v; }
 	inline void SetDueling(bool duel) { duelaccepted = duel; }
 	// use this one instead
 	void MemSpell(int32 spell_id, int slot, bool update_client = true);
@@ -2050,6 +2052,7 @@ private:
 	bool guild_dirty{ true };	//used to control add/delete opcodes due to client bug in Ti thru RoF2
 	bool GuildBanker;
 	uint16 duel_target;
+	bool duel_challenger = false; // the side that sent the pending OP_RequestDuel
 	bool duelaccepted;
 	std::vector<uint32> keyring;
 	bool tellsoff; // GM /toggle

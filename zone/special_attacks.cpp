@@ -298,6 +298,12 @@ void Mob::DoSpecialAttackDamage(Mob *who, EQ::skills::SkillType skill, int32 bas
 
 	DoAttack(who, my_hit);
 
+	// a riposte can kill the attacker inside DoAttack (NPC::Attack guards the same way);
+	// going on sent OP_Damage with source id 0
+	if (HasDied() || !GetID()) {
+		return;
+	}
+
 	who->AddToHateList(this, hate, 0);
 	who->Damage(this, my_hit.damage_done, SPELL_UNKNOWN, skill, false);
 
