@@ -243,13 +243,26 @@ void set_exception_handler() {
 #include <unistd.h>
 #include <sys/fcntl.h>
 
-#ifdef __FreeBSD__
 #include <signal.h>
+#ifdef __FreeBSD__
 #include <sys/stat.h>
 #endif
 
+static volatile sig_atomic_t crash_in_progress = 0;
+
 void print_trace()
 {
+	// The dump below is not async-signal-safe (popen, malloc, logging). If the crash came from heap
+	// corruption inside malloc, it can deadlock on the allocator lock and the process never exits, holding
+	// its launcher slot. So: a second fault while dumping exits at once, and an alarm kills the process
+	// if the dump has not finished in time.
+	if (crash_in_progress) {
+		_exit(1);
+	}
+	crash_in_progress = 1;
+	signal(SIGALRM, SIG_DFL);
+	alarm(60);
+
 	bool does_gdb_exist = Strings::Contains(Process::execute("gdb -v"), "GNU");
 	if (!does_gdb_exist) {
 		LogCrash(

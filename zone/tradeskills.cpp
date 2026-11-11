@@ -1199,7 +1199,12 @@ bool Client::TradeskillExecute(DBTradeskillRecipe_Struct *spec) {
 		if(over_trivial < 0)
 			CheckIncreaseTradeskill(bonusstat, stat_modifier, skillup_modifier, success_modifier, spec->tradeskill);
 
-		MessageString(Chat::Emote,TRADESKILL_FAILED);
+		// ToB's text names the recipe (%1); the argument overload sends Emote as type 4, so older clients keep the plain one
+		if (ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+			MessageString(Chat::Emote, TRADESKILL_FAILED, spec->name.c_str());
+		} else {
+			MessageString(Chat::Emote, TRADESKILL_FAILED);
+		}
 
 		LogTradeskills("Tradeskill failed");
 			if (GetGroup())

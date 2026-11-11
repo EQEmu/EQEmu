@@ -396,7 +396,7 @@ void Client::SendGuildTributes()
 			gtas->ability.tiers[ti].tribute_item_id = htonl(t.second.tiers[ti].tribute_item_id);
 			gtas->ability.tiers[ti].level = htonl(t.second.tiers[ti].level);
 		}
-		strn0cpy(gtas->ability.name, t.second.name.data(), t.second.name.length());
+		strn0cpy(gtas->ability.name, t.second.name.data(), len);
 		FastQueuePacket(&outapp);
 	}
 }

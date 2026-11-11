@@ -3221,8 +3221,10 @@ void Client::Handle_OP_AugmentItem(const EQApplicationPacket *app)
 						break;
 					}
 
+					// a swap targets a filled slot; the old augment comes out below
+					const bool is_swap = in_augment->augment_action == AugmentActions::Swap;
 					if (
-						tobe_auged->IsAugmentSlotAvailable(new_aug->GetAugmentType(), static_cast<uint8>(in_augment->augment_index)) &&
+						tobe_auged->IsAugmentSlotAvailable(new_aug->GetAugmentType(), static_cast<uint8>(in_augment->augment_index), is_swap) &&
 						tobe_auged->AvailableWearSlot(new_aug->GetItem()->Slots)
 					) {
 						old_aug = tobe_auged->RemoveAugment(static_cast<uint8>(in_augment->augment_index));
@@ -11861,6 +11863,9 @@ void Client::Handle_OP_PetitionCheckIn(const EQApplicationPacket *app)
 	Petition_Struct* inpet = (Petition_Struct*)app->pBuffer;
 
 	Petition* pet = PetitionList::Instance()->GetPetitionByID(inpet->petnumber);
+	if (!pet) {
+		return;
+	}
 	//if (inpet->urgency != pet->GetUrgency())
 	pet->SetUrgency(inpet->urgency);
 	pet->SetLastGM(GetName());

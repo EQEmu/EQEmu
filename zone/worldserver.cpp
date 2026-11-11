@@ -871,7 +871,7 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 		ServerMultiLineMsg_Struct* mlm = (ServerMultiLineMsg_Struct*)pack->pBuffer;
 		Client* client = entity_list.GetClientByName(mlm->to);
 		if (client) {
-			auto outapp = new EQApplicationPacket(OP_MultiLineMsg, strlen(mlm->message));
+			auto outapp = new EQApplicationPacket(OP_MultiLineMsg, strlen(mlm->message) + 1);
 			strcpy((char*)outapp->pBuffer, mlm->message);
 			client->QueuePacket(outapp);
 			safe_delete(outapp);

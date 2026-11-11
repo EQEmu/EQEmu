@@ -313,9 +313,9 @@ int8 EQ::ItemInstance::AvailableAugmentSlot(int32 augment_type) const
 	return INVALID_INDEX;
 }
 
-bool EQ::ItemInstance::IsAugmentSlotAvailable(int32 augment_type, uint8 slot) const
+bool EQ::ItemInstance::IsAugmentSlotAvailable(int32 augment_type, uint8 slot, bool allow_occupied) const
 {
-	if (!m_item || !m_item->IsClassCommon() || GetItem(slot)) {
+	if (!m_item || !m_item->IsClassCommon() || (!allow_occupied && GetItem(slot))) {
 		return false;
 	}
 
