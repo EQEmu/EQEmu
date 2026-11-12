@@ -27,6 +27,9 @@ read_eqemu_config_json();
 
 my $dbh = DBI->connect("DBI:mysql:database=$db_name;host=$db_host;port=$db_port", $db_user, $db_pass) or die "Cannot connect to MySql.";
 
+#::: Disable strict mode for this session. Caps values based on field type.
+$dbh->do(q{ SET SESSION sql_mode = 'NO_ENGINE_SUBSTITUTION' });
+
 read_items_file_from_13th_floor_text();
 update_items_table();
 
@@ -64,7 +67,7 @@ sub read_items_file_from_13th_floor_text {
         #::: Chomp this array...
         my @newitem_file_lines;
         chomp($item_file_lines[0]);
-        @fields = split("(?<!\\\\)\\|", $item_file_lines[0]);
+        @fields = split(/(?<!\\)(?:\\\\)*\|/, $item_file_lines[0]);
 
         my $sth = $dbh->prepare("SHOW TABLES LIKE 'items_floor'");
         $sth->execute();
@@ -73,7 +76,7 @@ sub read_items_file_from_13th_floor_text {
         #::: If we don't have items_floor table
         if ($has_items_floor eq '') {
                 $dbh->do("CREATE TABLE `items_floor` (`" . join("` VARCHAR(64) NOT NULL DEFAULT '', `", @fields). "` VARCHAR(64) NOT NULL DEFAULT '', UNIQUE INDEX `ID` (`id`)) COLLATE='latin1_swedish_ci' ENGINE=MyISAM");
-                $dbh->do("ALTER TABLE `items_floor` CHANGE `id` `id` INT(11) NOT NULL DEFAULT '0'");
+                $dbh->do("ALTER TABLE `items_floor` MODIFY `id` INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY");
                 printf "Database items_floor created\n";
         }
 
@@ -88,7 +91,7 @@ sub read_items_file_from_13th_floor_text {
 
         #::: Iterate through each item in items.txt
         for (1 .. $#item_file_lines) {
-                @f = split("(?<!\\\\)\\|", $item_file_lines[$_]);
+                @f = split(/(?<!\\)(?:\\\\)*\|/, $item_file_lines[$_]);
 
                 #::: Build our individual prepared statement (?, ?) values in the insert_ph
                 #::: ?, ? placeholders will be resolved via @field_values in the execute
@@ -148,7 +151,8 @@ sub update_items_table {
         #::: Establish items_new table
         print "Setting up new items table...\n";
         $dbh->do("DROP TABLE IF EXISTS items_new");
-        $dbh->do("CREATE TABLE items_new AS SELECT * FROM items");
+        $dbh->do("CREATE TABLE items_new LIKE items");
+        $dbh->do("INSERT INTO items_new SELECT * FROM items");
 
         print "Updating new items table...\n";
 
