@@ -2340,12 +2340,9 @@ void Client::Handle_OP_AdventureMerchantSell(const EQApplicationPacket *app)
 	}
 
 	// 06/11/2016 This formula matches RoF2 client side calculation.
-	uint32 price = EQ::Clamp(
-		price,
-		EQ::ClampUpper(
-			(item->LDoNPrice + 1) * item->LDoNSellBackRate / 100,
-			item->LDoNPrice
-		),
+	// (clamping the uninitialised price itself could refund the full LDoNPrice)
+	uint32 price = EQ::ClampUpper(
+		(item->LDoNPrice + 1) * item->LDoNSellBackRate / 100,
 		item->LDoNPrice
 	);
 
@@ -2879,7 +2876,13 @@ void Client::Handle_OP_AltCurrencySell(const EQApplicationPacket *app)
 			}
 
 			DeleteItemInInventory(sell->slot_id, sell->charges);
-			cost *= sell->charges;
+			// Handle_OP_AltCurrencyPurchase hands out MaxCharges units for one price, so a stack
+			// sells back pro rata (multiply first so small prices don't truncate to 0)
+			if (item->MaxCharges > 1) {
+				cost = cost * sell->charges / item->MaxCharges;
+			} else {
+				cost *= sell->charges;
+			}
 		}
 
 		sell->cost = cost;
@@ -3246,8 +3249,10 @@ void Client::Handle_OP_AugmentItem(const EQApplicationPacket *app)
 						break;
 					}
 
+					// a swap targets a filled slot; the old augment comes out below
+					const bool is_swap = in_augment->augment_action == AugmentActions::Swap;
 					if (
-						tobe_auged->IsAugmentSlotAvailable(new_aug->GetAugmentType(), static_cast<uint8>(in_augment->augment_index)) &&
+						tobe_auged->IsAugmentSlotAvailable(new_aug->GetAugmentType(), static_cast<uint8>(in_augment->augment_index), is_swap) &&
 						tobe_auged->AvailableWearSlot(new_aug->GetItem()->Slots)
 					) {
 						old_aug = tobe_auged->RemoveAugment(static_cast<uint8>(in_augment->augment_index));
@@ -6057,7 +6062,12 @@ void Client::Handle_OP_DuelDecline(const EQApplicationPacket *app)
 
 	Entity* entity = entity_list.GetID(ds->target_id);
 	Entity* initiator = entity_list.GetID(ds->entity_id);
-	if (!entity->IsClient() || !initiator->IsClient()) {
+	if (!entity || !initiator || !entity->IsClient() || !initiator->IsClient()) {
+		return;
+	}
+
+	// a decline must not cancel a duel that is already in progress
+	if (entity->CastToClient()->IsDueling() || initiator->CastToClient()->IsDueling()) {
 		return;
 	}
 
@@ -11965,6 +11975,9 @@ void Client::Handle_OP_PetitionCheckIn(const EQApplicationPacket *app)
 	Petition_Struct* inpet = (Petition_Struct*)app->pBuffer;
 
 	Petition* pet = PetitionList::Instance()->GetPetitionByID(inpet->petnumber);
+	if (!pet) {
+		return;
+	}
 	//if (inpet->urgency != pet->GetUrgency())
 	pet->SetUrgency(inpet->urgency);
 	pet->SetLastGM(GetName());
@@ -13701,6 +13714,32 @@ void Client::Handle_OP_RequestDuel(const EQApplicationPacket *app)
 	ds->duel_initiator = ds->duel_target;
 	ds->duel_target = duel;
 	Entity* entity = entity_list.GetID(ds->duel_target);
+	if (!entity) {
+		safe_delete(outapp);
+		return;
+	}
+
+	// The challenged player may answer with /duel, which sends OP_RequestDuel back to the challenger
+	// (no OP_DuelAccept follows). Only the challenged side's request is an accept; the challenger
+	// repeating /duel must not start the duel for the other player.
+	if (
+		GetID() != ds->duel_target &&
+		entity->IsClient() &&
+		!IsDueling() &&
+		!entity->CastToClient()->IsDueling() &&
+		!IsDuelChallenger() &&
+		entity->CastToClient()->IsDuelChallenger() &&
+		GetDuelTarget() == entity->GetID() &&
+		entity->CastToClient()->GetDuelTarget() == GetID()
+	) {
+		safe_delete(outapp);
+		EQApplicationPacket accept(OP_DuelAccept, sizeof(Duel_Struct));
+		auto as = (Duel_Struct *) accept.pBuffer;
+		as->duel_initiator = entity->GetID();
+		as->duel_target    = GetID();
+		Handle_OP_DuelAccept(&accept);
+		return;
+	}
 
 	if (
 		GetID() != ds->duel_target &&
@@ -13727,6 +13766,8 @@ void Client::Handle_OP_RequestDuel(const EQApplicationPacket *app)
 	) {
 		SetDuelTarget(ds->duel_target);
 		entity->CastToClient()->SetDuelTarget(GetID());
+		SetDuelChallenger(true);
+		entity->CastToClient()->SetDuelChallenger(false);
 		ds->duel_target = ds->duel_initiator;
 		entity->CastToClient()->FastQueuePacket(&outapp);
 		entity->CastToClient()->SetDueling(false);
@@ -13760,6 +13801,11 @@ void Client::Handle_OP_RespawnWindow(const EQApplicationPacket *app)
 		return;
 	}
 	char *Buffer = (char *)app->pBuffer;
+
+	// ignore repeat clicks after the player has already respawned
+	if (!IsHoveringForRespawn()) {
+		return;
+	}
 
 	uint32 Option = VARSTRUCT_DECODE_TYPE(uint32, Buffer);
 	HandleRespawnFromHover(Option);

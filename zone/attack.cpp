@@ -2096,6 +2096,12 @@ bool Client::Death(Mob* killer_mob, int64 damage, int32 spell, EQ::skills::Skill
 				}
 			}
 
+			// Other mobs' close lists hold this client under its current id, which the corpse takes over.
+			// Drop those entries now: after a hover respawn the client gets a new id, so they would never
+			// be removed and dangle once the client leaves (crash in Mob::IsCloseToBanker).
+			entity_list.RemoveMobFromCloseLists(this);
+			m_close_mobs.clear();
+
 			entity_list.AddCorpse(new_corpse, GetID());
 			SetID(0);
 

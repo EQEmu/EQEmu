@@ -85,7 +85,7 @@ void DatabaseUpdate::CheckDbUpdates()
 	}
 
 	int custom_database_version = UpdateManifest(manifest_entries_custom, v.custom_database_version, b.custom_database_version);
-	if (custom_database_version > v.server_database_version) {
+	if (custom_database_version > v.custom_database_version) {
 		LogInfo(
 			"Updates ran successfully, setting database version to [{}] from [{}]",
 			custom_database_version,

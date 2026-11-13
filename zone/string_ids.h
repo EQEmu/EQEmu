@@ -123,7 +123,7 @@
 #define DISARMED_TRAP				305		//You have disarmed the trap.
 #define LDON_SENSE_TRAP1			306		//You do not Sense any traps.
 #define TRADESKILL_NOCOMBINE		334		//You cannot combine these items in this container type!
-#define TRADESKILL_FAILED			336		//You lacked the skills to fashion the items together. // TODO: TOB - 336 You lacked the skills to fashion %1.
+#define TRADESKILL_FAILED			336		//You lacked the skills to fashion the items together. (ToB: ...to fashion %1.)
 #define TRADESKILL_TRIVIAL			338		//You can no longer advance your skill from making this item.
 #define TRADESKILL_SUCCEED			339		//You have fashioned the items together to create something new! // TODO: TOB - 339 You have %2fashioned the items together to create something new: %1.
 #define EVADE_SUCCESS				343		//You have momentarily ducked away from the main combat.
