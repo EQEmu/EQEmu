@@ -2600,6 +2600,7 @@ void ZoneDatabase::RefreshGroupFromDB(Client *client){
 	auto outapp = new EQApplicationPacket(OP_GroupUpdate, sizeof(GroupUpdate2_Struct));
 	GroupUpdate2_Struct* gu = (GroupUpdate2_Struct*)outapp->pBuffer;
 	gu->action = groupActUpdate;
+	gu->group_id = group->GetID();
 
 	strcpy(gu->yourname, client->GetName());
 	GetGroupLeadershipInfo(group->GetID(), gu->leadersname, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, &gu->leader_aas);

@@ -329,6 +329,7 @@
 #define QUEUED_TELL					2458	//[queued]
 #define QUEUE_TELL_FULL				2459	//[zoning and queue is full]
 #define TRADER_BUSY_TWO             3192    //Sorry, that action cannot be performed while trading.
+#define NOT_FAST_CAMP_ZONE 10031 //You are not in a zone that allows fast camping.
 #define SUSPEND_MINION_UNSUSPEND	3267	//%1 tells you, 'I live again...'
 #define SUSPEND_MINION_SUSPEND		3268	//%1 tells you, 'By your command, master.'
 #define ONLY_SUMMONED_PETS			3269	//This effect only works with summoned pets.
@@ -482,6 +483,10 @@
 #define LDON_NO_LOCKPICK			7564	//You must have a lock pick in your inventory to do this.
 #define LDON_WAS_NOT_LOCKED			7565	//%1 was not locked.
 #define LDON_WAS_NOT_TRAPPED		7566	//%1 was not trapped
+#define TRANSACTION_INVENTORY_FULL	7624	//Transaction failed: Your inventory is full!
+#define ITEM_OVERFLOW_ADDED			8334	//Your inventory is full. %1 has been added to your overflow items! Type /itemoverflow to view them.
+#define ITEM_OVERFLOW_COUNT			11355	//You have %1 overflow items available. Type /itemoverflow to view them.
+#define ITEM_OVERFLOW_RETRIEVED		11356	//You have successfully retrieved overflow item %1 x %2.
 #define GAIN_SINGLE_AA_SINGLE_AA	8019	//You have gained an ability point!  You now have %1 ability point.
 #define GAIN_SINGLE_AA_MULTI_AA		8020	//You have gained an ability point!  You now have %1 ability points.
 #define GAIN_MULTI_AA_MULTI_AA		8021	//You have gained %1 ability point(s)!  You now have %2 ability point(s).

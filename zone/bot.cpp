@@ -7759,7 +7759,7 @@ uint32 Bot::CalcCurrentWeight() {
 int Bot::GroupLeadershipAAHealthEnhancement() {
 	Group *g = GetGroup();
 
-	if (!g || (g->GroupCount() < 3))
+	if (!g || (g->GroupCount() < RuleI(Character, LeadershipMinGroupSize)))
 		return 0;
 
 	switch(g->GetLeadershipAA(groupAAHealthEnhancement)) {
@@ -7777,7 +7777,7 @@ int Bot::GroupLeadershipAAHealthEnhancement() {
 
 int Bot::GroupLeadershipAAManaEnhancement() {
 	Group *g = GetGroup();
-	if (!g || (g->GroupCount() < 3))
+	if (!g || (g->GroupCount() < RuleI(Character, LeadershipMinGroupSize)))
 		return 0;
 
 	switch(g->GetLeadershipAA(groupAAManaEnhancement)) {
@@ -7795,7 +7795,7 @@ int Bot::GroupLeadershipAAManaEnhancement() {
 
 int Bot::GroupLeadershipAAHealthRegeneration() {
 	Group *g = GetGroup();
-	if (!g || (g->GroupCount() < 3))
+	if (!g || (g->GroupCount() < RuleI(Character, LeadershipMinGroupSize)))
 		return 0;
 
 	switch(g->GetLeadershipAA(groupAAHealthRegeneration)) {
@@ -7815,7 +7815,7 @@ int Bot::GroupLeadershipAAHealthRegeneration() {
 int Bot::GroupLeadershipAAOffenseEnhancement() {
 	Group *g = GetGroup();
 
-	if (!g || (g->GroupCount() < 3))
+	if (!g || (g->GroupCount() < RuleI(Character, LeadershipMinGroupSize)))
 		return 0;
 
 	switch(g->GetLeadershipAA(groupAAOffenseEnhancement)) {

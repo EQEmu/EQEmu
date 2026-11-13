@@ -73,6 +73,9 @@ public:
 	std::unique_ptr<EQApplicationPacket> RefreshBuffs(EmuOpcode opcode, Mob* mob, bool remove,
 		bool buff_timers_suspended, const std::vector<uint32_t>& slots) const override;
 	bool NeedsWearMessage() const override;
+	bool NeedsBuffDefinitionsOnRefresh() const override;
+	std::unique_ptr<EQApplicationPacket> BuffRemovePrelude(Mob* mob, const Buffs_Struct& buff,
+		uint32_t slot) const override;
 	void SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, uint8_t refresh_type) const override;
 };
 

@@ -1561,6 +1561,7 @@ enum ItemPacketType {
     ItemPacketCharmUpdate    = 0x6E, // noted as incorrect
     ItemPacketRecovery       = 0x71,
     ItemPacketParcel         = 0x73,
+    ItemPacketOverflow       = 0x75, // TOB+ Item Overflow window
     ItemPacketInvalid        = 0xFF
 };
 
@@ -1720,6 +1721,15 @@ struct Surname_Struct
 /*0100*/
 };
 
+// Surname change reply for clients that identify the character by id instead of by name
+struct SurnameReply_Struct
+{
+/*000*/	uint32 character_id;
+/*004*/	int32  status;		// 1 = accepted
+/*008*/	char   lastname[32];
+/*040*/
+};
+
 struct GuildsListEntry_Struct {
 	char name[64];
 };
@@ -1856,6 +1866,153 @@ struct LootingItem_Struct {
 /*004*/	uint16	slot_id;
 /*006*/	uint8	unknown3[2];
 /*008*/	int32	auto_loot;
+};
+
+// OP_AdvLoot subtypes (u16, first in both directions)
+enum AdvLootSubtype : uint16 {
+	AdvLootSync         = 3,
+	AdvLootCoin         = 6,
+	AdvLootLeave        = 7,
+	AdvLootLoot         = 8,
+	AdvLootLootResult   = 9,
+	AdvLootAsk          = 0xa,
+	AdvLootChoice       = 0xb,
+	AdvLootGive         = 0xe,
+	AdvLootClearPending = 0x10,
+	AdvLootState        = 0x11,
+	AdvLootRoll         = 0x12,
+	AdvLootRollResult   = 0x13,
+};
+
+// Advanced Loot window requests (OP_AdvLootMisc, client to server)
+enum AdvLootMiscSubtype : uint16 {
+	AdvLootMiscFreeGrab = 0xf,
+};
+
+// One decoded OP_AdvLoot request. Only the fields that the subtype carries are set, the rest are zero:
+//   AdvLootSync:  none
+//   AdvLootLeave: item_id, corpse_id, quantity
+//   AdvLootLoot:  item_id, corpse_id, quantity, sequence
+//   AdvLootChoice: transaction_id, corpse_id, item_id, choice
+//   AdvLootAsk:   transaction_id, item_id, state, corpse_id
+//   AdvLootGive:  transaction_id (the ask the row carries, 0 if never asked), corpse_id, item_id, quantity,
+//                 leave (1 = leave on corpse, 0 = give), player_name
+//   AdvLootState: transaction_id, state
+//   AdvLootRoll:  transaction_id
+struct AdvLootRequest_Struct {
+	uint16	subtype;
+	uint32	transaction_id;
+	uint32	corpse_id;
+	uint32	item_id;
+	uint32	quantity;
+	uint32	sequence;
+	uint32	choice;
+	uint32	state;
+	uint8	leave;
+	char	player_name[64];
+};
+
+// One decoded OP_AdvLootMisc request
+struct AdvLootMisc_Struct {
+	uint16	subtype;
+	uint32	transaction_id;	// AdvLootMiscFreeGrab: the ask being grabbed
+	uint32	corpse_id;
+};
+
+// OP_AdvLootCorpseItems, zone to client: AdvLootCorpseItems_Struct followed by item_count AdvLootCorpseItem_Struct.
+// The player sees an item in the Shared list (shared_quantity) or the Personal list (personal_quantity).
+constexpr uint32 ADVLOOT_ITEM_LINK_SIZE = 256; // server-format item link, converted by the client patch
+
+struct AdvLootCorpseItems_Struct {
+	uint8	present;		// 1 when the player was near the corpse; 0 draws the rows locked
+	uint8	shared;			// 1 for a group or raid corpse, 0 for a solo corpse
+	uint32	unlock_seconds;	// time left before the corpse unlocks for everyone
+	uint32	corpse_id;
+	uint32	item_count;
+	char	corpse_name[64];
+};
+
+struct AdvLootCorpseItem_Struct {
+	uint64	item_id;
+	uint32	icon;
+	uint32	shared_quantity;
+	uint32	personal_quantity;
+	uint32	stack_size;		// largest stack; 1 draws one row per item
+	char	item_name[64];
+	char	item_link[ADVLOOT_ITEM_LINK_SIZE];
+};
+
+// OP_AdvLoot, zone to client. Every body starts with its AdvLootSubtype; the client patch writes each one in the
+// wire, so these hold only what the server decides. Names are NUL-terminated.
+struct AdvLootClearPending_Struct {
+	uint16	subtype;		// AdvLootClearPending
+	uint32	corpse_id;
+	uint64	item_id;
+};
+
+struct AdvLootCoin_Struct {
+	uint16	subtype;		// AdvLootCoin
+	uint8	split;			// 1 when the coin is a split between players
+	uint64	copper;
+};
+
+struct AdvLootResult_Struct {
+	uint16	subtype;		// AdvLootLootResult
+	uint16	result;			// AdvLootResult
+	uint32	sequence;		// the request's sequence, so the window can drop the request
+};
+
+// an item given to a player, or left on the corpse
+struct AdvLootGiveNotice_Struct {
+	uint16	subtype;		// AdvLootGive
+	uint32	transaction_id;	// the row's ask id, 0 when it was never asked
+	uint32	corpse_id;
+	uint64	item_id;
+	uint16	quantity;
+	uint8	leave;			// 1 = left on the corpse, 0 = given to player_name
+	char	player_name[64];	// who gave (leave) or who got the item
+};
+
+// an ask (need/greed) for one item on one corpse
+struct AdvLootAskNotice_Struct {
+	uint16	subtype;		// AdvLootAsk
+	uint32	transaction_id;
+	uint64	item_id;
+	uint32	state;			// AdvLootTransactionState
+	uint32	time_left;		// milliseconds
+	uint32	corpse_id;
+	uint32	quantity;
+};
+
+struct AdvLootStateNotice_Struct {
+	uint16	subtype;		// AdvLootState
+	uint32	transaction_id;
+	uint32	time_left;		// milliseconds
+	uint32	state;			// AdvLootTransactionState
+};
+
+// AdvLootRollResult_Struct is followed by roller_count AdvLootRoller_Struct
+struct AdvLootRollResult_Struct {
+	uint16	subtype;		// AdvLootRollResult
+	uint32	transaction_id;
+	uint32	best_choice;	// the choice that rolled: greed or need
+	uint16	roller_count;
+};
+
+struct AdvLootRoller_Struct {
+	uint16	roll;
+	char	name[64];
+};
+
+// reply to AdvLootSync
+struct AdvLootSyncReply_Struct {
+	uint16	subtype;		// AdvLootSync
+	char	master_looter_name[64];
+};
+
+// OP_AdvLootMasterLooter: the master looter for the window's Give list; an empty name clears it
+struct AdvLootMasterLooter_Struct {
+	char	name[64];
 };
 
 struct GuildManageStatus_Struct{
@@ -2148,7 +2305,10 @@ struct MerchantClick_Struct
     /*008*/ uint32 command;     // 1=open, 0=cancel/close
     /*012*/ float  rate;        // cost multiplier, dosent work anymore
     /*016*/ int32  tab_display; // bitmask b000 none, b001 Purchase/Sell, b010 Recover, b100 Parcels
-    /*020*/ int32  unknown020;  // Seen 2592000 from Server or -1 from Client
+    /*020*/ union {
+        int32  unknown020;   // RoF2 and older: Seen 2592000 from Server or -1 from Client
+        uint32 alt_currency; // points merchants (ToB+): alternate currency id, LOYALTY_MERCHANT_CURRENCY for loyalty merchants
+    };
     /*024*/
 };
 
@@ -2271,7 +2431,8 @@ struct Adventure_Sell_Struct {
 
 struct AdventurePoints_Update_Struct {
 /*000*/	uint32	ldon_available_points;		// Total available points
-/*004*/	uint8	unknown004[36];
+/*004*/	uint8	unknown004[32];
+/*036*/	uint32	ldon_generic_points;		// generic ('---') theme, read by the ToB points-merchant buy check
 /*040*/	uint8	unknown040[16];
 /*056*/	uint32	ldon_guk_points;		// Earned Deepest Guk points
 /*060*/	uint8	unknown060[16];
@@ -2516,7 +2677,8 @@ struct GroupUpdate2_Struct {
 /*0452*/	GroupLeadershipAA_Struct leader_aas;
 /*0580*/	uint8	unknown580[196];
 /*0766*/	uint32	NPCMarkerID;	// EntityID of player delegated MarkNPC ability
-/*0780*/	uint8	unknown780[56];
+/*0780*/	uint32	group_id;		// the group's id; 0 when the sender has none (TOB+ puts it first in the roster)
+/*0784*/	uint8	unknown784[52];
 /*0836*/
 };
 struct GroupJoin_Struct {
@@ -3151,6 +3313,7 @@ struct BazaarSearchResults_Struct {
 //
 //
 #define MAX_BUYER_COMPENSATION_ITEMS 10
+#define MAX_BUYER_LINES 255 // bound on buy lines in one OP_BuyerItems packet
 
 enum BarterBuyerActions {
 	Barter_BuyerSearch               = 0,
@@ -3876,6 +4039,7 @@ struct Internal_GuildMemberEntry_Struct {
 
 struct Internal_GuildMembers_Struct {	//just for display purposes, this is not actually used in the message encoding.
 	char	player_name[64];		//variable length.
+	uint32	guild_id;			//the guild the list is for (ToB sends it in the list header)
 	uint32	count;				//network byte order
 	uint32	name_length;	//total length of all of the char names, excluding terminators
 	uint32	note_length;	//total length of all the public notes, excluding terminators
@@ -3939,7 +4103,8 @@ struct GuildPermission_Struct
 struct GuildUpdateURLAndChannel_Struct
 {
 /*0000*/	uint32	Action;	// 0 = Update URL, 1 = Update Channel
-/*0004*/	char	Unknown0004[76];
+/*0004*/	uint32	WindowOpen;	// 1 = reply to the client's guild-window-open request (ToB only delivers these)
+/*0008*/	char	Unknown0008[72];
 /*0080*/	char	Text[512];	// URL can be up to 512, SoD client caps the Channel at 128;
 /*0592*/	char	Unknown0592[3584];
 /*4176*/
@@ -4420,6 +4585,84 @@ struct FindPersonRequest_Struct {
 	FindPerson_Point client_pos;
 };
 
+// What a Find window request asks for
+enum FindPersonRequestType : uint32 {
+	FindPersonRequestSpawn     = 1, // a findable spawn (request.npc_id)
+	FindPersonRequestZonePoint = 6, // a zone point by number (zone_point_number)
+	FindPersonRequestLocation  = 7  // a path to dest, which must be one of the zone's zone points
+};
+
+// Find window request from clients whose window also lists zone connections. The patch fills request.npc_id
+// only for FindPersonRequestSpawn and zone_point_number only for FindPersonRequestZonePoint.
+struct FindPersonRequestEx_Struct {
+	FindPersonRequest_Struct request;
+	uint32                   request_type; // FindPersonRequestType; other values get an empty reply
+	uint32                   zone_point_number;
+	FindPerson_Point         dest;
+};
+
+// Find window "Zone Connection" rows, one per zone point the client can use (the patch converts to the wire layout)
+struct FindZoneConnection_Struct {
+/*00*/ uint32 row_type;     // FindPersonRequestType the client sends back: Location = path to loc, ZonePoint = by id
+/*04*/ uint32 id;
+/*08*/ uint32 unknown08;
+/*12*/ uint32 zone_id;      // row text is this zone's name
+/*16*/ uint32 number;       // != 0 adds " - N" to the row text
+/*20*/ FindPerson_Point loc;
+/*32*/
+};
+
+struct FindZoneConnections_Struct {
+	uint32 count;
+	FindZoneConnection_Struct entries[0];
+};
+
+// Faction window list (the patch converts to the wire layout). Raw personal values: the client adds
+// the race/class/deity modifiers itself
+struct FactionListEntry_Struct {
+/*00*/ uint32 faction_id;
+/*04*/ int32  value;
+/*08*/
+};
+
+struct FactionList_Struct {
+	uint32 count;
+	FactionListEntry_Struct entries[0];
+};
+
+// Standing change (the patch converts to the wire layout). The client applies new_value - old_value
+// to its copy and, if show_message is set, prints the standing line itself
+enum FactionUpdateMessageType : int32 {
+	FactionUpdateUnchanged = 0, // did not change (string 14526)
+	FactionUpdateAtCap     = 1, // at the cap (strings 469/471 by direction)
+	FactionUpdateAdjusted  = 2  // adjusted by (string 14261)
+};
+
+struct FactionUpdate_Struct {
+/*00*/ uint8  show_message;
+/*01*/ int32  message_type; // FactionUpdateMessageType
+/*05*/ uint32 faction_id;
+/*09*/ int32  direction;    // sign only, used by message_type 1
+/*13*/ int32  old_value;
+/*17*/ int32  new_value;
+/*21*/
+};
+
+// Item Overflow window (items queued behind the cursor); the patch converts to and from the wire layout
+enum ItemOverflowAction : uint32 {
+	ItemOverflowList        = 0, // C2S
+	ItemOverflowRetrieve    = 1, // C2S, item_index
+	ItemOverflowRetrieveAll = 2, // C2S
+	ItemOverflowRemoved     = 4, // S2C, item_index
+	ItemOverflowClear       = 7  // S2C
+};
+
+struct ItemOverflow_Struct {
+/*00*/ uint32 action;
+/*04*/ uint64 item_index; // the 8-byte id in the serialized item (the item's serial number)
+/*12*/
+};
+
 //variable length packet of points
 struct FindPersonResult_Struct {
 	FindPerson_Point dest;
@@ -4877,6 +5120,20 @@ struct MarkNPC_Struct
 struct InspectBuffs_Struct {
 /*000*/ int32 spell_id[BUFF_COUNT];
 /*100*/ int32 tics_remaining[BUFF_COUNT];
+};
+
+// Inspect buffs for clients that show more: the same lists plus the target, the caster of each buff and
+// whether only the inspector's own buffs were requested
+struct InspectBuffsDetailed_Struct {
+	InspectBuffs_Struct buffs;
+	uint32 target_id;
+	uint32 caster_id[BUFF_COUNT];
+	uint8  only_mine;
+};
+
+// Client request to inspect the target's buffs (clients that send it as its own opcode)
+struct InspectBuffsRequest_Struct {
+	uint8 only_mine; // 1 = only buffs the inspector cast
 };
 
 struct RaidGeneral_Struct {

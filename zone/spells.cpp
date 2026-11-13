@@ -4457,7 +4457,7 @@ bool Mob::SpellOnTarget(
 					MessageString(Chat::SpellFailure, PHYSICAL_RESIST_FAIL,spells[spell_id].name);
 					spelltar->MessageString(Chat::SpellFailure, YOU_RESIST, spells[spell_id].name);
 				} else {
-					MessageString(Chat::SpellFailure, TARGET_RESISTED, spells[spell_id].name);
+					SendTargetResistedMessage(spelltar, spell_id);
 					spelltar->MessageString(Chat::SpellFailure, YOU_RESIST, spells[spell_id].name);
 
 					if (IsBot() && RuleB(Bots, ShowResistMessagesToOwner)) {
@@ -5151,7 +5151,7 @@ bool Mob::IsImmuneToSpell(int32 spell_id, Mob *caster)
 				if (RuleB(Spells, CharmAggroOverLevel)) {
 					int64 aggro = caster->CheckAggroAmount(spell_id, this);
 					aggro > 0 ? AddToHateList(caster, aggro) : AddToHateList(caster, 1, 0, true, false, false, spell_id);
-					caster->MessageString(Chat::SpellFailure, TARGET_RESISTED, spells[spell_id].name);
+					caster->SendTargetResistedMessage(this, spell_id);
 					return true;
 				}
 
@@ -7274,4 +7274,19 @@ bool Mob::CheckWaterLoS(Mob* m)
 		zone->watermap->InLiquid(GetPosition()) ==
 		zone->watermap->InLiquid(m->GetPosition())
 	);
+}
+
+// TOB+ string 425 is "%1 resisted your %2!" (target, spell); older clients use "Your target resisted the %1 spell."
+void Mob::SendTargetResistedMessage(Mob *target, uint16 spell_id)
+{
+	if (!IsValidSpell(spell_id)) {
+		return;
+	}
+
+	if (IsClient() && target && CastToClient()->ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+		MessageString(Chat::SpellFailure, TARGET_RESISTED, target->GetCleanName(), spells[spell_id].name);
+		return;
+	}
+
+	MessageString(Chat::SpellFailure, TARGET_RESISTED, spells[spell_id].name);
 }

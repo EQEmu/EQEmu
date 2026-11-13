@@ -1686,17 +1686,19 @@ void EntityList::QueueClientsByTarget(Mob *sender, const EQApplicationPacket *ap
 						Raid *raid = c->GetRaid();
 						if (raid) {
 							uint32 gid = raid->GetGroup(c);
-							if (gid < MAX_RAID_GROUPS && raid->GroupCount(gid) >= 3) {
+							if (gid < MAX_RAID_GROUPS && raid->GroupCount(gid) >= RuleI(Character, LeadershipMinGroupSize)) {
 								if (raid->GetLeadershipAA(groupAAInspectBuffs, gid))
 									Send = !clear_target_window;
 							}
 						}
 					} else {
 						Group *group = c->GetGroup();
-						if (group && group->GroupCount() >= 3) {
+						if (group && group->GroupCount() >= RuleI(Character, LeadershipMinGroupSize)) {
 							if (group->GetLeadershipAA(groupAAInspectBuffs)) {
 								Send = !clear_target_window;
 							}
+						} else if (!group && c->GetSoloLeadershipAA(groupAAInspectBuffs)) {
+							Send = !clear_target_window;
 						}
 					}
 				} else {
@@ -5099,6 +5101,13 @@ void EntityList::UnMarkNPC(uint16 ID)
 		if (*it)
 			(*it)->UnMarkNPC(ID);
 		++it;
+	}
+
+	// solo marks (rule Character:SoloMarkNPC); skip the mob itself, a client being destroyed
+	for (auto &e : client_list) {
+		if (e.second && e.first != ID) {
+			e.second->UnMarkSoloNPC(ID);
+		}
 	}
 }
 

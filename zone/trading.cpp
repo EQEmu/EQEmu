@@ -763,7 +763,7 @@ void Client::TraderShowItems()
 
 	for (int i = 0; i < item_limit; i++) {
 		data->item_cost[i] = trader_items.at(i).item_cost;
-		data->items[i]     = ClientVersion() == EQ::versions::ClientVersion::RoF2 ? trader_items.at(i).item_sn
+		data->items[i]     = ClientVersion() >= EQ::versions::ClientVersion::RoF2 ? trader_items.at(i).item_sn
 			: trader_items.at(i).item_id;
 	}
 

@@ -82,6 +82,7 @@ namespace EQ
 
 #define CLIENT_LD_TIMEOUT 30000 // length of time client stays in zone after LDing
 #define TARGETING_RANGE 200 // range for /assist and /target
+constexpr uint32 ADVLOOT_MASTER_LOOTER_REFRESH_MS = 1500; // wait for the roster packets before re-announcing the master looter
 #define XTARGET_HARDCAP 20
 #define MAX_SPECIALIZED_SKILL 50
 
@@ -489,6 +490,10 @@ public:
 	void WorldKick();
 	inline uint8 GetAnon() const { return m_pp.anon; }
 	inline uint8 GetAFK() const { return m_is_afk; }
+	inline bool IsAdvancedLooting() const { return m_advanced_looting; }
+	inline void SetAdvancedLooting(bool enabled) { m_advanced_looting = enabled; }
+	// re-announce the master looter shortly, after group/raid roster packets have reached the client
+	inline void QueueAdvancedLootMasterLooterRefresh() { m_advloot_master_looter_refresh.Start(ADVLOOT_MASTER_LOOTER_REFRESH_MS); }
 	void SetAnon(uint8 anon_flag);
 	inline Client* ResetAFKTimer() {
 		if (!RuleB(Character, EnableAutoAFK)) {
@@ -576,6 +581,9 @@ public:
 	void BulkSendTraderInventory(uint32 char_id);
 	void SendSingleTraderItem(uint32 char_id, int serial_number);
 	void BulkSendMerchantInventory(int merchant_id, int npcid);
+	void SendMerchantClose(uint32 npc_id);
+	void SendPointsMerchantWindow(NPC *npc);
+	void SendAlternateCurrencyMerchantList(NPC *npc);
 
 	inline uint8 GetLanguageSkill(uint8 language_id) const { return m_pp.languages[language_id]; }
 
@@ -769,7 +777,8 @@ public:
 	int GroupLeadershipAAManaEnhancement();
 	int GroupLeadershipAAHealthRegeneration();
 	int GroupLeadershipAAOffenseEnhancement();
-	void InspectBuffs(Client* Inspector, int Rank);
+	void InspectBuffs(Client* Inspector, int Rank, bool only_mine = false);
+	void InspectTargetBuffs(bool only_mine);
 	uint32 GetRaidPoints() { return(m_pp.raid_leadership_points); }
 	uint32 GetGroupPoints() { return(m_pp.group_leadership_points); }
 	uint32 GetRaidEXP() { return(m_pp.raid_leadership_exp); }
@@ -821,6 +830,8 @@ public:
 	int32 GetModCharacterFactionLevel(int32 faction_id);
 	void MerchantRejectMessage(Mob *merchant, int primaryfaction);
 	void SendFactionMessage(int32 tmpvalue, int32 faction_id, int32 faction_before_hit, int32 totalvalue, uint8 temp,  int32 this_faction_min, int32 this_faction_max);
+	void SendFactionList();
+	void SendFactionUpdate(int32 faction_id, int32 old_value, int32 new_value, int32 message_type, int32 direction, bool show_message);
 
 	void UpdatePersonalFaction(int32 char_id, int32 npc_value, int32 faction_id, int32 *current_value, int32 temp, int32 this_faction_min, int32 this_faction_max);
 	void SetFactionLevel(uint32 char_id, uint32 npc_faction_id, uint8 char_class, uint8 char_race, uint8 char_deity, bool quest = false);
@@ -853,8 +864,8 @@ public:
 	void SetGuildRank(uint32 rank);
 	void SetGuildID(uint32 guild_id);
 	void SendGuildMOTD(bool GetGuildMOTDReply = false);
-	void SendGuildURL();
-	void SendGuildChannel();
+	void SendGuildURL(bool tob_window_open = false);
+	void SendGuildChannel(bool tob_window_open = false);
 	void SendGuildSpawnAppearance();
 	void SendGuildRanks();
 	void SendGuildMembers();
@@ -873,7 +884,7 @@ public:
 	void SendGuildMemberAdd(uint32 guild_id, uint32 level, uint32 _class, uint32 rank, uint32 guild_show, uint32 zone_id, std::string player_name);
 	void SendGuildMemberRename(uint32 guild_id, std::string player_name, std::string new_player_name);
 	void SendGuildMemberDelete(uint32 guild_id, std::string player_name);
-	void SendGuildMemberLevel(uint32 guild_id, uint32 level, std::string player_name);
+	void SendGuildMemberLevel(uint32 guild_id, uint32 level, uint32 class_id, std::string player_name);
 	void SendGuildMemberRankAltBanker(uint32 guild_id, uint32 rank, std::string player_name, bool alt, bool banker);
 	void SendGuildMemberPublicNote(uint32 guild_id, std::string player_name, std::string public_note);
 	void SendGuildMemberDetails(uint32 guild_id, uint32 zone_id, uint32 offline_mode, std::string player_name);
@@ -909,6 +920,8 @@ public:
 	int GetAccountAge();
 
 	void SendPath(Mob* target);
+	void SendPathToLocation(const glm::vec3 &destination, float destination_size = 0.0f, bool allow_partial = false);
+	void SendFindZoneConnections();
 
 	bool IsDiscovered(uint32 itemid);
 	void DiscoverItem(uint32 itemid);
@@ -1068,6 +1081,7 @@ public:
 	int GetSpentAA() { return m_pp.aapoints_spent; }
 	uint32 GetRequiredAAExperience();
 	void AutoGrantAAPoints();
+	void GrantVeteranAAs();
 	void GrantAllAAPoints(uint8 unlock_level = 0, bool skip_grant_only = false);
 	bool HasAlreadyPurchasedRank(AA::Rank* rank);
 	void ListPurchasedAAs(Client *to, std::string search_criteria = std::string());
@@ -1133,6 +1147,10 @@ public:
 	bool FindNumberOfFreeInventorySlotsWithSizeCheck(std::vector<BuyerLineTradeItems_Struct> items);
 	bool PushItemOnCursor(const EQ::ItemInstance& inst, bool client_update = false);
 	void SendCursorBuffer();
+	bool IsItemOverflowEnabled();
+	void SendItemOverflowList();
+	void SendItemOverflowAction(uint32 action, uint64 item_index = 0);
+	bool RetrieveOverflowItem(uint64 item_index);
 	void DeleteItemInInventory(int16 slot_id, int16 quantity = 0, bool client_update = false, bool update_db = true);
 	uint32 CountItem(uint32 item_id);
 	void ResetItemCooldown(uint32 item_id);
@@ -1739,6 +1757,12 @@ public:
 	void LeaveGroupXTargets(Group *g);
 	void LeaveRaidXTargets(Raid *r);
 	void ClearXTargets();
+	// rule Character:SoloMarkNPC: NPC marks of an ungrouped player, shown only to them
+	void SoloMarkNPC(Mob *target, int number);
+	void UnMarkSoloNPC(uint16 entity_id);
+	void ClearSoloNPCMarks(bool notify);
+	// rank of a group leadership AA for a player in no group or raid, when Character:LeadershipMinGroupSize <= 1
+	int GetSoloLeadershipAA(int aa);
 	bool GroupFollow(Client* inviter);
 	inline bool  GetRunMode() const { return runmode; }
 
@@ -2050,6 +2074,7 @@ private:
 	uint8 guildrank; // player's rank in the guild, 1- Leader 8 Recruit
 	bool guild_tribute_opt_in;
 	bool guild_dirty{ true };	//used to control add/delete opcodes due to client bug in Ti thru RoF2
+	std::set<uint32> m_guild_names_sent; // guild ids already answered for OP_GuildNameRequest (ToB)
 	bool GuildBanker;
 	uint16 duel_target;
 	bool duel_challenger = false; // the side that sent the pending OP_RequestDuel
@@ -2065,6 +2090,8 @@ private:
 	char LFGComments[64];
 	bool m_is_afk = false;
 	bool m_is_manual_afk = false;
+	bool m_advanced_looting = false;          // TOB+ Loot Settings, sent by the client only when it changes
+	Timer  m_advloot_master_looter_refresh;
 	bool auto_attack;
 	bool auto_fire;
 	bool runmode;
@@ -2169,6 +2196,8 @@ private:
 	PTimerList p_timers; //persistent timers
 	Timer hpupdate_timer;
 	Timer camp_timer;
+	void CompleteCamp();         // leave group/raid, save, mark instalog (camp_timer and ToB fast camp)
+	bool IsFastCampZone() const; // zones where ToB clients may fast camp
 	Timer bot_camp_timer;
 	Timer process_timer;
 	Timer consume_food_timer;
@@ -2420,4 +2449,6 @@ public:
 	bool IsFilteredAFKPacket(const EQApplicationPacket *p);
 	void CheckAutoIdleAFK(PlayerPositionUpdateClient_Struct *p);
 	void SyncWorldPositionsToClient(bool ignore_idle = false);
+private:
+	uint16 m_solo_marked_npcs[3] = {}; // MAX_MARKED_NPCS (groups.h)
 };

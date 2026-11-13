@@ -28,6 +28,9 @@ class Mob;
 
 #define MAX_MARKED_NPCS 3
 
+// OP_GroupRoles role number of the group NPC marker (clients without OP_DelegateAbility delegate it here)
+constexpr uint32 GroupRoleMarkNPC = 4;
+
 enum {
 	RoleAssist = 1,
 	RoleTank   = 2,
@@ -134,6 +137,7 @@ public:
 	void	NotifyPuller(Client *c, uint8 toggle = 0);
 	void	NotifyMarkNPC(Client *c);
 	inline	uint32 GetNPCMarkerID() { return NPCMarkerID; }
+	const char *GetNPCMarkerName() { return NPCMarkerName.c_str(); }
 	void	SetMainTank(const char *NewMainTankName);
 	void	SetMainAssist(const char *NewMainAssistName);
 	void	SetPuller(const char *NewPullerName);
@@ -151,6 +155,9 @@ public:
 	void	QueueHPPacketsForNPCHealthAA(Mob* sender, const EQApplicationPacket* app);
 	void	QueueClients(Mob *sender, const EQApplicationPacket *app, bool ack_required = true, bool ignore_sender = true, float distance = 0);
 	void	ChangeLeader(Mob* newleader);
+	void	AnnounceAdvancedLootMasterLooter();
+	void	SetAdvancedLootMasterLooter(const std::string &name) { m_advloot_master_looter = name; }
+	Client	*GetAdvancedLootMasterLooter();
 	const char *GetClientNameByIndex(uint8 index);
 	void	UpdateXTargetMarkedNPC(uint32 Number, Mob *m);
 	void	SetDirtyAutoHaters();
@@ -169,6 +176,7 @@ public:
 	bool AnyMemberHasDzLockout(const std::string& expedition, const std::string& event);
 
 	Mob*	members[MAX_GROUP_MEMBERS] {nullptr};
+	std::string m_advloot_master_looter; // group window Master Looter role; empty = the leader
 	char	membername[MAX_GROUP_MEMBERS][64] {""};
 	uint8	MemberRoles[MAX_GROUP_MEMBERS] {0};
 	bool	disbandcheck {false};

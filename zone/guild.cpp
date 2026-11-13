@@ -61,7 +61,7 @@ void Client::SendGuildMOTD(bool GetGuildMOTDReply) {
 	FastQueuePacket(&outapp);
 }
 
-void Client::SendGuildURL()
+void Client::SendGuildURL(bool tob_window_open)
 {
 	if (ClientVersion() < EQ::versions::ClientVersion::SoF)
 		return;
@@ -76,6 +76,7 @@ void Client::SendGuildURL()
 		if(guild_mgr.GetGuildURL(GuildID(), guuacs->Text))
 		{
 			guuacs->Action = GuildUpdateURL;
+			guuacs->WindowOpen = tob_window_open ? 1 : 0;
 			FastQueuePacket(&outapp);
 		}
 		else
@@ -83,7 +84,7 @@ void Client::SendGuildURL()
 	}
 }
 
-void Client::SendGuildChannel()
+void Client::SendGuildChannel(bool tob_window_open)
 {
 	if (ClientVersion() < EQ::versions::ClientVersion::SoF)
 		return;
@@ -98,6 +99,7 @@ void Client::SendGuildChannel()
 		if(guild_mgr.GetGuildChannel(GuildID(), guuacs->Text))
 		{
 			guuacs->Action = GuildUpdateChannel;
+			guuacs->WindowOpen = tob_window_open ? 1 : 0;
 
 			FastQueuePacket(&outapp);
 		}
@@ -604,14 +606,20 @@ void Client::SendGuildMemberDelete(uint32 guild_id, std::string player_name)
 
 }
 
-void Client::SendGuildMemberLevel(uint32 guild_id, uint32 level, std::string player_name)
+void Client::SendGuildMemberLevel(uint32 guild_id, uint32 level, uint32 class_id, std::string player_name)
 {
-	auto outapp = new EQApplicationPacket(OP_GuildMemberLevel, sizeof(GuildMemberLevel_Struct));
+	// ToB needs the class as well; its encoder reads it after the struct
+	const bool   with_class = ClientVersion() >= EQ::versions::ClientVersion::TOB;
+	const uint32 size       = sizeof(GuildMemberLevel_Struct) + (with_class ? sizeof(uint32) : 0);
+	auto outapp = new EQApplicationPacket(OP_GuildMemberLevel, size);
 	auto out    = (GuildMemberLevel_Struct *) outapp->pBuffer;
 
 	out->guild_id = guild_id;
 	out->level    = level;
 	strn0cpy(out->player_name, player_name.c_str(), sizeof(out->player_name));
+	if (with_class) {
+		memcpy(outapp->pBuffer + sizeof(GuildMemberLevel_Struct), &class_id, sizeof(uint32));
+	}
 
 	QueuePacket(outapp);
 	safe_delete(outapp);
@@ -766,16 +774,22 @@ void EntityList::SendGuildMemberRemove(uint32 guild_id, std::string player_name)
 	}
 }
 
-void EntityList::SendGuildMemberLevel(uint32 guild_id, uint32 level, std::string player_name)
+void EntityList::SendGuildMemberLevel(uint32 guild_id, uint32 level, uint32 class_id, std::string player_name)
 {
 	for (auto const &c: client_list) {
 		if (c.second->GuildID() == guild_id) {
-			auto outapp = new EQApplicationPacket(OP_GuildMemberLevel, sizeof(GuildMemberLevel_Struct));
+			// ToB needs the class as well; its encoder reads it after the struct
+			const bool   with_class = c.second->ClientVersion() >= EQ::versions::ClientVersion::TOB;
+			const uint32 size       = sizeof(GuildMemberLevel_Struct) + (with_class ? sizeof(uint32) : 0);
+			auto outapp = new EQApplicationPacket(OP_GuildMemberLevel, size);
 			GuildMemberLevel_Struct *out = (GuildMemberLevel_Struct *) outapp->pBuffer;
 
 			out->guild_id = guild_id;
 			out->level    = level;
 			strn0cpy(out->player_name, player_name.c_str(), sizeof(out->player_name));
+			if (with_class) {
+				memcpy(outapp->pBuffer + sizeof(GuildMemberLevel_Struct), &class_id, sizeof(uint32));
+			}
 
 			c.second->QueuePacket(outapp);
 			safe_delete(outapp);

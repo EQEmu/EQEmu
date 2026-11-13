@@ -63,6 +63,7 @@ public:
 	void push_front(EQ::ItemInstance* inst);
 	EQ::ItemInstance* pop();
 	EQ::ItemInstance* pop_back();
+	EQ::ItemInstance* remove(const EQ::ItemInstance* inst);
 	EQ::ItemInstance* peek_front() const;
 
 protected:
@@ -127,6 +128,9 @@ namespace EQ
 
 		// Get cursor item in front of queue
 		ItemInstance* GetCursorItem();
+
+		// Remove an item queued behind the cursor (and take control of memory)
+		ItemInstance* PopCursorQueueItem(const ItemInstance* inst);
 
 		// Swap items in inventory
 		enum SwapItemFailState : int8 { swapInvalid = -1, swapPass = 0, swapNotAllowed, swapNullData, swapRaceClass, swapDeity, swapLevel };

@@ -351,6 +351,10 @@ namespace EQ
 		const void * inst;
 	};
 
+	// OP_TributeInfo / OP_SendGuildTributes for ToB carry {magic, count, InternalSerializedItem_Struct[count]}
+	// after the name; the patch serializes the item instances
+	constexpr uint32 TRIBUTE_ITEMS_TRAILER_MAGIC = 0x49424F54;
+
 	struct ItemData {
 		// Non packet based fields
 		uint8	MinStatus {};

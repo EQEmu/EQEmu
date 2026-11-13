@@ -667,7 +667,7 @@ enum aaID {	//AA IDs
 	aaSelosEnduringCadence					=1627,//implemented as bonus
 
 
-	aaThroneofHeroes						=4655,
+	aaThroneofHeroes						=4665,//from dbstr_us.txt
 	aaTinkeringMastery						=4672,
 	aaCombatMedic							=4688,//implemented as bonus
 	aaQuickDraw								=4698,
@@ -1538,8 +1538,12 @@ enum {	//values of AA_Action.action
 	aaActionActivate = 0,
 	aaActionSetEXP = 1,
 	aaActionDisableEXP = 2,
-	aaActionBuy = 3
+	aaActionBuy = 3,
+	aaActionTrainShift = 10, // ToB: shift-click Train, same as aaActionBuy
+	aaActionBuyAll = 11      // ToB: Buy All, every affordable rank of the ability
 };
+
+constexpr int MAX_AA_BUY_ALL_RANKS = 1000;
 
 namespace AACategory {
 	constexpr int None          = -1;

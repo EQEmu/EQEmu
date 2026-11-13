@@ -23,6 +23,7 @@
 #include "common/strings.h"
 #include "common/textures.h"
 
+#include <algorithm>
 #include <iostream>
 
 std::list<EQ::ItemInstance*> dirty_inst;
@@ -74,6 +75,19 @@ EQ::ItemInstance* ItemInstQueue::pop_back()
 	EQ::ItemInstance* inst = m_list.back();
 	m_list.pop_back();
 	return inst;
+}
+
+// Remove a specific item from the queue (and take control of memory)
+EQ::ItemInstance* ItemInstQueue::remove(const EQ::ItemInstance* inst)
+{
+	auto it = std::find(m_list.begin(), m_list.end(), inst);
+	if (it == m_list.end()) {
+		return nullptr;
+	}
+
+	EQ::ItemInstance* found = *it;
+	m_list.erase(it);
+	return found;
 }
 
 // Look at item at front of queue
@@ -254,6 +268,15 @@ int16 EQ::InventoryProfile::PushCursor(const ItemInstance &inst) {
 
 EQ::ItemInstance* EQ::InventoryProfile::GetCursorItem() {
 	return m_cursor.peek_front();
+}
+
+EQ::ItemInstance* EQ::InventoryProfile::PopCursorQueueItem(const ItemInstance* inst) {
+	// the front of the queue is the cursor itself
+	if (!inst || m_cursor.empty() || m_cursor.peek_front() == inst) {
+		return nullptr;
+	}
+
+	return m_cursor.remove(inst);
 }
 
 // Swap items in inventory
