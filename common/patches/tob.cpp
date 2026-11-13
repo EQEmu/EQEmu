@@ -3260,7 +3260,7 @@ namespace TOB
 			std::vector<uint32> claims;
 			if (RuleB(Character, EnableKeyRings)) {
 				for (size_t i = 0; i < std::size(TOB_KEYRING_CLAIMS); ++i) {
-					if (emu->tob_keyring_unlocks & (1 << (i + 1))) {
+					if (emu->keyring_unlock_mask & (1 << (i + 1))) {
 						claims.push_back(TOB_KEYRING_CLAIMS[i]);
 					}
 				}

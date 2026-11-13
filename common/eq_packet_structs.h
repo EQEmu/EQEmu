@@ -1131,7 +1131,10 @@ struct PlayerProfile_Struct
 /*19559*/	uint8				unknown19595[5];	// ***Placeholder (6/29/2005)
 /*19564*/	uint32				RestTimer;
 /*19568*/	uint32				char_id;			// Found as part of bazaar revamp (5/15/2024)
-			uint8				tob_keyring_unlocks;	// server only: bit r = key ring r unlocked (sent to TOB+ as store claims)
+	// Server only, never on the wire for any client: bit r set = key ring r is unlocked for this character.
+	// The zone fills it just before the profile is sent. The ToB encoder reports the unlocked rings in the
+	// profile's store claims list; it only sees this struct, so the mask has to travel with it.
+			uint8				keyring_unlock_mask;
 
 	// All player profile packets are translated and this overhead is ignored in out-bound packets
 	PlayerProfile_Struct() : m_player_profile_version(EQ::versions::MobVersion::Unknown) { }
