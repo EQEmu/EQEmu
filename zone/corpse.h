@@ -123,6 +123,7 @@ public:
 	virtual void DepopPlayerCorpse();
 	bool Process();
 	bool Save();
+	bool MoveForSupport(uint32 destination, uint16 instance, const glm::vec4 &position, bool world_spawn);
 
 	uint32 GetCharID() { return m_character_id; }
 

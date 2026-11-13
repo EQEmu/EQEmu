@@ -251,6 +251,7 @@
 	void Handle_OP_PDeletePetition(const EQApplicationPacket *app);
 	void Handle_OP_PetCommands(const EQApplicationPacket *app);
 	void Handle_OP_Petition(const EQApplicationPacket *app);
+	bool FilePetition(const std::string &text);
 	void Handle_OP_PetitionBug(const EQApplicationPacket *app);
 	void Handle_OP_PetitionCheckIn(const EQApplicationPacket *app);
 	void Handle_OP_PetitionCheckout(const EQApplicationPacket *app);

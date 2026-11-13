@@ -57,6 +57,13 @@ WorldServer::~WorldServer()
 {
 }
 
+void WorldServer::SendPacket(ServerPacket *pack)
+{
+	if (m_connection) {
+		m_connection->SendPacket(pack);
+	}
+}
+
 void WorldServer::ProcessMessage(uint16 opcode, EQ::Net::Packet &p)
 {
 	ServerPacket tpack(opcode, p);
@@ -115,7 +122,10 @@ void WorldServer::ProcessMessage(uint16 opcode, EQ::Net::Packet &p)
 
 		LogInfo("Player: [{}], Sent Message: [{}]", From, Message.c_str());
 
-		Client *c = g_Clientlist->FindCharacter(From);
+		// A mail header refresh goes to the character's mail connection only.
+		Client *c = Message.rfind("[getheaders", 0) == 0
+			? g_Clientlist->FindMailConnection(From)
+			: g_Clientlist->FindCharacter(From);
 
 		safe_delete_array(From);
 

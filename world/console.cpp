@@ -18,12 +18,17 @@
 #include "console.h"
 
 #include "common/md5.h"
+#include "common/repositories/character_parcels_repository.h"
+#include "common/rulesys.h"
 #include "common/strings.h"
+#include "common/util/uuid.h"
 #include "common/zone_store.h"
 #include "world/clientlist.h"
+#include "world/cliententry.h"
 #include "world/eqemu_api_world_data_service.h"
 #include "world/login_server_list.h"
 #include "world/login_server.h"
+#include "world/ucs.h"
 #include "world/world_config.h"
 #include "world/world_console_connection.h"
 #include "world/worlddb.h"
@@ -31,6 +36,12 @@
 #include "world/zoneserver.h"
 
 #include "fmt/format.h"
+
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <cstring>
+#include <unordered_map>
 
 /**
  * @param username
@@ -368,6 +379,870 @@ void ConsoleTell(
 	join_args.erase(join_args.begin(), join_args.begin() + 1);
 
 	ZSList::Instance()->SendChannelMessage(tmpname, to.c_str(), ChatChannel_Tell, 0, Strings::Join(join_args, " ").c_str());
+}
+
+namespace {
+
+using SupportChatClock = std::chrono::steady_clock;
+
+struct PendingPlayerSupportTell {
+	std::string console_id;
+	uint32 account_id;
+	uint32 character_id;
+	std::unique_ptr<ServerPacket> packet;
+	SupportChatClock::time_point expires;
+	// Spire's answer, or "timeout". It waits here while the sender is zoning.
+	std::string decision;
+};
+
+// How long an answer waits for a sender who is zoning.
+constexpr auto SupportTellZoningGrace = std::chrono::seconds(60);
+
+std::unordered_map<std::string, PendingPlayerSupportTell> pending_support_tells;
+
+// Zones print channel messages through printf, so a literal % must be doubled.
+std::string EscapeChannelText(const std::string &text)
+{
+	std::string escaped;
+	escaped.reserve(text.size());
+	for (const auto c : text) {
+		escaped.push_back(c);
+		if (c == '%') {
+			escaped.push_back('%');
+		}
+	}
+	return escaped;
+}
+
+// Shows text as a marquee to one character, through the stock cross-zone
+// marquee packet sent only to their zone. Long text is cut short.
+void SendPlayerSupportMarquee(ClientListEntry &recipient, const std::string &text)
+{
+	constexpr size_t max_length = 120;
+	auto marquee = text;
+	if (marquee.size() > max_length) {
+		marquee.resize(max_length - 3);
+		marquee.erase(marquee.find_last_not_of(' ') + 1);
+		marquee += "...";
+	}
+	ServerPacket packet(ServerOP_CZMarquee, sizeof(CZMarquee_Struct));
+	auto *m = reinterpret_cast<CZMarquee_Struct *>(packet.pBuffer);
+	m->update_type = CZUpdateType_Character;
+	m->update_identifier = static_cast<int>(recipient.CharID());
+	m->type = Chat::Yellow;
+	m->priority = 510;
+	m->fade_in = 0;
+	m->fade_out = 3000;
+	// About 70 ms a character, from 6 to 15 seconds.
+	m->duration = static_cast<uint32>(std::clamp<size_t>(marquee.size() * 70, 6000, 15000));
+	strn0cpy(m->message, marquee.c_str(), sizeof(m->message));
+	recipient.Server()->SendPacket(&packet);
+}
+
+// Shows a chat line to one character, through the stock cross-zone message
+// packet sent only to their zone. The zone prints it with printf, so the text
+// must have any % doubled.
+void SendPlayerSupportLine(ClientListEntry &recipient, uint32 type, const std::string &text)
+{
+	ServerPacket packet(ServerOP_CZMessage, sizeof(CZMessage_Struct));
+	auto *m = reinterpret_cast<CZMessage_Struct *>(packet.pBuffer);
+	m->update_type = CZUpdateType_Character;
+	m->update_identifier = static_cast<int>(recipient.CharID());
+	m->type = type;
+	strn0cpy(m->message, text.c_str(), sizeof(m->message));
+	recipient.Server()->SendPacket(&packet);
+}
+
+// Tells a character in game about new mail with a yellow chat line and the
+// same marquee. The sender has no %.
+void SendPlayerSupportMailNotice(ClientListEntry &recipient, const std::string &sender)
+{
+	const auto text = sender.empty()
+		? std::string("You have received a new mail message.")
+		: fmt::format("You have received a new mail message from {}.", sender);
+	SendPlayerSupportLine(recipient, Chat::Yellow, text);
+	SendPlayerSupportMarquee(recipient, text);
+}
+
+// Opens the stock dialogue window on one character, through the cross-zone
+// dialogue packet sent only to their zone. The window reads { } [ ] < > ~ as
+// markup, so the message has them replaced, and the option words it looks for
+// anywhere are split with an invisible colour restart. The leading tokens fix
+// the title, the animation (none for the target) and the timeout, and
+// hiddenresponse drops the stock "Click [OK]" line.
+void SendPlayerSupportPopup(ClientListEntry &recipient, const std::string &text)
+{
+	constexpr auto message_colour = "<c \"#00FFFF\">";
+	std::string body;
+	body.reserve(text.size());
+	for (const auto c : text) {
+		switch (c) {
+			case '{':
+			case '[':
+			case '<':
+				body.push_back('(');
+				break;
+			case '}':
+			case ']':
+			case '>':
+				body.push_back(')');
+				break;
+			case '~':
+				body.push_back('-');
+				break;
+			default:
+				body.push_back(c);
+		}
+	}
+	const std::string split = fmt::format("</c>{}", message_colour);
+	for (const auto *option : {"noquotes", "nobracket", "hiddenresponse", "wintype:", "popupid:", "secondresponseid:", "+idle+", "=0="}) {
+		for (auto at = body.find(option); at != std::string::npos; at = body.find(option, at + split.size() + 1)) {
+			body.insert(at + 1, split);
+		}
+	}
+	const auto markdown = fmt::format(
+		"{{title:Message from a Game Master}} noquotes hiddenresponse +idle+ =0= "
+		"<c \"#FFFF66\">A Game Master has sent you a message:</c><br><br>"
+		"{}{}</c><br><br>"
+		"<c \"#A0A0A0\">To answer, reply to this tell or type #petition followed by your message.</c>",
+		message_colour,
+		body
+	);
+	ServerPacket packet(ServerOP_CZDialogueWindow, sizeof(CZDialogueWindow_Struct));
+	auto *d = reinterpret_cast<CZDialogueWindow_Struct *>(packet.pBuffer);
+	d->update_type = CZUpdateType_Character;
+	d->update_identifier = static_cast<int>(recipient.CharID());
+	strn0cpy(d->message, markdown.c_str(), sizeof(d->message));
+	recipient.Server()->SendPacket(&packet);
+}
+
+// When each character last got a Game Master message. Only the first message
+// after a quiet spell opens the pop-up; entries older than that are dropped,
+// and the map starts empty when World restarts.
+constexpr auto SupportFirstContactGap = std::chrono::minutes(30);
+std::unordered_map<uint32, SupportChatClock::time_point> last_support_message;
+
+bool IsFirstSupportContact(uint32 character_id)
+{
+	const auto now = SupportChatClock::now();
+	for (auto it = last_support_message.begin(); it != last_support_message.end();) {
+		if (now - it->second >= SupportFirstContactGap) {
+			it = last_support_message.erase(it);
+		} else {
+			++it;
+		}
+	}
+	const bool first = last_support_message.find(character_id) == last_support_message.end();
+	last_support_message[character_id] = now;
+	return first;
+}
+
+// The personas Player Support has shown each character in the last day, oldest
+// first, so a reply to "(GM) <persona>" reaches Player Support and World's own
+// notices use the persona shown last. The map starts empty when World restarts.
+constexpr auto SupportPersonaMemory = std::chrono::hours(24);
+constexpr size_t SupportPersonasPerCharacter = 8;
+
+struct SupportPersona {
+	std::string name;
+	SupportChatClock::time_point shown;
+};
+
+std::unordered_map<uint32, std::vector<SupportPersona>> support_personas;
+
+void ForgetOldSupportPersonas()
+{
+	const auto now = SupportChatClock::now();
+	for (auto it = support_personas.begin(); it != support_personas.end();) {
+		auto &shown = it->second;
+		shown.erase(
+			std::remove_if(shown.begin(), shown.end(), [now](const SupportPersona &p) {
+				return now - p.shown >= SupportPersonaMemory;
+			}),
+			shown.end()
+		);
+		if (shown.empty()) {
+			it = support_personas.erase(it);
+		} else {
+			++it;
+		}
+	}
+}
+
+void RememberSupportPersona(uint32 character_id, const std::string &name)
+{
+	ForgetOldSupportPersonas();
+	auto &shown = support_personas[character_id];
+	shown.erase(
+		std::remove_if(shown.begin(), shown.end(), [&name](const SupportPersona &p) {
+			return strcasecmp(p.name.c_str(), name.c_str()) == 0;
+		}),
+		shown.end()
+	);
+	shown.push_back(SupportPersona{name, SupportChatClock::now()});
+	if (shown.size() > SupportPersonasPerCharacter) {
+		shown.erase(shown.begin());
+	}
+}
+
+const std::vector<SupportPersona> *ShownSupportPersonas(uint32 character_id)
+{
+	ForgetOldSupportPersonas();
+	const auto it = support_personas.find(character_id);
+	return it == support_personas.end() ? nullptr : &it->second;
+}
+
+std::string LastSupportPersona(uint32 character_id)
+{
+	const auto *shown = ShownSupportPersonas(character_id);
+	return shown ? shown->back().name : std::string(EQ::Net::PlayerSupportDisplayName);
+}
+
+// Letters and single spaces, 3 to 24 characters, starting with a letter;
+// anything else shows the default name.
+std::string SupportPersonaName(std::string name)
+{
+	Strings::Trim(name, " ");
+	bool valid = name.size() >= 3 && name.size() <= 24 && isalpha(static_cast<unsigned char>(name[0]));
+	for (size_t i = 1; valid && i < name.size(); ++i) {
+		const auto c = static_cast<unsigned char>(name[i]);
+		valid = isalpha(c) || (c == ' ' && name[i - 1] != ' ');
+	}
+	return valid ? name : std::string(EQ::Net::PlayerSupportDisplayName);
+}
+
+void RejectPlayerSupportTell(ClientListEntry &sender, const std::string &decision)
+{
+	const char *message = "Messaging the Game Master is unavailable right now. Please try again.";
+	if (decision == "no_petition") {
+		message = "Your account has no active petition. Use #petition [message] to file one.";
+	} else if (decision == "messages_off") {
+		message = "Your message was not sent. Replies to the Game Master are not open on your petition right now; a Game Master will open them when they need your answer.";
+	} else if (decision == "invalid") {
+		message = "Your message was empty or too long. Please shorten it and try again.";
+	} else if (decision == "timeout") {
+		message = "Your message to the Game Master could not be confirmed. Please try again.";
+	}
+	const auto from = fmt::format("*(GM) {}", LastSupportPersona(sender.CharID()));
+	ZSList::Instance()->SendChannelMessageRaw(from.c_str(), sender.name(), ChatChannel_Tell, 0, message);
+}
+
+// Delivers the answer to the sender. Returns false while the sender is
+// zoning, so the answer can wait for them instead of being lost. Statuses
+// past InZone (such as offline trading on some servers) count as gone.
+bool FinishPlayerSupportTell(const PendingPlayerSupportTell &tell)
+{
+	auto *sender = ClientList::Instance()->FindCLEByCharacterID(tell.character_id);
+	if (!sender || sender->AccountID() != tell.account_id || sender->Online() < CLE_Status::Zoning ||
+		sender->Online() > CLE_Status::InZone) {
+		return true;
+	}
+	if (sender->Online() != CLE_Status::InZone || !sender->Server()) {
+		return false;
+	}
+	if (tell.decision == "accepted") {
+		const auto *original = reinterpret_cast<const ServerChannelMessage_Struct *>(tell.packet->pBuffer);
+		const auto text = EscapeChannelText(original->message);
+		ServerPacket echo(ServerOP_ChannelMessage, sizeof(ServerChannelMessage_Struct) + text.size() + 1);
+		auto *message = reinterpret_cast<ServerChannelMessage_Struct *>(echo.pBuffer);
+		memcpy(message, original, sizeof(ServerChannelMessage_Struct));
+		memcpy(message->message, text.c_str(), text.size() + 1);
+		strn0cpy(message->deliverto, sender->name(), sizeof(message->deliverto));
+		// Echo the name the player addressed, "You told (GM) <persona>", or
+		// "(GM) Game Master" for a tell to GameMaster. Zones copy this name as given.
+		if (strncmp(message->to, "(GM) ", 5) != 0) {
+			strn0cpy(message->to, fmt::format("(GM) {}", EQ::Net::PlayerSupportDisplayName).c_str(), sizeof(message->to));
+		}
+		message->chan_num = ChatChannel_TellEcho;
+		message->noreply = true;
+		sender->Server()->SendPacket(&echo);
+	} else {
+		RejectPlayerSupportTell(*sender, tell.decision);
+	}
+	return true;
+}
+
+}
+
+// A player's tell to "(GM) <name>", or to "(GM)" with the name leading the
+// text (a typed tell the client split at the first space). It goes to Player
+// Support when <name> is a persona shown to this player in the last day, or
+// the default name; otherwise to the character <name>. Only the name is taken
+// off the text. The zone doubled each % for a player, so Player Support gets
+// the text with that undone.
+void ResolveGMAddressedTell(ServerChannelMessage_Struct &message)
+{
+	if (strncasecmp(message.deliverto, "(GM)", 4) != 0 || (message.deliverto[4] != '\0' && message.deliverto[4] != ' ')) {
+		return;
+	}
+	auto *sender = ClientList::Instance()->FindCharacter(message.from);
+	const auto *shown = sender && sender->CharID() ? ShownSupportPersonas(sender->CharID()) : nullptr;
+	std::string text = message.message;
+	std::string name;
+	size_t taken = 0;
+	if (message.deliverto[4] == ' ') {
+		name = message.deliverto + 5;
+	} else {
+		// The longest of the default name and the personas shown that leads the
+		// text as whole words (or is the whole text), so "John Smith" beats "John".
+		std::vector<std::string> candidates{EQ::Net::PlayerSupportDisplayName};
+		for (size_t i = 0; shown && i < shown->size(); ++i) {
+			candidates.push_back((*shown)[i].name);
+		}
+		for (const auto &persona : candidates) {
+			if (persona.size() > name.size() && text.size() >= persona.size() &&
+				(text.size() == persona.size() || text[persona.size()] == ' ') &&
+				strncasecmp(text.c_str(), persona.c_str(), persona.size()) == 0) {
+				name = persona;
+				taken = std::min(text.size(), persona.size() + 1);
+			}
+		}
+		if (name.empty()) {
+			const auto space = text.find(' ');
+			if (space == std::string::npos || space == 0) {
+				return;
+			}
+			name = text.substr(0, space);
+			taken = space + 1;
+		}
+	}
+	Strings::Trim(name, " ");
+	if (name.empty()) {
+		return;
+	}
+	text.erase(0, taken);
+
+	std::string persona;
+	if (strcasecmp(name.c_str(), EQ::Net::PlayerSupportDisplayName) == 0) {
+		persona = EQ::Net::PlayerSupportDisplayName;
+	}
+	for (size_t i = 0; shown && persona.empty() && i < shown->size(); ++i) {
+		if (strcasecmp((*shown)[i].name.c_str(), name.c_str()) == 0) {
+			persona = (*shown)[i].name;
+		}
+	}
+	// An empty tell to Player Support gets its usual "empty or too long" answer;
+	// a name with nothing after it is not a tell to that character.
+	if (persona.empty() && text.empty()) {
+		return;
+	}
+	if (!persona.empty()) {
+		strn0cpy(message.deliverto, EQ::Net::PlayerSupportConsoleName, sizeof(message.deliverto));
+		strn0cpy(message.to, fmt::format("(GM) {}", persona).c_str(), sizeof(message.to));
+		text = Strings::Replace(text, "%%", "%");
+	} else {
+		strn0cpy(message.deliverto, name.c_str(), sizeof(message.deliverto));
+		strn0cpy(message.to, name.c_str(), sizeof(message.to));
+	}
+	// Never longer than the text it replaces.
+	memmove(message.message, text.c_str(), text.size() + 1);
+}
+
+void QueuePlayerSupportTell(EQ::Net::ConsoleServerConnection *connection, ClientListEntry &sender, ServerPacket &packet)
+{
+	if (!connection || !connection->IsSupportChat()) {
+		// Petitions are one per account, and any of its characters may reply.
+		const auto result = database.QueryDatabase(fmt::format(
+			"SELECT p.dib FROM petitions p "
+			"JOIN account acct ON acct.name = p.accountname "
+			"WHERE acct.id = {} LIMIT 1",
+			sender.AccountID()
+		));
+		RejectPlayerSupportTell(sender, result.Success() && result.RowCount() == 0 ? "no_petition" : "unavailable");
+		return;
+	}
+
+	const auto *message = reinterpret_cast<const ServerChannelMessage_Struct *>(packet.pBuffer);
+	const auto available = packet.size - offsetof(ServerChannelMessage_Struct, message);
+	const auto *end = static_cast<const char *>(std::memchr(message->message, '\0', available));
+	if (!end || end == message->message || end - message->message > 4096) {
+		RejectPlayerSupportTell(sender, "invalid");
+		return;
+	}
+	// A few unanswered messages per character, so one player cannot fill the queue.
+	const auto character_pending = std::count_if(
+		pending_support_tells.begin(), pending_support_tells.end(),
+		[&sender](const auto &pending) { return pending.second.character_id == sender.CharID(); }
+	);
+	if (pending_support_tells.size() >= 128 || character_pending >= 3) {
+		RejectPlayerSupportTell(sender, "unavailable");
+		return;
+	}
+
+	const auto request_id = EQ::Util::UUID::Generate().ToString();
+	pending_support_tells.emplace(request_id, PendingPlayerSupportTell{
+		connection->GetUUID(), sender.AccountID(), sender.CharID(),
+		std::unique_ptr<ServerPacket>(packet.Copy()), SupportChatClock::now() + std::chrono::seconds(8)
+	});
+	Json::Value event;
+	event["kind"] = "tell";
+	event["request_id"] = request_id;
+	event["account_id"] = sender.AccountID();
+	event["character_id"] = sender.CharID();
+	event["character"] = sender.name();
+	event["text"] = std::string(message->message, end);
+	Json::StreamWriterBuilder writer;
+	writer["indentation"] = "";
+	connection->SendLine("SPIRE_SUPPORT " + Json::writeString(writer, event));
+}
+
+void ProcessPlayerSupportTells()
+{
+	if (pending_support_tells.empty()) {
+		return;
+	}
+	const auto now = SupportChatClock::now();
+	static auto next_check = now;
+	if (now < next_check) {
+		return;
+	}
+	next_check = now + std::chrono::seconds(1);
+	for (auto it = pending_support_tells.begin(); it != pending_support_tells.end();) {
+		auto &tell = it->second;
+		if (tell.decision.empty() && tell.expires <= now) {
+			tell.decision = "timeout";
+		}
+		if (!tell.decision.empty() && (FinishPlayerSupportTell(tell) || tell.expires + SupportTellZoningGrace <= now)) {
+			it = pending_support_tells.erase(it);
+		} else {
+			++it;
+		}
+	}
+}
+
+static void ConsoleSupportChat(
+	EQ::Net::ConsoleServerConnection *connection,
+	const std::string &,
+	const std::vector<std::string> &args
+)
+{
+	Json::Value response;
+	if (args.size() == 1 && args[0] == "listen") {
+		response["kind"] = connection->EnableSupportChat() ? "ready" : "busy";
+		response["protocol"] = 2;
+	} else if (!connection->IsSupportChat()) {
+		return;
+	} else if (args.size() == 3 && args[0] == "decision") {
+		auto it = pending_support_tells.find(args[1]);
+		// The first answer stands; a late one cannot replace a timeout.
+		if (it != pending_support_tells.end() && it->second.console_id == connection->GetUUID() && it->second.decision.empty()) {
+			it->second.decision = args[2];
+			if (FinishPlayerSupportTell(it->second)) {
+				pending_support_tells.erase(it);
+			}
+		}
+		return;
+	} else if (args.size() == 1 && args[0] == "ping") {
+		response["kind"] = "pong";
+	} else if ((args.size() == 5 || args.size() == 6) && args[0] == "send" && args[1].size() <= 64) {
+		// send [request] [account] [character] [hex message] [hex persona, optional]
+		response["request_id"] = args[1];
+		response["kind"] = "unreachable";
+		const auto account_id = Strings::ToUnsignedInt(args[2]);
+		const auto character_id = Strings::ToUnsignedInt(args[3]);
+		// Lowercase hex of printable ASCII; anything else decodes to nothing.
+		auto decode_hex = [](const std::string &hex, size_t max_size) {
+			std::string decoded;
+			const std::string digits = "0123456789abcdef";
+			if (!hex.empty() && hex.size() <= max_size && hex.size() % 2 == 0) {
+				for (size_t i = 0; i < hex.size(); i += 2) {
+					const auto high = digits.find(hex[i]);
+					const auto low = digits.find(hex[i + 1]);
+					if (high == std::string::npos || low == std::string::npos || high * 16 + low < 32 || high * 16 + low > 126) {
+						return std::string();
+					}
+					decoded.push_back(static_cast<char>(high * 16 + low));
+				}
+			}
+			return decoded;
+		};
+		const auto message = decode_hex(args[4], 400);
+		const auto persona = SupportPersonaName(args.size() == 6 ? decode_hex(args[5], 128) : std::string());
+		auto *recipient = character_id ? ClientList::Instance()->FindCLEByCharacterID(character_id) : nullptr;
+		if (!message.empty() && recipient && account_id && recipient->AccountID() == account_id &&
+			recipient->Online() == CLE_Status::InZone && recipient->Server() && !recipient->TellsOff()) {
+			const auto from = fmt::format("*(GM) {}", persona);
+			ZSList::Instance()->SendChannelMessageRaw(from.c_str(), recipient->name(), ChatChannel_Tell, 0, EscapeChannelText(message).c_str());
+			response["kind"] = "sent";
+			RememberSupportPersona(recipient->CharID(), persona);
+			// The tell is what the player replies to; the marquee follows, and the
+			// first message after a quiet spell also opens a pop-up.
+			SendPlayerSupportMarquee(*recipient, persona + ": " + message);
+			if (IsFirstSupportContact(recipient->CharID())) {
+				SendPlayerSupportPopup(*recipient, message);
+			}
+		}
+	} else {
+		return;
+	}
+	Json::StreamWriterBuilder writer;
+	writer["indentation"] = "";
+	connection->SendLine("SPIRE_SUPPORT " + Json::writeString(writer, response));
+}
+
+static uint16 SupportZonePort(ZoneServer *zone_server)
+{
+	if (!zone_server || (zone_server->GetIP() != "127.0.0.1" && zone_server->GetIP() != "::ffff:127.0.0.1")) {
+		return 0;
+	}
+	return zone_server->GetCPort();
+}
+
+static void SendSupportMoveResult(EQ::Net::ConsoleServerConnection *connection, const char *status, uint16 port = 0)
+{
+	connection->SendLine(fmt::format("{{\"status\":\"{}\",\"port\":{}}}", status, port));
+}
+
+static void ConsoleSupportLocation(
+	EQ::Net::ConsoleServerConnection *connection,
+	const std::string &,
+	const std::vector<std::string> &args
+)
+{
+	if (!connection->IsLocalAdmin() || args.size() != 2) {
+		SendSupportMoveResult(connection, "stale");
+		return;
+	}
+	const auto character_id = Strings::ToUnsignedInt(args[0]);
+	const auto account_id = Strings::ToUnsignedInt(args[1]);
+	auto *client = character_id ? ClientList::Instance()->FindCLEByCharacterID(character_id) : nullptr;
+	if (!account_id || (client && client->AccountID() != account_id)) {
+		SendSupportMoveResult(connection, "stale");
+	} else if (!client || client->Online() < CLE_Status::Zoning) {
+		SendSupportMoveResult(connection, "offline");
+	} else if (client->Online() != CLE_Status::InZone || !client->Server() || client->Server()->IsBootingUp()) {
+		SendSupportMoveResult(connection, "busy");
+	} else if (const auto port = SupportZonePort(client->Server())) {
+		SendSupportMoveResult(connection, "zone", port);
+	} else {
+		SendSupportMoveResult(connection, "unavailable");
+	}
+}
+
+static void ConsoleSupportMove(
+	EQ::Net::ConsoleServerConnection *connection,
+	const std::string &,
+	const std::vector<std::string> &args
+)
+{
+	auto reply = [connection](const char *status, uint16 port = 0) {
+		SendSupportMoveResult(connection, status, port);
+	};
+	const bool player_position = args.size() == 11;
+	if (!connection->IsLocalAdmin() || (args.size() != 6 && !player_position) ||
+		!std::all_of(args.begin(), args.begin() + (player_position ? 7 : 6), [](const auto &arg) {
+			return !arg.empty() && arg.find_first_not_of("0123456789") == std::string::npos;
+		})) {
+		reply("stale");
+		return;
+	}
+	const auto character_id = Strings::ToUnsignedInt(args[0]);
+	const auto account_id = Strings::ToUnsignedInt(args[1]);
+	const auto corpse_id = Strings::ToUnsignedInt(args[2]);
+	const auto source_zone = Strings::ToUnsignedInt(args[3]);
+	const auto source_instance = Strings::ToUnsignedInt(args[4]);
+	const auto destination = Strings::ToUnsignedInt(args[5]);
+	const auto *target = ZoneStore::Instance()->GetZone(destination);
+	if (!character_id || !account_id || !source_zone || source_zone > UINT16_MAX || source_instance > UINT16_MAX ||
+		(corpse_id == 0 && args[2] != "0") || (source_instance == 0 && args[4] != "0") ||
+		!target || target->version != 0) {
+		reply("stale");
+		return;
+	}
+	uint32 destination_instance = 0;
+	float x = target->safe_x, y = target->safe_y, z = target->safe_z, heading = target->safe_heading;
+	if (player_position) {
+		destination_instance = Strings::ToUnsignedInt(args[6]);
+		auto read_float = [](const std::string &value, float &coordinate) {
+			try {
+				size_t parsed = 0;
+				coordinate = std::stof(value, &parsed);
+				return parsed == value.size() && std::isfinite(coordinate);
+			} catch (const std::exception &) {
+				return false;
+			}
+		};
+		if (destination_instance > UINT16_MAX || (destination_instance == 0 && args[6] != "0") ||
+			!read_float(args[7], x) || !read_float(args[8], y) || !read_float(args[9], z) || !read_float(args[10], heading)) {
+			reply("stale");
+			return;
+		}
+		if (corpse_id) {
+			// A corpse moved to its owner follows the owner's live position.
+			auto *owner = ClientList::Instance()->FindCLEByCharacterID(character_id);
+			if (!owner || owner->AccountID() != account_id || owner->Online() != CLE_Status::InZone ||
+				owner->zone() != destination || owner->instance() != destination_instance || !SupportZonePort(owner->Server())) {
+				reply("busy");
+				return;
+			}
+		} else if (destination_instance != 0) {
+			// Character moves use GM coordinates in the base zone only.
+			reply("stale");
+			return;
+		}
+	}
+
+	ZoneServer *source = nullptr;
+	if (corpse_id) {
+		auto corpse = database.QueryDatabase(fmt::format(
+			"SELECT is_buried FROM character_corpses WHERE id = {} AND charid = {}",
+			corpse_id, character_id
+		));
+		if (!corpse.Success()) {
+			reply("unavailable");
+			return;
+		}
+		if (corpse.RowCount() != 1) {
+			reply("stale");
+			return;
+		}
+		auto row = corpse.begin();
+		// Zones never load a corpse buried in Shadowrest, so only the database can move it.
+		const bool in_shadowrest = row[0] && Strings::ToInt(row[0]) != 0 && RuleB(Zone, EnableShadowrest);
+		if (!in_shadowrest) {
+			source = source_instance ? ZSList::Instance()->FindByInstanceID(source_instance)
+			                         : ZSList::Instance()->FindByZoneID(source_zone);
+		}
+	} else {
+		auto *client = ClientList::Instance()->FindCLEByCharacterID(character_id);
+		if (client && client->Online() >= CLE_Status::Zoning) {
+			if (client->AccountID() != account_id || client->zone() != source_zone ||
+				client->instance() != source_instance) {
+				reply("stale");
+				return;
+			}
+			if (client->Online() != CLE_Status::InZone || !client->Server()) {
+				reply("busy");
+				return;
+			}
+			source = client->Server();
+		}
+	}
+	if (source) {
+		if (source->IsBootingUp() || source->GetZoneID() != source_zone ||
+			source->GetInstanceID() != source_instance) {
+			reply("busy");
+		} else if (const auto port = SupportZonePort(source)) {
+			reply("zone", port);
+		} else {
+			reply("unavailable");
+		}
+		return;
+	}
+
+	const auto position = fmt::format(
+		"zone_id = {}, x = {}, y = {}, z = {}, heading = {}",
+		destination, x, y, z, heading
+	);
+	// Upstream EQEmu's TransactionBegin() returns void, so check the query itself.
+	if (!corpse_id && !database.QueryDatabase("START TRANSACTION").Success()) {
+		reply("unavailable");
+		return;
+	}
+	// A buried corpse is past its decay time, so unbury it the way CharacterCorpsesRepository::UnburyCorpse
+	// does: restart the decay clock. Both are set before is_buried so they read its old value. The clock
+	// starts a second back because a zone that loads the corpse at age 0 gives it only a 2 second timer.
+	auto result = corpse_id ? database.QueryDatabase(fmt::format(
+		"UPDATE character_corpses SET {}, instance_id = {}, "
+		"time_of_death = IF(is_buried = 0, time_of_death, NOW() - INTERVAL 1 SECOND), "
+		"was_at_graveyard = IF(is_buried = 0, was_at_graveyard, 0), "
+		"is_buried = 0 WHERE id = {} AND charid = {} "
+		"AND zone_id = {} AND instance_id = {} "
+		"AND EXISTS (SELECT 1 FROM character_data cd WHERE cd.id = {} AND cd.account_id = {})",
+		position, destination_instance, corpse_id, character_id, source_zone, source_instance, character_id, account_id
+	)) : database.QueryDatabase(fmt::format(
+		"UPDATE character_data SET {}, zone_instance = 0 WHERE id = {} AND account_id = {} "
+		"AND zone_id = {} AND zone_instance = {} AND deleted_at IS NULL",
+		position, character_id, account_id, source_zone, source_instance
+	));
+	if (!result.Success() || result.RowsAffected() != 1) {
+		if (!corpse_id) {
+			database.TransactionRollback();
+		}
+		reply("stale");
+		return;
+	}
+	if (!corpse_id) {
+		const auto queued = database.QueryDatabase(fmt::format(
+			"INSERT INTO data_buckets (`key`, `value`, expires, character_id) "
+			"VALUES ('spire:character-move-notice', '1', 0, {}) "
+			"ON DUPLICATE KEY UPDATE `value` = VALUES(`value`), expires = VALUES(expires)",
+			character_id
+		));
+		if (!queued.Success()) {
+			database.TransactionRollback();
+			reply("unavailable");
+			return;
+		}
+		if (!database.TransactionCommit().Success()) {
+			database.TransactionRollback();
+			reply("unconfirmed");
+			return;
+		}
+	} else if (!player_position) {
+		auto *zone = ZSList::Instance()->FindByZoneID(destination);
+		if (zone && !zone->IsBootingUp()) {
+			ServerPacket packet(ServerOP_SpawnPlayerCorpse, sizeof(SpawnPlayerCorpse_Struct));
+			auto *spawn = reinterpret_cast<SpawnPlayerCorpse_Struct *>(packet.pBuffer);
+			spawn->player_corpse_id = corpse_id;
+			spawn->zone_id = destination;
+			zone->SendPacket(&packet);
+		}
+	}
+	reply("saved");
+}
+
+static void ConsoleSupportFeatures(
+	EQ::Net::ConsoleServerConnection *connection,
+	const std::string &,
+	const std::vector<std::string> &
+)
+{
+	if (!connection->IsLocalAdmin()) {
+		connection->SendLine("{\"status\":\"stale\",\"patch\":0,\"features\":[]}");
+		return;
+	}
+	connection->SendLine(
+		"{\"status\":\"ok\",\"patch\":3,"
+		"\"features\":[\"close_petition\",\"lockouts\",\"tasks\",\"revoke\",\"corpse_exp\",\"unbury\",\"marquee\",\"mail_replies\",\"mail_notice\",\"persona\"]}"
+	);
+}
+
+// supportmailnotice [character id] [sender]: tells a character in a zone that
+// Spire mailed them. The sender is optional, printable, without %, and at most
+// 64 characters.
+static void ConsoleSupportMailNotice(
+	EQ::Net::ConsoleServerConnection *connection,
+	const std::string &,
+	const std::vector<std::string> &args
+)
+{
+	auto reply = [connection](const char *status) {
+		connection->SendLine(fmt::format("{{\"status\":\"{}\"}}", status));
+	};
+	const auto sender = args.size() > 1 ? Strings::Join(std::vector<std::string>(args.begin() + 1, args.end()), " ") : "";
+	if (!connection->IsLocalAdmin() || args.empty() || args[0].empty() || args[0].size() > 10 ||
+		args[0].find_first_not_of("0123456789") != std::string::npos || sender.size() > 64 ||
+		std::any_of(sender.begin(), sender.end(), [](char c) { return c < 32 || c > 126 || c == '%'; })) {
+		reply("stale");
+		return;
+	}
+	const auto character_id = Strings::ToUnsignedBigInt(args[0]);
+	auto *recipient = character_id && character_id <= UINT32_MAX
+		? ClientList::Instance()->FindCLEByCharacterID(static_cast<uint32>(character_id)) : nullptr;
+	if (!recipient || recipient->Online() < CLE_Status::Zoning || recipient->Online() > CLE_Status::InZone) {
+		reply("offline");
+	} else if (recipient->Online() != CLE_Status::InZone || !recipient->Server()) {
+		reply("busy");
+	} else {
+		SendPlayerSupportMailNotice(*recipient, sender);
+		// Ask UCS to list the character's mail again, as the stock getheaders
+		// mail command does, so an open mail window shows the new mail.
+		UCSConnection::Instance()->SendMessage(recipient->name(), "[getheaders");
+		reply("shown");
+	}
+}
+
+// All digits, at most max_digits long, and no larger than max.
+static bool ParseSupportNumber(const std::string &value, size_t max_digits, uint64 max, uint64 &number)
+{
+	if (value.empty() || value.size() > max_digits || value.find_first_not_of("0123456789") != std::string::npos) {
+		return false;
+	}
+	number = Strings::ToUnsignedBigInt(value);
+	return number <= max;
+}
+
+static void ConsoleSupportPetition(
+	EQ::Net::ConsoleServerConnection *connection,
+	const std::string &,
+	const std::vector<std::string> &args
+)
+{
+	auto reply = [connection](const char *status) {
+		connection->SendLine(fmt::format("{{\"status\":\"{}\"}}", status));
+	};
+	uint64 dib = 0;
+	uint64 sent_time = 0;
+	uint64 account_id = 0;
+	if (!connection->IsLocalAdmin() || args.size() != 4 || args[0] != "close" ||
+		!ParseSupportNumber(args[1], 10, UINT32_MAX, dib) || !dib ||
+		!ParseSupportNumber(args[2], 18, INT64_MAX, sent_time) ||
+		!ParseSupportNumber(args[3], 10, UINT32_MAX, account_id) || !account_id) {
+		reply("stale");
+		return;
+	}
+
+	const auto match = fmt::format(
+		"FROM petitions p JOIN account a ON a.name = p.accountname "
+		"WHERE p.dib = {} AND p.senttime = {} AND a.id = {}",
+		dib, sent_time, account_id
+	);
+	const auto deleted = database.QueryDatabase(fmt::format("DELETE p {} AND p.ischeckedout = 0", match));
+	if (!deleted.Success()) {
+		reply("unavailable");
+		return;
+	}
+	if (deleted.RowsAffected() > 0) {
+		ServerPacket packet(ServerOP_Petition, sizeof(ServerPetitionUpdate_Struct));
+		auto *update = reinterpret_cast<ServerPetitionUpdate_Struct *>(packet.pBuffer);
+		update->petid = 0;
+		update->status = 0;
+		ZSList::Instance()->SendPacket(&packet);
+		reply("closed");
+		return;
+	}
+
+	auto remaining = database.QueryDatabase(fmt::format("SELECT p.ischeckedout {} LIMIT 1", match));
+	if (!remaining.Success()) {
+		reply("unavailable");
+	} else if (remaining.RowCount() == 0) {
+		reply("gone");
+	} else {
+		auto row = remaining.begin();
+		// A row that is no longer checked out changed between the two queries; Spire asks the GM to check.
+		reply(row[0] && Strings::ToInt(row[0]) != 0 ? "checked_out" : "unavailable");
+	}
+}
+
+static void ConsoleParcelNotify(
+	EQ::Net::ConsoleServerConnection *connection,
+	const std::string &,
+	const std::vector<std::string> &args
+)
+{
+	if (!connection->IsLocalAdmin() || args.size() < 2 || args.size() > 21) {
+		connection->SendLine("invalid");
+		return;
+	}
+	const auto character_id = Strings::ToUnsignedInt(args[0]);
+	auto *recipient = character_id ? ClientList::Instance()->FindCLEByCharacterID(character_id) : nullptr;
+	if (!recipient || recipient->Online() != CLE_Status::InZone || !recipient->Server()) {
+		connection->SendLine("offline");
+		return;
+	}
+
+	std::vector<std::string> parcel_ids;
+	for (size_t i = 1; i < args.size(); ++i) {
+		const auto id = Strings::ToUnsignedInt(args[i]);
+		if (!id) {
+			connection->SendLine("invalid");
+			return;
+		}
+		parcel_ids.push_back(std::to_string(id));
+	}
+	const auto parcels = CharacterParcelsRepository::GetWhere(
+		database, fmt::format("char_id = {} AND id IN ({})", character_id, Strings::Join(parcel_ids, ","))
+	);
+	for (const auto &parcel : parcels) {
+		ServerPacket packet(ServerOP_ParcelDelivery, sizeof(Parcel_Struct));
+		auto *delivery = reinterpret_cast<Parcel_Struct *>(packet.pBuffer);
+		*delivery = {};
+		delivery->item_slot = parcel.slot_id;
+		strn0cpy(delivery->send_to, recipient->name(), sizeof(delivery->send_to));
+		recipient->Server()->SendPacket(&packet);
+	}
+	connection->SendLine(parcels.empty() ? "gone" : "ok");
 }
 
 /**
@@ -1386,10 +2261,17 @@ void RegisterConsoleFunctions(std::unique_ptr<EQ::Net::ConsoleServer>& console)
 	console->RegisterCall("md5", 50, "md5", std::bind(ConsoleMd5, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	console->RegisterCall("ooc", 50, "ooc [message]", std::bind(ConsoleOOC, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	console->RegisterCall("ping", 50, "ping", std::bind(ConsoleNull, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	console->RegisterCall("parcelnotify", 200, "parcelnotify [character id] [parcel ids]", ConsoleParcelNotify);
 	console->RegisterCall("reloadworld", 200, "reloadworld", std::bind(ConsoleReloadWorld, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	console->RegisterCall("reloadzonequests", 200, "reloadzonequests [zone_short_name]", std::bind(ConsoleReloadZoneQuests, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	console->RegisterCall("setpass", 200, "setpass [account_name] [new_password]", std::bind(ConsoleSetPass, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	console->RegisterCall("signalcharbyname", 50, "signalcharbyname charname ID", std::bind(ConsoleSignalCharByName, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+	console->RegisterCall("supportchat", 200, "supportchat", ConsoleSupportChat);
+	console->RegisterCall("supportfeatures", 200, "supportfeatures", ConsoleSupportFeatures);
+	console->RegisterCall("supportmove", 200, "supportmove [character] [account] [corpse or 0] [source zone] [source instance] [destination] [instance x y z heading]", ConsoleSupportMove);
+	console->RegisterCall("supportlocation", 200, "supportlocation [character] [account]", ConsoleSupportLocation);
+	console->RegisterCall("supportmailnotice", 200, "supportmailnotice [character id] [sender name]", ConsoleSupportMailNotice);
+	console->RegisterCall("supportpetition", 200, "supportpetition close [petition row] [sent time] [account]", ConsoleSupportPetition);
 	console->RegisterCall("tell", 50, "tell [name] [message]", std::bind(ConsoleTell, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	console->RegisterCall("unlock", 150, "unlock", std::bind(ConsoleUnlock, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 	console->RegisterCall("uptime", 50, "uptime [zone_server_id]", std::bind(ConsoleUptime, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));

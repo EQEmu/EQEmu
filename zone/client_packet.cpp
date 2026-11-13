@@ -520,6 +520,13 @@ void Client::CompleteConnect()
 	UpdateWho();
 	client_state = CLIENT_CONNECTED;
 	SendAllPackets();
+	const auto support_notice = database.QueryDatabase(fmt::format(
+		"DELETE FROM data_buckets WHERE `key` = 'spire:character-move-notice' AND character_id = {}",
+		CharacterID()
+	));
+	if (support_notice.Success() && support_notice.RowsAffected() > 0) {
+		Message(Chat::Yellow, "You have been moved by a Game Master");
+	}
 	hpupdate_timer.Start();
 	autosave_timer.Start();
 	SetDuelTarget(0);
@@ -805,6 +812,21 @@ void Client::CompleteConnect()
 		);
 
 		bool is_first_login = e.first_login == 0;
+
+		// UCS stores unread mail with status 1 (read is 3, trash is 4).
+		auto unread_mail = database.QueryDatabase(fmt::format(
+			"SELECT COUNT(*) FROM `mail` WHERE `charid` = {} AND `status` = 1",
+			CharacterID()
+		));
+		if (unread_mail.Success() && unread_mail.RowCount() == 1) {
+			auto row = unread_mail.begin();
+			const auto unread = row[0] ? Strings::ToUnsignedInt(row[0]) : 0;
+			if (unread > 0) {
+				const auto text = fmt::format("You have {} unread mail message{}.", unread, unread == 1 ? "" : "s");
+				Message(Chat::Yellow, "%s", text.c_str());
+				SendMarqueeMessage(Chat::Yellow, 510, 0, 3000, 6000, text);
+			}
+		}
 
 		RecordPlayerEventLog(PlayerEvent::WENT_ONLINE, PlayerEvent::EmptyEvent{});
 
@@ -11821,48 +11843,56 @@ void Client::Handle_OP_Petition(const EQApplicationPacket *app)
 {
 	if (app->size <= 1)
 		return;
-	if (!worldserver.Connected())
+	const auto *text = reinterpret_cast<const char *>(app->pBuffer);
+	FilePetition(std::string(text, strnlen(text, app->size)));
+}
+
+// /guidehelp and #petition share this path so both create the same petition.
+bool Client::FilePetition(const std::string &text)
+{
+	if (!worldserver.Connected()) {
 		Message(Chat::Red, "Error: World server disconnected");
-	/*else if(petition_list.FindPetitionByAccountName(AccountName()))
-	{
-	Message(Chat::White,"You already have a petition in queue, you cannot petition again until this one has been responded to or you have deleted the petition.");
-	return;
-	}*/
-	else
-	{
-		if (PetitionList::Instance()->FindPetitionByAccountName(AccountName()))
-		{
-			Message(Chat::White, "You already have a petition in the queue, you must wait for it to be answered or use /deletepetition to delete it.");
-			return;
-		}
-		auto pet = new Petition(CharacterID());
-		pet->SetAName(AccountName());
-		pet->SetClass(GetClass());
-		pet->SetLevel(GetLevel());
-		pet->SetCName(GetName());
-		pet->SetRace(GetRace());
-		pet->SetLastGM("");
-		pet->SetCName(GetName());
-		pet->SetPetitionText((char*)app->pBuffer);
-		pet->SetZone(zone->GetZoneID());
-		pet->SetUrgency(0);
-		PetitionList::Instance()->AddPetition(pet);
-		database.InsertPetitionToDB(pet);
-		PetitionList::Instance()->UpdateGMQueue();
-		PetitionList::Instance()->UpdateZoneListQueue();
-		worldserver.SendEmoteMessage(
-			0,
-			0,
-			AccountStatus::QuestTroupe,
-			Chat::Yellow,
-			fmt::format(
-				"{} has made a petition. ID: {}",
-				GetCleanName(),
-				pet->GetID()
-			).c_str()
-		);
+		return false;
 	}
-	return;
+	if (PetitionList::Instance()->FindPetitionByAccountName(AccountName()))
+	{
+		Message(Chat::White, "You already have a petition in the queue, you must wait for it to be answered or use /deletepetition to delete it.");
+		return false;
+	}
+	std::string petition_text = text;
+	auto pet = new Petition(CharacterID());
+	pet->SetAName(AccountName());
+	pet->SetClass(GetClass());
+	pet->SetLevel(GetLevel());
+	pet->SetCName(GetName());
+	pet->SetRace(GetRace());
+	pet->SetLastGM("");
+	pet->SetCName(GetName());
+	pet->SetPetitionText(petition_text.data());
+	pet->SetZone(zone->GetZoneID());
+	pet->SetUrgency(0);
+	// Save first, so the player is never told a petition was filed when it
+	// was not.
+	if (!database.InsertPetitionToDB(pet)) {
+		safe_delete(pet);
+		Message(Chat::Red, "Your petition could not be saved. Please try again.");
+		return false;
+	}
+	PetitionList::Instance()->AddPetition(pet);
+	PetitionList::Instance()->UpdateGMQueue();
+	PetitionList::Instance()->UpdateZoneListQueue();
+	worldserver.SendEmoteMessage(
+		0,
+		0,
+		AccountStatus::QuestTroupe,
+		Chat::Yellow,
+		fmt::format(
+			"{} has made a petition. ID: {}",
+			GetCleanName(),
+			pet->GetID()
+		).c_str()
+	);
+	return true;
 }
 
 void Client::Handle_OP_PetitionBug(const EQApplicationPacket *app)

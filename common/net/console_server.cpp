@@ -45,6 +45,13 @@ void EQ::Net::ConsoleServer::RegisterLogin(ConsoleServerLoginCallback fn)
 }
 
 EQ::Net::ConsoleServerConnection *EQ::Net::ConsoleServer::FindByAccountName(const std::string &acct_name) {
+	if (Strings::ToLower(acct_name) == "gamemaster") {
+		for (auto &entry : m_connections) {
+			if (entry.second->IsSupportChat()) {
+				return entry.second.get();
+			}
+		}
+	}
 	for (auto &iter : m_connections) {
 		if (iter.second->UserName().compare(acct_name) == 0) {
 			return iter.second.get();
