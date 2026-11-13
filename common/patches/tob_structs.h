@@ -1779,6 +1779,14 @@ namespace TOB {
 		// S2C command 3/4 result lists: u32 Command; uint8 Unknown004[20]; u32 Count; then serialized entries.
 		static constexpr uint32 LFGuild_HeaderSize = 0x18;
 
+		// OP_LFGuild commands (the same numbers are used by the server). 2 and 5 are ignored by the client, 6 shows the window.
+		enum LFGuildCommand : uint32 {
+			LFGuildPlayerStatus = 0,
+			LFGuildGuildStatus  = 1,
+			LFGuildPlayerSearch = 3,
+			LFGuildGuildSearch  = 4,
+		};
+
 
 		struct FindPerson_Point {
 			float y;

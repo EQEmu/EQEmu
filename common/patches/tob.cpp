@@ -55,6 +55,70 @@ namespace TOB
 	static OpcodeManager* opcodes = nullptr;
 	static Strategy struct_strategy;
 
+	// ---- ToB wire limits ----
+	// The client copies variable-length strings into fixed-size buffers without checking the length, so these are
+	// the most characters (not counting the NUL) that are sent for each buffer size.
+	static constexpr size_t TOB_NAME_MAX_CHARS         = 63;    // 64-byte name buffers (characters, guilds, mercs, buyers, raid members)
+	static constexpr size_t TOB_LINE_MAX_CHARS         = 127;   // 128-byte buffers (expedition names, task descriptions)
+	static constexpr size_t TOB_NOTE_MAX_CHARS         = 255;   // 256-byte buffers (guild notes, LFG comments, lockout event names)
+	static constexpr size_t TOB_TEXT_MAX_CHARS         = 1023;  // 1024-byte buffers (raid MOTD, emotes, task item lists)
+	static constexpr size_t TOB_GUILD_NAME_MAX_CHARS   = 62;    // the client copies min(strlen + 1, 63) bytes of a guild name
+	static constexpr size_t TOB_FINDABLE_NAME_MAX_CHARS      = 62;  // findable NPC name
+	static constexpr size_t TOB_FINDABLE_LAST_NAME_MAX_CHARS = 30;  // findable NPC last name
+	static constexpr size_t TOB_GUILD_URL_FIELD_SIZE   = 0x200;     // guild URL / channel text field in OP_GuildUpdate
+	static constexpr size_t TOB_GUILD_URL_MAX_CHARS    = TOB_GUILD_URL_FIELD_SIZE - 1;
+	static constexpr size_t TOB_GUILD_CHANNEL_MAX_CHARS = 127;      // the client copies 0x80 bytes of the guild channel
+	static constexpr uint32 TOB_GUILD_MEMBER_LIST_MAX  = 10000;     // sanity cap on the member count of a guild member list
+	static constexpr uint32 TOB_LFGUILD_MAX_RESULTS    = 1000;      // rows sent for an LFGuild search
+	static constexpr uint32 TOB_LFGUILD_MAX_CLASS      = 17;        // highest class id in the client's class-name table (18 entries)
+	static constexpr int32  TOB_TIMEZONE_NONE          = -1;        // LFGuild timezone: not set
+	static constexpr int32  TOB_TIMEZONE_MAX           = 23;        // highest LFGuild timezone-name table index
+	static constexpr uint32 TOB_TASK_HISTORY_MAX_TASKS      = 50;   // the client keeps at most 50 task history entries
+	static constexpr uint32 TOB_TASK_HISTORY_MAX_ACTIVITIES = 20;   // activities per task history entry
+	static constexpr uint32 TOB_SET_GROUP_TARGET_MAX_NUMBER = 3;    // the client indexes a 3 entry array with this unchecked
+	static constexpr uint32 TOB_INVALID_ID             = 0xFFFFFFFF; // "none" in u32 id / type fields
+
+	static constexpr uint16 EMU_GUILD_NONE_U16 = 0xFFFF; // "no guild" in the 16-bit guild id fields some emu packets carry
+	static constexpr uint32 TOB_GUILD_RANK_MIN = 1;      // the client ignores a guild invite rank outside 1..8
+	static constexpr uint32 TOB_GUILD_RANK_MAX = 8;
+	static constexpr uint32 EMU_GUILD_INVITE_DECLINE_RESPONSE = 9; // OP_GuildInviteAccept response sent on decline
+	static constexpr uint32 TOB_GUILD_INVITE_ACCEPT_ACTION  = 1;   // OP_GuildInviteAccept action field
+	static constexpr uint32 TOB_GUILD_INVITE_DECLINE_ACTION = 2;
+	// The legacy group update carries no levels, so members are shown with placeholder levels.
+	static constexpr uint32 TOB_GROUP_UPDATE_SELF_LEVEL  = 0x46;
+	static constexpr uint32 TOB_GROUP_UPDATE_OTHER_LEVEL = 0x41;
+	// OP_Surname C2S/S2C: u8 id[8]; int32 status; u32 length; char surname[length]
+	static constexpr uint32 TOB_SURNAME_ID_SIZE      = 8;
+	static constexpr uint32 TOB_SURNAME_STATUS_OFFSET = 8;
+	static constexpr uint32 TOB_SURNAME_LENGTH_OFFSET = 12;
+	static constexpr uint32 TOB_SURNAME_HEADER_SIZE   = 16;
+
+	// OP_GuildBank actions as the server numbers them (GuildBank* in zone/guild_mgr.h) and as ToB numbers them.
+	// From Promote on ToB's numbers are one lower than the server's; the item update is 0 on the wire.
+	enum EmuGuildBankAction : uint32 {
+		EmuGuildBankItemUpdate  = 1,
+		EmuGuildBankPromote     = 3,
+		EmuGuildBankViewItem    = 4,
+		EmuGuildBankDeposit     = 5,
+		EmuGuildBankPermissions = 6,
+		EmuGuildBankWithdraw    = 7,
+		EmuGuildBankAcknowledge = 10,
+	};
+	enum TOBGuildBankAction : uint32 {
+		TOBGuildBankItemUpdate  = 0,
+		TOBGuildBankPromote     = 2,
+		TOBGuildBankViewItem    = 3,
+		TOBGuildBankDeposit     = 4,
+		TOBGuildBankPermissions = 5,
+		TOBGuildBankWithdraw    = 6, // split (7) and merge (8) follow
+		TOBGuildBankSplitStacks = 7,
+		TOBGuildBankMergeStacks = 8,
+		TOBGuildBankAcknowledge = 9,
+	};
+
+	static constexpr uint32 EMU_LFGUILD_HEADER_SIZE = 8;  // emu OP_LFGuild header: u32 command + u32 unknown
+	static constexpr uint32 TOB_BUYER_LINE_TRAILER_SIZE = 13; // unused bytes the client appends to each buy line
+
 	// Writes n zero bytes (padding / unknown fixed-width fields).
 	static void TOBWriteZeros(SerializeBuffer &buf, uint32 n)
 	{
@@ -1290,7 +1354,7 @@ namespace TOB
 		auto emu = (Surname_Struct*)in->pBuffer;
 		const size_t len = strnlen(emu->lastname, sizeof(emu->lastname));
 		SerializeBuffer buffer;
-		TOBWriteBytes(buffer, emu->name, 8);
+		TOBWriteBytes(buffer, emu->name, TOB_SURNAME_ID_SIZE);
 		buffer.WriteInt32(static_cast<int32>(emu->unknown0064));
 		buffer.WriteUInt32(static_cast<uint32>(len));
 		TOBWriteBytes(buffer, emu->lastname, len);
@@ -1418,8 +1482,9 @@ namespace TOB
 
 		if (in->size == sizeof(GroupUpdate2_Struct)) {
 			auto gu2 = (GroupUpdate2_Struct*)in->pBuffer;
+			constexpr int other_slots = sizeof(gu2->membername) / sizeof(gu2->membername[0]);
 			int member_count = 1;
-			for (int i = 0; i < 5; ++i) {
+			for (int i = 0; i < other_slots; ++i) {
 				if (gu2->membername[i][0] != '\0') {
 					++member_count;
 				}
@@ -1444,12 +1509,12 @@ namespace TOB
 				buffer.WriteUInt64(0);  // unknown
 			};
 
-			write_member(0, gu2->yourname, 0x46);
+			write_member(0, gu2->yourname, TOB_GROUP_UPDATE_SELF_LEVEL);
 			uint32 member_number = 1;
-			for (int i = 0; i < 5; ++i) {
+			for (int i = 0; i < other_slots; ++i) {
 				if (gu2->membername[i][0] == '\0')
 					continue;
-				write_member(member_number++, gu2->membername[i], 0x41);
+				write_member(member_number++, gu2->membername[i], TOB_GROUP_UPDATE_OTHER_LEVEL);
 			}
 
 			auto outapp = new EQApplicationPacket(OP_GroupUpdateB, std::move(buffer));
@@ -3588,7 +3653,7 @@ namespace TOB
 
 		uint32 count = emu->count;
 		size_t fixed = sizeof(Internal_GuildMembers_Struct) + static_cast<size_t>(count) * sizeof(Internal_GuildMemberEntry_Struct);
-		if (count > 10000 || fixed > in->size) {
+		if (count > TOB_GUILD_MEMBER_LIST_MAX || fixed > in->size) {
 			LogNetcode("TOB::ENCODE(OP_GuildMemberList) inconsistent count [{}] for size [{}]", count, in->size);
 			count = 0;
 			fixed = sizeof(Internal_GuildMembers_Struct);
@@ -3610,12 +3675,12 @@ namespace TOB
 		std::vector<std::string> names;
 		names.reserve(count);
 		for (uint32 i = 0; i < count; ++i) {
-			names.push_back(next_string(63));
+			names.push_back(next_string(TOB_NAME_MAX_CHARS));
 		}
 		std::vector<std::string> notes;
 		notes.reserve(count);
 		for (uint32 i = 0; i < count; ++i) {
-			notes.push_back(next_string(255));
+			notes.push_back(next_string(TOB_NOTE_MAX_CHARS));
 		}
 
 		SerializeBuffer buffer;
@@ -3837,8 +3902,8 @@ namespace TOB
 				continue;
 			}
 			buffer.WriteUInt64(g.guild_id);
-			// client copies min(strlen+1, 63): keep names <= 62 chars so they stay terminated
-			buffer.WriteString(g.guild_name.substr(0, 62));
+			// keep names short enough that they stay terminated in the client's buffer
+			buffer.WriteString(g.guild_name.substr(0, TOB_GUILD_NAME_MAX_CHARS));
 		}
 
 		auto outapp = new EQApplicationPacket(OP_GuildsList, buffer.size());
@@ -3870,9 +3935,9 @@ namespace TOB
 
 		TOBCopyStr(eq->othername, emu->othername);
 		TOBCopyStr(eq->myname, emu->myname);
-		eq->guild_id       = (emu->guildeqid == 0xFFFF) ? 0 : ServerToTOBGuildID(emu->guildeqid);
+		eq->guild_id       = (emu->guildeqid == EMU_GUILD_NONE_U16) ? 0 : ServerToTOBGuildID(emu->guildeqid);
 		eq->my_rank        = 0;
-		eq->rank           = (emu->officer >= 1 && emu->officer <= 8) ? emu->officer : 8; // client ignores rank outside 1..8
+		eq->rank           = (emu->officer >= TOB_GUILD_RANK_MIN && emu->officer <= TOB_GUILD_RANK_MAX) ? emu->officer : TOB_GUILD_RANK_MAX;
 		eq->use_guild_name = 0;                                                        // client resolves the name from guild_id
 
 		FINISH_ENCODE();
@@ -3887,7 +3952,7 @@ namespace TOB
 		TOBCopyStr(eq->new_member, emu->new_member);
 		eq->response = emu->response;
 		eq->guild_id = ServerToTOBGuildID(emu->guild_id);
-		eq->action   = (emu->response >= 9) ? 2 : 1;
+		eq->action   = (emu->response >= EMU_GUILD_INVITE_DECLINE_RESPONSE) ? TOB_GUILD_INVITE_DECLINE_ACTION : TOB_GUILD_INVITE_ACCEPT_ACTION;
 
 		FINISH_ENCODE();
 	}
@@ -3912,6 +3977,22 @@ namespace TOB
 		buffer.WriteUInt64(guild_id);
 	}
 
+	// Layout of the emu GuildUpdate packet header. The emu side has no struct for the part every action shares.
+	static constexpr uint32 EMU_GUILD_UPDATE_ACTION_OFFSET   = 0x00;
+	static constexpr uint32 EMU_GUILD_UPDATE_UNKNOWN4_OFFSET = 0x04;
+	static constexpr uint32 EMU_GUILD_UPDATE_UNKNOWN8_OFFSET = 0x08;
+	static constexpr uint32 EMU_GUILD_UPDATE_NAME_OFFSET     = 0x0c;
+	static constexpr uint32 EMU_GUILD_UPDATE_GUILD_ID_OFFSET = 0x4c;
+	static constexpr uint32 EMU_GUILD_UPDATE_HEADER_SIZE     = 0x50; // the payload starts here
+
+	// OP_GuildUpdate actions. URL and channel match the server's GuildInformationActions; ToB drops one entry from
+	// the middle of that list, so rank names (server: GuildUpdateRanks) and permissions (server:
+	// GuildUpdatePermissions) are numbered one lower on the wire.
+	enum TOBGuildUpdateAction : uint32 {
+		TOBGuildUpdateRankNames   = 3,
+		TOBGuildUpdatePermissions = 4,
+	};
+
 	// GuildUpdate: ToB inserts 4 bytes before the name (0x0c -> 0x10), widens the guild id to u64
 	// (0x4c u32 -> 0x50 u64), so the payload moves 0x50 -> 0x58 (+8).
 	// Action numbers 4 (rank names) and 5 (permissions) become 3 and 4.
@@ -3920,7 +4001,7 @@ namespace TOB
 		EQApplicationPacket *in = *p;
 		*p = nullptr;
 
-		constexpr uint32 EMU_HDR = 0x50;
+		constexpr uint32 EMU_HDR = EMU_GUILD_UPDATE_HEADER_SIZE;
 		constexpr uint32 TOB_HDR = sizeof(structs::GuildUpdateHeader_Struct); // 0x58
 		if (in->size < EMU_HDR) {
 			delete in;
@@ -3929,29 +4010,29 @@ namespace TOB
 
 		const uint8 *src = in->pBuffer;
 		uint32 action = 0, u4 = 0, u8_ = 0, gid = 0;
-		memcpy(&action, src + 0x00, 4);
-		memcpy(&u4,     src + 0x04, 4);
-		memcpy(&u8_,    src + 0x08, 4);
-		memcpy(&gid,    src + 0x4c, 4);
+		memcpy(&action, src + EMU_GUILD_UPDATE_ACTION_OFFSET,   sizeof(action));
+		memcpy(&u4,     src + EMU_GUILD_UPDATE_UNKNOWN4_OFFSET, sizeof(u4));
+		memcpy(&u8_,    src + EMU_GUILD_UPDATE_UNKNOWN8_OFFSET, sizeof(u8_));
+		memcpy(&gid,    src + EMU_GUILD_UPDATE_GUILD_ID_OFFSET, sizeof(gid));
 
 		// Actions 0/1 are the guild URL / channel (GuildUpdateURLAndChannel_Struct, text at 0x50). Their
 		// ToB layout is unmapped and sending them crashed the client at zone-in, so drop them.
 		// The ToB guild window is NULL from character select until the first zone-in finishes, and the
 		// URL/channel handlers dereference it unchecked, so only forward replies to the window-open
 		// request (OP_GuildOpenGuildWindow), which the zone marks with WindowOpen.
-		if (action == 0 || action == 1) {
+		if (action == GuildUpdateURL || action == GuildUpdateChannel) {
 			if (in->size < sizeof(GuildUpdateURLAndChannel_Struct) ||
 				reinterpret_cast<GuildUpdateURLAndChannel_Struct *>(in->pBuffer)->WindowOpen == 0) {
 				delete in;
 				return;
 			}
 			auto uc = reinterpret_cast<GuildUpdateURLAndChannel_Struct *>(in->pBuffer);
-			const size_t max_text = (action == 0) ? 511 : 127; // client copies 0x200 / 0x80
+			const size_t max_text = (action == GuildUpdateURL) ? TOB_GUILD_URL_MAX_CHARS : TOB_GUILD_CHANNEL_MAX_CHARS;
 			const size_t text_len = std::min(strnlen(uc->Text, sizeof(uc->Text)), max_text);
 			SerializeBuffer buffer;
 			TOBWriteGuildUpdateHeader(buffer, action, 0, 0, nullptr, 0);
 			TOBWriteBytes(buffer, uc->Text, text_len);
-			TOBWriteZeros(buffer, 0x200 - text_len); // text field is zero padded to its full width
+			TOBWriteZeros(buffer, TOB_GUILD_URL_FIELD_SIZE - text_len); // text field is zero padded to its full width
 			auto outapp = new EQApplicationPacket(OP_GuildUpdate, std::move(buffer));
 			dest->FastQueuePacket(&outapp, ack_req);
 			delete in;
@@ -3959,12 +4040,12 @@ namespace TOB
 		}
 
 		uint32 tob_action = action;
-		if (action == 4)      { tob_action = 3; }   // rank name
-		else if (action == 5) { tob_action = 4; }   // permission
+		if (action == GuildUpdateRanks)            { tob_action = TOBGuildUpdateRankNames; }
+		else if (action == GuildUpdatePermissions) { tob_action = TOBGuildUpdatePermissions; }
 
 		const uint32 payload = in->size - EMU_HDR;
 		SerializeBuffer buffer;
-		TOBWriteGuildUpdateHeader(buffer, tob_action, u4, u8_, reinterpret_cast<const char *>(src + 0x0c), ServerToTOBGuildID(gid));
+		TOBWriteGuildUpdateHeader(buffer, tob_action, u4, u8_, reinterpret_cast<const char *>(src + EMU_GUILD_UPDATE_NAME_OFFSET), ServerToTOBGuildID(gid));
 		TOBWriteBytes(buffer, src + EMU_HDR, payload);
 
 		auto outapp = new EQApplicationPacket(OP_GuildUpdate, std::move(buffer));
@@ -3989,8 +4070,8 @@ namespace TOB
 		std::string old_message(emu->message, strnlen(emu->message, emu_msg_cap));
 		std::string new_message;
 		ServerToTOBConvertLinks(new_message, old_message);
-		if (new_message.length() > 1023)          // the client copies into a 1024-byte buffer
-			new_message.resize(1023);
+		if (new_message.length() > TOB_TEXT_MAX_CHARS)
+			new_message.resize(TOB_TEXT_MAX_CHARS);
 
 		SerializeBuffer buffer;
 		buffer.WriteUInt32(emu->type);
@@ -4040,28 +4121,36 @@ namespace TOB
 		uint32 unknown1, const std::string &leader_name, uint32 parameter)
 	{
 		buf.WriteUInt32(action);
-		buf.WriteString(player_name);   // client keeps <= 63 chars
+		buf.WriteString(player_name);   // the client keeps at most TOB_NAME_MAX_CHARS
 		buf.WriteUInt32(unknown1);
 		buf.WriteString(leader_name);   // the name the sub-action acts on
 		buf.WriteUInt32(0);             // new in ToB, not read by the handled actions
 		buf.WriteUInt32(parameter);     // parameter (group, eqstr id, loot type, flag)
 	}
 
+	// Raid delegate ability types. The server numbers them 3 (main assist) and 4 (main marker).
+	enum TOBDelegateType : uint32 {
+		EmuDelegateMainAssist = 3,
+		EmuDelegateMainMarker = 4,
+		TOBDelegateMainAssist = 1, // eqstr 0x2242/0x2248
+		TOBDelegateMainMarker = 2, // eqstr 0x2243/0x2249
+	};
+
 	static inline uint32 ServerToTOBDelegateType(uint32 t)
 	{
 		switch (t) {
-			case 3: return 1; // RaidDelegateMainAssist -> eqstr 0x2242/0x2248
-			case 4: return 2; // RaidDelegateMainMarker -> eqstr 0x2243/0x2249
-			default: return 0xFFFFFFFF; // emu type 5 has no ToB case; ToB type 0 has no emu value
+			case EmuDelegateMainAssist: return TOBDelegateMainAssist;
+			case EmuDelegateMainMarker: return TOBDelegateMainMarker;
+			default: return TOB_INVALID_ID; // emu type 5 has no ToB case; ToB type 0 has no emu value
 		}
 	}
 
 	static inline uint32 TOBToServerDelegateType(uint32 t)
 	{
 		switch (t) {
-			case 1: return 3;
-			case 2: return 4;
-			default: return 0xFFFFFFFF; // unknown to the server; Handle_OP_RaidDelegateAbility ignores it
+			case TOBDelegateMainAssist: return EmuDelegateMainAssist;
+			case TOBDelegateMainMarker: return EmuDelegateMainMarker;
+			default: return TOB_INVALID_ID; // unknown to the server; Handle_OP_RaidDelegateAbility ignores it
 		}
 	}
 
@@ -4113,8 +4202,8 @@ namespace TOB
 				}
 				auto emu = (const RaidLeadershipUpdate_Struct *)emu_buf;
 				TOBWriteRaidHeader(buf, action,
-					TOBFixedStr(emu->player_name, sizeof(emu->player_name), 63), 0,
-					TOBFixedStr(emu->leader_name, sizeof(emu->leader_name), 63), 0);
+					TOBFixedStr(emu->player_name, sizeof(emu->player_name), TOB_NAME_MAX_CHARS), 0,
+					TOBFixedStr(emu->leader_name, sizeof(emu->leader_name), TOB_NAME_MAX_CHARS), 0);
 				break;
 			}
 			case raidAdd: {
@@ -4125,9 +4214,9 @@ namespace TOB
 				}
 				auto emu = (const RaidAddMember_Struct *)emu_buf;
 				TOBWriteRaidHeader(buf, action,
-					TOBFixedStr(emu->raidGen.player_name, sizeof(emu->raidGen.player_name), 63),
+					TOBFixedStr(emu->raidGen.player_name, sizeof(emu->raidGen.player_name), TOB_NAME_MAX_CHARS),
 					emu->raidGen.unknown1,
-					TOBFixedStr(emu->raidGen.leader_name, sizeof(emu->raidGen.leader_name), 63),
+					TOBFixedStr(emu->raidGen.leader_name, sizeof(emu->raidGen.leader_name), TOB_NAME_MAX_CHARS),
 					emu->raidGen.parameter);                 // group number, 0xFFFFFFFF = ungrouped
 				buf.WriteUInt32(static_cast<uint32>(emu->_class)); // u32 in ToB
 				buf.WriteUInt8(emu->level);
@@ -4142,11 +4231,11 @@ namespace TOB
 				}
 				auto emu = (const RaidMOTD_Struct *)emu_buf;
 				TOBWriteRaidHeader(buf, action,
-					TOBFixedStr(emu->general.player_name, sizeof(emu->general.player_name), 63),
+					TOBFixedStr(emu->general.player_name, sizeof(emu->general.player_name), TOB_NAME_MAX_CHARS),
 					emu->general.unknown1,
-					TOBFixedStr(emu->general.leader_name, sizeof(emu->general.leader_name), 63),
+					TOBFixedStr(emu->general.leader_name, sizeof(emu->general.leader_name), TOB_NAME_MAX_CHARS),
 					emu->general.parameter);
-				buf.WriteString(TOBFixedStr(emu->motd, sizeof(emu->motd), 1023)); // client buffer 0x400
+				buf.WriteString(TOBFixedStr(emu->motd, sizeof(emu->motd), TOB_TEXT_MAX_CHARS));
 				break;
 			}
 			case raidSetNote: {
@@ -4157,11 +4246,11 @@ namespace TOB
 				}
 				auto emu = (const RaidNote_Struct *)emu_buf;
 				TOBWriteRaidHeader(buf, action,
-					TOBFixedStr(emu->general.player_name, sizeof(emu->general.player_name), 63),
+					TOBFixedStr(emu->general.player_name, sizeof(emu->general.player_name), TOB_NAME_MAX_CHARS),
 					emu->general.unknown1,
-					TOBFixedStr(emu->general.leader_name, sizeof(emu->general.leader_name), 63),
+					TOBFixedStr(emu->general.leader_name, sizeof(emu->general.leader_name), TOB_NAME_MAX_CHARS),
 					emu->general.parameter);
-				buf.WriteString(TOBFixedStr(emu->note, sizeof(emu->note), 63)); // member note, 0x40 cap
+				buf.WriteString(TOBFixedStr(emu->note, sizeof(emu->note), TOB_NAME_MAX_CHARS)); // member note
 				break;
 			}
 			case raidCreate: {
@@ -4173,9 +4262,9 @@ namespace TOB
 				auto emu = (const RaidGeneral_Struct *)emu_buf;
 				// raid id must be >= 1, or the client ignores a later disband
 				TOBWriteRaidHeader(buf, action,
-					TOBFixedStr(emu->player_name, sizeof(emu->player_name), 63),
+					TOBFixedStr(emu->player_name, sizeof(emu->player_name), TOB_NAME_MAX_CHARS),
 					emu->unknown1 ? emu->unknown1 : 1,
-					TOBFixedStr(emu->leader_name, sizeof(emu->leader_name), 63), 0);
+					TOBFixedStr(emu->leader_name, sizeof(emu->leader_name), TOB_NAME_MAX_CHARS), 0);
 				buf.WriteUInt8(0); // case 8 reads a trailing u8 in place of the 6th u32 (unused)
 				break;
 			}
@@ -4189,9 +4278,9 @@ namespace TOB
 				}
 				auto emu = (const RaidGeneral_Struct *)emu_buf;
 				TOBWriteRaidHeader(buf, action,
-					TOBFixedStr(emu->player_name, sizeof(emu->player_name), 63),
+					TOBFixedStr(emu->player_name, sizeof(emu->player_name), TOB_NAME_MAX_CHARS),
 					emu->unknown1,
-					TOBFixedStr(emu->leader_name, sizeof(emu->leader_name), 63),
+					TOBFixedStr(emu->leader_name, sizeof(emu->leader_name), TOB_NAME_MAX_CHARS),
 					emu->parameter);
 				break;
 			}
@@ -4220,7 +4309,7 @@ namespace TOB
 		// The emu packet has no raid id. Any value >= 1 works for the client (it is echoed back in C2S
 		// unknown1, which the server ignores); use the leader's entity id, or 1.
 		uint32 raid_id = emu->leader_id ? emu->leader_id : 1;
-		std::string leader = TOBFixedStr(emu->leader_name, sizeof(emu->leader_name), 63);
+		std::string leader = TOBFixedStr(emu->leader_name, sizeof(emu->leader_name), TOB_NAME_MAX_CHARS);
 
 		SerializeBuffer buf;
 		TOBWriteRaidHeader(buf, raidCreate, leader, raid_id, leader, RaidCommandAcceptInvite);
@@ -4246,7 +4335,7 @@ namespace TOB
 		auto emu = (const DelegateAbility_Struct *)in->pBuffer;
 
 		uint32 tob_type = ServerToTOBDelegateType(emu->DelegateAbility);
-		if (tob_type == 0xFFFFFFFF) { // no ToB equivalent
+		if (tob_type == TOB_INVALID_ID) { // no ToB equivalent
 			delete in;
 			return;
 		}
@@ -4315,12 +4404,12 @@ namespace TOB
 		in->SetReadPosition(0);
 		uint32 task_index = in->ReadUInt32();
 		uint32 count      = in->ReadUInt32();
-		if (in->ReadError() || task_index > 49) { // client ignores index >= 50
+		if (in->ReadError() || task_index >= TOB_TASK_HISTORY_MAX_TASKS) { // client ignores a larger index
 			delete in;
 			return;
 		}
-		if (count > 20) { // client clamps to 20 activities
-			count = 20;
+		if (count > TOB_TASK_HISTORY_MAX_ACTIVITIES) { // client clamps the activity count
+			count = TOB_TASK_HISTORY_MAX_ACTIVITIES;
 		}
 
 		struct Act {
@@ -4333,14 +4422,14 @@ namespace TOB
 		for (uint32 i = 0; i < count; ++i) {
 			Act a;
 			a.type = in->ReadUInt32();
-			in->ReadString(a.target, 63);    // client cap 0x3f
-			in->ReadString(a.items, 1023);
+			in->ReadString(a.target, TOB_NAME_MAX_CHARS);
+			in->ReadString(a.items, TOB_TEXT_MAX_CHARS);
 			a.goal = in->ReadUInt32();
 			in->ReadUInt32();
 			in->ReadUInt32();
 			uint32 zone_id = in->ReadUInt32();
 			in->ReadUInt32();
-			in->ReadString(a.desc, 127);     // client cap 0x7f
+			in->ReadString(a.desc, TOB_LINE_MAX_CHARS);
 			if (in->ReadError()) {
 				break;                // truncated emu packet: send the complete activities only
 			}
@@ -4392,11 +4481,11 @@ namespace TOB
 			std::string title;
 		};
 		std::vector<Done> tasks;
-		tasks.reserve(std::min<uint32>(count, 50));
-		for (uint32 i = 0; i < count && tasks.size() < 50; ++i) {
+		tasks.reserve(std::min<uint32>(count, TOB_TASK_HISTORY_MAX_TASKS));
+		for (uint32 i = 0; i < count && tasks.size() < TOB_TASK_HISTORY_MAX_TASKS; ++i) {
 			Done t;
 			t.task_id = in->ReadUInt32();
-			in->ReadString(t.title, 63);
+			in->ReadString(t.title, TOB_NAME_MAX_CHARS);
 			t.completed_time = in->ReadUInt32();
 			if (in->ReadError()) {
 				break;
@@ -4483,8 +4572,8 @@ namespace TOB
 		buffer.WriteUInt8(unk04);
 		buffer.WriteUInt32(0);	// new in ToB, meaning unknown
 		if (name && name_max > 0) {
-			// client copies at most 63 chars; never read past the emu array
-			std::string n(name, strnlen(name, std::min<size_t>(name_max, 63)));
+			// never read past the emu array
+			std::string n(name, strnlen(name, std::min<size_t>(name_max, TOB_NAME_MAX_CHARS)));
 			buffer.WriteString(n);
 		}
 		else {
@@ -4705,11 +4794,11 @@ namespace TOB
 		}
 		for (uint32 i = 0; i < count; ++i) {
 			const auto& t = emu->timers[i];
-			// ToB: u32-length-prefixed strings; client keeps <=127 / <=255 chars
-			buf.WriteLengthString(std::string(t.expedition_name, strnlen(t.expedition_name, 127)));
+			// ToB: u32-length-prefixed strings
+			buf.WriteLengthString(std::string(t.expedition_name, strnlen(t.expedition_name, TOB_LINE_MAX_CHARS)));
 			buf.WriteUInt32(t.seconds_remaining);
 			buf.WriteInt32(t.event_type);
-			buf.WriteLengthString(std::string(t.event_name, strnlen(t.event_name, 255)));
+			buf.WriteLengthString(std::string(t.event_name, strnlen(t.event_name, TOB_NOTE_MAX_CHARS)));
 		}
 
 		auto outapp = new EQApplicationPacket(OP_DzExpeditionLockoutTimers, buf.size());
@@ -4991,29 +5080,29 @@ namespace TOB
 		auto outapp = new EQApplicationPacket(OP_GuildBank, in->size + 4); // all of them are 4 bytes bigger
 
 		switch (in->ReadUInt32()) {
-		case 10: // GuildBankAcknowledge
+		case EmuGuildBankAcknowledge:
 			if (in->size >= 8) {
-				outapp->WriteUInt32(9);
+				outapp->WriteUInt32(TOBGuildBankAcknowledge);
 				outapp->WriteUInt32(in->ReadUInt32());
 				outapp->WriteUInt32(0);
 			}
 			break;
-		case 5: // GuildBankDeposit (ack)
+		case EmuGuildBankDeposit: // ack
 			if (in->size >= 12) {
-				outapp->WriteUInt32(4);
+				outapp->WriteUInt32(TOBGuildBankDeposit);
 				outapp->WriteUInt32(in->ReadUInt32());
 				outapp->WriteUInt32(0);
 				outapp->WriteUInt32(in->ReadUInt32());
 			}
 			break;
-		case 1: { // GuildBankItemUpdate
+		case EmuGuildBankItemUpdate: {
 			if (in->size < sizeof(GuildBankItemUpdate_Struct) ||
 			    outapp->size < sizeof(structs::GuildBankItemUpdate_Struct)) {
 				break;
 			}
 			auto emu = (GuildBankItemUpdate_Struct *)in->pBuffer;
 			auto eq  = (structs::GuildBankItemUpdate_Struct *)outapp->pBuffer;
-			eq->action = 0;
+			eq->action = TOBGuildBankItemUpdate;
 			OUT(display);
 			OUT(slot_id);
 			OUT(area);
@@ -5043,20 +5132,20 @@ namespace TOB
 		}
 		// all actions are 1 off due to the removal of one of the enums
 		switch (__packet->ReadUInt32()) {
-		case 2: {
+		case TOBGuildBankPromote: {
 			DECODE_LENGTH_EXACT(structs::GuildBankPromote_Struct);
 			SETUP_DIRECT_DECODE(GuildBankPromote_Struct, structs::GuildBankPromote_Struct);
-			emu->Action = 3;
+			emu->Action = EmuGuildBankPromote;
 			IN(Unknown04);
 			IN(Slot);
 			IN(Slot2);
 			FINISH_DIRECT_DECODE();
 			return;
 		}
-		case 3: {
+		case TOBGuildBankViewItem: {
 			DECODE_LENGTH_EXACT(structs::GuildBankViewItem_Struct);
 			SETUP_DIRECT_DECODE(GuildBankViewItem_Struct, structs::GuildBankViewItem_Struct);
-			emu->Action = 4;
+			emu->Action = EmuGuildBankViewItem;
 			IN(Unknown04);
 			IN(SlotID);
 			IN(Area);
@@ -5065,30 +5154,30 @@ namespace TOB
 			FINISH_DIRECT_DECODE();
 			return;
 		}
-		case 4: {
-			__packet->WriteUInt32(5);
+		case TOBGuildBankDeposit: {
+			__packet->WriteUInt32(EmuGuildBankDeposit);
 			return;
 		}
-		case 5: {
+		case TOBGuildBankPermissions: {
 			DECODE_LENGTH_EXACT(structs::GuildBankPermissions_Struct);
 			SETUP_DIRECT_DECODE(GuildBankPermissions_Struct, structs::GuildBankPermissions_Struct);
-			emu->Action = 6;
+			emu->Action = EmuGuildBankPermissions;
 			IN(Unknown04);
 			IN(SlotID);
 			IN(Unknown10);
 			IN(ItemID);
 			IN(Permissions);
-			strn0cpy(emu->MemberName, eq->MemberName, 64);
+			strn0cpy(emu->MemberName, eq->MemberName, sizeof(emu->MemberName));
 			FINISH_DIRECT_DECODE();
 			return;
 		}
-		case 6:
-		case 7:
-		case 8: {
+		case TOBGuildBankWithdraw:
+		case TOBGuildBankSplitStacks:
+		case TOBGuildBankMergeStacks: {
 			const uint32 wire_action = *reinterpret_cast<uint32 *>(__packet->pBuffer);
 			DECODE_LENGTH_EXACT(structs::GuildBankWithdrawItem_Struct);
 			SETUP_DIRECT_DECODE(GuildBankWithdrawItem_Struct, structs::GuildBankWithdrawItem_Struct);
-			emu->Action = wire_action + 1;   // 7 withdraw, 8 split, 9 merge
+			emu->Action = wire_action + 1;   // server: 7 withdraw, 8 split, 9 merge
 			IN(Unknown04);
 			IN(SlotID);
 			IN(Area);
@@ -5124,7 +5213,7 @@ namespace TOB
 		SerializeBuffer buf;
 
 		switch (command) {
-		case 0: {   // player status. Body is byte-identical to the server struct; only header + u64 time differ.
+		case structs::LFGuildPlayerStatus: {   // player status. Body is byte-identical to the server struct; only header + u64 time differ.
 			if (size < sizeof(::LFGuild_PlayerToggle_Struct)) {
 				LogNetcode("TOB::ENCODE(OP_LFGuild) player toggle too short [{}]", size);
 				delete in;
@@ -5132,7 +5221,7 @@ namespace TOB
 			}
 			auto emu = reinterpret_cast<const ::LFGuild_PlayerToggle_Struct *>(src);
 			structs::LFGuild_PlayerToggle_Struct eq{};
-			eq.Command = 0;
+			eq.Command = structs::LFGuildPlayerStatus;
 			// ToB comment field is 524 (server Comment[256] + Unknown328[268]); the server only fills Comment
 			strn0cpy(eq.Comment, emu->Comment, sizeof(emu->Comment));
 			eq.TimeZone   = static_cast<int32>(emu->TimeZone);
@@ -5144,7 +5233,7 @@ namespace TOB
 			delete in;
 			return;
 		}
-		case 1: {   // guild status
+		case structs::LFGuildGuildStatus: {   // guild status
 			if (size < sizeof(::LFGuild_GuildToggle_Struct)) {
 				LogNetcode("TOB::ENCODE(OP_LFGuild) guild toggle too short [{}]", size);
 				delete in;
@@ -5152,7 +5241,7 @@ namespace TOB
 			}
 			auto emu = reinterpret_cast<const ::LFGuild_GuildToggle_Struct *>(src);
 			structs::LFGuild_GuildToggle_Struct eq{};
-			eq.Command = 1;
+			eq.Command = structs::LFGuildGuildStatus;
 			// ToB comment field is 512; the server only fills Comment[256]
 			strn0cpy(eq.Comment, emu->Comment, sizeof(emu->Comment));
 			eq.FromLevel  = emu->FromLevel;
@@ -5169,32 +5258,32 @@ namespace TOB
 			delete in;
 			return;
 		}
-		case 3: {   // player search results. Emu wire: u32 3, u32 ?, u32 count, entries.
+		case structs::LFGuildPlayerSearch: {   // player search results. Emu wire: u32 3, u32 ?, u32 count, entries.
 			struct Entry { std::string name, comment; uint32 level, cls, aa, tz; };
 			std::vector<Entry> entries;
 			in->SetReadPosition(0);
-			in->ReadSkip(8);
+			in->ReadSkip(EMU_LFGUILD_HEADER_SIZE);
 			uint32 count = in->ReadUInt32();
 			if (!in->ReadError()) {
-				count = std::min<uint32>(count, 1000);
+				count = std::min<uint32>(count, TOB_LFGUILD_MAX_RESULTS);
 				for (uint32 i = 0; i < count; ++i) {
 					Entry e{};
-					in->ReadString(e.name, 63);          // client strcpy's into 0x40
+					in->ReadString(e.name, TOB_NAME_MAX_CHARS);
 					e.level = in->ReadUInt32();
 					e.cls   = in->ReadUInt32();
 					e.aa    = in->ReadUInt32();
 					e.tz    = in->ReadUInt32();
-					in->ReadString(e.comment, 255);      // client stages through 4 KB
+					in->ReadString(e.comment, TOB_NOTE_MAX_CHARS);
 					if (in->ReadError()) {
 						break;
 					}
-					if (e.cls > 17) { e.cls = 0; }                           // class-name table has 18 entries
-					if (static_cast<int32>(e.tz) < -1 || static_cast<int32>(e.tz) > 23) { e.tz = static_cast<uint32>(-1); }
+					if (e.cls > TOB_LFGUILD_MAX_CLASS) { e.cls = 0; }
+					if (static_cast<int32>(e.tz) < TOB_TIMEZONE_NONE || static_cast<int32>(e.tz) > TOB_TIMEZONE_MAX) { e.tz = static_cast<uint32>(TOB_TIMEZONE_NONE); }
 					entries.push_back(std::move(e));
 				}
 			}
-			buf.WriteUInt32(3);
-			TOBWriteZeros(buf, 20);
+			buf.WriteUInt32(structs::LFGuildPlayerSearch);
+			TOBWriteZeros(buf, structs::LFGuild_HeaderSize - sizeof(uint32)); // command, then the unknown header bytes
 			buf.WriteUInt32(static_cast<uint32>(entries.size()));
 			for (const auto &e : entries) {
 				buf.WriteString(e.name);
@@ -5206,29 +5295,29 @@ namespace TOB
 			}
 			break;
 		}
-		case 4: {   // guild search results: entries {cstr name, u32 timezone, cstr comment}
+		case structs::LFGuildGuildSearch: {   // guild search results: entries {cstr name, u32 timezone, cstr comment}
 			struct Entry { std::string name, comment; uint32 tz; };
 			std::vector<Entry> entries;
 			in->SetReadPosition(0);
-			in->ReadSkip(8);
+			in->ReadSkip(EMU_LFGUILD_HEADER_SIZE);
 			uint32 count = in->ReadUInt32();
 			if (!in->ReadError()) {
-				count = std::min<uint32>(count, 1000);
+				count = std::min<uint32>(count, TOB_LFGUILD_MAX_RESULTS);
 				for (uint32 i = 0; i < count; ++i) {
 					Entry e{};
-					in->ReadString(e.name, 63);
+					in->ReadString(e.name, TOB_NAME_MAX_CHARS);
 					e.tz = in->ReadUInt32();
-					in->ReadString(e.comment, 255);
+					in->ReadString(e.comment, TOB_NOTE_MAX_CHARS);
 					if (in->ReadError()) {
 						break;
 					}
 					// ToB indexes the timezone-name table with this value WITHOUT a range check
-					if (static_cast<int32>(e.tz) < -1 || static_cast<int32>(e.tz) > 23) { e.tz = static_cast<uint32>(-1); }
+					if (static_cast<int32>(e.tz) < TOB_TIMEZONE_NONE || static_cast<int32>(e.tz) > TOB_TIMEZONE_MAX) { e.tz = static_cast<uint32>(TOB_TIMEZONE_NONE); }
 					entries.push_back(std::move(e));
 				}
 			}
-			buf.WriteUInt32(4);
-			TOBWriteZeros(buf, 20);
+			buf.WriteUInt32(structs::LFGuildGuildSearch);
+			TOBWriteZeros(buf, structs::LFGuild_HeaderSize - sizeof(uint32)); // command, then the unknown header bytes
 			buf.WriteUInt32(static_cast<uint32>(entries.size()));
 			for (const auto &e : entries) {
 				buf.WriteString(e.name);
@@ -5238,10 +5327,10 @@ namespace TOB
 			break;
 		}
 		default: {  // 2, 5 (ignored by the client), 6 (show window), anything else: widen the header 8 -> 0x18
-			const uint32 tail = size > 8 ? size - 8 : 0;
+			const uint32 tail = size > EMU_LFGUILD_HEADER_SIZE ? size - EMU_LFGUILD_HEADER_SIZE : 0;
 			buf.WriteUInt32(command);
 			TOBWriteZeros(buf, structs::LFGuild_HeaderSize - sizeof(command));
-			TOBWriteBytes(buf, src + 8, tail);
+			TOBWriteBytes(buf, src + EMU_LFGUILD_HEADER_SIZE, tail);
 			break;
 		}
 		}
@@ -5270,11 +5359,11 @@ namespace TOB
 		};
 
 		switch (command) {
-		case 0: {
+		case structs::LFGuildPlayerStatus: {
 			if (size != sizeof(structs::LFGuild_PlayerToggle_Struct)) { break; }
 			auto eq  = reinterpret_cast<const structs::LFGuild_PlayerToggle_Struct *>(eq_buffer);
 			auto emu = reinterpret_cast<::LFGuild_PlayerToggle_Struct *>(replace(sizeof(::LFGuild_PlayerToggle_Struct)));
-			emu->Command = 0;
+			emu->Command = structs::LFGuildPlayerStatus;
 			strn0cpy(emu->Comment, eq->Comment, sizeof(emu->Comment));
 			emu->TimeZone   = eq->TimeZone;
 			emu->Toggle     = eq->Toggle;
@@ -5282,11 +5371,11 @@ namespace TOB
 			delete[] eq_buffer;
 			return;
 		}
-		case 1: {
+		case structs::LFGuildGuildStatus: {
 			if (size != sizeof(structs::LFGuild_GuildToggle_Struct)) { break; }
 			auto eq  = reinterpret_cast<const structs::LFGuild_GuildToggle_Struct *>(eq_buffer);
 			auto emu = reinterpret_cast<::LFGuild_GuildToggle_Struct *>(replace(sizeof(::LFGuild_GuildToggle_Struct)));
-			emu->Command = 1;
+			emu->Command = structs::LFGuildGuildStatus;
 			strn0cpy(emu->Comment, eq->Comment, sizeof(emu->Comment));   // clamp to the server's 256
 			emu->FromLevel  = eq->FromLevel;
 			emu->ToLevel    = eq->ToLevel;
@@ -5299,11 +5388,11 @@ namespace TOB
 			delete[] eq_buffer;
 			return;
 		}
-		case 3: {
+		case structs::LFGuildPlayerSearch: {
 			if (size != sizeof(structs::LFGuild_SearchPlayer_Struct)) { break; }
 			auto eq  = reinterpret_cast<const structs::LFGuild_SearchPlayer_Struct *>(eq_buffer);
 			auto emu = reinterpret_cast<::LFGuild_SearchPlayer_Struct *>(replace(sizeof(::LFGuild_SearchPlayer_Struct)));
-			emu->Command   = 3;
+			emu->Command   = structs::LFGuildPlayerSearch;
 			emu->FromLevel = eq->FromLevel;
 			emu->ToLevel   = eq->ToLevel;
 			emu->MinAA     = eq->MinAA;
@@ -5312,11 +5401,11 @@ namespace TOB
 			delete[] eq_buffer;
 			return;
 		}
-		case 4: {
+		case structs::LFGuildGuildSearch: {
 			if (size != sizeof(structs::LFGuild_SearchGuild_Struct)) { break; }
 			auto eq  = reinterpret_cast<const structs::LFGuild_SearchGuild_Struct *>(eq_buffer);
 			auto emu = reinterpret_cast<::LFGuild_SearchGuild_Struct *>(replace(sizeof(::LFGuild_SearchGuild_Struct)));
-			emu->Command  = 4;
+			emu->Command  = structs::LFGuildGuildSearch;
 			emu->Level    = eq->Level;
 			emu->AAPoints = eq->AAPoints;
 			emu->TimeZone = static_cast<uint32>(eq->TimeZone);
@@ -5648,7 +5737,7 @@ namespace TOB
 	{
 		// zone/worldserver.cpp writes CLE->GuildID() truncated to u16, so GUILD_NONE arrives as 0xFFFF.
 		// ToB spawn packets write "no guild" as u32 -1, u32 0; mirror that.
-		return emu_guild == 0xFFFF ? 0x00000000FFFFFFFFull : static_cast<uint64>(emu_guild);
+		return emu_guild == EMU_GUILD_NONE_U16 ? 0x00000000FFFFFFFFull : static_cast<uint64>(emu_guild);
 	}
 
 	// Emu wire (built by WorldServer::HandleLFGMatches):
@@ -5677,8 +5766,8 @@ namespace TOB
 			const uint32 row_start = in->GetReadPosition();
 			std::string comments, name;
 			// the client copies both strings into 64-byte locals with no bound: clamp to 63
-			in->ReadString(comments, 63);
-			in->ReadString(name, 63);
+			in->ReadString(comments, TOB_NAME_MAX_CHARS);
+			in->ReadString(name, TOB_NAME_MAX_CHARS);
 			const uint16 class_ = in->ReadUInt16();
 			const uint16 level  = in->ReadUInt16();
 			const uint16 zone   = in->ReadUInt16();
@@ -5728,7 +5817,7 @@ namespace TOB
 		while (ok && in->ReadRemaining() > 0) {
 			const uint32 group_start = in->GetReadPosition();
 			std::string comments;
-			in->ReadString(comments, 63);
+			in->ReadString(comments, TOB_NAME_MAX_CHARS);
 			const uint16 from    = in->ReadUInt16();
 			const uint16 to      = in->ReadUInt16();
 			const uint32 classes = in->ReadUInt32();
@@ -5748,7 +5837,7 @@ namespace TOB
 			for (uint16 i = 0; i < count; ++i) {
 				const uint32 member_start = in->GetReadPosition();
 				std::string name;
-				in->ReadString(name, 63);
+				in->ReadString(name, TOB_NAME_MAX_CHARS);
 				const uint16 class_ = in->ReadUInt16();
 				const uint16 level  = in->ReadUInt16();
 				const uint16 zone   = in->ReadUInt16();
@@ -5792,7 +5881,7 @@ namespace TOB
 		uint32 target_id = 0, number = 0;
 		memcpy(&target_id, in->pBuffer, sizeof(uint32));
 		memcpy(&number, in->pBuffer + sizeof(uint32), sizeof(uint32));
-		if (number > 3) { // the client indexes an array with this value unchecked
+		if (number > TOB_SET_GROUP_TARGET_MAX_NUMBER) {
 			delete in;
 			return;
 		}
@@ -5829,11 +5918,11 @@ namespace TOB
 		FindableNPC_Struct *emu = (FindableNPC_Struct *)in->pBuffer;
 
 		// ToB: u32 count, then {u32 action, u32 id, name, last_name, u32 race, u32 class}.
-		// The client keeps at most 63/31 bytes of the names; the emu arrays may be unterminated.
+		// The client keeps a limited number of bytes of the names; the emu arrays may be unterminated.
 		size_t name_len = strnlen(emu->Name, sizeof(emu->Name));
-		if (name_len > 62) { name_len = 62; }
+		if (name_len > TOB_FINDABLE_NAME_MAX_CHARS) { name_len = TOB_FINDABLE_NAME_MAX_CHARS; }
 		size_t last_len = strnlen(emu->LastName, sizeof(emu->LastName));
-		if (last_len > 30) { last_len = 30; }
+		if (last_len > TOB_FINDABLE_LAST_NAME_MAX_CHARS) { last_len = TOB_FINDABLE_LAST_NAME_MAX_CHARS; }
 
 		SerializeBuffer buffer;
 		buffer.WriteUInt32(1);
@@ -7664,7 +7753,7 @@ namespace TOB
 							buyer_buy_lines.buy_lines[i].trade_items.push_back(blti);
 						}
 					}
-					__packet->ReadSkip(std::min<uint32>(13, __packet->ReadRemaining())); // trailing padding
+					__packet->ReadSkip(std::min<uint32>(TOB_BUYER_LINE_TRAILER_SIZE, __packet->ReadRemaining())); // trailing padding
 				}
 
 				if (__packet->ReadError()) {
@@ -7737,7 +7826,7 @@ namespace TOB
 					__packet->ReadString(sell_item.buyer_name, 64);
 				}
 				else {
-					__packet->ReadSkip(13);
+					__packet->ReadSkip(TOB_BUYER_LINE_TRAILER_SIZE);
 				}
 
 				sell_item.seller_quantity = __packet->ReadUInt32();
@@ -8155,7 +8244,7 @@ namespace TOB
 	{
 		DECODE_LENGTH_ATLEAST(structs::GuildUpdateHeader_Struct);
 
-		constexpr uint32 EMU_HDR = 0x50;
+		constexpr uint32 EMU_HDR = EMU_GUILD_UPDATE_HEADER_SIZE;
 		constexpr uint32 TOB_HDR = sizeof(structs::GuildUpdateHeader_Struct);
 
 		unsigned char *__eq_buffer = __packet->pBuffer;
@@ -8163,19 +8252,19 @@ namespace TOB
 		const uint32 payload = __packet->size - TOB_HDR;
 
 		uint32 action = hdr->action;
-		if (action == 3)      { action = 4; } // rank name
-		else if (action == 4) { action = 5; }      // permission
+		if (action == TOBGuildUpdateRankNames)        { action = GuildUpdateRanks; }
+		else if (action == TOBGuildUpdatePermissions) { action = GuildUpdatePermissions; }
 
 		// keep the server's largest struct size so fixed-size casts on the server stay in bounds
 		const uint32 emu_size = std::max<uint32>(EMU_HDR + payload, sizeof(GuildUpdateURLAndChannel_Struct));
 		auto buf = new unsigned char[emu_size] {};
 		uint32 gid = TOBToServerGuildID(hdr->guild_id);
-		memcpy(buf + 0x00, &action, 4);
-		memcpy(buf + 0x04, &hdr->unknown4, 4);
-		memcpy(buf + 0x08, &hdr->unknown8, 4);
-		memcpy(buf + 0x0c, hdr->name, sizeof(hdr->name));
-		buf[0x0c + sizeof(hdr->name) - 1] = '\0';
-		memcpy(buf + 0x4c, &gid, 4);
+		memcpy(buf + EMU_GUILD_UPDATE_ACTION_OFFSET,   &action,         sizeof(action));
+		memcpy(buf + EMU_GUILD_UPDATE_UNKNOWN4_OFFSET, &hdr->unknown4, sizeof(hdr->unknown4));
+		memcpy(buf + EMU_GUILD_UPDATE_UNKNOWN8_OFFSET, &hdr->unknown8, sizeof(hdr->unknown8));
+		memcpy(buf + EMU_GUILD_UPDATE_NAME_OFFSET,     hdr->name,      sizeof(hdr->name));
+		buf[EMU_GUILD_UPDATE_NAME_OFFSET + sizeof(hdr->name) - 1] = '\0';
+		memcpy(buf + EMU_GUILD_UPDATE_GUILD_ID_OFFSET, &gid,           sizeof(gid));
 		if (payload) {
 			memcpy(buf + EMU_HDR, __eq_buffer + TOB_HDR, payload);
 		}
@@ -8257,11 +8346,11 @@ namespace TOB
 		strn0cpy(player_name, player_name_str.c_str(), sizeof(player_name));
 		strn0cpy(leader_name, leader_name_str.c_str(), sizeof(leader_name));
 
-		// ToB raid-options loot commands are 32/33/34; the server's RaidCommand values are 20/21/22
+		// ToB raid-options loot commands use the "2" variants; the server handles them as the plain loot commands
 		switch (action) {
-			case 32: action = RaidCommandLootType; break;
-			case 33: action = RaidCommandAddLooter; break;
-			case 34: action = RaidCommandRemoveLooter; break;
+			case RaidCommandLootType2: action = RaidCommandLootType; break;
+			case RaidCommandAddLooter2: action = RaidCommandAddLooter; break;
+			case RaidCommandRemoveLooter2: action = RaidCommandRemoveLooter; break;
 			default: break;
 		}
 
@@ -8499,8 +8588,8 @@ namespace TOB
 		uint32 claim_id = 0, action = 0;
 		std::string name;
 		__packet->ReadLengthString(name);
-		if (name.size() > 63) {
-			name.resize(63);
+		if (name.size() > TOB_NAME_MAX_CHARS) {
+			name.resize(TOB_NAME_MAX_CHARS);
 		}
 		bool ok = !__packet->ReadError();
 		if (ok) {
@@ -8630,22 +8719,22 @@ namespace TOB
 	DECODE(OP_Surname)
 	{
 		// ToB (captured 0x0c53): u32 char id, u32 world id, int32 status, u32 length, surname (no terminator)
-		if (__packet->size < 16) {
+		if (__packet->size < TOB_SURNAME_HEADER_SIZE) {
 			__packet->SetOpcode(OP_Unknown);
 			return;
 		}
 		unsigned char *__eq_buffer = __packet->pBuffer;
-		const uint32 len = *(uint32*)(__eq_buffer + 12);
-		if (__packet->size < 16 + len) {
+		const uint32 len = *(uint32*)(__eq_buffer + TOB_SURNAME_LENGTH_OFFSET);
+		if (__packet->size < TOB_SURNAME_HEADER_SIZE + len) {
 			__packet->SetOpcode(OP_Unknown);
 			return;
 		}
 		__packet->size = sizeof(Surname_Struct);
 		__packet->pBuffer = new unsigned char[__packet->size]{};
 		auto emu = (Surname_Struct*)__packet->pBuffer;
-		memcpy(emu->name, __eq_buffer, 8); // keep the id for the reply; the server handler doesn't read name
-		emu->unknown0064 = *(uint32*)(__eq_buffer + 8);
-		memcpy(emu->lastname, __eq_buffer + 16, std::min<uint32>(len, sizeof(emu->lastname) - 1));
+		memcpy(emu->name, __eq_buffer, TOB_SURNAME_ID_SIZE); // keep the id for the reply; the server handler doesn't read name
+		emu->unknown0064 = *(uint32*)(__eq_buffer + TOB_SURNAME_STATUS_OFFSET);
+		memcpy(emu->lastname, __eq_buffer + TOB_SURNAME_HEADER_SIZE, std::min<uint32>(len, sizeof(emu->lastname) - 1));
 		delete[] __eq_buffer;
 	}
 
