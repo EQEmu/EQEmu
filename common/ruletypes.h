@@ -237,7 +237,7 @@ RULE_INT(Character, BandolierSwapDelay, 0, "Bandolier swap delay in milliseconds
 RULE_BOOL(Character, EnableHackedFastCampForGM, false, "Enables hacked fast camp for GM clients, if the GM doesn't have a hacked client they'll camp like normal")
 RULE_BOOL(Character, EnableFastCamp, true, "ToB+ clients get the 'Fast camp now?' prompt (and instant /camp fast) in cities, no-combat zones and Character:FastCampZones")
 RULE_STRING(Character, FastCampZones, "", "Comma-separated zone short names that also allow fast camp for ToB+ clients")
-RULE_BOOL(Character, KeyRingsUnlockedByDefault, true, "TOB+ key rings a character has not been given or denied by a quest (UnlockKeyRing/LockKeyRing) count as unlocked")
+RULE_BOOL(Character, KeyRingsUnlockedByDefault, false, "TOB+ key rings a character has not been given or denied by a quest (UnlockKeyRing/LockKeyRing) count as unlocked")
 RULE_INT(Character, LeadershipMinGroupSize, 3, "Group (or raid group) size leadership abilities need: inspect buffs and the leadership AA bonuses, and a group's NPC marks are cleared when it drops below this. Live: 3")
 RULE_BOOL(Character, SoloMarkNPC, false, "Let an ungrouped player /mark NPCs (TOB+ clients send /mark when ungrouped). The marks are shown only to that player")
 RULE_BOOL(Character, ToBLeadershipAlwaysOn, false, "ToB+ clients cannot buy leadership AAs: groups and raids led by one get every leadership ability at max rank (the player profile is not changed)")
