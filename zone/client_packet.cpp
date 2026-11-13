@@ -10332,15 +10332,22 @@ void Client::Handle_OP_Logout(const EQApplicationPacket *app)
 {
 	LogDebug("[{}] sent a logout packet", GetName());
 
-	// ToB fast camp: OP_Logout arrives when the player accepts the prompt (or at once for /camp fast),
-	// before camp_timer fires; finish the camp now so this is a clean logout, not a linkdead
-	if (ClientVersion() >= EQ::versions::ClientVersion::TOB && (camp_timer.Enabled() || GetGM())) {
-		if (camp_timer.Enabled()) {
-			CompleteCamp();
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+		// ToB fast camp: in a fast camp zone OP_Logout arrives when the player accepts the prompt (or at once for
+		// /camp fast), before camp_timer fires; finish the camp now so this is a clean logout, not a linkdead
+		if (GetGM() || (camp_timer.Enabled() && IsFastCampZone())) {
+			if (camp_timer.Enabled()) {
+				CompleteCamp();
+			}
+			SendLogoutPackets();
+			Disconnect();
+			return;
 		}
-		SendLogoutPackets();
-		Disconnect();
-		return;
+
+		// anywhere else the camp has to run its full countdown first
+		if (!instalog && !(camp_timer.Enabled() && camp_timer.GetRemainingTime() <= 3000)) {
+			return;
+		}
 	}
 
 	SendLogoutPackets();
