@@ -1208,7 +1208,8 @@ namespace TOB
 						reinterpret_cast<EQ::InternalSerializedItem_Struct *>(e.serialize_item_2.data())->inst);
 				}
 
-				// same header as RoF2 (packed), then the TOB-serialized previews of both items
+				// packed header (action, both unique ids, compatibility, max level, a presence byte per item), then the
+				// TOB-serialized previews of both items
 				SerializeBuffer buf;
 				buf.WriteUInt32(e.action);
 				buf.WriteUInt64(e.item1_unique_id);
@@ -6728,7 +6729,7 @@ namespace TOB
 		SETUP_DIRECT_ENCODE(MaxCharacters_Struct, structs::MaxCharacters_Struct);
 
 		*eq = {0};
-		eq->total_character_slots = emu->max_chars; // server limit (CharacterCreationLimit), as RoF2
+		eq->total_character_slots = emu->max_chars; // server limit (CharacterCreationLimit)
 		eq->marketplace_character_slots = 0;
 		eq->unknown008 = -1;
 		eq->head_start_button = 0;
@@ -8067,7 +8068,7 @@ namespace TOB
 			*/
 
 			buffer.WriteUInt32(emu->PlayerState);
-			buffer.WriteUInt32(emu->npc_tint_id); // NpcTintIndex (npc_types.armortint_id), as RoF2
+			buffer.WriteUInt32(emu->npc_tint_id); // NpcTintIndex (npc_types.armortint_id)
 			buffer.WriteUInt32(0);
 			buffer.WriteUInt32(0);
 
@@ -8663,7 +8664,7 @@ namespace TOB
 	{
 		// ToB: cstr sender, cstr target, 8 unknown bytes, u32 language, u32 channel, 5 unknown bytes, u32 skill,
 		// cstr message (client limit about 11k; may be unterminated at the end of the packet), then 15 trailing bytes
-		// (see ENCODE). Same as RoF2 with 4 more bytes before the language.
+		// (see ENCODE).
 		constexpr uint32 ChannelMessageGapBeforeLanguage = 8;
 		constexpr uint32 ChannelMessageGapBeforeSkill    = 5;
 
