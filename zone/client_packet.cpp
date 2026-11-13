@@ -9862,6 +9862,14 @@ void Client::Handle_OP_ItemVerifyRequest(const EQApplicationPacket *app)
 		return;
 	}
 
+	// key ring items stay in their ring when the ring is switched off or locked; they cannot be clicked then
+	if (
+		EQ::invslot::IsKeyRingSlot(slot_id) &&
+		(!IsKeyRingEnabled() || !IsKeyRingUnlocked(EQ::invslot::KeyRingFromSlot(slot_id)))
+	) {
+		return;
+	}
+
 	const EQ::ItemInstance* inst = m_inv[slot_id];
 	if (!inst) {
 		Message(Chat::Red, "Error: item not found in inventory slot #%i", slot_id);
