@@ -55,6 +55,29 @@ namespace TOB
 	static OpcodeManager* opcodes = nullptr;
 	static Strategy struct_strategy;
 
+	// Writes n zero bytes (padding / unknown fixed-width fields).
+	static void TOBWriteZeros(SerializeBuffer &buf, uint32 n)
+	{
+		for (uint32 i = 0; i < n; ++i) { buf.WriteUInt8(0); }
+	}
+
+	// Writes n raw bytes.
+	static void TOBWriteBytes(SerializeBuffer &buf, const void *data, size_t n)
+	{
+		auto bytes = static_cast<const uint8 *>(data);
+		for (size_t i = 0; i < n; ++i) { buf.WriteUInt8(bytes[i]); }
+	}
+
+	// Writes a fixed-width, zero-padded character field. At most width - 1 characters of str are copied, so the
+	// field is always NUL-terminated (same result as strn0cpy into a zeroed buffer of that width).
+	static void TOBWriteFixedString(SerializeBuffer &buf, const char *str, uint32 width)
+	{
+		uint32 len = 0;
+		while (len + 1 < width && str[len] != '\0') { ++len; }
+		for (uint32 i = 0; i < len; ++i) { buf.WriteUInt8(static_cast<uint8>(str[i])); }
+		TOBWriteZeros(buf, width - len);
+	}
+
 	void SerializeItem(SerializeBuffer &buffer, const EQ::ItemInstance* inst, int16 slot_id, uint8 depth, ItemPacketType packet_type);
 
 	// message link converters
@@ -298,20 +321,17 @@ namespace TOB
 		// spells, then the final two bools -- see 0x140202750
 		SETUP_VAR_ENCODE(BlockedBuffs_Struct);
 
-		// size is uint32 + count * int32 + uint8 + uint8
-		uint32 sz = 6 + emu->Count * 4;
-		__packet->size = sz;
-		__packet->pBuffer = new unsigned char[sz];
-		memset(__packet->pBuffer, 0, sz);
-
-		__packet->WriteUInt32(emu->Count);
+		SerializeBuffer buffer;
+		buffer.WriteUInt32(emu->Count);
 		for (int i = 0; i < emu->Count; i++)
-			__packet->WriteSInt32(emu->SpellID[i]);
+			buffer.WriteInt32(emu->SpellID[i]);
 
-		__packet->WriteUInt8(emu->Pet);
-		__packet->WriteUInt8(emu->Initialise);
+		buffer.WriteUInt8(emu->Pet);
+		buffer.WriteUInt8(emu->Initialise);
 
-		FINISH_ENCODE();
+		auto outapp = new EQApplicationPacket(OP_BlockedBuffs, std::move(buffer));
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete __packet;
 	}
 
 	// ---- Bazaar / Trader / Barter (same flow as rof2.cpp) ----
@@ -382,20 +402,17 @@ namespace TOB
 
 				LogTradingDetail("Sending item search results <green>[{}]", bisr.result_count);
 
-				uint32 packet_size = bisr.result_count * sizeof(structs::BuyerItemSearchResultEntry_Struct) + 8;
-				auto   outapp      = std::make_unique<EQApplicationPacket>(OP_Barter, packet_size);
-				auto   eq          = (char *) outapp->pBuffer;
-
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, structs::TOBBuyerActions::BuyerSearchResults);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, bisr.result_count);
+				SerializeBuffer buffer;
+				buffer.WriteUInt32(structs::TOBBuyerActions::BuyerSearchResults);
+				buffer.WriteUInt32(bisr.result_count);
 				for (auto const &i: bisr.results) {
-					strn0cpy(eq, i.item_name, 64);
-					eq += 64;
-					VARSTRUCT_ENCODE_TYPE(uint32, eq, i.item_id);
-					VARSTRUCT_ENCODE_TYPE(uint32, eq, i.item_icon);
-					VARSTRUCT_SKIP_TYPE(uint32, eq);
+					TOBWriteFixedString(buffer, i.item_name, sizeof(structs::BuyerItemSearchResultEntry_Struct::item_name));
+					buffer.WriteUInt32(i.item_id);
+					buffer.WriteUInt32(i.item_icon);
+					buffer.WriteUInt32(0);
 				}
 
+				auto outapp = std::make_unique<EQApplicationPacket>(OP_Barter, std::move(buffer));
 				dest->QueuePacket(outapp.get());
 				delete in;
 				break;
@@ -426,38 +443,27 @@ namespace TOB
 				cereal::BinaryInputArchive                    ar(ss);
 				ar(results);
 
-				auto name_size = 0;
+				SerializeBuffer buffer;
+				buffer.WriteUInt32(0);
+				buffer.WriteUInt16(results.empty() ? 0 : results[0].trader_zone_id);
+				buffer.WriteUInt32(results.empty() ? 0 : results[0].trader_id);
+				buffer.WriteUInt32(results.size());
+
 				for (auto const &i: results) {
-					name_size += i.item_name.length() + 1;
+					buffer.WriteUInt32(i.trader_id);                          //trader ID
+					buffer.WriteString(i.serial_number_RoF);                  //serial
+					buffer.WriteUInt32(i.cost);                               //cost
+					buffer.WriteUInt32(i.stackable ? i.charges : i.count);    //quantity
+					buffer.WriteUInt32(i.item_id);                            //ID
+					buffer.WriteUInt32(i.icon_id);                            //icon
+					buffer.WriteString(i.item_name);                          //name
+					buffer.WriteUInt32(i.item_stat);                          //itemstat
+					buffer.WriteFloat(0.0f);                                  //TOB only: unknown float, sent as 0
 				}
 
-				// TOB: 45 bytes per entry (RoF2: 41). The ToB result parser
-				// reads one extra float after item_stat; the RoF2 parser stops at item_stat.
-				auto p_size = 45 * results.size() + name_size + 14;
-				auto buffer = new char[p_size];
-				auto bufptr = buffer;
-
-				VARSTRUCT_ENCODE_TYPE(uint32, bufptr, 0);
-				VARSTRUCT_ENCODE_TYPE(uint16, bufptr, results.empty() ? 0 : results[0].trader_zone_id);
-				VARSTRUCT_ENCODE_TYPE(uint32, bufptr, results.empty() ? 0 : results[0].trader_id);
-				VARSTRUCT_ENCODE_TYPE(uint32, bufptr, results.size());
-
-				for (auto i: results) {
-					VARSTRUCT_ENCODE_TYPE(uint32, bufptr, i.trader_id);                          //trader ID
-					VARSTRUCT_ENCODE_STRING(bufptr, i.serial_number_RoF.c_str());                //serial
-					VARSTRUCT_ENCODE_TYPE(uint32, bufptr, i.cost);                               //cost
-					VARSTRUCT_ENCODE_TYPE(uint32, bufptr, i.stackable ? i.charges : i.count);    //quantity
-					VARSTRUCT_ENCODE_TYPE(uint32, bufptr, i.item_id);                            //ID
-					VARSTRUCT_ENCODE_TYPE(uint32, bufptr, i.icon_id);                            //icon
-					VARSTRUCT_ENCODE_STRING(bufptr, i.item_name.c_str());                        //name
-					VARSTRUCT_ENCODE_TYPE(uint32, bufptr, i.item_stat);                          //itemstat
-					VARSTRUCT_ENCODE_TYPE(float, bufptr, 0.0f);                                 //TOB only: unknown float, sent as 0
-				}
-
-				safe_delete_array(in->pBuffer);
-				in->size    = p_size;
-				in->pBuffer = (uchar*)buffer;
-				dest->QueuePacket(in);
+				auto outapp = new EQApplicationPacket(OP_BazaarSearch, std::move(buffer));
+				dest->QueuePacket(outapp);
+				delete outapp;
 				delete in;
 
 				break;
@@ -597,6 +603,29 @@ namespace TOB
 		delete inapp;
 	}
 
+	// Body shared by the buy line update (BuyerModifyBuyLine) and buy line inspect (BuyerSendBuyLine) packets.
+	static void TOBWriteBuyLine(SerializeBuffer &buffer, uint32 action, uint32 second_field, const BuyerLineItems_Struct &bl)
+	{
+		buffer.WriteUInt32(action);
+		buffer.WriteUInt32(second_field);
+		buffer.WriteUInt32(bl.slot);
+		buffer.WriteUInt8(bl.enabled ? 1 : 0);
+		buffer.WriteUInt32(bl.item_id);
+		buffer.WriteString(bl.item_name);
+		buffer.WriteUInt32(bl.item_icon);
+		buffer.WriteUInt32(bl.item_quantity);
+		buffer.WriteUInt8(bl.item_toggle ? 1 : 0);
+		buffer.WriteUInt32(bl.item_cost);
+		buffer.WriteUInt32(bl.trade_items.size());
+
+		for (auto const &i: bl.trade_items) {
+			buffer.WriteUInt32(i.item_id);
+			buffer.WriteUInt32(i.item_quantity);
+			buffer.WriteUInt32(i.item_icon);
+			buffer.WriteString(i.item_name);
+		}
+	}
+
 	ENCODE(OP_BuyerItems)
 	{
 		EQApplicationPacket *inapp = *p;
@@ -615,35 +644,10 @@ namespace TOB
 				cereal::BinaryInputArchive   ar(ss);
 				ar(bl);
 
-				//packet size
-				size_t          packet_size = bl.item_name.length() + 1 + 34;
-				for (auto const &b: bl.trade_items) {
-					packet_size += b.item_name.length() + 1;
-					packet_size += 12;
-				}
+				SerializeBuffer buffer;
+				TOBWriteBuyLine(buffer, structs::TOBBuyerActions::BuyerModifyBuyLine, 0, bl);
 
-				auto outapp         = std::make_unique<EQApplicationPacket>(OP_BuyerItems, packet_size);
-				char *eq            = (char *) outapp->pBuffer;
-				auto no_trade_items = bl.trade_items.size();
-
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, structs::TOBBuyerActions::BuyerModifyBuyLine);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, 0);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, bl.slot);
-				VARSTRUCT_ENCODE_TYPE(uint8, eq, bl.enabled ? 1 : 0);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, bl.item_id);
-				VARSTRUCT_ENCODE_STRING(eq, bl.item_name.c_str());
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, bl.item_icon);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, bl.item_quantity);
-				VARSTRUCT_ENCODE_TYPE(uint8, eq, bl.item_toggle ? 1 : 0);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, bl.item_cost);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, no_trade_items);
-
-				for (int i = 0; i < no_trade_items; i++) {
-					VARSTRUCT_ENCODE_TYPE(uint32, eq, bl.trade_items[i].item_id);
-					VARSTRUCT_ENCODE_TYPE(uint32, eq, bl.trade_items[i].item_quantity);
-					VARSTRUCT_ENCODE_TYPE(uint32, eq, bl.trade_items[i].item_icon);
-					VARSTRUCT_ENCODE_STRING(eq, bl.trade_items[i].item_name.c_str());
-				}
+				auto outapp = std::make_unique<EQApplicationPacket>(OP_BuyerItems, std::move(buffer));
 				dest->QueuePacket(outapp.get());
 				delete inapp;
 				break;
@@ -659,35 +663,10 @@ namespace TOB
 				cereal::BinaryInputArchive   ar(ss);
 				ar(bli);
 
-				//packet size
-				auto            packet_size = bli.item_name.length() + 1 + 34;
-				for (auto const &b: bli.trade_items) {
-					packet_size += b.item_name.length() + 1;
-					packet_size += 12;
-				}
+				SerializeBuffer buffer;
+				TOBWriteBuyLine(buffer, structs::TOBBuyerActions::BuyerSendBuyLine, bli.slot, bli);
 
-				auto packet         = std::make_unique<EQApplicationPacket>(OP_BuyerItems, packet_size);
-				char *eq            = (char *) packet->pBuffer;
-				auto no_trade_items = bli.trade_items.size();
-
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, structs::TOBBuyerActions::BuyerSendBuyLine);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, bli.slot);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, bli.slot);
-				VARSTRUCT_ENCODE_TYPE(uint8, eq, bli.enabled ? 1 : 0);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, bli.item_id);
-				VARSTRUCT_ENCODE_STRING(eq, bli.item_name.c_str());
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, bli.item_icon);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, bli.item_quantity);
-				VARSTRUCT_ENCODE_TYPE(uint8, eq, bli.item_toggle ? 1 : 0);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, bli.item_cost);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, no_trade_items);
-
-				for (auto const &i: bli.trade_items) {
-					VARSTRUCT_ENCODE_TYPE(uint32, eq, i.item_id);
-					VARSTRUCT_ENCODE_TYPE(uint32, eq, i.item_quantity);
-					VARSTRUCT_ENCODE_TYPE(uint32, eq, i.item_icon);
-					VARSTRUCT_ENCODE_STRING(eq, i.item_name.c_str());
-				}
+				auto packet = std::make_unique<EQApplicationPacket>(OP_BuyerItems, std::move(buffer));
 				dest->QueuePacket(packet.get());
 				delete inapp;
 
@@ -704,58 +683,38 @@ namespace TOB
 				ar(bls);
 				LogTrading("(TOB) Barter_BuyerSearch action <green>[{}]", emu->action);
 
-				//Calculate size of packet
-				auto p_size = 0;
-				p_size += 5 * sizeof(uint32) + 1 * sizeof(uint8);
-				p_size += bls.search_string.length() + 1;
+				SerializeBuffer buffer;
+				buffer.WriteUInt32(1);
+				buffer.WriteString(bls.search_string);
+				buffer.WriteUInt32(bls.transaction_id);
+				buffer.WriteUInt32(0);
+				buffer.WriteUInt32(0);
+				buffer.WriteUInt8(1);
+				buffer.WriteUInt32(bls.no_items);
 				for (auto const &b: bls.buy_line) {
-					p_size += 6 * sizeof(uint32) + 2 * sizeof(uint8);
-					p_size += strlen(b.item_name) + 1;
-					p_size += b.buyer_name.length() + 1;
-					for (auto const &d: b.trade_items) {
-						if (d.item_id != 0) {
-							p_size += d.item_name.length() + 1;
-							p_size += 3 * sizeof(uint32);
-						}
-					}
-					p_size += 3 * sizeof(uint32);
-				}
-
-				BuyerBuyLines_Struct bl{};
-				auto outapp = std::make_unique<EQApplicationPacket>(OP_BuyerItems, p_size);
-				auto eq     = (char *) outapp->pBuffer;
-
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, 1);
-				VARSTRUCT_ENCODE_STRING(eq, bls.search_string.c_str());
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, bls.transaction_id);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, 0);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, 0);
-				VARSTRUCT_ENCODE_TYPE(uint8, eq, 1);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, bls.no_items);
-				for (auto const &b: bls.buy_line) {
-					VARSTRUCT_ENCODE_TYPE(uint32, eq, b.slot);
-					VARSTRUCT_ENCODE_TYPE(uint8, eq, 1);
-					VARSTRUCT_ENCODE_TYPE(uint32, eq, b.item_id);
-					VARSTRUCT_ENCODE_STRING(eq, b.item_name);
-					VARSTRUCT_ENCODE_TYPE(uint32, eq, b.item_icon);
-					VARSTRUCT_ENCODE_TYPE(uint32, eq, b.item_quantity);
-					VARSTRUCT_ENCODE_TYPE(uint8, eq, 1);
-					VARSTRUCT_ENCODE_TYPE(uint32, eq, b.item_cost);
-					auto no_sub_items = b.trade_items.size();
-					VARSTRUCT_ENCODE_TYPE(uint32, eq, no_sub_items);
+					buffer.WriteUInt32(b.slot);
+					buffer.WriteUInt8(1);
+					buffer.WriteUInt32(b.item_id);
+					buffer.WriteString(b.item_name);
+					buffer.WriteUInt32(b.item_icon);
+					buffer.WriteUInt32(b.item_quantity);
+					buffer.WriteUInt8(1);
+					buffer.WriteUInt32(b.item_cost);
+					buffer.WriteUInt32(b.trade_items.size());
 					for (auto const &i: b.trade_items) {
-						VARSTRUCT_ENCODE_TYPE(uint32, eq, i.item_id);
-						VARSTRUCT_ENCODE_TYPE(uint32, eq, i.item_quantity);
-						VARSTRUCT_ENCODE_TYPE(uint32, eq, i.item_icon);
-						VARSTRUCT_ENCODE_STRING(eq, i.item_name.c_str());
+						buffer.WriteUInt32(i.item_id);
+						buffer.WriteUInt32(i.item_quantity);
+						buffer.WriteUInt32(i.item_icon);
+						buffer.WriteString(i.item_name);
 					}
-					VARSTRUCT_ENCODE_TYPE(uint32, eq, b.buyer_entity_id);
-					VARSTRUCT_ENCODE_TYPE(uint32, eq, b.buyer_id);
-					VARSTRUCT_ENCODE_TYPE(uint16, eq, b.buyer_zone_id);
-					VARSTRUCT_ENCODE_TYPE(uint16, eq, b.buyer_zone_instance_id);
-					VARSTRUCT_ENCODE_STRING(eq, b.buyer_name.c_str());
+					buffer.WriteUInt32(b.buyer_entity_id);
+					buffer.WriteUInt32(b.buyer_id);
+					buffer.WriteUInt16(b.buyer_zone_id);
+					buffer.WriteUInt16(b.buyer_zone_instance_id);
+					buffer.WriteString(b.buyer_name);
 				}
 
+				auto outapp = std::make_unique<EQApplicationPacket>(OP_BuyerItems, std::move(buffer));
 				dest->QueuePacket(outapp.get());
 				delete inapp;
 				break;
@@ -778,55 +737,46 @@ namespace TOB
 				cereal::BinaryInputArchive   ar(ss);
 				ar(blsi);
 
-				//packet size
-				auto            packet_size = strlen(blsi.item_name) * 2 + 2 + 48 + 30 + blsi.seller_name.length() + 1 +
-											  blsi.buyer_name.length() + 1;
-				for (auto const &b: blsi.trade_items) {
-					packet_size += b.item_name.length() + 1;
-					packet_size += 12;
-				}
-
-				auto outapp = std::make_unique<EQApplicationPacket>(OP_BuyerItems, packet_size);
-				auto eq     = (char *) outapp->pBuffer;
-
+				SerializeBuffer buffer;
 				switch (action) {
 					case Barter_BuyerTransactionComplete: {
-						VARSTRUCT_ENCODE_TYPE(uint32, eq, structs::TOBBuyerActions::BuyerBuyItem);
+						buffer.WriteUInt32(structs::TOBBuyerActions::BuyerBuyItem);
 						break;
 					}
 					case Barter_SellerTransactionComplete: {
-						VARSTRUCT_ENCODE_TYPE(uint32, eq, structs::TOBBuyerActions::BuyerSellItem);
+						buffer.WriteUInt32(structs::TOBBuyerActions::BuyerSellItem);
 						break;
 					}
 				}
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, blsi.sub_action);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, blsi.error_code);
-				eq += 16;
-				VARSTRUCT_ENCODE_STRING(eq, blsi.buyer_name.c_str());
-				VARSTRUCT_ENCODE_STRING(eq, blsi.item_name);
-				VARSTRUCT_ENCODE_STRING(eq, blsi.seller_name.c_str());
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, 0xFFFFFFFF);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, 0xFFFFFFFF);
-				eq += 1;
-				VARSTRUCT_ENCODE_STRING(eq, blsi.item_name);
-				eq += 9;
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, blsi.item_cost);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, blsi.trade_items.size());
+				buffer.WriteUInt32(blsi.sub_action);
+				buffer.WriteUInt32(blsi.error_code);
+				TOBWriteZeros(buffer, 16);
+				buffer.WriteString(blsi.buyer_name);
+				buffer.WriteString(blsi.item_name);
+				buffer.WriteString(blsi.seller_name);
+				buffer.WriteUInt32(0xFFFFFFFF);
+				buffer.WriteUInt32(0xFFFFFFFF);
+				TOBWriteZeros(buffer, 1);
+				buffer.WriteString(blsi.item_name);
+				TOBWriteZeros(buffer, 9);
+				buffer.WriteUInt32(blsi.item_cost);
+				buffer.WriteUInt32(blsi.trade_items.size());
 
 				for (auto const &i: blsi.trade_items) {
-					VARSTRUCT_ENCODE_TYPE(uint32, eq, 0);
-					VARSTRUCT_ENCODE_TYPE(uint32, eq, i.item_quantity);
-					VARSTRUCT_ENCODE_TYPE(uint32, eq, 0);
-					VARSTRUCT_ENCODE_STRING(eq, i.item_name.c_str());
+					buffer.WriteUInt32(0);
+					buffer.WriteUInt32(i.item_quantity);
+					buffer.WriteUInt32(0);
+					buffer.WriteString(i.item_name);
 				}
 
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, 0);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, 0);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, 0);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, 0xFFFFFF);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, 0);
-				VARSTRUCT_ENCODE_TYPE(uint32, eq, blsi.seller_quantity);
+				buffer.WriteUInt32(0);
+				buffer.WriteUInt32(0);
+				buffer.WriteUInt32(0);
+				buffer.WriteUInt32(0xFFFFFF);
+				buffer.WriteUInt32(0);
+				buffer.WriteUInt32(blsi.seller_quantity);
 
+				auto outapp = std::make_unique<EQApplicationPacket>(OP_BuyerItems, std::move(buffer));
 				dest->QueuePacket(outapp.get());
 				delete inapp;
 				break;
@@ -888,29 +838,28 @@ namespace TOB
 		std::string new_message;
 		ServerToTOBConvertLinks(new_message, old_message);
 
-		in->size = strlen(emu->sender) + strlen(emu->targetname) + new_message.length() + 43;
+		SerializeBuffer buffer;
+		buffer.WriteString(emu->sender);
+		buffer.WriteString(emu->targetname);
+		buffer.WriteUInt64(0);	// Unknown
+		buffer.WriteUInt32(emu->language);
+		buffer.WriteUInt32(emu->chan_num);
+		buffer.WriteUInt32(0);	// Unknown
+		buffer.WriteUInt8(0);	// Unknown
+		buffer.WriteUInt32(emu->skill_in_language);
+		buffer.WriteString(new_message);
 
-		in->pBuffer = new unsigned char[in->size];
+		buffer.WriteUInt8(0); // Unknown
+		buffer.WriteUInt32(0);// Unknown
+		buffer.WriteUInt32(0);// Unknown
 
-		char* OutBuffer = (char*)in->pBuffer;
+		buffer.WriteString("");
+		buffer.WriteUInt8(0); // Unknown
+		buffer.WriteUInt32(0);// Unknown
 
-		VARSTRUCT_ENCODE_STRING(OutBuffer, emu->sender);
-		VARSTRUCT_ENCODE_STRING(OutBuffer, emu->targetname);
-		VARSTRUCT_ENCODE_TYPE(uint64, OutBuffer, 0);	// Unknown
-		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, emu->language);
-		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, emu->chan_num);
-		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);	// Unknown
-		VARSTRUCT_ENCODE_TYPE(uint8, OutBuffer, 0);	// Unknown
-		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, emu->skill_in_language);
-		VARSTRUCT_ENCODE_STRING(OutBuffer, new_message.c_str());
-
-		VARSTRUCT_ENCODE_TYPE(uint8, OutBuffer, 0); // Unknown
-		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);// Unknown
-		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);// Unknown
-
-		VARSTRUCT_ENCODE_STRING(OutBuffer, "");
-		VARSTRUCT_ENCODE_TYPE(uint8, OutBuffer, 0); // Unknown
-		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);// Unknown
+		in->size = buffer.size();
+		in->pBuffer = new unsigned char[buffer.size()];
+		memcpy(in->pBuffer, buffer.buffer(), buffer.size());
 
 		delete[] __emu_buffer;
 		dest->FastQueuePacket(&in, ack_req);
@@ -1340,13 +1289,12 @@ namespace TOB
 		*p = nullptr;
 		auto emu = (Surname_Struct*)in->pBuffer;
 		const size_t len = strnlen(emu->lastname, sizeof(emu->lastname));
-		auto outapp = new EQApplicationPacket(OP_Surname, 16 + len);
-		char *buffer = (char*)outapp->pBuffer;
-		memcpy(buffer, emu->name, 8);
-		buffer += 8;
-		VARSTRUCT_ENCODE_TYPE(int32, buffer, static_cast<int32>(emu->unknown0064));
-		VARSTRUCT_ENCODE_TYPE(uint32, buffer, static_cast<uint32>(len));
-		memcpy(buffer, emu->lastname, len);
+		SerializeBuffer buffer;
+		TOBWriteBytes(buffer, emu->name, 8);
+		buffer.WriteInt32(static_cast<int32>(emu->unknown0064));
+		buffer.WriteUInt32(static_cast<uint32>(len));
+		TOBWriteBytes(buffer, emu->lastname, len);
+		auto outapp = new EQApplicationPacket(OP_Surname, std::move(buffer));
 		dest->FastQueuePacket(&outapp, ack_req);
 		delete in;
 	}
@@ -1470,35 +1418,30 @@ namespace TOB
 
 		if (in->size == sizeof(GroupUpdate2_Struct)) {
 			auto gu2 = (GroupUpdate2_Struct*)in->pBuffer;
-			// fixed bytes per member besides the name: 4 + 2 + 1 (empty owner) + 4 + 5 + 4 + 8 + 4 + 8 = 40
-			const uint32 per_member = 40;
 			int member_count = 1;
-			uint32 packet_length = 8 + strlen(gu2->leadersname) + 1 + per_member + strlen(gu2->yourname) + 1;
 			for (int i = 0; i < 5; ++i) {
 				if (gu2->membername[i][0] != '\0') {
-					packet_length += per_member + strlen(gu2->membername[i]) + 1;
 					++member_count;
 				}
 			}
 
-			auto outapp = new EQApplicationPacket(OP_GroupUpdateB, packet_length);
-			char *buffer = (char*)outapp->pBuffer;
-			VARSTRUCT_ENCODE_TYPE(uint32, buffer, 0);
-			VARSTRUCT_ENCODE_TYPE(uint32, buffer, member_count);
-			VARSTRUCT_ENCODE_STRING(buffer, gu2->leadersname);
+			SerializeBuffer buffer;
+			buffer.WriteUInt32(0);
+			buffer.WriteUInt32(member_count);
+			buffer.WriteString(gu2->leadersname);
 
 			auto write_member = [&buffer](uint32 index, const char* name, uint32 level) {
-				VARSTRUCT_ENCODE_TYPE(uint32, buffer, index);
-				VARSTRUCT_ENCODE_STRING(buffer, name);
-				VARSTRUCT_ENCODE_TYPE(uint16, buffer, 0);  // merc flag
-				VARSTRUCT_ENCODE_TYPE(uint8, buffer, 0);   // merc owner name (empty string)
-				VARSTRUCT_ENCODE_TYPE(uint32, buffer, level);
+				buffer.WriteUInt32(index);
+				buffer.WriteString(name);
+				buffer.WriteUInt16(0);  // merc flag
+				buffer.WriteUInt8(0);   // merc owner name (empty string)
+				buffer.WriteUInt32(level);
 				for (int r = 0; r < 5; ++r)
-					VARSTRUCT_ENCODE_TYPE(uint8, buffer, 0); // role flags (tank, assist, puller, +2 new in ToB)
-				VARSTRUCT_ENCODE_TYPE(uint32, buffer, 0);  // offline
-				VARSTRUCT_ENCODE_TYPE(uint64, buffer, 0);  // timestamp
-				VARSTRUCT_ENCODE_TYPE(uint32, buffer, 0);  // unknown
-				VARSTRUCT_ENCODE_TYPE(uint64, buffer, 0);  // unknown
+					buffer.WriteUInt8(0); // role flags (tank, assist, puller, +2 new in ToB)
+				buffer.WriteUInt32(0);  // offline
+				buffer.WriteUInt64(0);  // timestamp
+				buffer.WriteUInt32(0);  // unknown
+				buffer.WriteUInt64(0);  // unknown
 			};
 
 			write_member(0, gu2->yourname, 0x46);
@@ -1509,6 +1452,7 @@ namespace TOB
 				write_member(member_number++, gu2->membername[i], 0x41);
 			}
 
+			auto outapp = new EQApplicationPacket(OP_GroupUpdateB, std::move(buffer));
 			dest->FastQueuePacket(&outapp);
 			delete in;
 			return;
@@ -2208,22 +2152,21 @@ namespace TOB
 		SETUP_VAR_ENCODE(sPickPocket_Struct);
 
 		uint32 nameLen = strnlen(emu->itemname, sizeof(emu->itemname));
-		uint32 pktLen  = sizeof(structs::PickPocket_Struct) + nameLen + 1;
 
-		ALLOC_LEN_ENCODE(pktLen);
+		// structs::PickPocket_Struct, then the item name, then one terminating zero byte
+		SerializeBuffer buffer;
+		buffer.WriteUInt32(emu->to);
+		buffer.WriteUInt32(emu->from);
+		buffer.WriteUInt32(emu->myskill);
+		buffer.WriteUInt8(static_cast<uint8>(emu->type));
+		buffer.WriteUInt32(emu->coin);
+		buffer.WriteUInt32(nameLen);
+		TOBWriteBytes(buffer, emu->itemname, nameLen);
+		buffer.WriteUInt8(0); // luckily
 
-		auto *eq    = reinterpret_cast<structs::PickPocket_Struct *>(__packet->pBuffer);
-		eq->to      = emu->to;
-		eq->from    = emu->from;
-		eq->myskill = emu->myskill;
-		eq->type    = static_cast<uint8>(emu->type);
-		eq->coin    = emu->coin;
-		eq->nameLen = nameLen;
-		if (nameLen > 0)
-			memcpy(__packet->pBuffer + sizeof(structs::PickPocket_Struct), emu->itemname, nameLen);
-		__packet->pBuffer[sizeof(structs::PickPocket_Struct) + nameLen] = 0; // luckily
-
-		FINISH_ENCODE();
+		auto outapp = new EQApplicationPacket(OP_PickPocket, std::move(buffer));
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete __packet;
 	}
 
 	ENCODE(OP_PlayerProfile) {
@@ -3949,6 +3892,26 @@ namespace TOB
 		FINISH_ENCODE();
 	}
 
+	// Writes structs::GuildUpdateHeader_Struct (unknown12 is always zero). name may be null (sent as all zeros);
+	// otherwise the first sizeof(name) - 1 bytes are copied as they are and the last byte is forced to NUL.
+	static void TOBWriteGuildUpdateHeader(SerializeBuffer &buffer, uint32 action, uint32 unknown4, uint32 unknown8,
+		const char *name, uint64 guild_id)
+	{
+		buffer.WriteUInt32(action);
+		buffer.WriteUInt32(unknown4);
+		buffer.WriteUInt32(unknown8);
+		buffer.WriteUInt32(0);
+		constexpr size_t name_size = sizeof(structs::GuildUpdateHeader_Struct::name);
+		if (name) {
+			TOBWriteBytes(buffer, name, name_size - 1);
+			buffer.WriteUInt8(0);
+		}
+		else {
+			TOBWriteZeros(buffer, name_size);
+		}
+		buffer.WriteUInt64(guild_id);
+	}
+
 	// GuildUpdate: ToB inserts 4 bytes before the name (0x0c -> 0x10), widens the guild id to u64
 	// (0x4c u32 -> 0x50 u64), so the payload moves 0x50 -> 0x58 (+8).
 	// Action numbers 4 (rank names) and 5 (permissions) become 3 and 4.
@@ -3985,10 +3948,11 @@ namespace TOB
 			auto uc = reinterpret_cast<GuildUpdateURLAndChannel_Struct *>(in->pBuffer);
 			const size_t max_text = (action == 0) ? 511 : 127; // client copies 0x200 / 0x80
 			const size_t text_len = std::min(strnlen(uc->Text, sizeof(uc->Text)), max_text);
-			auto outapp = new EQApplicationPacket(OP_GuildUpdate, sizeof(structs::GuildUpdateHeader_Struct) + 0x200);
-			auto hdr    = reinterpret_cast<structs::GuildUpdateHeader_Struct *>(outapp->pBuffer);
-			hdr->action = action;
-			memcpy(outapp->pBuffer + sizeof(structs::GuildUpdateHeader_Struct), uc->Text, text_len); // rest zeroed
+			SerializeBuffer buffer;
+			TOBWriteGuildUpdateHeader(buffer, action, 0, 0, nullptr, 0);
+			TOBWriteBytes(buffer, uc->Text, text_len);
+			TOBWriteZeros(buffer, 0x200 - text_len); // text field is zero padded to its full width
+			auto outapp = new EQApplicationPacket(OP_GuildUpdate, std::move(buffer));
 			dest->FastQueuePacket(&outapp, ack_req);
 			delete in;
 			return;
@@ -3999,18 +3963,11 @@ namespace TOB
 		else if (action == 5) { tob_action = 4; }   // permission
 
 		const uint32 payload = in->size - EMU_HDR;
-		auto outapp = new EQApplicationPacket(OP_GuildUpdate, TOB_HDR + payload);
-		auto hdr = reinterpret_cast<structs::GuildUpdateHeader_Struct *>(outapp->pBuffer);
-		hdr->action   = tob_action;
-		hdr->unknown4 = u4;
-		hdr->unknown8 = u8_;
-		memcpy(hdr->name, src + 0x0c, sizeof(hdr->name));
-		hdr->name[sizeof(hdr->name) - 1] = '\0';
-		hdr->guild_id = ServerToTOBGuildID(gid);
-		if (payload) {
-			memcpy(outapp->pBuffer + TOB_HDR, src + EMU_HDR, payload);
-		}
+		SerializeBuffer buffer;
+		TOBWriteGuildUpdateHeader(buffer, tob_action, u4, u8_, reinterpret_cast<const char *>(src + 0x0c), ServerToTOBGuildID(gid));
+		TOBWriteBytes(buffer, src + EMU_HDR, payload);
 
+		auto outapp = new EQApplicationPacket(OP_GuildUpdate, std::move(buffer));
 		dest->FastQueuePacket(&outapp, ack_req);
 		delete in;
 	}
@@ -4035,10 +3992,10 @@ namespace TOB
 		if (new_message.length() > 1023)          // the client copies into a 1024-byte buffer
 			new_message.resize(1023);
 
-		uint32 type = emu->type;
-		auto outapp = new EQApplicationPacket(OP_Emote, sizeof(uint32) + new_message.length() + 1);
-		memcpy(outapp->pBuffer, &type, sizeof(uint32));
-		memcpy(outapp->pBuffer + sizeof(uint32), new_message.c_str(), new_message.length() + 1);
+		SerializeBuffer buffer;
+		buffer.WriteUInt32(emu->type);
+		buffer.WriteString(new_message);
+		auto outapp = new EQApplicationPacket(OP_Emote, std::move(buffer));
 
 		delete in;
 		dest->FastQueuePacket(&outapp, ack_req);
@@ -4135,8 +4092,7 @@ namespace TOB
 				// zone-in. Action 4 (no longer leader, parameter 0) drops the in-raid flag without a message.
 				SerializeBuffer pre;
 				TOBWriteRaidHeader(pre, raidNoLongerLeader, "", 0, "", 0);
-				auto pre_app = new EQApplicationPacket(OP_RaidUpdate, pre.size());
-				memcpy(pre_app->pBuffer, pre.buffer(), pre.size());
+				auto pre_app = new EQApplicationPacket(OP_RaidUpdate, std::move(pre));
 				dest->FastQueuePacket(&pre_app, ack_req);
 				TOBWriteRaidHeader(buf, action, "", 0, "", 0);
 				break;
@@ -4940,23 +4896,20 @@ namespace TOB
 			const uint32 max_entries = (in->size - sizeof(AltCurrencyPopulate_Struct)) / sizeof(AltCurrencyPopulateEntry_Struct);
 			const uint32 count       = std::min<uint32>(emu->count, max_entries);
 
-			const uint32 out_size = sizeof(structs::AltCurrencyPopulate_Struct) +
-			                        sizeof(structs::AltCurrencyPopulateEntry_Struct) * count;
-			auto outapp = new EQApplicationPacket(OP_AltCurrency, out_size);   // zero-filled
-			auto *eq    = reinterpret_cast<structs::AltCurrencyPopulate_Struct *>(outapp->pBuffer);
-
-			eq->opcode = emu->opcode;
-			eq->count  = count;
+			SerializeBuffer buffer;
+			buffer.WriteUInt32(emu->opcode);
+			buffer.WriteUInt32(count);
 			for (uint32 i = 0; i < count; ++i) {
-				eq->entries[i].currency_number  = emu->entries[i].currency_number;
-				eq->entries[i].unknown00        = emu->entries[i].unknown00;
-				eq->entries[i].currency_number2 = emu->entries[i].currency_number2;
-				eq->entries[i].item_id          = emu->entries[i].item_id;
-				eq->entries[i].item_icon        = emu->entries[i].item_icon;
-				eq->entries[i].stack_size       = emu->entries[i].stack_size;
-				eq->entries[i].sort_order       = 0;  // new ToB field, meaning not confirmed
-				eq->entries[i].display          = (emu->entries[i].stack_size > 0) ? 1 : 0;
+				buffer.WriteUInt32(emu->entries[i].currency_number);
+				buffer.WriteUInt32(emu->entries[i].unknown00);
+				buffer.WriteUInt32(emu->entries[i].currency_number2);
+				buffer.WriteUInt32(emu->entries[i].item_id);
+				buffer.WriteUInt32(emu->entries[i].item_icon);
+				buffer.WriteUInt32(emu->entries[i].stack_size);
+				buffer.WriteUInt32(0);  // sort_order: new ToB field, meaning not confirmed
+				buffer.WriteUInt8((emu->entries[i].stack_size > 0) ? 1 : 0); // display
 			}
+			auto outapp = new EQApplicationPacket(OP_AltCurrency, std::move(buffer));
 			dest->FastQueuePacket(&outapp, ack_req);
 		}
 		else {
@@ -5154,11 +5107,6 @@ namespace TOB
 
 	// ---- LFGuild, projectile, tribute info ----
 
-	static void TOBWriteZeros(SerializeBuffer &buf, uint32 n)
-	{
-		for (uint32 i = 0; i < n; ++i) { buf.WriteUInt8(0); }
-	}
-
 	ENCODE(OP_LFGuild)
 	{
 		EQApplicationPacket *in = *p;
@@ -5292,20 +5240,15 @@ namespace TOB
 		}
 		default: {  // 2, 5 (ignored by the client), 6 (show window), anything else: widen the header 8 -> 0x18
 			const uint32 tail = size > 8 ? size - 8 : 0;
-			auto outapp = new EQApplicationPacket(OP_LFGuild, structs::LFGuild_HeaderSize + tail);  // zero-filled
-			memcpy(outapp->pBuffer, &command, sizeof(command));
-			if (tail) {
-				memcpy(outapp->pBuffer + structs::LFGuild_HeaderSize, src + 8, tail);
-			}
-			dest->FastQueuePacket(&outapp, ack_req);
-			delete in;
-			return;
+			buf.WriteUInt32(command);
+			TOBWriteZeros(buf, structs::LFGuild_HeaderSize - sizeof(command));
+			TOBWriteBytes(buf, src + 8, tail);
+			break;
 		}
 		}
 
-		// commands 3 / 4
-		auto outapp = new EQApplicationPacket(OP_LFGuild, buf.size());
-		outapp->WriteData(buf.buffer(), buf.size());
+		// all commands that are rebuilt through the buffer
+		auto outapp = new EQApplicationPacket(OP_LFGuild, std::move(buf));
 		dest->FastQueuePacket(&outapp, ack_req);
 		delete in;
 	}
@@ -5728,7 +5671,7 @@ namespace TOB
 			return;
 		}
 
-		SerializeBuffer buf(size + 64);
+		SerializeBuffer buf;
 		buf.WriteUInt32(hdr);
 
 		while (in->ReadRemaining() > 0) {
@@ -5755,8 +5698,7 @@ namespace TOB
 			buf.WriteUInt16(anon);
 		}
 
-		auto outapp = new EQApplicationPacket(OP_LFGGetMatchesResponse, static_cast<uint32>(buf.size()));
-		memcpy(outapp->pBuffer, buf.buffer(), buf.size());
+		auto outapp = new EQApplicationPacket(OP_LFGGetMatchesResponse, std::move(buf));
 		delete in;
 		dest->FastQueuePacket(&outapp, ack_req);
 	}
@@ -5780,7 +5722,7 @@ namespace TOB
 			return;
 		}
 
-		SerializeBuffer buf(size + 6 * MAX_GROUP_MEMBERS * 8 + 64);
+		SerializeBuffer buf;
 		buf.WriteUInt32(hdr);
 
 		bool ok = true;
@@ -5802,7 +5744,7 @@ namespace TOB
 				count = MAX_GROUP_MEMBERS;
 			}
 
-			SerializeBuffer members(count * 80);
+			SerializeBuffer members;
 			uint16 written = 0;
 			for (uint16 i = 0; i < count; ++i) {
 				const uint32 member_start = in->GetReadPosition();
@@ -5830,11 +5772,10 @@ namespace TOB
 			buf.WriteUInt16(to);
 			buf.WriteUInt32(classes);
 			buf.WriteUInt16(written);
-			for (size_t b = 0; b < members.size(); ++b) { buf.WriteUInt8(members.buffer()[b]); }
+			TOBWriteBytes(buf, members.buffer(), members.size());
 		}
 
-		auto outapp = new EQApplicationPacket(OP_LFPGetMatchesResponse, static_cast<uint32>(buf.size()));
-		memcpy(outapp->pBuffer, buf.buffer(), buf.size());
+		auto outapp = new EQApplicationPacket(OP_LFPGetMatchesResponse, std::move(buf));
 		delete in;
 		dest->FastQueuePacket(&outapp, ack_req);
 	}
@@ -5904,8 +5845,7 @@ namespace TOB
 		buffer.WriteUInt32(emu->Race);
 		buffer.WriteUInt32(emu->Class);
 
-		auto outapp = new EQApplicationPacket(OP_SendFindableNPCs, buffer.size());
-		memcpy(outapp->pBuffer, buffer.buffer(), buffer.size());
+		auto outapp = new EQApplicationPacket(OP_SendFindableNPCs, std::move(buffer));
 		dest->FastQueuePacket(&outapp, ack_req);
 
 		delete in;
@@ -6331,23 +6271,7 @@ namespace TOB
 		task.flag            = in->ReadUInt8();
 		in->ReadString(task.zones2);
 
-		uint32 out_size = 5 * sizeof(uint32)                        // task_slot_index..list_group
-		                + sizeof(int32)                              // activity_type
-		                + sizeof(uint8)                              // optional_byte
-		                + task.target_name.size() + 1
-		                + sizeof(uint32) + task.item_list.size()
-		                + sizeof(uint32)                             // goal_count
-		                + sizeof(uint32) + task.skill_list.size()
-		                + sizeof(uint32) + task.spell_list.size()
-		                + sizeof(uint32)                             // length-prefixed (empty)
-		                + task.zones.size() + 1                      // zones (null-terminated)
-		                + sizeof(uint32)                             // dz_switch_id
-		                + task.description_override.size() + 1
-		                + sizeof(uint32)                             // done_count
-		                + sizeof(uint8)                              // flag
-		                + task.zones2.size() + 1;
-
-		SerializeBuffer buf(out_size);
+		SerializeBuffer buf;
 		buf.WriteUInt32(task.task_slot_index);
 		buf.WriteUInt32(task.task_type);
 		buf.WriteUInt32(task.task_id);
@@ -6914,51 +6838,47 @@ namespace TOB
 		emu->unknown44[0] = Count;
 		emu->unknown52 = 0;
 
-		// ALLOC_LEN_ENCODE evaluates its argument 3 times; using __packet->size inside it made the memset
-		// run 4*Count bytes past the allocation (heap corruption on every /who)
-		const uint32 out_len = __packet->size + (Count * 4);
-		ALLOC_LEN_ENCODE(out_len);
+		SerializeBuffer buffer;
+		TOBWriteBytes(buffer, __emu_buffer, sizeof(WhoAllReturnStruct));
 
-		char *InBuffer  = (char *)__emu_buffer + sizeof(WhoAllReturnStruct);
-		char *OutBuffer = (char *)__packet->pBuffer;
-
-		memcpy(OutBuffer, __emu_buffer, sizeof(WhoAllReturnStruct));
-		OutBuffer += sizeof(WhoAllReturnStruct);
+		char *InBuffer = (char *)__emu_buffer + sizeof(WhoAllReturnStruct);
 
 		for (int i = 0; i < Count; ++i) {
 			uint32 x;
 
 			x = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
-			VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, x);   // FormatMSGID
+			buffer.WriteUInt32(x);                         // FormatMSGID
 
 			InBuffer += 4;                                 // skip server PIDMSGID
-			VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);           // PIDMSGID = 0 (no surname)
-			VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0xffffffff);  // extra uint32 before Name
+			buffer.WriteUInt32(0);                         // PIDMSGID = 0 (no surname)
+			buffer.WriteUInt32(0xffffffff);                // extra uint32 before Name
 
 			char Name[64];
 
 			VARSTRUCT_DECODE_STRING(Name, InBuffer);       // Char Name
-			VARSTRUCT_ENCODE_STRING(OutBuffer, Name);
+			buffer.WriteString(Name);
 
 			x = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
-			VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, x);   // RankMSGID
+			buffer.WriteUInt32(x);                         // RankMSGID
 
 			VARSTRUCT_DECODE_STRING(Name, InBuffer);       // Guild Name
-			VARSTRUCT_ENCODE_STRING(OutBuffer, Name);
+			buffer.WriteString(Name);
 
 			for (int j = 0; j < 7; ++j) {
 				x = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
-				VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, x);
+				buffer.WriteUInt32(x);
 			}
 
 			VARSTRUCT_DECODE_STRING(Name, InBuffer);       // Account
-			VARSTRUCT_ENCODE_STRING(OutBuffer, Name);
+			buffer.WriteString(Name);
 
 			x = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
-			VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, x);   // Unknown100
+			buffer.WriteUInt32(x);                         // Unknown100
 		}
 
-		FINISH_ENCODE();
+		auto outapp = new EQApplicationPacket(OP_WhoAllResponse, std::move(buffer));
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete __packet;
 	}
 
 	ENCODE(OP_ZoneChange)
@@ -6987,23 +6907,22 @@ namespace TOB
 	{
 		SETUP_VAR_ENCODE(ZonePlayerToBind_Struct);
 		// 20 fixed bytes + zone name with terminator + 4 trailing uint32s actually written below
-		// (sizing by the struct left the last uint32 past the end: heap corruption on bind/respawn)
-		ALLOC_LEN_ENCODE(20 + strlen(emu->zone_name) + 1 + 4 * sizeof(uint32));
+		SerializeBuffer buffer;
+		buffer.WriteUInt16(emu->bind_zone_id);
+		buffer.WriteUInt16(emu->bind_instance_id);
+		buffer.WriteFloat(emu->x);
+		buffer.WriteFloat(emu->y);
+		buffer.WriteFloat(emu->z);
+		buffer.WriteFloat(emu->heading);
+		buffer.WriteString(emu->zone_name);
+		buffer.WriteUInt32(60);
+		buffer.WriteUInt32(0);
+		buffer.WriteUInt32(51);
+		buffer.WriteUInt32(41);
 
-		__packet->SetWritePosition(0);
-		__packet->WriteUInt16(emu->bind_zone_id);
-		__packet->WriteUInt16(emu->bind_instance_id);
-		__packet->WriteFloat(emu->x);
-		__packet->WriteFloat(emu->y);
-		__packet->WriteFloat(emu->z);
-		__packet->WriteFloat(emu->heading);
-		__packet->WriteString(emu->zone_name);
-		__packet->WriteUInt32(60);
-		__packet->WriteUInt32(0);
-		__packet->WriteUInt32(51);
-		__packet->WriteUInt32(41);
-
-		FINISH_ENCODE();
+		auto outapp = new EQApplicationPacket(OP_ZonePlayerToBind, std::move(buffer));
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete __packet;
 	}
 
 	ENCODE(OP_ZoneSpawns)
