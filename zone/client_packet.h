@@ -177,6 +177,8 @@
 	void Handle_OP_GuildInviteAccept(const EQApplicationPacket *app);
 	void Handle_OP_GuildLeader(const EQApplicationPacket *app);
 	void Handle_OP_GuildManageBanker(const EQApplicationPacket *app);
+	void Handle_OP_GuildNameRequest(const EQApplicationPacket *app);
+	void Handle_OP_GuildOpenGuildWindow(const EQApplicationPacket *app);
 	void Handle_OP_GuildPeace(const EQApplicationPacket *app);
 	void Handle_OP_GuildPromote(const EQApplicationPacket *app);
 	void Handle_OP_GuildPublicNote(const EQApplicationPacket *app);

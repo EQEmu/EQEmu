@@ -1013,12 +1013,34 @@ void Raid::TeleportRaid(Mob* sender, uint32 zoneID, uint16 instance_id, float x,
 	}
 }
 
+// ToB keeps the raid loot type and looter list in client state and only learns them from RaidUpdate actions
+// 32 (loot type, parameter), 33 / 34 (add / remove looter, name in leader_name); older clients get nothing here.
+template <typename Members>
+static void SendTOBRaidLootUpdate(Members& members, uint32 action, const char* name, uint32 parameter)
+{
+	auto outapp = new EQApplicationPacket(OP_RaidUpdate, sizeof(RaidGeneral_Struct));
+	auto rg = (RaidGeneral_Struct*) outapp->pBuffer;
+	rg->action = action;
+	if (name) {
+		strn0cpy(rg->leader_name, name, sizeof(rg->leader_name));
+		strn0cpy(rg->player_name, name, sizeof(rg->player_name));
+	}
+	rg->parameter = parameter;
+	for (auto& m : members) {
+		if (!m.is_bot && m.member && m.member->ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+			m.member->QueuePacket(outapp);
+		}
+	}
+	safe_delete(outapp);
+}
+
 void Raid::ChangeLootType(uint32 type)
 {
 	std::string query = StringFormat("UPDATE raid_details SET loottype = %lu WHERE raidid = %lu",
 									 (unsigned long)type, (unsigned long)GetID());
 	auto results = database.QueryDatabase(query);
 	LootType = type;
+	SendTOBRaidLootUpdate(members, 32, nullptr, type);
 }
 
 void Raid::AddRaidLooter(const char* looter)
@@ -1036,6 +1058,7 @@ void Raid::AddRaidLooter(const char* looter)
 			break;
 		}
 	}
+	SendTOBRaidLootUpdate(members, 33, looter, 0);
 
 	auto pack = new ServerPacket(ServerOP_DetailsChange, sizeof(ServerRaidGeneralAction_Struct));
 	auto rga = (ServerRaidGeneralAction_Struct*)pack->pBuffer;
@@ -1061,6 +1084,7 @@ void Raid::RemoveRaidLooter(const char* looter)
 			break;
 		}
 	}
+	SendTOBRaidLootUpdate(members, 34, looter, 0);
 
 	auto pack = new ServerPacket(ServerOP_DetailsChange, sizeof(ServerRaidGeneralAction_Struct));
 	auto rga = (ServerRaidGeneralAction_Struct*)pack->pBuffer;
@@ -2379,6 +2403,7 @@ void Raid::DelegateAbilityAssist(Mob* delegator, const char* delegatee)
 	das->DelegateAbility = RaidDelegateMainAssist;
 	das->MemberNumber = slot + 1;
 	das->EntityID = c->GetID();
+	das->Unknown024 = c->CharacterID(); // ToB matches delegates against the character id
 	strcpy(das->Name, delegatee);
 	QueuePacket(outapp);
 	safe_delete(outapp);
@@ -2512,6 +2537,7 @@ void Raid::DelegateAbilityMark(Mob* delegator, const char* delegatee)
 	das->DelegateAbility = RaidDelegateMainMarker;
 	das->MemberNumber = 0;
 	das->EntityID = c->GetID();
+	das->Unknown024 = c->CharacterID(); // ToB matches delegates against the character id
 	strcpy(das->Name, delegatee);
 	QueuePacket(outapp);
 	safe_delete(outapp);
@@ -2863,6 +2889,7 @@ void Raid::SendRaidAssisterTo(const char* assister, Client* to)
 			das->DelegateAbility = RaidDelegateMainAssist;
 			das->MemberNumber = 0;
 			das->EntityID = m_id;
+			das->Unknown024 = mob->IsClient() ? mob->CastToClient()->CharacterID() : 0; // ToB: character id
 			strcpy(das->Name, assister);
 			to->QueuePacket(outapp);
 			safe_delete(outapp);
@@ -2887,6 +2914,7 @@ void Raid::SendRaidAssister(const char* assister)
 			das->DelegateAbility = RaidDelegateMainAssist;
 			das->MemberNumber = 0;
 			das->EntityID = m_id;
+			das->Unknown024 = mob->IsClient() ? mob->CastToClient()->CharacterID() : 0; // ToB: character id
 			strcpy(das->Name, assister);
 			QueuePacket(outapp);
 			safe_delete(outapp);
@@ -2919,6 +2947,7 @@ void Raid::SendRaidMarkerTo(const char* marker, Client* to)
 			das->DelegateAbility = RaidDelegateMainMarker;
 			das->MemberNumber = 0;
 			das->EntityID = m_id;
+			das->Unknown024 = mob->IsClient() ? mob->CastToClient()->CharacterID() : 0; // ToB: character id
 			strcpy(das->Name, marker);
 			to->QueuePacket(outapp);
 			safe_delete(outapp);
@@ -2942,6 +2971,7 @@ void Raid::SendRaidMarker(const char* marker)
 			das->DelegateAbility = RaidDelegateMainMarker;
 			das->MemberNumber = 0;
 			das->EntityID = m_id;
+			das->Unknown024 = mob->IsClient() ? mob->CastToClient()->CharacterID() : 0; // ToB: character id
 			strcpy(das->Name, marker);
 			QueuePacket(outapp);
 			safe_delete(outapp);

@@ -729,6 +729,17 @@ namespace AlternateCurrencyMode {
 	constexpr uint32 Populate = 8;
 }
 
+// OP_Camp body on ToB and newer clients
+namespace CampMode {
+	constexpr uint32 Camp         = 0;   // /camp
+	constexpr uint32 Desktop      = 1;   // /camp desktop
+	constexpr uint32 ServerSelect = 2;   // /camp server
+	constexpr uint32 FastOffset   = 100; // added for "/camp fast"
+}
+
+// MerchantClick_Struct::alt_currency for loyalty merchants: the client's loyalty token id
+constexpr uint32 LOYALTY_MERCHANT_CURRENCY = 999999;
+
 typedef enum {
 	FilterNone = 0,
 	FilterGuildChat = 1,		//0=hide, 1=show

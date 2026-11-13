@@ -576,6 +576,9 @@ public:
 	void BulkSendTraderInventory(uint32 char_id);
 	void SendSingleTraderItem(uint32 char_id, int serial_number);
 	void BulkSendMerchantInventory(int merchant_id, int npcid);
+	void SendMerchantClose(uint32 npc_id);
+	void SendPointsMerchantWindow(NPC *npc);
+	void SendAlternateCurrencyMerchantList(NPC *npc);
 
 	inline uint8 GetLanguageSkill(uint8 language_id) const { return m_pp.languages[language_id]; }
 
@@ -853,8 +856,8 @@ public:
 	void SetGuildRank(uint32 rank);
 	void SetGuildID(uint32 guild_id);
 	void SendGuildMOTD(bool GetGuildMOTDReply = false);
-	void SendGuildURL();
-	void SendGuildChannel();
+	void SendGuildURL(bool tob_window_open = false);
+	void SendGuildChannel(bool tob_window_open = false);
 	void SendGuildSpawnAppearance();
 	void SendGuildRanks();
 	void SendGuildMembers();
@@ -873,7 +876,7 @@ public:
 	void SendGuildMemberAdd(uint32 guild_id, uint32 level, uint32 _class, uint32 rank, uint32 guild_show, uint32 zone_id, std::string player_name);
 	void SendGuildMemberRename(uint32 guild_id, std::string player_name, std::string new_player_name);
 	void SendGuildMemberDelete(uint32 guild_id, std::string player_name);
-	void SendGuildMemberLevel(uint32 guild_id, uint32 level, std::string player_name);
+	void SendGuildMemberLevel(uint32 guild_id, uint32 level, uint32 class_id, std::string player_name);
 	void SendGuildMemberRankAltBanker(uint32 guild_id, uint32 rank, std::string player_name, bool alt, bool banker);
 	void SendGuildMemberPublicNote(uint32 guild_id, std::string player_name, std::string public_note);
 	void SendGuildMemberDetails(uint32 guild_id, uint32 zone_id, uint32 offline_mode, std::string player_name);
@@ -2050,6 +2053,7 @@ private:
 	uint8 guildrank; // player's rank in the guild, 1- Leader 8 Recruit
 	bool guild_tribute_opt_in;
 	bool guild_dirty{ true };	//used to control add/delete opcodes due to client bug in Ti thru RoF2
+	std::set<uint32> m_guild_names_sent; // guild ids already answered for OP_GuildNameRequest (ToB)
 	bool GuildBanker;
 	uint16 duel_target;
 	bool duel_challenger = false; // the side that sent the pending OP_RequestDuel
@@ -2169,6 +2173,8 @@ private:
 	PTimerList p_timers; //persistent timers
 	Timer hpupdate_timer;
 	Timer camp_timer;
+	void CompleteCamp();         // leave group/raid, save, mark instalog (camp_timer and ToB fast camp)
+	bool IsFastCampZone() const; // zones where ToB clients may fast camp
 	Timer bot_camp_timer;
 	Timer process_timer;
 	Timer consume_food_timer;

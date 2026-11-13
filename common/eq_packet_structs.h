@@ -1720,6 +1720,15 @@ struct Surname_Struct
 /*0100*/
 };
 
+// Surname change reply for clients that identify the character by id instead of by name
+struct SurnameReply_Struct
+{
+/*000*/	uint32 character_id;
+/*004*/	int32  status;		// 1 = accepted
+/*008*/	char   lastname[32];
+/*040*/
+};
+
 struct GuildsListEntry_Struct {
 	char name[64];
 };
@@ -2148,7 +2157,10 @@ struct MerchantClick_Struct
     /*008*/ uint32 command;     // 1=open, 0=cancel/close
     /*012*/ float  rate;        // cost multiplier, dosent work anymore
     /*016*/ int32  tab_display; // bitmask b000 none, b001 Purchase/Sell, b010 Recover, b100 Parcels
-    /*020*/ int32  unknown020;  // Seen 2592000 from Server or -1 from Client
+    /*020*/ union {
+        int32  unknown020;   // RoF2 and older: Seen 2592000 from Server or -1 from Client
+        uint32 alt_currency; // points merchants (ToB+): alternate currency id, LOYALTY_MERCHANT_CURRENCY for loyalty merchants
+    };
     /*024*/
 };
 
@@ -2271,7 +2283,8 @@ struct Adventure_Sell_Struct {
 
 struct AdventurePoints_Update_Struct {
 /*000*/	uint32	ldon_available_points;		// Total available points
-/*004*/	uint8	unknown004[36];
+/*004*/	uint8	unknown004[32];
+/*036*/	uint32	ldon_generic_points;		// generic ('---') theme, read by the ToB points-merchant buy check
 /*040*/	uint8	unknown040[16];
 /*056*/	uint32	ldon_guk_points;		// Earned Deepest Guk points
 /*060*/	uint8	unknown060[16];
@@ -3151,6 +3164,7 @@ struct BazaarSearchResults_Struct {
 //
 //
 #define MAX_BUYER_COMPENSATION_ITEMS 10
+#define MAX_BUYER_LINES 255 // bound on buy lines in one OP_BuyerItems packet
 
 enum BarterBuyerActions {
 	Barter_BuyerSearch               = 0,
@@ -3876,6 +3890,7 @@ struct Internal_GuildMemberEntry_Struct {
 
 struct Internal_GuildMembers_Struct {	//just for display purposes, this is not actually used in the message encoding.
 	char	player_name[64];		//variable length.
+	uint32	guild_id;			//the guild the list is for (ToB sends it in the list header)
 	uint32	count;				//network byte order
 	uint32	name_length;	//total length of all of the char names, excluding terminators
 	uint32	note_length;	//total length of all the public notes, excluding terminators
@@ -3939,7 +3954,8 @@ struct GuildPermission_Struct
 struct GuildUpdateURLAndChannel_Struct
 {
 /*0000*/	uint32	Action;	// 0 = Update URL, 1 = Update Channel
-/*0004*/	char	Unknown0004[76];
+/*0004*/	uint32	WindowOpen;	// 1 = reply to the client's guild-window-open request (ToB only delivers these)
+/*0008*/	char	Unknown0008[72];
 /*0080*/	char	Text[512];	// URL can be up to 512, SoD client caps the Channel at 128;
 /*0592*/	char	Unknown0592[3584];
 /*4176*/

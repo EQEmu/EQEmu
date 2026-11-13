@@ -231,6 +231,8 @@ RULE_INT(Character, MendAlwaysSucceedValue, 199, "Value at which mend will alway
 RULE_BOOL(Character, SneakAlwaysSucceedOver100, false, "When sneak skill is over 100, always succeed sneak/hide. Default: false")
 RULE_INT(Character, BandolierSwapDelay, 0, "Bandolier swap delay in milliseconds, default is 0")
 RULE_BOOL(Character, EnableHackedFastCampForGM, false, "Enables hacked fast camp for GM clients, if the GM doesn't have a hacked client they'll camp like normal")
+RULE_BOOL(Character, EnableFastCamp, true, "ToB+ clients get the 'Fast camp now?' prompt (and instant /camp fast) in cities, no-combat zones and Character:FastCampZones")
+RULE_STRING(Character, FastCampZones, "", "Comma-separated zone short names that also allow fast camp for ToB+ clients")
 RULE_BOOL(Character, AlwaysAllowNameChange, false, "Enable this option to allow /changename to work without enabling a name change via scripts.")
 RULE_BOOL(Character, EnableAutoAFK, false, "Enable or disable the auto AFK feature, cuts down on packet spam")
 RULE_BOOL(Character, AutoIdleFilterPackets, true, "Enable or disable filtering packets when auto AFK is enabled, heavily cuts down on packet spam in zones with lots of players")

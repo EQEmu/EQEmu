@@ -277,6 +277,31 @@ void Client::AddTributePoints(int32 ammount) {
 	QueuePacket(&outapp);
 }
 
+// ToB tribute lists carry the tier items after the name: {magic, count, InternalSerializedItem_Struct[count]}.
+// The instance pointers are only valid because EQStreamProxy::QueuePacket encodes synchronously;
+// the caller frees the instances after queueing.
+static uint32 TributeItemTrailerSize(const std::vector<EQ::ItemInstance *> &items)
+{
+	return items.empty() ? 0 : sizeof(uint32) * 2 + items.size() * sizeof(EQ::InternalSerializedItem_Struct);
+}
+
+static void AppendTributeItemTrailer(EQApplicationPacket *outapp, size_t offset, const std::vector<EQ::ItemInstance *> &items)
+{
+	uchar       *w     = outapp->pBuffer + offset;
+	const uint32 magic = EQ::TRIBUTE_ITEMS_TRAILER_MAGIC;
+	const uint32 n     = items.size();
+	memcpy(w, &magic, sizeof(magic));
+	memcpy(w + sizeof(magic), &n, sizeof(n));
+	w += sizeof(magic) + sizeof(n);
+	for (auto *inst : items) {
+		EQ::InternalSerializedItem_Struct si{};
+		si.slot_id = 0;
+		si.inst    = inst;
+		memcpy(w, &si, sizeof(si));
+		w += sizeof(si);
+	}
+}
+
 void Client::SendTributes() {
 
 	std::map<uint32, TributeData>::iterator cur,end;
@@ -287,11 +312,23 @@ void Client::SendTributes() {
 		if(cur->second.is_guild)
 			continue;	//skip guild tributes here
 		int len = cur->second.name.length();
-		EQApplicationPacket outapp(OP_TributeInfo, sizeof(TributeAbility_Struct) + len + 1);
+
+		// ToB labels the tiers and fills the description from full item data: append the item
+		// instances after the name (same as SendGuildTributes)
+		const bool tob = ClientVersion() >= EQ::versions::ClientVersion::TOB;
+		std::vector<EQ::ItemInstance *> tob_items;
+		if (tob) {
+			for (uint32 ti = 0; ti < cur->second.tier_count && ti < MAX_TRIBUTE_TIERS; ti++) {
+				tob_items.push_back(database.CreateItem(cur->second.tiers[ti].tribute_item_id, 1));
+			}
+		}
+		const uint32 trailer = TributeItemTrailerSize(tob_items);
+
+		EQApplicationPacket outapp(OP_TributeInfo, sizeof(TributeAbility_Struct) + len + 1 + trailer);
 		TributeAbility_Struct* tas = (TributeAbility_Struct*)outapp.pBuffer;
 
 		tas->tribute_id = htonl(cur->first);
-		tas->tier_count = htonl(cur->second.unknown);
+		tas->tier_count = htonl(tob ? cur->second.tier_count : cur->second.unknown); // the ToB encoder trusts the count
 
 		//gotta copy over the data from tiers, and flip all the
 		//byte orders, no idea why its flipped here
@@ -307,7 +344,15 @@ void Client::SendTributes() {
 
 		memcpy(tas->name, cur->second.name.c_str(), len);
 		tas->name[len] = '\0';
+
+		if (trailer) {
+			AppendTributeItemTrailer(&outapp, sizeof(TributeAbility_Struct) + len + 1, tob_items);
+		}
+
 		QueuePacket(&outapp);
+		for (auto *inst : tob_items) {
+			safe_delete(inst);
+		}
 	}
 }
 
@@ -380,7 +425,16 @@ void Client::SendGuildTributes()
 		//guild tribute has an unknown uint32 at its begining, guild ID?
 		int len = t.second.name.length() + 1;
 
-		EQApplicationPacket* outapp = new EQApplicationPacket(OP_SendGuildTributes, sizeof(GuildTributeAbility_Struct) + len);
+		// ToB names the tiers from full item data: append the item instances after the name
+		std::vector<EQ::ItemInstance *> tob_items;
+		if (ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+			for (uint32 ti = 0; ti < t.second.tier_count && ti < MAX_TRIBUTE_TIERS; ti++) {
+				tob_items.push_back(database.CreateItem(t.second.tiers[ti].tribute_item_id, 1));
+			}
+		}
+		const uint32 trailer = TributeItemTrailerSize(tob_items);
+
+		EQApplicationPacket* outapp = new EQApplicationPacket(OP_SendGuildTributes, sizeof(GuildTributeAbility_Struct) + len + trailer);
 		GuildTributeAbility_Struct* gtas = (GuildTributeAbility_Struct*)outapp->pBuffer;
 
 		auto tier_count = t.second.tier_count;
@@ -397,7 +451,15 @@ void Client::SendGuildTributes()
 			gtas->ability.tiers[ti].level = htonl(t.second.tiers[ti].level);
 		}
 		strn0cpy(gtas->ability.name, t.second.name.data(), len);
+
+		if (trailer) {
+			AppendTributeItemTrailer(outapp, sizeof(GuildTributeAbility_Struct) + len, tob_items);
+		}
+
 		FastQueuePacket(&outapp);
+		for (auto *inst : tob_items) {
+			safe_delete(inst);
+		}
 	}
 }
 
