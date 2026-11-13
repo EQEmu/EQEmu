@@ -8670,60 +8670,44 @@ namespace TOB
 
 	DECODE(OP_ChannelMessage)
 	{
-		unsigned char* __eq_buffer = __packet->pBuffer;
-		const uint32 in_size = __packet->size;
-		uint32 pos = 0;
+		// ToB: cstr sender, cstr target, 8 unknown bytes, u32 language, u32 channel, 5 unknown bytes, u32 skill,
+		// cstr message (client limit about 11k; may be unterminated at the end of the packet), then 15 trailing bytes
+		// (see ENCODE). Same as RoF2 with 4 more bytes before the language.
+		constexpr uint32 ChannelMessageGapBeforeLanguage = 8;
+		constexpr uint32 ChannelMessageGapBeforeSkill    = 5;
 
-		// bounded string read: copies at most dst_len - 1 chars, always terminates, false if no NUL in the packet
-		auto read_str = [&](char *dst, size_t dst_len) -> bool {
-			if (pos >= in_size) { return false; }
-			const char *src = reinterpret_cast<const char *>(__eq_buffer + pos);
-			const size_t len = strnlen(src, in_size - pos);
-			if (len == in_size - pos) { return false; }
-			strn0cpy(dst, src, std::min(dst_len, len + 1));
-			pos += static_cast<uint32>(len) + 1;
-			return true;
-		};
+		unsigned char *__eq_buffer = __packet->pBuffer;
+		const uint32  in_size      = __packet->size;
+		__packet->SetReadPosition(0);
 
-		char Sender[64] = {};
-		char Target[64] = {};
-
-		// 4 empty bytes before the language
-		// 8 skipped + language + channel + 5 skipped + skill
-		const uint32 fixed_len = 8 + 4 + 4 + 5 + 4;
-		if (!read_str(Sender, sizeof(Sender)) || !read_str(Target, sizeof(Target)) || in_size - pos < fixed_len) {
+		std::string sender, target;
+		__packet->ReadString(sender, sizeof(ChannelMessage_Struct::sender) - 1);
+		__packet->ReadString(target, sizeof(ChannelMessage_Struct::targetname) - 1);
+		__packet->ReadSkip(ChannelMessageGapBeforeLanguage);
+		const uint32 language = __packet->ReadUInt32();
+		const uint32 channel  = __packet->ReadUInt32();
+		__packet->ReadSkip(ChannelMessageGapBeforeSkill);
+		const uint32 skill = __packet->ReadUInt32();
+		if (__packet->ReadError()) {
 			LogNetcode("TOB::DECODE(OP_ChannelMessage) malformed packet size [{}]", in_size);
 			__packet->SetOpcode(OP_Unknown);
 			return;
 		}
 
-		char *InBuffer = reinterpret_cast<char *>(__eq_buffer + pos);
-		InBuffer += 8;
-
-		uint32 Language = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
-		uint32 Channel = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
-
-		InBuffer += 5;
-
-		uint32 Skill = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
-		pos += fixed_len;
-
-		// this has a size limit of 11k in the client
-		std::string old_message(InBuffer, strnlen(InBuffer, in_size - pos));
+		const char *message_start = reinterpret_cast<const char *>(__eq_buffer + __packet->GetReadPosition());
+		std::string old_message(message_start, strnlen(message_start, __packet->ReadRemaining()));
 		std::string new_message;
 		TOBToServerConvertLinks(new_message, old_message);
 
-		// there are 15 bytes after this, part of which is an unk string, check the ENCODE for the layout
-
-		__packet->size = sizeof(ChannelMessage_Struct) + new_message.length() + 1;
+		__packet->size    = sizeof(ChannelMessage_Struct) + new_message.length() + 1;
 		__packet->pBuffer = new unsigned char[__packet->size];
-		ChannelMessage_Struct* emu = (ChannelMessage_Struct*)__packet->pBuffer;
+		ChannelMessage_Struct *emu = (ChannelMessage_Struct *) __packet->pBuffer;
 
-		strn0cpy(emu->targetname, Target, sizeof(emu->targetname));
-		strn0cpy(emu->sender, Sender, sizeof(emu->sender));
-		emu->language = Language;
-		emu->chan_num = Channel;
-		emu->skill_in_language = Skill;
+		strn0cpy(emu->targetname, target.c_str(), sizeof(emu->targetname));
+		strn0cpy(emu->sender, sender.c_str(), sizeof(emu->sender));
+		emu->language          = language;
+		emu->chan_num          = channel;
+		emu->skill_in_language = skill;
 		strcpy(emu->message, new_message.c_str());
 
 		delete[] __eq_buffer;
