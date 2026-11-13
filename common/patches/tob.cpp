@@ -196,6 +196,10 @@ namespace TOB
 	// claim value the client wants for a feature the character has (it only tests for above 0)
 	static constexpr int32 TOB_CLAIM_VALUE_OWNED = 1;
 
+	// selected stat item index of a key ring (three s16 per ring in the player profile): -1 = none selected
+	static constexpr int16 TOB_KEYRING_STAT_NONE = -1;
+	static constexpr int   TOB_KEYRING_STAT_ITEMS = 3; // stat item indexes sent per ring
+
 	// casting slots
 	static inline spells::CastingSlot ServerToTOBCastingSlot(EQ::spells::CastingSlot slot);
 	static inline EQ::spells::CastingSlot TOBToServerCastingSlot(spells::CastingSlot slot);
@@ -3145,7 +3149,7 @@ namespace TOB
 		//ItemIndex keyring_item_index[6];
 		// Unfinished: Stat Mount / Stat Illusion / Stat Familiar are not implemented. This is the selected stat
 		// item per ring, but the packet the Key Ring window sends to pick one is not known yet (needs a Live
-		// capture), so every ring reports none (-1).
+		// capture), so every ring reports none (TOB_KEYRING_STAT_NONE).
 		for (int i = 0; i < EQ::invslot::KEYRING_COUNT; ++i) {
 			/*
 			s16 slot1;
@@ -3153,9 +3157,9 @@ namespace TOB
 			s16 slot3;
 			*/
 
-			out.WriteInt16(-1);
-			out.WriteInt16(-1);
-			out.WriteInt16(-1);
+			for (int stat = 0; stat < TOB_KEYRING_STAT_ITEMS; ++stat) {
+				out.WriteInt16(TOB_KEYRING_STAT_NONE);
+			}
 		}
 
 		/*
@@ -3269,7 +3273,7 @@ namespace TOB
 			std::vector<uint32> claims;
 			if (RuleB(Character, EnableKeyRings)) {
 				for (const auto &claim : TOB_KEYRING_CLAIMS) {
-					if (emu->keyring_unlock_mask & (1 << claim.ring)) {
+					if (emu->keyring_unlock_mask & (1u << claim.ring)) {
 						claims.push_back(claim.claim_id);
 					}
 				}
