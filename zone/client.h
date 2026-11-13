@@ -82,6 +82,7 @@ namespace EQ
 
 #define CLIENT_LD_TIMEOUT 30000 // length of time client stays in zone after LDing
 #define TARGETING_RANGE 200 // range for /assist and /target
+constexpr uint32 ADVLOOT_MASTER_LOOTER_REFRESH_MS = 1500; // wait for the roster packets before re-announcing the master looter
 #define XTARGET_HARDCAP 20
 #define MAX_SPECIALIZED_SKILL 50
 
@@ -489,6 +490,10 @@ public:
 	void WorldKick();
 	inline uint8 GetAnon() const { return m_pp.anon; }
 	inline uint8 GetAFK() const { return m_is_afk; }
+	inline bool IsAdvancedLooting() const { return m_advanced_looting; }
+	inline void SetAdvancedLooting(bool enabled) { m_advanced_looting = enabled; }
+	// re-announce the master looter shortly, after group/raid roster packets have reached the client
+	inline void QueueAdvancedLootMasterLooterRefresh() { m_advloot_master_looter_refresh.Start(ADVLOOT_MASTER_LOOTER_REFRESH_MS); }
 	void SetAnon(uint8 anon_flag);
 	inline Client* ResetAFKTimer() {
 		if (!RuleB(Character, EnableAutoAFK)) {
@@ -576,6 +581,9 @@ public:
 	void BulkSendTraderInventory(uint32 char_id);
 	void SendSingleTraderItem(uint32 char_id, int serial_number);
 	void BulkSendMerchantInventory(int merchant_id, int npcid);
+	void SendMerchantClose(uint32 npc_id);
+	void SendPointsMerchantWindow(NPC *npc);
+	void SendAlternateCurrencyMerchantList(NPC *npc);
 
 	inline uint8 GetLanguageSkill(uint8 language_id) const { return m_pp.languages[language_id]; }
 
@@ -853,8 +861,8 @@ public:
 	void SetGuildRank(uint32 rank);
 	void SetGuildID(uint32 guild_id);
 	void SendGuildMOTD(bool GetGuildMOTDReply = false);
-	void SendGuildURL();
-	void SendGuildChannel();
+	void SendGuildURL(bool tob_window_open = false);
+	void SendGuildChannel(bool tob_window_open = false);
 	void SendGuildSpawnAppearance();
 	void SendGuildRanks();
 	void SendGuildMembers();
@@ -873,7 +881,7 @@ public:
 	void SendGuildMemberAdd(uint32 guild_id, uint32 level, uint32 _class, uint32 rank, uint32 guild_show, uint32 zone_id, std::string player_name);
 	void SendGuildMemberRename(uint32 guild_id, std::string player_name, std::string new_player_name);
 	void SendGuildMemberDelete(uint32 guild_id, std::string player_name);
-	void SendGuildMemberLevel(uint32 guild_id, uint32 level, std::string player_name);
+	void SendGuildMemberLevel(uint32 guild_id, uint32 level, uint32 class_id, std::string player_name);
 	void SendGuildMemberRankAltBanker(uint32 guild_id, uint32 rank, std::string player_name, bool alt, bool banker);
 	void SendGuildMemberPublicNote(uint32 guild_id, std::string player_name, std::string public_note);
 	void SendGuildMemberDetails(uint32 guild_id, uint32 zone_id, uint32 offline_mode, std::string player_name);
@@ -2050,6 +2058,7 @@ private:
 	uint8 guildrank; // player's rank in the guild, 1- Leader 8 Recruit
 	bool guild_tribute_opt_in;
 	bool guild_dirty{ true };	//used to control add/delete opcodes due to client bug in Ti thru RoF2
+	std::set<uint32> m_guild_names_sent; // guild ids already answered for OP_GuildNameRequest (ToB)
 	bool GuildBanker;
 	uint16 duel_target;
 	bool duel_challenger = false; // the side that sent the pending OP_RequestDuel
@@ -2065,6 +2074,8 @@ private:
 	char LFGComments[64];
 	bool m_is_afk = false;
 	bool m_is_manual_afk = false;
+	bool m_advanced_looting = false;          // TOB+ Loot Settings, sent by the client only when it changes
+	Timer  m_advloot_master_looter_refresh;
 	bool auto_attack;
 	bool auto_fire;
 	bool runmode;
@@ -2169,6 +2180,8 @@ private:
 	PTimerList p_timers; //persistent timers
 	Timer hpupdate_timer;
 	Timer camp_timer;
+	void CompleteCamp();         // leave group/raid, save, mark instalog (camp_timer and ToB fast camp)
+	bool IsFastCampZone() const; // zones where ToB clients may fast camp
 	Timer bot_camp_timer;
 	Timer process_timer;
 	Timer consume_food_timer;

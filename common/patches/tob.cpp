@@ -55,10 +55,92 @@ namespace TOB
 	static OpcodeManager* opcodes = nullptr;
 	static Strategy struct_strategy;
 
+	// ---- ToB wire limits ----
+	// The client copies variable-length strings into fixed-size buffers without checking the length, so these are
+	// the most characters (not counting the NUL) that are sent for each buffer size.
+	static constexpr size_t TOB_NAME_MAX_CHARS         = 63;    // 64-byte name buffers (characters, guilds, mercs, buyers, raid members)
+	static constexpr size_t TOB_LINE_MAX_CHARS         = 127;   // 128-byte buffers (expedition names, task descriptions)
+	static constexpr size_t TOB_NOTE_MAX_CHARS         = 255;   // 256-byte buffers (guild notes, LFG comments, lockout event names)
+	static constexpr size_t TOB_TEXT_MAX_CHARS         = 1023;  // 1024-byte buffers (raid MOTD, emotes, task item lists)
+	static constexpr size_t TOB_GUILD_NAME_MAX_CHARS   = 62;    // the client copies min(strlen + 1, 63) bytes of a guild name
+	static constexpr size_t TOB_FINDABLE_NAME_MAX_CHARS      = 62;  // findable NPC name
+	static constexpr size_t TOB_FINDABLE_LAST_NAME_MAX_CHARS = 30;  // findable NPC last name
+	static constexpr size_t TOB_GUILD_URL_FIELD_SIZE   = 0x200;     // guild URL / channel text field in OP_GuildUpdate
+	static constexpr size_t TOB_GUILD_URL_MAX_CHARS    = TOB_GUILD_URL_FIELD_SIZE - 1;
+	static constexpr size_t TOB_GUILD_CHANNEL_MAX_CHARS = 127;      // the client copies 0x80 bytes of the guild channel
+	static constexpr uint32 TOB_GUILD_MEMBER_LIST_MAX  = 10000;     // sanity cap on the member count of a guild member list
+	static constexpr uint32 TOB_LFGUILD_MAX_RESULTS    = 1000;      // rows sent for an LFGuild search
+	static constexpr uint32 TOB_LFGUILD_MAX_CLASS      = 17;        // highest class id in the client's class-name table (18 entries)
+	static constexpr int32  TOB_TIMEZONE_NONE          = -1;        // LFGuild timezone: not set
+	static constexpr int32  TOB_TIMEZONE_MAX           = 23;        // highest LFGuild timezone-name table index
+	static constexpr uint32 TOB_TASK_HISTORY_MAX_TASKS      = 50;   // the client keeps at most 50 task history entries
+	static constexpr uint32 TOB_TASK_HISTORY_MAX_ACTIVITIES = 20;   // activities per task history entry
+	static constexpr uint32 TOB_SET_GROUP_TARGET_MAX_NUMBER = 3;    // the client indexes a 3 entry array with this unchecked
+	static constexpr uint32 TOB_INVALID_ID             = 0xFFFFFFFF; // "none" in u32 id / type fields
+
+	static constexpr uint16 EMU_GUILD_NONE_U16 = 0xFFFF; // "no guild" in the 16-bit guild id fields some emu packets carry
+	static constexpr uint32 TOB_GUILD_RANK_MIN = 1;      // the client ignores a guild invite rank outside 1..8
+	static constexpr uint32 TOB_GUILD_RANK_MAX = 8;
+	static constexpr uint32 EMU_GUILD_INVITE_DECLINE_RESPONSE = 9; // OP_GuildInviteAccept response sent on decline
+	static constexpr uint32 TOB_GUILD_INVITE_ACCEPT_ACTION  = 1;   // OP_GuildInviteAccept action field
+	static constexpr uint32 TOB_GUILD_INVITE_DECLINE_ACTION = 2;
+	// The legacy group update carries no levels, so members are shown with placeholder levels.
+	static constexpr uint32 TOB_GROUP_UPDATE_SELF_LEVEL  = 0x46;
+	static constexpr uint32 TOB_GROUP_UPDATE_OTHER_LEVEL = 0x41;
+
+	// OP_GuildBank actions as the server numbers them (GuildBank* in zone/guild_mgr.h) and as ToB numbers them.
+	// From Promote on ToB's numbers are one lower than the server's; the item update is 0 on the wire.
+	enum EmuGuildBankAction : uint32 {
+		EmuGuildBankItemUpdate  = 1,
+		EmuGuildBankPromote     = 3,
+		EmuGuildBankViewItem    = 4,
+		EmuGuildBankDeposit     = 5,
+		EmuGuildBankPermissions = 6,
+		EmuGuildBankWithdraw    = 7,
+		EmuGuildBankAcknowledge = 10,
+	};
+	enum TOBGuildBankAction : uint32 {
+		TOBGuildBankItemUpdate  = 0,
+		TOBGuildBankPromote     = 2,
+		TOBGuildBankViewItem    = 3,
+		TOBGuildBankDeposit     = 4,
+		TOBGuildBankPermissions = 5,
+		TOBGuildBankWithdraw    = 6, // split (7) and merge (8) follow
+		TOBGuildBankSplitStacks = 7,
+		TOBGuildBankMergeStacks = 8,
+		TOBGuildBankAcknowledge = 9,
+	};
+
+	static constexpr uint32 EMU_LFGUILD_HEADER_SIZE = 8;  // emu OP_LFGuild header: u32 command + u32 unknown
+	static constexpr uint32 TOB_BUYER_LINE_TRAILER_SIZE = 13; // unused bytes the client appends to each buy line
+
+	// Writes n zero bytes (padding / unknown fixed-width fields).
+	static void TOBWriteZeros(SerializeBuffer &buf, uint32 n)
+	{
+		for (uint32 i = 0; i < n; ++i) { buf.WriteUInt8(0); }
+	}
+
+	// Writes n raw bytes.
+	static void TOBWriteBytes(SerializeBuffer &buf, const void *data, size_t n)
+	{
+		auto bytes = static_cast<const uint8 *>(data);
+		for (size_t i = 0; i < n; ++i) { buf.WriteUInt8(bytes[i]); }
+	}
+
+	// Writes a fixed-width, zero-padded character field. At most width - 1 characters of str are copied, so the
+	// field is always NUL-terminated (same result as strn0cpy into a zeroed buffer of that width).
+	static void TOBWriteFixedString(SerializeBuffer &buf, const char *str, uint32 width)
+	{
+		uint32 len = 0;
+		while (len + 1 < width && str[len] != '\0') { ++len; }
+		for (uint32 i = 0; i < len; ++i) { buf.WriteUInt8(static_cast<uint8>(str[i])); }
+		TOBWriteZeros(buf, width - len);
+	}
+
 	void SerializeItem(SerializeBuffer &buffer, const EQ::ItemInstance* inst, int16 slot_id, uint8 depth, ItemPacketType packet_type);
 
 	// message link converters
-	static void ServerToTOBConvertLinks(std::string& message_out, const std::string& message_in);
+	static void ServerToTOBConvertLinks(std::string& message_out, const std::string& message_in, bool client_tags_brackets = true);
 	static void TOBToServerConvertLinks(std::string& message_out, const std::string& message_in);
 
 	// SpawnAppearance
@@ -88,6 +170,27 @@ namespace TOB
 
 	// buff slots
 	static inline int TOBToServerBuffSlot(int index);
+
+	// guild ids
+	static constexpr uint32 TOB_SERVER_GUILD_NONE = 0xFFFFFFFF;
+
+	// ToB uses u64 guild ids and 0 == "no guild".
+	static inline uint64 ServerToTOBGuildID(uint32 id)
+	{
+		return (id == TOB_SERVER_GUILD_NONE) ? 0 : static_cast<uint64>(id);
+	}
+
+	static inline uint32 TOBToServerGuildID(uint64 id)
+	{
+		return (id == 0 || id >= TOB_SERVER_GUILD_NONE) ? TOB_SERVER_GUILD_NONE : static_cast<uint32>(id);
+	}
+
+	// copy a fixed char field into another, always terminated
+	template <size_t N, size_t M>
+	static inline void TOBCopyStr(char (&dst)[N], const char (&src)[M])
+	{
+		strn0cpy(dst, src, std::min(N, M));
+	}
 
 	void Register(EQStreamIdentifier& into)
 	{
@@ -277,20 +380,470 @@ namespace TOB
 		// spells, then the final two bools -- see 0x140202750
 		SETUP_VAR_ENCODE(BlockedBuffs_Struct);
 
-		// size is uint32 + count * int32 + uint8 + uint8
-		uint32 sz = 6 + emu->Count * 4;
-		__packet->size = sz;
-		__packet->pBuffer = new unsigned char[sz];
-		memset(__packet->pBuffer, 0, sz);
-
-		__packet->WriteUInt32(emu->Count);
+		SerializeBuffer buffer;
+		buffer.WriteUInt32(emu->Count);
 		for (int i = 0; i < emu->Count; i++)
-			__packet->WriteSInt32(emu->SpellID[i]);
+			buffer.WriteInt32(emu->SpellID[i]);
 
-		__packet->WriteUInt8(emu->Pet);
-		__packet->WriteUInt8(emu->Initialise);
+		buffer.WriteUInt8(emu->Pet);
+		buffer.WriteUInt8(emu->Initialise);
 
-		FINISH_ENCODE();
+		auto outapp = new EQApplicationPacket(OP_BlockedBuffs, std::move(buffer));
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete __packet;
+	}
+
+	// ---- Bazaar / Trader / Barter ----
+
+	ENCODE(OP_Barter)
+	{
+		EQApplicationPacket *in        = *p;
+		*p = nullptr;
+
+		char *buffer = (char *) in->pBuffer;
+		uint32              sub_action = VARSTRUCT_DECODE_TYPE(uint32, buffer);
+
+		switch (sub_action) {
+			case Barter_BuyerAppearance: {
+				auto emu = (BuyerInspectRequest_Struct *) in->pBuffer;
+
+				auto outapp = new EQApplicationPacket(OP_Barter, sizeof(structs::Buyer_SetAppearance_Struct));
+				auto eq     = (structs::Buyer_SetAppearance_Struct *) outapp->pBuffer;
+
+				eq->action    = structs::TOBBuyerActions::BuyerAppearance;
+				eq->entity_id = emu->buyer_id;
+				eq->enabled   = emu->approval;
+
+				dest->FastQueuePacket(&outapp);
+				delete in;
+
+				break;
+			}
+			case Barter_BuyerItemRemove: {
+				auto emu = (BuyerRemoveItem_Struct *) in->pBuffer;
+
+				auto outapp = new EQApplicationPacket(OP_BuyerItems, sizeof(structs::BuyerRemoveItem_Struct));
+				auto eq     = (structs::BuyerRemoveItem_Struct *) outapp->pBuffer;
+
+				eq->action  = structs::TOBBuyerActions::BuyerModifyBuyLine;
+				eq->slot_id = emu->buy_slot_id;
+				eq->toggle  = 0;
+
+				dest->FastQueuePacket(&outapp);
+				delete in;
+
+				break;
+			}
+			case Barter_BuyerInspectBegin: {
+				*(uint32 *) in->pBuffer = structs::TOBBuyerActions::BuyerInspectBegin;
+				dest->FastQueuePacket(&in);
+				break;
+			}
+			case Barter_BuyerInspectEnd: {
+				*(uint32 *) in->pBuffer = structs::TOBBuyerActions::BuyerInspectEnd;
+				dest->FastQueuePacket(&in);
+				break;
+			}
+			case Barter_SellerBrowsing: {
+				*(uint32 *) in->pBuffer = structs::TOBBuyerActions::BuyerBrowsingBuyLine;
+				dest->FastQueuePacket(&in);
+				break;
+			}
+			case Barter_BuyerSearchResults: {
+				BuyerItemSearchResults_Struct bisr{};
+				auto                          emu = (BuyerGeneric_Struct *) in->pBuffer;
+				EQ::Util::MemoryStreamReader  ss(
+					reinterpret_cast<char *>(emu->payload),
+					in->size - sizeof(BuyerGeneric_Struct)
+				);
+				cereal::BinaryInputArchive    ar(ss);
+				ar(bisr);
+
+				LogTradingDetail("Sending item search results <green>[{}]", bisr.result_count);
+
+				SerializeBuffer buffer;
+				buffer.WriteUInt32(structs::TOBBuyerActions::BuyerSearchResults);
+				buffer.WriteUInt32(bisr.result_count);
+				for (auto const &i: bisr.results) {
+					TOBWriteFixedString(buffer, i.item_name, sizeof(structs::BuyerItemSearchResultEntry_Struct::item_name));
+					buffer.WriteUInt32(i.item_id);
+					buffer.WriteUInt32(i.item_icon);
+					buffer.WriteUInt32(0);
+				}
+
+				auto outapp = std::make_unique<EQApplicationPacket>(OP_Barter, std::move(buffer));
+				dest->QueuePacket(outapp.get());
+				delete in;
+				break;
+			}
+			default: {
+				LogTradingDetail("Unhandled action <red>[{}]", sub_action);
+				dest->FastQueuePacket(&in);
+			}
+		}
+	}
+
+	ENCODE(OP_BazaarSearch)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		uint32 action = *(uint32 *) in->pBuffer;
+
+		switch (action) {
+			case BazaarSearch: {
+				LogTrading("(TOB) BazaarSearch action <green>[{}]", action);
+				std::vector<BazaarSearchResultsFromDB_Struct> results{};
+				auto                                          bsms = (BazaarSearchMessaging_Struct *) in->pBuffer;
+				EQ::Util::MemoryStreamReader                  ss(
+					reinterpret_cast<char *>(bsms->payload),
+					in->size - sizeof(BazaarSearchMessaging_Struct)
+				);
+				cereal::BinaryInputArchive                    ar(ss);
+				ar(results);
+
+				SerializeBuffer buffer;
+				buffer.WriteUInt32(0);
+				buffer.WriteUInt16(results.empty() ? 0 : results[0].trader_zone_id);
+				buffer.WriteUInt32(results.empty() ? 0 : results[0].trader_id);
+				buffer.WriteUInt32(results.size());
+
+				for (auto const &i: results) {
+					buffer.WriteUInt32(i.trader_id);                          //trader ID
+					buffer.WriteString(i.serial_number_RoF);                  //serial
+					buffer.WriteUInt32(i.cost);                               //cost
+					buffer.WriteUInt32(i.stackable ? i.charges : i.count);    //quantity
+					buffer.WriteUInt32(i.item_id);                            //ID
+					buffer.WriteUInt32(i.icon_id);                            //icon
+					buffer.WriteString(i.item_name);                          //name
+					buffer.WriteUInt32(i.item_stat);                          //itemstat
+					buffer.WriteFloat(0.0f);                                  //TOB only: unknown float, sent as 0
+				}
+
+				auto outapp = new EQApplicationPacket(OP_BazaarSearch, std::move(buffer));
+				dest->QueuePacket(outapp);
+				delete outapp;
+				delete in;
+
+				break;
+			}
+			case BazaarInspect: {
+				LogTrading("(TOB) BazaarInspect action <green>[{}]", action);
+				dest->FastQueuePacket(&in, ack_req);
+				break;
+			}
+			case WelcomeMessage: {
+				auto buffer = new char[sizeof(structs::BazaarWelcome_Struct)];
+				auto emu    = (BazaarWelcome_Struct *) in->pBuffer;
+				auto eq     = (structs::BazaarWelcome_Struct *) buffer;
+
+				eq->action         = structs::TOBBazaarTraderBuyerActions::WelcomeMessage;
+				eq->num_of_traders = emu->traders;
+				eq->num_of_items   = emu->items;
+
+				safe_delete_array(in->pBuffer);
+				in->SetOpcode(OP_TraderShop);
+				in->size    = sizeof(structs::BazaarWelcome_Struct);
+				in->pBuffer = (uchar *)buffer;
+
+				LogTrading("(TOB) WelcomeMessage action <green>[{}]", action);
+				dest->QueuePacket(in);
+				delete in;
+
+				break;
+			}
+			case DeliveryCostUpdate: {
+				auto data = (BazaarDeliveryCost_Struct *) in->pBuffer;
+				LogTrading("(TOB) Delivery costs updated: vouchers <green>[{}] parcel percentage <green>[{}]",
+						   data->voucher_delivery_cost,
+						   data->parcel_deliver_cost
+				);
+				data->action = 0;
+				dest->FastQueuePacket(&in);
+				break;
+			}
+			default: {
+				LogTrading("(TOB) Unhandled action <red>[{}]", action);
+				dest->FastQueuePacket(&in, ack_req);
+			}
+		}
+	}
+
+	ENCODE(OP_BecomeTrader)
+	{
+		EQApplicationPacket *inapp = *p;
+		*p = nullptr;
+
+		unsigned char *__emu_buffer = inapp->pBuffer;
+		auto          in            = (BecomeTrader_Struct *) __emu_buffer;
+
+		switch (in->action) {
+			case TraderOff: {
+				auto emu = (BecomeTrader_Struct *) __emu_buffer;
+
+				auto outapp = new EQApplicationPacket(OP_BecomeTrader, sizeof(structs::BecomeTrader_Struct));
+				auto eq     = (structs::BecomeTrader_Struct *) outapp->pBuffer;
+
+				eq->action    = TraderOff;
+				eq->entity_id = emu->entity_id;
+
+				LogTrading(
+					"(TOB) TraderOff action <green>[{}] for entity_id <green>[{}]",
+					eq->action,
+					eq->entity_id
+				);
+				dest->FastQueuePacket(&outapp);
+				break;
+			}
+			case TraderOn: {
+				auto emu = (BecomeTrader_Struct *) __emu_buffer;
+
+				auto outapp = new EQApplicationPacket(OP_BecomeTrader, sizeof(structs::BecomeTrader_Struct));
+				auto eq     = (structs::BecomeTrader_Struct *) outapp->pBuffer;
+
+				eq->action    = TraderOn;
+				eq->entity_id = emu->entity_id;
+
+				LogTrading(
+					"(TOB) TraderOn action <green>[{}] for entity_id <green>[{}]",
+					eq->action,
+					eq->entity_id
+				);
+				dest->FastQueuePacket(&outapp);
+				break;
+			}
+			case AddTraderToBazaarWindow: {
+				auto emu    = (BecomeTrader_Struct *) __emu_buffer;
+				auto outapp = new EQApplicationPacket(OP_TraderShop, sizeof(BecomeTrader_Struct));
+				auto eq     = (BecomeTrader_Struct *) outapp->pBuffer;
+
+				eq->action           = emu->action;
+				eq->entity_id        = emu->entity_id;
+				eq->trader_id        = emu->trader_id;
+				eq->zone_id          = emu->zone_id;
+				eq->zone_instance_id = emu->zone_instance_id;
+				strn0cpy(eq->trader_name, emu->trader_name, sizeof(eq->trader_name));
+
+				LogTrading(
+					"(TOB) AddTraderToBazaarWindow action <green>[{}] trader_id <green>[{}] entity_id <green>[{}] "
+					"zone_id <green>[{}] zone_instance_id <green>[{}]",
+					eq->action,
+					eq->trader_id,
+					eq->entity_id,
+					eq->zone_id,
+					eq->zone_instance_id);
+				dest->FastQueuePacket(&outapp);
+				break;
+			}
+			case RemoveTraderFromBazaarWindow: {
+				auto emu    = (BecomeTrader_Struct *) __emu_buffer;
+				auto outapp = new EQApplicationPacket(OP_TraderShop, sizeof(structs::BazaarWindowRemoveTrader_Struct));
+				auto eq     = (structs::BazaarWindowRemoveTrader_Struct *) outapp->pBuffer;
+
+				eq->action    = emu->action;
+				eq->trader_id = emu->trader_id;
+
+				LogTrading(
+					"(TOB) RemoveTraderFromBazaarWindow action <green>[{}] for entity_id <green>[{}]",
+					eq->action,
+					eq->trader_id
+				);
+				dest->FastQueuePacket(&outapp);
+				break;
+			}
+			default: {
+				LogTrading(
+					"(TOB) Unhandled action <red>[{}]",
+					in->action
+				);
+				dest->QueuePacket(inapp);
+			}
+		}
+		delete inapp;
+	}
+
+	// Body shared by the buy line update (BuyerModifyBuyLine) and buy line inspect (BuyerSendBuyLine) packets.
+	static void TOBWriteBuyLine(SerializeBuffer &buffer, uint32 action, uint32 second_field, const BuyerLineItems_Struct &bl)
+	{
+		buffer.WriteUInt32(action);
+		buffer.WriteUInt32(second_field);
+		buffer.WriteUInt32(bl.slot);
+		buffer.WriteUInt8(bl.enabled ? 1 : 0);
+		buffer.WriteUInt32(bl.item_id);
+		buffer.WriteString(bl.item_name);
+		buffer.WriteUInt32(bl.item_icon);
+		buffer.WriteUInt32(bl.item_quantity);
+		buffer.WriteUInt8(bl.item_toggle ? 1 : 0);
+		buffer.WriteUInt32(bl.item_cost);
+		buffer.WriteUInt32(bl.trade_items.size());
+
+		for (auto const &i: bl.trade_items) {
+			buffer.WriteUInt32(i.item_id);
+			buffer.WriteUInt32(i.item_quantity);
+			buffer.WriteUInt32(i.item_icon);
+			buffer.WriteString(i.item_name);
+		}
+	}
+
+	ENCODE(OP_BuyerItems)
+	{
+		EQApplicationPacket *inapp = *p;
+		*p = nullptr;
+
+		auto action = *(uint32 *) inapp->pBuffer;
+
+		switch (action) {
+			case Barter_BuyerItemUpdate: {
+				BuyerLineItems_Struct        bl{};
+				auto                         emu = (BuyerGeneric_Struct *) inapp->pBuffer;
+				EQ::Util::MemoryStreamReader ss(
+					reinterpret_cast<char *>(emu->payload),
+					inapp->size - sizeof(BuyerGeneric_Struct)
+				);
+				cereal::BinaryInputArchive   ar(ss);
+				ar(bl);
+
+				SerializeBuffer buffer;
+				TOBWriteBuyLine(buffer, structs::TOBBuyerActions::BuyerModifyBuyLine, 0, bl);
+
+				auto outapp = std::make_unique<EQApplicationPacket>(OP_BuyerItems, std::move(buffer));
+				dest->QueuePacket(outapp.get());
+				delete inapp;
+				break;
+			}
+			case Barter_BuyerInspectBegin: {
+				auto emu = (BuyerGeneric_Struct *) inapp->pBuffer;
+
+				BuyerLineItems_Struct        bli{};
+				EQ::Util::MemoryStreamReader ss(
+					reinterpret_cast<char *>(emu->payload),
+					inapp->size - sizeof(BuyerGeneric_Struct)
+				);
+				cereal::BinaryInputArchive   ar(ss);
+				ar(bli);
+
+				SerializeBuffer buffer;
+				TOBWriteBuyLine(buffer, structs::TOBBuyerActions::BuyerSendBuyLine, bli.slot, bli);
+
+				auto packet = std::make_unique<EQApplicationPacket>(OP_BuyerItems, std::move(buffer));
+				dest->QueuePacket(packet.get());
+				delete inapp;
+
+				break;
+			}
+			case Barter_BuyerSearch: {
+				BuyerLineSearch_Struct       bls{};
+				auto                         emu = (BuyerGeneric_Struct *) inapp->pBuffer;
+				EQ::Util::MemoryStreamReader ss(
+					reinterpret_cast<char *>(emu->payload),
+					inapp->size - sizeof(BuyerGeneric_Struct)
+				);
+				cereal::BinaryInputArchive   ar(ss);
+				ar(bls);
+				LogTrading("(TOB) Barter_BuyerSearch action <green>[{}]", emu->action);
+
+				SerializeBuffer buffer;
+				buffer.WriteUInt32(1);
+				buffer.WriteString(bls.search_string);
+				buffer.WriteUInt32(bls.transaction_id);
+				buffer.WriteUInt32(0);
+				buffer.WriteUInt32(0);
+				buffer.WriteUInt8(1);
+				buffer.WriteUInt32(bls.no_items);
+				for (auto const &b: bls.buy_line) {
+					buffer.WriteUInt32(b.slot);
+					buffer.WriteUInt8(1);
+					buffer.WriteUInt32(b.item_id);
+					buffer.WriteString(b.item_name);
+					buffer.WriteUInt32(b.item_icon);
+					buffer.WriteUInt32(b.item_quantity);
+					buffer.WriteUInt8(1);
+					buffer.WriteUInt32(b.item_cost);
+					buffer.WriteUInt32(b.trade_items.size());
+					for (auto const &i: b.trade_items) {
+						buffer.WriteUInt32(i.item_id);
+						buffer.WriteUInt32(i.item_quantity);
+						buffer.WriteUInt32(i.item_icon);
+						buffer.WriteString(i.item_name);
+					}
+					buffer.WriteUInt32(b.buyer_entity_id);
+					buffer.WriteUInt32(b.buyer_id);
+					buffer.WriteUInt16(b.buyer_zone_id);
+					buffer.WriteUInt16(b.buyer_zone_instance_id);
+					buffer.WriteString(b.buyer_name);
+				}
+
+				auto outapp = std::make_unique<EQApplicationPacket>(OP_BuyerItems, std::move(buffer));
+				dest->QueuePacket(outapp.get());
+				delete inapp;
+				break;
+			}
+			case Barter_RemoveFromMerchantWindow: {
+				auto emu = (BuyerRemoveItemFromMerchantWindow_Struct *) inapp->pBuffer;
+
+				emu->action = structs::TOBBuyerActions::BuyerSendBuyLine;
+				dest->FastQueuePacket(&inapp);
+				break;
+			}
+			case Barter_BuyerTransactionComplete:
+			case Barter_SellerTransactionComplete: {
+				BuyerLineSellItem_Struct     blsi{};
+				auto                         emu = (BuyerGeneric_Struct *) inapp->pBuffer;
+				EQ::Util::MemoryStreamReader ss(
+					reinterpret_cast<char *>(emu->payload),
+					inapp->size - sizeof(BuyerGeneric_Struct)
+				);
+				cereal::BinaryInputArchive   ar(ss);
+				ar(blsi);
+
+				SerializeBuffer buffer;
+				switch (action) {
+					case Barter_BuyerTransactionComplete: {
+						buffer.WriteUInt32(structs::TOBBuyerActions::BuyerBuyItem);
+						break;
+					}
+					case Barter_SellerTransactionComplete: {
+						buffer.WriteUInt32(structs::TOBBuyerActions::BuyerSellItem);
+						break;
+					}
+				}
+				buffer.WriteUInt32(blsi.sub_action);
+				buffer.WriteUInt32(blsi.error_code);
+				TOBWriteZeros(buffer, 16);
+				buffer.WriteString(blsi.buyer_name);
+				buffer.WriteString(blsi.item_name);
+				buffer.WriteString(blsi.seller_name);
+				buffer.WriteUInt32(0xFFFFFFFF);
+				buffer.WriteUInt32(0xFFFFFFFF);
+				TOBWriteZeros(buffer, 1);
+				buffer.WriteString(blsi.item_name);
+				TOBWriteZeros(buffer, 9);
+				buffer.WriteUInt32(blsi.item_cost);
+				buffer.WriteUInt32(blsi.trade_items.size());
+
+				for (auto const &i: blsi.trade_items) {
+					buffer.WriteUInt32(0);
+					buffer.WriteUInt32(i.item_quantity);
+					buffer.WriteUInt32(0);
+					buffer.WriteString(i.item_name);
+				}
+
+				buffer.WriteUInt32(0);
+				buffer.WriteUInt32(0);
+				buffer.WriteUInt32(0);
+				buffer.WriteUInt32(0xFFFFFF);
+				buffer.WriteUInt32(0);
+				buffer.WriteUInt32(blsi.seller_quantity);
+
+				auto outapp = std::make_unique<EQApplicationPacket>(OP_BuyerItems, std::move(buffer));
+				dest->QueuePacket(outapp.get());
+				delete inapp;
+				break;
+			}
+			default: {
+				dest->FastQueuePacket(&inapp);
+			}
+		}
 	}
 
 	ENCODE(OP_CancelTrade)
@@ -344,29 +897,28 @@ namespace TOB
 		std::string new_message;
 		ServerToTOBConvertLinks(new_message, old_message);
 
-		in->size = strlen(emu->sender) + strlen(emu->targetname) + new_message.length() + 43;
+		SerializeBuffer buffer;
+		buffer.WriteString(emu->sender);
+		buffer.WriteString(emu->targetname);
+		buffer.WriteUInt64(0);	// Unknown
+		buffer.WriteUInt32(emu->language);
+		buffer.WriteUInt32(emu->chan_num);
+		buffer.WriteUInt32(0);	// Unknown
+		buffer.WriteUInt8(0);	// Unknown
+		buffer.WriteUInt32(emu->skill_in_language);
+		buffer.WriteString(new_message);
 
-		in->pBuffer = new unsigned char[in->size];
+		buffer.WriteUInt8(0); // Unknown
+		buffer.WriteUInt32(0);// Unknown
+		buffer.WriteUInt32(0);// Unknown
 
-		char* OutBuffer = (char*)in->pBuffer;
+		buffer.WriteString("");
+		buffer.WriteUInt8(0); // Unknown
+		buffer.WriteUInt32(0);// Unknown
 
-		VARSTRUCT_ENCODE_STRING(OutBuffer, emu->sender);
-		VARSTRUCT_ENCODE_STRING(OutBuffer, emu->targetname);
-		VARSTRUCT_ENCODE_TYPE(uint64, OutBuffer, 0);	// Unknown
-		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, emu->language);
-		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, emu->chan_num);
-		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);	// Unknown
-		VARSTRUCT_ENCODE_TYPE(uint8, OutBuffer, 0);	// Unknown
-		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, emu->skill_in_language);
-		VARSTRUCT_ENCODE_STRING(OutBuffer, new_message.c_str());
-
-		VARSTRUCT_ENCODE_TYPE(uint8, OutBuffer, 0); // Unknown
-		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);// Unknown
-		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);// Unknown
-
-		VARSTRUCT_ENCODE_STRING(OutBuffer, "");
-		VARSTRUCT_ENCODE_TYPE(uint8, OutBuffer, 0); // Unknown
-		VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);// Unknown
+		in->size = buffer.size();
+		in->pBuffer = new unsigned char[buffer.size()];
+		memcpy(in->pBuffer, buffer.buffer(), buffer.size());
 
 		delete[] __emu_buffer;
 		dest->FastQueuePacket(&in, ack_req);
@@ -521,10 +1073,20 @@ namespace TOB
 		SETUP_DIRECT_ENCODE(CombatDamage_Struct, structs::CombatDamage_Struct);
 
 		OUT(target);
-		OUT(source);
+		// source 0 makes ToB's hit-message formatter dereference a null spawn (crash); an unknown id is skipped
+		eq->source = emu->source ? emu->source : 0xFFFF;
 		OUT(type);
 		OUT(spellid);
-		OUT(damage);
+		// ToB reads damage as a signed int64. Sign-extend: blocks/parries/dodges (-1..-6)
+		// were showing as 42949672xx. Damage-shield types (> 0xE7) print "N points of non-melee damage"
+		// only for N >= 1, and the server sends DS damage negative (Mob::DamageShield), so flip it.
+		{
+			int64 dmg = static_cast<int64>(static_cast<int32>(emu->damage));
+			if (emu->type > 0xE7 && dmg < 0) {
+				dmg = -dmg;
+			}
+			eq->damage = dmg;
+		}
 		OUT(force);
 		OUT(hit_heading);
 		OUT(hit_pitch);
@@ -765,6 +1327,203 @@ namespace TOB
 		// TODO: determine what the client expects for group_request_id at offset 168 —
 		// it is stored in EverQuest_GroupRequestId and may be used in the accept/decline flow.
 
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_GroupFollow)
+	{
+		ENCODE_LENGTH_EXACT(GroupGeneric_Struct);
+		SETUP_DIRECT_ENCODE(GroupGeneric_Struct, structs::GroupFollow_Struct);
+		memcpy(eq->name1, emu->name1, sizeof(eq->name1));
+		memcpy(eq->name2, emu->name2, sizeof(eq->name2));
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_Surname)
+	{
+		ENCODE_LENGTH_EXACT(SurnameReply_Struct);
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+		auto emu = reinterpret_cast<const SurnameReply_Struct *>(in->pBuffer);
+
+		structs::Surname_Struct header{};
+		header.character.Id      = emu->character_id;
+		header.character.WorldId = static_cast<uint16>(RuleI(World, Id));
+		header.status            = emu->status;
+		header.length            = static_cast<uint32>(strnlen(emu->lastname, sizeof(emu->lastname)));
+
+		SerializeBuffer buffer;
+		TOBWriteBytes(buffer, &header, sizeof(header));
+		TOBWriteBytes(buffer, emu->lastname, header.length);
+
+		auto outapp = new EQApplicationPacket(OP_Surname, std::move(buffer));
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+
+	ENCODE(OP_RezzRequest)
+	{
+		ENCODE_LENGTH_EXACT(Resurrect_Struct);
+		SETUP_DIRECT_ENCODE(Resurrect_Struct, structs::Resurrect_Struct);
+		OUT(unknown000);
+		OUT(zone_id);
+		OUT(instance_id);
+		OUT(y);
+		OUT(x);
+		OUT(z);
+		OUT(unknown020);
+		strn0cpy(eq->your_name, emu->your_name, sizeof(eq->your_name));
+		eq->unknown088 = emu->unknown088;
+		strn0cpy(eq->rezzer_name, emu->rezzer_name, sizeof(eq->rezzer_name));
+		OUT(spellid);
+		strn0cpy(eq->corpse_name, emu->corpse_name, sizeof(eq->corpse_name));
+		OUT(action);
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_RezzComplete)
+	{
+		ENCODE_LENGTH_EXACT(Resurrect_Struct);
+		SETUP_DIRECT_ENCODE(Resurrect_Struct, structs::Resurrect_Struct);
+		OUT(unknown000);
+		OUT(zone_id);
+		OUT(instance_id);
+		OUT(y);
+		OUT(x);
+		OUT(z);
+		OUT(unknown020);
+		strn0cpy(eq->your_name, emu->your_name, sizeof(eq->your_name));
+		eq->unknown088 = emu->unknown088;
+		strn0cpy(eq->rezzer_name, emu->rezzer_name, sizeof(eq->rezzer_name));
+		OUT(spellid);
+		strn0cpy(eq->corpse_name, emu->corpse_name, sizeof(eq->corpse_name));
+		OUT(action);
+		FINISH_ENCODE();
+	}
+
+	// SETUP_DIRECT_ENCODE allocates sizeof(structs::X) and ENCODE_LENGTH_EXACT drops packets whose
+	// size != sizeof(emu struct), so nothing reads/writes past either buffer.
+
+	ENCODE(OP_EnduranceUpdate)
+	{
+		ENCODE_LENGTH_EXACT(EnduranceUpdate_Struct);
+		SETUP_DIRECT_ENCODE(EnduranceUpdate_Struct, structs::EnduranceUpdate_Struct);
+
+		OUT(spawn_id);
+		OUT(cur_end);
+		OUT(max_end);
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_ManaUpdate)
+	{
+		ENCODE_LENGTH_EXACT(ManaUpdate_Struct);
+		SETUP_DIRECT_ENCODE(ManaUpdate_Struct, structs::ManaUpdate_Struct);
+
+		OUT(spawn_id);
+		OUT(cur_mana);
+		OUT(max_mana);
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_MobEnduranceUpdate)
+	{
+		ENCODE_LENGTH_EXACT(MobEnduranceUpdate_Struct);
+		SETUP_DIRECT_ENCODE(MobEnduranceUpdate_Struct, structs::MobEnduranceUpdate_Struct);
+
+		eq->spawn_id  = static_cast<int16>(emu->spawn_id);
+		eq->endurance = emu->endurance; // uint8 -> int32
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_MobManaUpdate)
+	{
+		ENCODE_LENGTH_EXACT(MobManaUpdate_Struct);
+		SETUP_DIRECT_ENCODE(MobManaUpdate_Struct, structs::MobManaUpdate_Struct);
+
+		eq->spawn_id = static_cast<int16>(emu->spawn_id);
+		eq->mana     = emu->mana; // uint8 -> int32
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_GroupUpdate)
+	{
+		// Member list (OP_GroupUpdateB) layout per ToB:
+		// header: u32, u32 member_count, str leader; per member: u32 index, str name, u16 merc, str owner,
+		// u32 level, u8 x5 role flags, u32 offline, u64 timestamp, u32 unknown, u64 unknown.
+		EQApplicationPacket *in = *p;
+		GroupJoin_Struct *gjs = (GroupJoin_Struct*)in->pBuffer;
+
+		if ((gjs->action == groupActLeave) || (gjs->action == groupActDisband)) {
+			if ((gjs->action == groupActDisband) || !strcmp(gjs->yourname, gjs->membername)) {
+				auto outapp = new EQApplicationPacket(OP_GroupDisbandYou, sizeof(structs::GroupGeneric_Struct));
+				auto ggs = (structs::GroupGeneric_Struct*)outapp->pBuffer;
+				memcpy(ggs->name1, gjs->yourname, sizeof(ggs->name1));
+				memcpy(ggs->name2, gjs->membername, sizeof(ggs->name2));
+				dest->FastQueuePacket(&outapp);
+				delete in;
+				return;
+			}
+
+			auto outapp = new EQApplicationPacket(OP_GroupDisbandOther, sizeof(structs::GroupGeneric_Struct));
+			auto ggs = (structs::GroupGeneric_Struct*)outapp->pBuffer;
+			memcpy(ggs->name1, gjs->yourname, sizeof(ggs->name1));
+			memcpy(ggs->name2, gjs->membername, sizeof(ggs->name2));
+			dest->FastQueuePacket(&outapp);
+			delete in;
+			return;
+		}
+
+		if (in->size == sizeof(GroupUpdate2_Struct)) {
+			auto gu2 = (GroupUpdate2_Struct*)in->pBuffer;
+			constexpr int other_slots = sizeof(gu2->membername) / sizeof(gu2->membername[0]);
+			int member_count = 1;
+			for (int i = 0; i < other_slots; ++i) {
+				if (gu2->membername[i][0] != '\0') {
+					++member_count;
+				}
+			}
+
+			SerializeBuffer buffer;
+			buffer.WriteUInt32(gu2->group_id ? gu2->group_id : structs::GROUP_ID_PLACEHOLDER);
+			buffer.WriteUInt32(member_count);
+			buffer.WriteString(gu2->leadersname);
+
+			auto write_member = [&buffer](uint32 index, const char* name, uint32 level) {
+				buffer.WriteUInt32(index);
+				buffer.WriteString(name);
+				buffer.WriteUInt16(0);  // merc flag
+				buffer.WriteUInt8(0);   // merc owner name (empty string)
+				buffer.WriteUInt32(level);
+				for (int r = 0; r < 5; ++r)
+					buffer.WriteUInt8(0); // role flags (tank, assist, puller, +2 new in ToB)
+				buffer.WriteUInt32(0);  // offline
+				buffer.WriteUInt64(0);  // timestamp
+				buffer.WriteUInt32(0);  // unknown
+				buffer.WriteUInt64(0);  // unknown
+			};
+
+			write_member(0, gu2->yourname, TOB_GROUP_UPDATE_SELF_LEVEL);
+			uint32 member_number = 1;
+			for (int i = 0; i < other_slots; ++i) {
+				if (gu2->membername[i][0] == '\0')
+					continue;
+				write_member(member_number++, gu2->membername[i], TOB_GROUP_UPDATE_OTHER_LEVEL);
+			}
+
+			auto outapp = new EQApplicationPacket(OP_GroupUpdateB, std::move(buffer));
+			dest->FastQueuePacket(&outapp);
+			delete in;
+			return;
+		}
+
+		ENCODE_LENGTH_EXACT(GroupJoin_Struct);
+		SETUP_DIRECT_ENCODE(GroupJoin_Struct, structs::GroupJoin_Struct);
+		memcpy(eq->membername, emu->membername, sizeof(eq->membername));
 		FINISH_ENCODE();
 	}
 
@@ -1421,20 +2180,27 @@ namespace TOB
 	{
 		EQApplicationPacket* in = *p;
 		*p = nullptr;
+
+		if (in->size < sizeof(OnLevelMessage_Struct)) {
+			delete in;
+			return;
+		}
+
 		OnLevelMessage_Struct* emu = (OnLevelMessage_Struct*)in->pBuffer;
 		SerializeBuffer buffer;
 
-		buffer.WriteLengthString(emu->Title);
-		buffer.WriteLengthString(emu->Text);
-		buffer.WriteLengthString(emu->ButtonName0);
-		buffer.WriteLengthString(emu->ButtonName1);
-		buffer.WriteUInt8(emu->Buttons);
+		// bounded lengths: the emu char arrays are not guaranteed to be NUL-terminated
+		buffer.WriteLengthString(strnlen(emu->Title, sizeof(emu->Title)), emu->Title);
+		buffer.WriteLengthString(strnlen(emu->Text, sizeof(emu->Text)), emu->Text);
+		buffer.WriteLengthString(strnlen(emu->ButtonName0, sizeof(emu->ButtonName0)), emu->ButtonName0);
+		buffer.WriteLengthString(strnlen(emu->ButtonName1, sizeof(emu->ButtonName1)), emu->ButtonName1);
+		buffer.WriteUInt8(emu->Buttons ? 1 : 0);   // 0 = OK only, 1 = ButtonName0/ButtonName1; >=2 shows all three on ToB
 		buffer.WriteUInt8(emu->SoundControls);
-		buffer.WriteUInt32(emu->Duration);
-		buffer.WriteUInt32(emu->PopupID);
-		buffer.WriteUInt32(emu->NegativeID);
-		buffer.WriteUInt32(0); //seen -1 & 0
-		buffer.WriteUInt32(0); //seen 0
+		buffer.WriteUInt32(emu->Duration);          // ms, 0 = no auto-close
+		buffer.WriteUInt32(emu->PopupID);           // reply {0, PopupID} on OK/left button
+		buffer.WriteUInt32(emu->NegativeID);        // reply {1, NegativeID} on right button
+		buffer.WriteUInt32(0);                      // TimeoutID: reply {2, id} on timeout or window close; 0 = no reply
+		buffer.WriteUInt32(0);                      // chat echo channel (1..31 echoes text to chat); 0 = off
 
 		auto outapp = new EQApplicationPacket(OP_OnLevelMessage, buffer.size());
 		outapp->WriteData(buffer.buffer(), buffer.size());
@@ -1449,22 +2215,21 @@ namespace TOB
 		SETUP_VAR_ENCODE(sPickPocket_Struct);
 
 		uint32 nameLen = strnlen(emu->itemname, sizeof(emu->itemname));
-		uint32 pktLen  = sizeof(structs::PickPocket_Struct) + nameLen + 1;
 
-		ALLOC_LEN_ENCODE(pktLen);
+		// structs::PickPocket_Struct, then the item name, then one terminating zero byte
+		SerializeBuffer buffer;
+		buffer.WriteUInt32(emu->to);
+		buffer.WriteUInt32(emu->from);
+		buffer.WriteUInt32(emu->myskill);
+		buffer.WriteUInt8(static_cast<uint8>(emu->type));
+		buffer.WriteUInt32(emu->coin);
+		buffer.WriteUInt32(nameLen);
+		TOBWriteBytes(buffer, emu->itemname, nameLen);
+		buffer.WriteUInt8(0); // luckily
 
-		auto *eq    = reinterpret_cast<structs::PickPocket_Struct *>(__packet->pBuffer);
-		eq->to      = emu->to;
-		eq->from    = emu->from;
-		eq->myskill = emu->myskill;
-		eq->type    = static_cast<uint8>(emu->type);
-		eq->coin    = emu->coin;
-		eq->nameLen = nameLen;
-		if (nameLen > 0)
-			memcpy(__packet->pBuffer + sizeof(structs::PickPocket_Struct), emu->itemname, nameLen);
-		__packet->pBuffer[sizeof(structs::PickPocket_Struct) + nameLen] = 0; // luckily
-
-		FINISH_ENCODE();
+		auto outapp = new EQApplicationPacket(OP_PickPocket, std::move(buffer));
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete __packet;
 	}
 
 	ENCODE(OP_PlayerProfile) {
@@ -2079,7 +2844,7 @@ namespace TOB
 		u8 status;
 		*/
 
-		out.WriteUInt64(emu->guild_id);
+		out.WriteUInt64(ServerToTOBGuildID(emu->guild_id)); // 0 = no guild on ToB
 		out.WriteUInt8(0);
 		out.WriteUInt8(5);
 
@@ -2298,7 +3063,8 @@ namespace TOB
 		*/
 
 		out.WriteUInt32(6);
-		out.WriteUInt32(0);
+		// slot 0 = the generic '---' theme; ToB's points-merchant buy check reads "earned" from it
+		out.WriteUInt32(emu->ldon_points_available);
 		out.WriteUInt32(emu->ldon_points_guk);
 		out.WriteUInt32(emu->ldon_points_mir);
 		out.WriteUInt32(emu->ldon_points_mmc);
@@ -2864,6 +3630,2678 @@ namespace TOB
 		FINISH_ENCODE();
 	}
 
+	// ---- guild ----
+// -----------------------------------------------------------------------------------------------------
+
+
+// -----------------------------------------------------------------------------------------------------
+	ENCODE(OP_GuildMemberList)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		if (in->size < sizeof(Internal_GuildMembers_Struct)) {
+			delete in;
+			return;
+		}
+
+		const uint8 *begin = in->pBuffer;
+		auto emu = reinterpret_cast<const Internal_GuildMembers_Struct *>(begin);
+
+		uint32 count = emu->count;
+		size_t fixed = sizeof(Internal_GuildMembers_Struct) + static_cast<size_t>(count) * sizeof(Internal_GuildMemberEntry_Struct);
+		if (count > TOB_GUILD_MEMBER_LIST_MAX || fixed > in->size) {
+			LogNetcode("TOB::ENCODE(OP_GuildMemberList) inconsistent count [{}] for size [{}]", count, in->size);
+			count = 0;
+			fixed = sizeof(Internal_GuildMembers_Struct);
+		}
+
+		// strings follow the fixed entries: count names, then count notes (each NUL-terminated)
+		in->SetReadPosition(static_cast<uint32>(fixed));
+		std::vector<std::string> names(count);
+		for (auto &name : names) {
+			in->ReadString(name, TOB_NAME_MAX_CHARS);
+		}
+		std::vector<std::string> notes(count);
+		for (auto &note : notes) {
+			in->ReadString(note, TOB_NOTE_MAX_CHARS);
+		}
+
+		SerializeBuffer buffer;
+		// the client reads (and discards) a length-prefixed name first (the leading player name)
+		buffer.WriteLengthString(std::string(emu->player_name, strnlen(emu->player_name, sizeof(emu->player_name))));
+
+		buffer.WriteUInt64(ServerToTOBGuildID(emu->guild_id));
+		buffer.WriteUInt8(0);         // unknown
+		buffer.WriteUInt8(0);         // auto-evict flag
+		buffer.WriteUInt32(count);
+
+		const Internal_GuildMemberEntry_Struct *e = emu->member;
+		for (uint32 i = 0; i < count; ++i, ++e) {
+			buffer.WriteLengthString(names[i]);
+			buffer.WriteUInt32(e->level);
+			buffer.WriteUInt32(e->banker);
+			buffer.WriteUInt32(e->class_);
+			buffer.WriteUInt32(e->rank);
+			buffer.WriteUInt32(e->time_last_on);
+			buffer.WriteUInt8(e->tribute_enable ? 1 : 0);
+			buffer.WriteUInt8(0);                       // unknown
+			buffer.WriteUInt32(e->total_tribute);
+			buffer.WriteUInt32(e->last_tribute);
+			buffer.WriteUInt8(1);                       // unknown, always 1
+			buffer.WriteLengthString(notes[i]);
+			buffer.WriteUInt32(e->zone_id);             // non-zero = shown online
+			buffer.WriteUInt8(1);                       // guild_show, always 1
+			buffer.WriteUInt8(0);                       // offline mode
+		}
+
+		auto outapp = new EQApplicationPacket(OP_GuildMemberList, buffer.size());
+		outapp->WriteData(buffer.buffer(), buffer.size());
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+
+	ENCODE(OP_GuildMemberAdd)
+	{
+		ENCODE_LENGTH_EXACT(GuildMemberAdd_Struct);
+		SETUP_DIRECT_ENCODE(GuildMemberAdd_Struct, structs::GuildMemberAdd_Struct);
+
+		eq->guild_id   = ServerToTOBGuildID(emu->guild_id);
+		eq->level      = emu->level;
+		eq->class_     = emu->class_;
+		eq->rank       = emu->rank_;
+		eq->guild_show = emu->guild_show ? 1 : 0;
+		eq->zone_id    = emu->zone_id;
+		eq->last_on    = emu->last_on;
+		TOBCopyStr(eq->player_name, emu->player_name);
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_GuildMemberLevel)
+	{
+		// ToB also overwrites the member's class with this packet, so the zone appends a uint32 class
+		// after GuildMemberLevel_Struct for ToB clients (EntityList::SendGuildMemberLevel)
+		EQApplicationPacket *in = *p;
+		if (in->size != sizeof(GuildMemberLevel_Struct) + sizeof(uint32)) {
+			LogNetcode("Wrong size on outbound [{}] (GuildMemberLevel_Struct + class): Got [{}], expected [{}]",
+				opcodes->EmuToName(in->GetOpcode()), in->size, sizeof(GuildMemberLevel_Struct) + sizeof(uint32));
+			delete in;
+			*p = nullptr;
+			return;
+		}
+		uint32 class_ = 0;
+		memcpy(&class_, in->pBuffer + sizeof(GuildMemberLevel_Struct), sizeof(uint32));
+
+		SETUP_DIRECT_ENCODE(GuildMemberLevel_Struct, structs::GuildMemberLevel_Struct);
+		eq->guild_id = ServerToTOBGuildID(emu->guild_id);
+		TOBCopyStr(eq->player_name, emu->player_name);
+		eq->level  = emu->level;
+		eq->class_ = class_;
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_GuildMemberRankAltBanker)
+	{
+		ENCODE_LENGTH_EXACT(GuildMemberRank_Struct);
+		SETUP_DIRECT_ENCODE(GuildMemberRank_Struct, structs::GuildMemberRank_Struct);
+
+		eq->guild_id   = ServerToTOBGuildID(emu->guild_id);
+		eq->rank       = emu->rank_;
+		TOBCopyStr(eq->player_name, emu->player_name);
+		eq->alt_banker = emu->alt_banker;
+		eq->guild_show = static_cast<uint8>(emu->offline);   // emu offline flag, passed through
+		eq->self_perm_flag = 0;
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_SetGuildRank)
+	{
+		ENCODE_LENGTH_EXACT(GuildSetRank_Struct);
+		SETUP_DIRECT_ENCODE(GuildSetRank_Struct, structs::GuildMemberRank_Struct);
+
+		eq->guild_id   = ServerToTOBGuildID(emu->Unknown00);  // the emu struct carries the guild id in Unknown00
+		eq->rank       = emu->rank;
+		TOBCopyStr(eq->player_name, emu->member_name);
+		eq->alt_banker = emu->banker;
+		eq->guild_show = 1;                                  // always 1
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_GuildMemberPublicNote)
+	{
+		ENCODE_LENGTH_EXACT(GuildMemberPublicNote_Struct);
+		SETUP_DIRECT_ENCODE(GuildMemberPublicNote_Struct, structs::GuildMemberPublicNote_Struct);
+
+		eq->guild_id = ServerToTOBGuildID(emu->guild_id);
+		TOBCopyStr(eq->player_name, emu->player_name);
+		TOBCopyStr(eq->public_note, emu->public_note);       // client strcpy's into 0x100: keep terminated
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_GuildMemberRename)
+	{
+		ENCODE_LENGTH_EXACT(GuildRenameMember_Struct);
+		SETUP_DIRECT_ENCODE(GuildRenameMember_Struct, structs::GuildRenameMember_Struct);
+
+		eq->guild_id = ServerToTOBGuildID(emu->guild_id);
+		TOBCopyStr(eq->player_name, emu->player_name);
+		TOBCopyStr(eq->new_player_name, emu->new_player_name);
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_GuildMemberDelete)
+	{
+		ENCODE_LENGTH_EXACT(GuildMemberDelete_Struct);
+		SETUP_DIRECT_ENCODE(GuildMemberDelete_Struct, structs::GuildMemberDelete_Struct);
+
+		eq->guild_id = ServerToTOBGuildID(emu->guild_id);
+		TOBCopyStr(eq->player_name, emu->player_name);
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_GuildMemberDetails)
+	{
+		ENCODE_LENGTH_EXACT(GuildMemberDetails_Struct);
+		SETUP_DIRECT_ENCODE(GuildMemberDetails_Struct, structs::GuildMemberDetails_Struct);
+
+		eq->guild_id = ServerToTOBGuildID(emu->guild_id);
+		TOBCopyStr(eq->player_name, emu->player_name);
+		eq->zone_id      = emu->zone_id;
+		eq->last_on      = emu->last_on;
+		eq->offline_mode = emu->offline_mode;
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_GuildMemberUpdate)
+	{
+		ENCODE_LENGTH_EXACT(GuildMemberUpdate_Struct);
+		SETUP_DIRECT_ENCODE(GuildMemberUpdate_Struct, structs::GuildMemberDetails_Struct);
+
+		eq->guild_id = ServerToTOBGuildID(emu->GuildID);
+		TOBCopyStr(eq->player_name, emu->MemberName);
+		eq->zone_id      = emu->ZoneID;
+		eq->last_on      = emu->LastSeen;
+		eq->offline_mode = 0;                                // always 0
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_GuildRenameGuild)
+	{
+		ENCODE_LENGTH_EXACT(GuildRenameGuild_Struct);
+		SETUP_DIRECT_ENCODE(GuildRenameGuild_Struct, structs::GuildRenameGuild_Struct);
+
+		eq->guild_id = ServerToTOBGuildID(emu->guild_id);
+		TOBCopyStr(eq->new_guild_name, emu->new_guild_name); // client strcpy's: keep terminated
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_GuildDeleteGuild)
+	{
+		ENCODE_LENGTH_EXACT(GuildDelete_Struct);
+		SETUP_DIRECT_ENCODE(GuildDelete_Struct, structs::GuildDelete_Struct);
+
+		eq->guild_id = ServerToTOBGuildID(emu->guild_id);
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_GuildsList)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		GuildsListMessaging_Struct glms{};
+		try {
+			EQ::Util::MemoryStreamReader ss(reinterpret_cast<char *>(in->pBuffer), in->size);
+			cereal::BinaryInputArchive ar(ss);
+			ar(glms);
+		}
+		catch (const std::exception &ex) {
+			LogNetcode("TOB::ENCODE(OP_GuildsList) bad emu packet: {}", ex.what());
+			delete in;
+			return;
+		}
+
+		uint32 n = 0;
+		for (auto const &g : glms.guild_detail) {
+			if (g.guild_id != 0 && g.guild_id != TOB_SERVER_GUILD_NONE) {
+				++n;
+			}
+		}
+
+		SerializeBuffer buffer;
+		buffer.WriteUInt32(0); // header string length, empty
+		buffer.WriteUInt32(n);
+		for (auto const &g : glms.guild_detail) {
+			if (g.guild_id == 0 || g.guild_id == TOB_SERVER_GUILD_NONE) {
+				continue;
+			}
+			buffer.WriteUInt64(g.guild_id);
+			// keep names short enough that they stay terminated in the client's buffer
+			buffer.WriteString(g.guild_name.substr(0, TOB_GUILD_NAME_MAX_CHARS));
+		}
+
+		auto outapp = new EQApplicationPacket(OP_GuildsList, buffer.size());
+		outapp->WriteData(buffer.buffer(), buffer.size());
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+
+	ENCODE(OP_GuildMOTD)
+	{
+		ENCODE_LENGTH_ATLEAST(GuildMOTD_Struct);
+		SETUP_DIRECT_ENCODE(GuildMOTD_Struct, structs::GuildMOTD_Struct);
+
+		eq->guild_id = ServerToTOBGuildID(emu->unknown0);
+		TOBCopyStr(eq->name, emu->name);
+		TOBCopyStr(eq->setby_name, emu->setby_name);
+		eq->unknown136 = emu->unknown132;
+		TOBCopyStr(eq->motd, emu->motd);
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_GetGuildMOTDReply) { ENCODE_FORWARD(OP_GuildMOTD); }
+
+	ENCODE(OP_GuildInvite)
+	{
+		ENCODE_LENGTH_EXACT(GuildCommand_Struct);
+		SETUP_DIRECT_ENCODE(GuildCommand_Struct, structs::GuildInvite_Struct);
+
+		TOBCopyStr(eq->othername, emu->othername);
+		TOBCopyStr(eq->myname, emu->myname);
+		eq->guild_id       = (emu->guildeqid == EMU_GUILD_NONE_U16) ? 0 : ServerToTOBGuildID(emu->guildeqid);
+		eq->my_rank        = 0;
+		eq->rank           = (emu->officer >= TOB_GUILD_RANK_MIN && emu->officer <= TOB_GUILD_RANK_MAX) ? emu->officer : TOB_GUILD_RANK_MAX;
+		eq->use_guild_name = 0;                                                        // client resolves the name from guild_id
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_GuildInviteAccept)
+	{
+		ENCODE_LENGTH_EXACT(GuildInviteAccept_Struct);
+		SETUP_DIRECT_ENCODE(GuildInviteAccept_Struct, structs::GuildInviteAccept_Struct);
+
+		TOBCopyStr(eq->inviter, emu->inviter);
+		TOBCopyStr(eq->new_member, emu->new_member);
+		eq->response = emu->response;
+		eq->guild_id = ServerToTOBGuildID(emu->guild_id);
+		eq->action   = (emu->response >= EMU_GUILD_INVITE_DECLINE_RESPONSE) ? TOB_GUILD_INVITE_DECLINE_ACTION : TOB_GUILD_INVITE_ACCEPT_ACTION;
+
+		FINISH_ENCODE();
+	}
+
+	// Writes structs::GuildUpdateHeader_Struct (unknown12 is always zero). name may be null (sent as all zeros);
+	// otherwise the first sizeof(name) - 1 bytes are copied as they are and the last byte is forced to NUL.
+	static void TOBWriteGuildUpdateHeader(SerializeBuffer &buffer, uint32 action, uint32 unknown4, uint32 unknown8,
+		const char *name, uint64 guild_id)
+	{
+		buffer.WriteUInt32(action);
+		buffer.WriteUInt32(unknown4);
+		buffer.WriteUInt32(unknown8);
+		buffer.WriteUInt32(0);
+		constexpr size_t name_size = sizeof(structs::GuildUpdateHeader_Struct::name);
+		if (name) {
+			TOBWriteBytes(buffer, name, name_size - 1);
+			buffer.WriteUInt8(0);
+		}
+		else {
+			TOBWriteZeros(buffer, name_size);
+		}
+		buffer.WriteUInt64(guild_id);
+	}
+
+	// Layout of the emu GuildUpdate packet header. The emu side has no struct for the part every action shares.
+	static constexpr uint32 EMU_GUILD_UPDATE_ACTION_OFFSET   = 0x00;
+	static constexpr uint32 EMU_GUILD_UPDATE_UNKNOWN4_OFFSET = 0x04;
+	static constexpr uint32 EMU_GUILD_UPDATE_UNKNOWN8_OFFSET = 0x08;
+	static constexpr uint32 EMU_GUILD_UPDATE_NAME_OFFSET     = 0x0c;
+	static constexpr uint32 EMU_GUILD_UPDATE_GUILD_ID_OFFSET = 0x4c;
+	static constexpr uint32 EMU_GUILD_UPDATE_HEADER_SIZE     = 0x50; // the payload starts here
+
+	// OP_GuildUpdate actions. URL and channel match the server's GuildInformationActions; ToB drops one entry from
+	// the middle of that list, so rank names (server: GuildUpdateRanks) and permissions (server:
+	// GuildUpdatePermissions) are numbered one lower on the wire.
+	enum TOBGuildUpdateAction : uint32 {
+		TOBGuildUpdateRankNames   = 3,
+		TOBGuildUpdatePermissions = 4,
+	};
+
+	// GuildUpdate: ToB inserts 4 bytes before the name (0x0c -> 0x10), widens the guild id to u64
+	// (0x4c u32 -> 0x50 u64), so the payload moves 0x50 -> 0x58 (+8).
+	// Action numbers 4 (rank names) and 5 (permissions) become 3 and 4.
+	ENCODE(OP_GuildUpdate)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		constexpr uint32 EMU_HDR = EMU_GUILD_UPDATE_HEADER_SIZE;
+		constexpr uint32 TOB_HDR = sizeof(structs::GuildUpdateHeader_Struct); // 0x58
+		if (in->size < EMU_HDR) {
+			delete in;
+			return;
+		}
+
+		const uint8 *src = in->pBuffer;
+		uint32 action = 0, u4 = 0, u8_ = 0, gid = 0;
+		memcpy(&action, src + EMU_GUILD_UPDATE_ACTION_OFFSET,   sizeof(action));
+		memcpy(&u4,     src + EMU_GUILD_UPDATE_UNKNOWN4_OFFSET, sizeof(u4));
+		memcpy(&u8_,    src + EMU_GUILD_UPDATE_UNKNOWN8_OFFSET, sizeof(u8_));
+		memcpy(&gid,    src + EMU_GUILD_UPDATE_GUILD_ID_OFFSET, sizeof(gid));
+
+		// Actions 0/1 are the guild URL / channel (GuildUpdateURLAndChannel_Struct, text at 0x50). Their
+		// ToB layout is unmapped and sending them crashed the client at zone-in, so drop them.
+		// The ToB guild window is NULL from character select until the first zone-in finishes, and the
+		// URL/channel handlers dereference it unchecked, so only forward replies to the window-open
+		// request (OP_GuildOpenGuildWindow), which the zone marks with WindowOpen.
+		if (action == GuildUpdateURL || action == GuildUpdateChannel) {
+			if (in->size < sizeof(GuildUpdateURLAndChannel_Struct) ||
+				reinterpret_cast<GuildUpdateURLAndChannel_Struct *>(in->pBuffer)->WindowOpen == 0) {
+				delete in;
+				return;
+			}
+			auto uc = reinterpret_cast<GuildUpdateURLAndChannel_Struct *>(in->pBuffer);
+			const size_t max_text = (action == GuildUpdateURL) ? TOB_GUILD_URL_MAX_CHARS : TOB_GUILD_CHANNEL_MAX_CHARS;
+			const size_t text_len = std::min(strnlen(uc->Text, sizeof(uc->Text)), max_text);
+			SerializeBuffer buffer;
+			TOBWriteGuildUpdateHeader(buffer, action, 0, 0, nullptr, 0);
+			TOBWriteBytes(buffer, uc->Text, text_len);
+			TOBWriteZeros(buffer, TOB_GUILD_URL_FIELD_SIZE - text_len); // text field is zero padded to its full width
+			auto outapp = new EQApplicationPacket(OP_GuildUpdate, std::move(buffer));
+			dest->FastQueuePacket(&outapp, ack_req);
+			delete in;
+			return;
+		}
+
+		uint32 tob_action = action;
+		if (action == GuildUpdateRanks)            { tob_action = TOBGuildUpdateRankNames; }
+		else if (action == GuildUpdatePermissions) { tob_action = TOBGuildUpdatePermissions; }
+
+		const uint32 payload = in->size - EMU_HDR;
+		SerializeBuffer buffer;
+		TOBWriteGuildUpdateHeader(buffer, tob_action, u4, u8_, reinterpret_cast<const char *>(src + EMU_GUILD_UPDATE_NAME_OFFSET), ServerToTOBGuildID(gid));
+		TOBWriteBytes(buffer, src + EMU_HDR, payload);
+
+		auto outapp = new EQApplicationPacket(OP_GuildUpdate, std::move(buffer));
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+
+
+	// OP_Emote 0x43cb, S2C: u32 type; char message[]
+	ENCODE(OP_Emote)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		if (in->size < sizeof(uint32)) { // emu packet too small; drop
+			delete in;
+			return;
+		}
+
+		Emote_Struct *emu = (Emote_Struct *)in->pBuffer;
+		size_t emu_msg_cap = std::min<size_t>(sizeof(emu->message), in->size - sizeof(uint32));
+		std::string old_message(emu->message, strnlen(emu->message, emu_msg_cap));
+		std::string new_message;
+		ServerToTOBConvertLinks(new_message, old_message);
+		if (new_message.length() > TOB_TEXT_MAX_CHARS)
+			new_message.resize(TOB_TEXT_MAX_CHARS);
+
+		SerializeBuffer buffer;
+		buffer.WriteUInt32(emu->type);
+		buffer.WriteString(new_message);
+		auto outapp = new EQApplicationPacket(OP_Emote, std::move(buffer));
+
+		delete in;
+		dest->FastQueuePacket(&outapp, ack_req);
+	}
+
+	// OP_InspectRequest 0x6ea6: server -> target client forward (pre-SoF targets only)
+	ENCODE(OP_InspectRequest)
+	{
+		ENCODE_LENGTH_EXACT(Inspect_Struct);
+		SETUP_DIRECT_ENCODE(Inspect_Struct, structs::Inspect_Struct);
+		OUT(TargetID);
+		OUT(PlayerID);
+		FINISH_ENCODE();
+	}
+
+	// OP_GMLastName 0x00a0, S2C (surname refresh for other clients): same 195-byte layout as the C2S packet
+	ENCODE(OP_GMLastName)
+	{
+		ENCODE_LENGTH_EXACT(GMLastName_Struct);
+		SETUP_DIRECT_ENCODE(GMLastName_Struct, structs::GMLastName_Struct);
+		strn0cpy(eq->name, emu->name, sizeof(eq->name));
+		strn0cpy(eq->gmname, emu->gmname, sizeof(eq->gmname));
+		strn0cpy(eq->lastname, emu->lastname, sizeof(eq->lastname));
+		// emu unknown[] is uint16 (1,1,1,1); a byte copy sent 01 00 01 and the name never refreshed
+		eq->unknown192[0] = 1;
+		eq->unknown192[1] = 1;
+		eq->unknown192[2] = 1;
+		FINISH_ENCODE();
+	}
+
+	// ---- raid + task window ----
+
+	// String from a fixed-size emu char array; never reads past the array, truncated to max_len chars.
+	static inline std::string TOBFixedStr(const char *s, size_t cap, size_t max_len)
+	{
+		return std::string(s, std::min(strnlen(s, cap), max_len));
+	}
+
+	// ToB raid stream header:
+	//   u32 action; cstr player_name; u32 unknown1 (raid id); cstr leader_name; u32 (new, unused); u32 parameter
+	static inline void TOBWriteRaidHeader(SerializeBuffer &buf, uint32 action, const std::string &player_name,
+		uint32 unknown1, const std::string &leader_name, uint32 parameter)
+	{
+		buf.WriteUInt32(action);
+		buf.WriteString(player_name);   // the client keeps at most TOB_NAME_MAX_CHARS
+		buf.WriteUInt32(unknown1);
+		buf.WriteString(leader_name);   // the name the sub-action acts on
+		buf.WriteUInt32(0);             // new in ToB, not read by the handled actions
+		buf.WriteUInt32(parameter);     // parameter (group, eqstr id, loot type, flag)
+	}
+
+	// Raid delegate ability types. The server numbers them 3 (main assist) and 4 (main marker).
+	enum TOBDelegateType : uint32 {
+		EmuDelegateMainAssist = 3,
+		EmuDelegateMainMarker = 4,
+		EmuDelegateMasterLooter = 100, // Advanced Loot master looter
+		TOBDelegateMainAssist = 1, // eqstr 0x2242/0x2248
+		TOBDelegateMasterLooter = 0,
+		TOBDelegateMainMarker = 2, // eqstr 0x2243/0x2249
+	};
+
+	static inline uint32 ServerToTOBDelegateType(uint32 t)
+	{
+		switch (t) {
+			case EmuDelegateMainAssist: return TOBDelegateMainAssist;
+			case EmuDelegateMainMarker: return TOBDelegateMainMarker;
+			case EmuDelegateMasterLooter: return TOBDelegateMasterLooter;
+			default: return TOB_INVALID_ID; // emu type 5 has no ToB case; ToB has no other types
+		}
+	}
+
+	static inline uint32 TOBToServerDelegateType(uint32 t)
+	{
+		switch (t) {
+			case TOBDelegateMasterLooter: return EmuDelegateMasterLooter;
+			case TOBDelegateMainAssist: return EmuDelegateMainAssist;
+			case TOBDelegateMainMarker: return EmuDelegateMainMarker;
+			default: return TOB_INVALID_ID; // unknown to the server; Handle_OP_RaidDelegateAbility ignores it
+		}
+	}
+
+	// ---- OP_RaidUpdate (S2C 0x294a) ----
+	// ToB parses this as a stream.
+	ENCODE(OP_RaidUpdate)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		const uint8 *emu_buf  = in->pBuffer;
+		const size_t emu_size = in->size;
+		if (emu_buf == nullptr || emu_size < sizeof(uint32)) {
+			delete in;
+			return;
+		}
+
+		uint32 action = 0;
+		memcpy(&action, emu_buf, sizeof(uint32));
+
+		SerializeBuffer buf;
+
+		switch (action) {
+			case raidNoRaid: {
+				// Zone-in sends ZoneInSendName_Struct (136 bytes, shorter than RaidGeneral_Struct).
+				// ToB case 10 reads nothing past the action, but only clears the raid silently when the client
+				// thinks it isn't in one; ToB keeps its raid across zones, so members were added again on every
+				// zone-in. Action 4 (no longer leader, parameter 0) drops the in-raid flag without a message.
+				SerializeBuffer pre;
+				TOBWriteRaidHeader(pre, raidNoLongerLeader, "", 0, "", 0);
+				auto pre_app = new EQApplicationPacket(OP_RaidUpdate, std::move(pre));
+				dest->FastQueuePacket(&pre_app, ack_req);
+				TOBWriteRaidHeader(buf, action, "", 0, "", 0);
+				break;
+			}
+			case raidSetLeaderAbilities: {
+				// ToB has no case 14 (the switch ignores it). Leadership AA would need ToB case 15's new
+				// layout, which is not mapped yet. Drop.
+				delete in;
+				return;
+			}
+			case raidMakeLeader: {
+				// emu RaidLeadershipUpdate_Struct: action@0, player_name@4, leader_name@68 (no unknown1).
+				// ToB case 30 reads 5 header fields and no leadership AA block.
+				if (emu_size < offsetof(RaidLeadershipUpdate_Struct, group)) {
+					LogNetcode("TOB OP_RaidUpdate action [{}] too short ([{}] bytes)", action, emu_size);
+					delete in;
+					return;
+				}
+				auto emu = (const RaidLeadershipUpdate_Struct *)emu_buf;
+				TOBWriteRaidHeader(buf, action,
+					TOBFixedStr(emu->player_name, sizeof(emu->player_name), TOB_NAME_MAX_CHARS), 0,
+					TOBFixedStr(emu->leader_name, sizeof(emu->leader_name), TOB_NAME_MAX_CHARS), 0);
+				break;
+			}
+			case raidAdd: {
+				if (emu_size < sizeof(RaidAddMember_Struct)) {
+					LogNetcode("TOB OP_RaidUpdate raidAdd too short ([{}] bytes)", emu_size);
+					delete in;
+					return;
+				}
+				auto emu = (const RaidAddMember_Struct *)emu_buf;
+				TOBWriteRaidHeader(buf, action,
+					TOBFixedStr(emu->raidGen.player_name, sizeof(emu->raidGen.player_name), TOB_NAME_MAX_CHARS),
+					emu->raidGen.unknown1,
+					TOBFixedStr(emu->raidGen.leader_name, sizeof(emu->raidGen.leader_name), TOB_NAME_MAX_CHARS),
+					emu->raidGen.parameter);                 // group number, 0xFFFFFFFF = ungrouped
+				buf.WriteUInt32(static_cast<uint32>(emu->_class)); // u32 in ToB
+				buf.WriteUInt8(emu->level);
+				buf.WriteUInt8(emu->isGroupLeader);
+				break;
+			}
+			case raidSetMotd: {
+				if (emu_size < sizeof(RaidMOTD_Struct)) {
+					LogNetcode("TOB OP_RaidUpdate raidSetMotd too short ([{}] bytes)", emu_size);
+					delete in;
+					return;
+				}
+				auto emu = (const RaidMOTD_Struct *)emu_buf;
+				TOBWriteRaidHeader(buf, action,
+					TOBFixedStr(emu->general.player_name, sizeof(emu->general.player_name), TOB_NAME_MAX_CHARS),
+					emu->general.unknown1,
+					TOBFixedStr(emu->general.leader_name, sizeof(emu->general.leader_name), TOB_NAME_MAX_CHARS),
+					emu->general.parameter);
+				buf.WriteString(TOBFixedStr(emu->motd, sizeof(emu->motd), TOB_TEXT_MAX_CHARS));
+				break;
+			}
+			case raidSetNote: {
+				if (emu_size < sizeof(RaidNote_Struct)) {
+					LogNetcode("TOB OP_RaidUpdate raidSetNote too short ([{}] bytes)", emu_size);
+					delete in;
+					return;
+				}
+				auto emu = (const RaidNote_Struct *)emu_buf;
+				TOBWriteRaidHeader(buf, action,
+					TOBFixedStr(emu->general.player_name, sizeof(emu->general.player_name), TOB_NAME_MAX_CHARS),
+					emu->general.unknown1,
+					TOBFixedStr(emu->general.leader_name, sizeof(emu->general.leader_name), TOB_NAME_MAX_CHARS),
+					emu->general.parameter);
+				buf.WriteString(TOBFixedStr(emu->note, sizeof(emu->note), TOB_NAME_MAX_CHARS)); // member note
+				break;
+			}
+			case raidCreate: {
+				// Normally arrives via OP_RaidJoin; handled here too in case a RaidGeneral_Struct is used.
+				if (emu_size < sizeof(RaidGeneral_Struct)) {
+					delete in;
+					return;
+				}
+				auto emu = (const RaidGeneral_Struct *)emu_buf;
+				// raid id must be >= 1, or the client ignores a later disband
+				TOBWriteRaidHeader(buf, action,
+					TOBFixedStr(emu->player_name, sizeof(emu->player_name), TOB_NAME_MAX_CHARS),
+					emu->unknown1 ? emu->unknown1 : 1,
+					TOBFixedStr(emu->leader_name, sizeof(emu->leader_name), TOB_NAME_MAX_CHARS), 0);
+				buf.WriteUInt8(0); // case 8 reads a trailing u8 in place of the 6th u32 (unused)
+				break;
+			}
+			default: {
+				// raidRemove2 (1), raidDisband (5), raidLock/Unlock (17/18), invite (20), loot (11/32),
+				// string id (12/19/31), group changes (3/13/16) ... all use the plain header.
+				if (emu_size < sizeof(RaidGeneral_Struct)) {
+					LogNetcode("TOB OP_RaidUpdate action [{}] too short ([{}] bytes)", action, emu_size);
+					delete in;
+					return;
+				}
+				auto emu = (const RaidGeneral_Struct *)emu_buf;
+				TOBWriteRaidHeader(buf, action,
+					TOBFixedStr(emu->player_name, sizeof(emu->player_name), TOB_NAME_MAX_CHARS),
+					emu->unknown1,
+					TOBFixedStr(emu->leader_name, sizeof(emu->leader_name), TOB_NAME_MAX_CHARS),
+					emu->parameter);
+				break;
+			}
+		}
+
+		auto outapp = new EQApplicationPacket(OP_RaidUpdate, buf.size());
+		outapp->WriteData(buf.buffer(), buf.size());
+		delete in;
+		dest->FastQueuePacket(&outapp, ack_req);
+	}
+
+	// ---- OP_RaidJoin (emu-only) -> OP_RaidUpdate action 8 (raidCreate) ----
+	// ToB case 8: u32 8; cstr; u32 raid_id; cstr; u32; u8.
+	ENCODE(OP_RaidJoin)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		if (in->pBuffer == nullptr || in->size < sizeof(RaidCreate_Struct)) {
+			LogNetcode("TOB OP_RaidJoin too short ([{}] bytes)", in->size);
+			delete in;
+			return;
+		}
+		auto emu = (const RaidCreate_Struct *)in->pBuffer;
+
+		// The emu packet has no raid id. Any value >= 1 works for the client (it is echoed back in C2S
+		// unknown1, which the server ignores); use the leader's entity id, or 1.
+		uint32 raid_id = emu->leader_id ? emu->leader_id : 1;
+		std::string leader = TOBFixedStr(emu->leader_name, sizeof(emu->leader_name), TOB_NAME_MAX_CHARS);
+
+		SerializeBuffer buf;
+		TOBWriteRaidHeader(buf, raidCreate, leader, raid_id, leader, RaidCommandAcceptInvite);
+		buf.WriteUInt8(0);
+
+		auto outapp = new EQApplicationPacket(OP_RaidUpdate, buf.size());
+		outapp->WriteData(buf.buffer(), buf.size());
+		delete in;
+		dest->FastQueuePacket(&outapp, ack_req);
+	}
+
+	// ---- OP_RaidDelegateAbility 0x8ea0 ----
+	ENCODE(OP_RaidDelegateAbility)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		if (in->pBuffer == nullptr || in->size < sizeof(DelegateAbility_Struct)) {
+			LogNetcode("TOB OP_RaidDelegateAbility too short ([{}] bytes)", in->size);
+			delete in;
+			return;
+		}
+		auto emu = (const DelegateAbility_Struct *)in->pBuffer;
+
+		uint32 tob_type = ServerToTOBDelegateType(emu->DelegateAbility);
+		if (tob_type == TOB_INVALID_ID) { // no ToB equivalent
+			delete in;
+			return;
+		}
+
+		auto outapp = new EQApplicationPacket(OP_RaidDelegateAbility, sizeof(structs::DelegateAbility_Struct));
+		auto eq = (structs::DelegateAbility_Struct *)outapp->pBuffer; // zeroed by the constructor
+		eq->DelegateAbility = tob_type;
+		eq->MemberNumber    = emu->MemberNumber;
+		eq->Action          = emu->Action;
+		eq->Unknown012      = emu->Unknown012;
+		eq->Unknown016      = emu->Unknown016;
+		// ToB compares the delegate id with the character id (PlayerProfile unique_player_id), not the spawn id;
+		// the zone puts the character id in Unknown024.
+		eq->EntityID        = emu->Unknown024 ? emu->Unknown024 : emu->EntityID;
+		eq->Unknown024      = emu->Unknown024;
+		strn0cpy(eq->Name, emu->Name, sizeof(eq->Name)); // both 64; strn0cpy always terminates
+
+		delete in;
+		dest->FastQueuePacket(&outapp, ack_req);
+	}
+
+	DECODE(OP_RaidDelegateAbility)
+	{
+		// C2S: u64 0; 7 x u32; cstr name. Variable length; the server wants exactly 92 bytes.
+		const unsigned char *buf  = __packet->pBuffer;
+		const size_t         size = __packet->size;
+		const size_t fixed = sizeof(uint64) + 7 * sizeof(uint32); // 36
+
+		if (buf == nullptr || size < fixed) {
+			LogNetcode("TOB OP_RaidDelegateAbility C2S too short ([{}] bytes)", size);
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+
+		uint32 f[7];
+		memcpy(f, buf + sizeof(uint64), sizeof(f));
+		const char *name     = (const char *)(buf + fixed);
+		size_t      name_len = strnlen(name, size - fixed); // tolerate a missing terminator
+
+		unsigned char *__eq_buffer = __packet->pBuffer;
+		__packet->size    = sizeof(DelegateAbility_Struct);
+		__packet->pBuffer = new unsigned char[__packet->size] {};
+		auto emu = (DelegateAbility_Struct *)__packet->pBuffer;
+		emu->DelegateAbility = TOBToServerDelegateType(f[0]);
+		emu->MemberNumber    = f[1];
+		emu->Action          = f[2];
+		emu->Unknown012      = f[3];
+		emu->Unknown016      = f[4];
+		emu->EntityID        = f[5];
+		emu->Unknown024      = f[6];
+		memcpy(emu->Name, name, std::min(name_len, sizeof(emu->Name) - 1)); // buffer is zeroed -> terminated
+
+		delete[] __eq_buffer;
+	}
+
+	// ---- OP_TaskHistoryReply 0x50a3 (S2C) ----
+	// Per activity: u32 type; cstr target; lenstr item_list; u32 goal; lenstr skill;
+	// lenstr spell; cstr zones; cstr (new); u32 dz_switch_id; cstr description; cstr zones2.
+	// Input is the emu format: u32 index; u32 count; count x { u32 type;
+	// cstr target; cstr item_list; u32 goal; u32; u32; u32 zone_id; u32; cstr desc }.
+	ENCODE(OP_TaskHistoryReply)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		in->SetReadPosition(0);
+		uint32 task_index = in->ReadUInt32();
+		uint32 count      = in->ReadUInt32();
+		if (in->ReadError() || task_index >= TOB_TASK_HISTORY_MAX_TASKS) { // client ignores a larger index
+			delete in;
+			return;
+		}
+		if (count > TOB_TASK_HISTORY_MAX_ACTIVITIES) { // client clamps the activity count
+			count = TOB_TASK_HISTORY_MAX_ACTIVITIES;
+		}
+
+		struct Act {
+			uint32      type = 0;
+			uint32      goal = 0;
+			std::string target, items, desc, zone;
+		};
+		std::vector<Act> acts;
+		acts.reserve(count);
+		for (uint32 i = 0; i < count; ++i) {
+			Act a;
+			a.type = in->ReadUInt32();
+			in->ReadString(a.target, TOB_NAME_MAX_CHARS);
+			in->ReadString(a.items, TOB_TEXT_MAX_CHARS);
+			a.goal = in->ReadUInt32();
+			in->ReadUInt32();
+			in->ReadUInt32();
+			uint32 zone_id = in->ReadUInt32();
+			in->ReadUInt32();
+			in->ReadString(a.desc, TOB_LINE_MAX_CHARS);
+			if (in->ReadError()) {
+				break;                // truncated emu packet: send the complete activities only
+			}
+			a.zone = std::to_string(zone_id);
+			acts.push_back(std::move(a));
+		}
+
+		SerializeBuffer buf;
+		buf.WriteUInt32(task_index);
+		buf.WriteUInt32(static_cast<uint32>(acts.size()));
+		for (const auto &a : acts) {
+			buf.WriteUInt32(a.type);
+			buf.WriteString(a.target);
+			buf.WriteLengthString(a.items);
+			buf.WriteUInt32(a.goal);
+			buf.WriteLengthString(std::string("-1")); // skill list ("-1" = none)
+			buf.WriteLengthString(std::string("-1")); // spell list
+			buf.WriteString(a.zone);                  // zones: cstr here (lenstr in OP_TaskActivity)
+			buf.WriteString("");                      // new ToB field, same as in OP_TaskActivity
+			buf.WriteUInt32(0);                       // dz_switch_id
+			buf.WriteString(a.desc);
+			buf.WriteString(a.zone);                  // zones2
+		}
+
+		auto outapp = new EQApplicationPacket(OP_TaskHistoryReply, buf.size());
+		outapp->WriteData(buf.buffer(), buf.size());
+		delete in;
+		dest->FastQueuePacket(&outapp, ack_req);
+	}
+
+	// ---- OP_CompletedTasks 0x7446 (S2C), with clamps ----
+	// Client loop: stops after 50 entries and copies each title with an
+	// UNBOUNDED byte loop into a 64-byte field, so both limits must be enforced here.
+	ENCODE(OP_CompletedTasks)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		in->SetReadPosition(0);
+		uint32 count = in->ReadUInt32();
+		if (in->ReadError()) {
+			delete in;
+			return;
+		}
+
+		struct Done {
+			uint32      task_id = 0;
+			uint32      completed_time = 0;
+			std::string title;
+		};
+		std::vector<Done> tasks;
+		tasks.reserve(std::min<uint32>(count, TOB_TASK_HISTORY_MAX_TASKS));
+		for (uint32 i = 0; i < count && tasks.size() < TOB_TASK_HISTORY_MAX_TASKS; ++i) {
+			Done t;
+			t.task_id = in->ReadUInt32();
+			in->ReadString(t.title, TOB_NAME_MAX_CHARS);
+			t.completed_time = in->ReadUInt32();
+			if (in->ReadError()) {
+				break;
+			}
+			tasks.push_back(std::move(t));
+		}
+
+		SerializeBuffer buf;
+		buf.WriteUInt32(static_cast<uint32>(tasks.size()));
+		for (const auto &t : tasks) {
+			buf.WriteUInt32(t.task_id);
+			buf.WriteString(t.title);
+			buf.WriteUInt64(static_cast<uint64>(t.completed_time));
+		}
+
+		auto outapp = new EQApplicationPacket(OP_CompletedTasks, buf.size());
+		outapp->WriteData(buf.buffer(), buf.size());
+		delete in;
+		dest->FastQueuePacket(&outapp, ack_req);
+	}
+
+
+	// ---- tribute + mercenaries ----
+	ENCODE(OP_TributeItem)
+	{
+		ENCODE_LENGTH_EXACT(TributeItem_Struct);
+		SETUP_DIRECT_ENCODE(TributeItem_Struct, structs::TributeItem_Struct);
+
+		eq->inventory_slot = ServerToTOBSlot(emu->slot);
+		OUT(quantity);
+		OUT(tribute_master_id);
+		OUT(tribute_points);
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_MercenaryTimer)
+	{
+		ENCODE_LENGTH_EXACT(MercenaryStatus_Struct);
+		SETUP_DIRECT_ENCODE(MercenaryStatus_Struct, structs::MercenaryStatus_Struct);
+
+		OUT(MercEntityID);
+		OUT(UpdateInterval);
+		OUT(MercUnk01);
+		// ToB inserted a state 5; the server's 5 ("normal"/no active merc) is 6 in ToB.
+		eq->MercState = (emu->MercState >= 5) ? emu->MercState + 1 : emu->MercState;
+		eq->SuspendedTime = emu->SuspendedTime;	// zero-extend unix time
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_MercenarySuspendResponse)
+	{
+		ENCODE_LENGTH_EXACT(SuspendMercenaryResponse_Struct);
+		SETUP_DIRECT_ENCODE(SuspendMercenaryResponse_Struct, structs::SuspendMercenaryResponse_Struct);
+
+		eq->SuspendTime = emu->SuspendTime;
+
+		FINISH_ENCODE();
+	}
+
+	// One merc list entry. Used by OP_MercenaryDataUpdate and OP_MercenaryDataResponse.
+	// 'name' may be nullptr (merchant list sends an empty name).
+	static void WriteTOBMercEntry(SerializeBuffer &buffer, uint32 merc_id, uint32 merc_type, uint32 merc_sub_type,
+		uint32 purchase_cost, uint32 upkeep_cost, uint32 status, uint32 alt_cost, uint32 alt_upkeep, uint32 alt_type,
+		uint8 unk01, int32 time_left, uint32 merchant_slot, uint32 unk02, uint32 stance_count, int32 unk03, uint8 unk04,
+		const char *name, size_t name_max, const MercenaryStance_Struct *stances)
+	{
+		buffer.WriteUInt32(merc_id);
+		buffer.WriteUInt32(merc_type);
+		buffer.WriteUInt32(merc_sub_type);
+		buffer.WriteUInt32(purchase_cost);
+		buffer.WriteUInt32(upkeep_cost);
+		buffer.WriteUInt8(static_cast<uint8>(status));	// u8 in ToB
+		buffer.WriteUInt32(alt_cost);
+		buffer.WriteUInt32(alt_upkeep);
+		buffer.WriteUInt32(alt_type);
+		buffer.WriteUInt8(unk01);
+		buffer.WriteInt32(time_left);
+		buffer.WriteUInt32(merchant_slot);
+		buffer.WriteUInt32(unk02);
+		buffer.WriteUInt32(stance_count);
+		buffer.WriteInt32(unk03);
+		buffer.WriteUInt8(unk04);
+		buffer.WriteUInt32(0);	// new in ToB, meaning unknown
+		if (name && name_max > 0) {
+			// never read past the emu array
+			std::string n(name, strnlen(name, std::min<size_t>(name_max, TOB_NAME_MAX_CHARS)));
+			buffer.WriteString(n);
+		}
+		else {
+			buffer.WriteUInt8(0);
+		}
+		for (uint32 k = 0; k < stance_count; ++k) {
+			buffer.WriteUInt32(stances[k].StanceIndex);
+			buffer.WriteUInt32(stances[k].Stance);
+		}
+	}
+
+	ENCODE(OP_MercenaryDataUpdate)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		SerializeBuffer buffer;
+
+		const size_t hdr = offsetof(MercenaryDataUpdate_Struct, MercData);
+		if (in->size > sizeof(NoMercenaryHired_Struct) && in->size >= hdr &&
+			((MercenaryDataUpdate_Struct *)in->pBuffer)->MercStatus >= 0) {
+			auto emu = (MercenaryDataUpdate_Struct *)in->pBuffer;
+			// only trust as many entries as the emu buffer really holds
+			uint32 max_by_size = (in->size - hdr) / sizeof(MercenaryData_Struct);
+			uint32 count = std::min<uint32>(std::min<uint32>(emu->MercCount, MAX_MERC), max_by_size);
+
+			buffer.WriteInt32(emu->MercStatus);	// index of the active merc, -1 = none
+			buffer.WriteUInt32(count);
+			for (uint32 r = 0; r < count; ++r) {
+				const auto &m = emu->MercData[r];
+				uint32 stances = std::min<uint32>(m.StanceCount, MAX_MERC_STANCES);
+				WriteTOBMercEntry(buffer, m.MercID, m.MercType, m.MercSubType, m.PurchaseCost, m.UpkeepCost,
+					m.Status, m.AltCurrencyCost, m.AltCurrencyUpkeep, m.AltCurrencyType, m.MercUnk01, m.TimeLeft,
+					m.MerchantSlot, m.MercUnk02, stances, m.MercUnk03, m.MercUnk04, m.MercName, sizeof(m.MercName),
+					m.Stances);
+			}
+			buffer.WriteUInt32(count ? emu->MercData[0].MercUnk05 : 1);	// trailing field (unlocked slots)
+			buffer.WriteUInt32(0xb); // new ToB trailing field; 0xb is the client's own default
+		}
+		else if (in->size >= sizeof(NoMercenaryHired_Struct)) {
+			// SendClearMercInfo: {-1, 0, 1} (or any MercStatus < 0)
+			auto emu = (NoMercenaryHired_Struct *)in->pBuffer;
+			buffer.WriteInt32(emu->MercStatus);
+			buffer.WriteUInt32(0);
+			buffer.WriteUInt32(emu->MercID);
+			buffer.WriteUInt32(0xb);
+		}
+		else {
+			LogNetcode("TOB::ENCODE(OP_MercenaryDataUpdate) short packet [{}]", in->size);
+			delete in;
+			return;
+		}
+
+		auto outapp = new EQApplicationPacket(OP_MercenaryDataUpdate, buffer.size());
+		outapp->WriteData(buffer.buffer(), buffer.size());
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+
+	ENCODE(OP_MercenaryDataResponse)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		if (in->size < offsetof(MercenaryMerchantList_Struct, Mercs)) {
+			LogNetcode("TOB::ENCODE(OP_MercenaryDataResponse) short packet [{}]", in->size);
+			delete in;
+			return;
+		}
+
+		auto emu = (MercenaryMerchantList_Struct *)in->pBuffer;
+		uint32 type_count = std::min<uint32>(emu->MercTypeCount, MAX_MERC_GRADES);
+		// only trust as many entries as the emu buffer really holds
+		uint32 max_by_size = (in->size - offsetof(MercenaryMerchantList_Struct, Mercs)) / sizeof(MercenaryListEntry_Struct);
+		uint32 count = std::min<uint32>(std::min<uint32>(emu->MercCount, MAX_MERC), max_by_size);
+
+		SerializeBuffer buffer;
+		buffer.WriteUInt32(type_count);
+		for (uint32 r = 0; r < type_count; ++r) {
+			buffer.WriteUInt32(emu->MercGrades[r]);
+		}
+		buffer.WriteUInt32(count);
+		for (uint32 r = 0; r < count; ++r) {
+			const auto &m = emu->Mercs[r];
+			uint32 stances = std::min<uint32>(m.StanceCount, MAX_MERC_STANCES);
+			WriteTOBMercEntry(buffer, m.MercID, m.MercType, m.MercSubType, m.PurchaseCost, m.UpkeepCost,
+				m.Status, m.AltCurrencyCost, m.AltCurrencyUpkeep, m.AltCurrencyType, m.MercUnk01, m.TimeLeft,
+				m.MerchantSlot, m.MercUnk02, stances, m.MercUnk03, m.MercUnk04, nullptr, 0, m.Stances);
+		}
+
+		auto outapp = new EQApplicationPacket(OP_MercenaryDataResponse, buffer.size());
+		outapp->WriteData(buffer.buffer(), buffer.size());
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+
+
+	// ---- DZ, inspect buffs, veteran rewards ----
+
+	ENCODE(OP_DzChooseZone)
+	{
+		EQApplicationPacket* in = *p;
+		*p = nullptr;
+
+		if (in->size < sizeof(DynamicZoneChooseZone_Struct)) {
+			delete in;
+			return;
+		}
+		auto emu = reinterpret_cast<DynamicZoneChooseZone_Struct*>(in->pBuffer);
+		uint32 max_count = (in->size - sizeof(DynamicZoneChooseZone_Struct)) / sizeof(DynamicZoneChooseZoneEntry_Struct);
+		uint32 count = std::min(emu->count, max_count);
+
+		SerializeBuffer buf;
+		buf.WriteUInt32(emu->client_id);
+		buf.WriteUInt32(count);
+		for (uint32 i = 0; i < count; ++i) {
+			const auto& c = emu->choices[i];
+			buf.WriteUInt16(c.dz_zone_id);       // u32 dz_id = zone | instance << 16
+			buf.WriteUInt16(c.dz_instance_id);
+			buf.WriteUInt32(c.unknown_id1);
+			buf.WriteUInt8(static_cast<uint8>(c.dz_type)); // ToB: u8
+			buf.WriteUInt32(c.unknown_id2);
+			buf.WriteString(std::string(c.description, strnlen(c.description, sizeof(c.description) - 1)));
+			buf.WriteString(std::string(c.leader_name, strnlen(c.leader_name, sizeof(c.leader_name) - 1)));
+		}
+
+		auto outapp = new EQApplicationPacket(OP_DzChooseZone, buf.size());
+		outapp->WriteData(buf.buffer(), buf.size());
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+
+	ENCODE(OP_DzExpeditionEndsWarning)
+	{
+		ENCODE_LENGTH_EXACT(ExpeditionExpireWarning);
+		SETUP_DIRECT_ENCODE(ExpeditionExpireWarning, structs::ExpeditionExpireWarning);
+
+		OUT(minutes_remaining);
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_DzExpeditionInfo)
+	{
+		ENCODE_LENGTH_EXACT(DynamicZoneInfo_Struct);
+		SETUP_DIRECT_ENCODE(DynamicZoneInfo_Struct, structs::DynamicZoneInfo_Struct);
+
+		OUT(client_id);
+		eq->assigned = emu->assigned ? 1 : 0;
+		OUT(max_players);
+		eq->unknown016 = 0;
+		strn0cpy(eq->dz_name, emu->dz_name, sizeof(eq->dz_name));
+		strn0cpy(eq->leader_name, emu->leader_name, sizeof(eq->leader_name));
+		// the client sprintf()s these with the name as the format string
+		std::replace(eq->dz_name, eq->dz_name + sizeof(eq->dz_name), '%', ' ');
+		std::replace(eq->leader_name, eq->leader_name + sizeof(eq->leader_name), '%', ' ');
+		eq->dz_type = 1; // expedition (emu struct has no type); lets the window auto-open like live
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_DzExpeditionInvite)
+	{
+		EQApplicationPacket* in = *p;
+		*p = nullptr;
+
+		if (in->size != sizeof(ExpeditionInvite_Struct)) {
+			LogNetcode("TOB::ENCODE(OP_DzExpeditionInvite) wrong size [{}]", in->size);
+			delete in;
+			return;
+		}
+		auto emu = reinterpret_cast<ExpeditionInvite_Struct*>(in->pBuffer);
+
+		SerializeBuffer buf;
+		buf.WriteUInt32(emu->client_id);
+		buf.WriteUInt32(emu->unknown004);
+		buf.WriteLengthString(std::string());   // replay-timer warning list (emu has none)
+		buf.WriteLengthString(std::string(emu->inviter_name, strnlen(emu->inviter_name, sizeof(emu->inviter_name))));
+		buf.WriteLengthString(std::string(emu->expedition_name, strnlen(emu->expedition_name, sizeof(emu->expedition_name))));
+		buf.WriteLengthString(std::string(emu->swap_name, strnlen(emu->swap_name, sizeof(emu->swap_name))));
+		buf.WriteUInt16(emu->dz_zone_id);       // echoed back at +8 of OP_DzExpeditionInviteResponse
+		buf.WriteUInt16(emu->dz_instance_id);
+		buf.WriteUInt8(emu->swapping);
+
+		auto outapp = new EQApplicationPacket(OP_DzExpeditionInvite, buf.size());
+		outapp->WriteData(buf.buffer(), buf.size());
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+
+	ENCODE(OP_DzExpeditionLockoutTimers)
+	{
+		EQApplicationPacket* in = *p;
+		*p = nullptr;
+
+		if (in->size < sizeof(ExpeditionLockoutTimers_Struct)) {
+			delete in;
+			return;
+		}
+		auto emu = reinterpret_cast<ExpeditionLockoutTimers_Struct*>(in->pBuffer);
+		uint32 max_count = (in->size - sizeof(ExpeditionLockoutTimers_Struct)) / sizeof(ExpeditionLockoutTimerEntry_Struct);
+		uint32 count = std::min(emu->count, max_count);
+
+		SerializeBuffer buf;
+		buf.WriteUInt32(emu->client_id);
+		if (count == 0) {
+			// The ToB window only clears its rows when the new list has at least one entry,
+			// so send one already-expired placeholder,
+			// which the client never draws.
+			buf.WriteUInt32(1);
+			buf.WriteLengthString(std::string());
+			buf.WriteUInt32(0);
+			buf.WriteInt32(-1);
+			buf.WriteLengthString(std::string());
+		}
+		else {
+			buf.WriteUInt32(count);
+		}
+		for (uint32 i = 0; i < count; ++i) {
+			const auto& t = emu->timers[i];
+			// ToB: u32-length-prefixed strings
+			buf.WriteLengthString(std::string(t.expedition_name, strnlen(t.expedition_name, TOB_LINE_MAX_CHARS)));
+			buf.WriteUInt32(t.seconds_remaining);
+			buf.WriteInt32(t.event_type);
+			buf.WriteLengthString(std::string(t.event_name, strnlen(t.event_name, TOB_NOTE_MAX_CHARS)));
+		}
+
+		auto outapp = new EQApplicationPacket(OP_DzExpeditionLockoutTimers, buf.size());
+		outapp->WriteData(buf.buffer(), buf.size());
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+
+	ENCODE(OP_DzMemberList)
+	{
+		EQApplicationPacket* in = *p;
+		*p = nullptr;
+
+		if (in->size < sizeof(DynamicZoneMemberList_Struct)) {
+			delete in;
+			return;
+		}
+		auto emu = reinterpret_cast<DynamicZoneMemberList_Struct*>(in->pBuffer);
+		uint32 max_count = (in->size - sizeof(DynamicZoneMemberList_Struct)) / sizeof(DynamicZoneMemberEntry_Struct);
+		uint32 count = std::min(emu->member_count, max_count);
+
+		SerializeBuffer buf;
+		buf.WriteUInt32(emu->client_id);
+		buf.WriteUInt32(count);
+		for (uint32 i = 0; i < count; ++i) {
+			const auto& m = emu->members[i];
+			buf.WriteString(std::string(m.name, strnlen(m.name, sizeof(m.name) - 1)));
+			buf.WriteUInt8(m.online_status);
+			buf.WriteUInt8(1); // "Flagged" column: flagged (members the server added passed its checks)
+			buf.WriteUInt8(1); // flag known (0 shows "Pending")
+		}
+
+		// keep the emu opcode so OP_DzMemberListStatus can forward here
+		auto outapp = new EQApplicationPacket(in->GetOpcode(), buf.size());
+		outapp->WriteData(buf.buffer(), buf.size());
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+
+	ENCODE(OP_DzMemberListStatus) { ENCODE_FORWARD(OP_DzMemberList); } // ToB merges by name; any count is fine
+
+	ENCODE(OP_DzMemberListName)
+	{
+		ENCODE_LENGTH_EXACT(DynamicZoneMemberListName_Struct);
+		SETUP_DIRECT_ENCODE(DynamicZoneMemberListName_Struct, structs::DynamicZoneMemberListName_Struct);
+
+		OUT(client_id);
+		eq->add_name = emu->add_name ? 1 : 0;
+		strn0cpy(eq->name, emu->name, sizeof(eq->name)); // the name field starts 4 bytes into the struct
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_InspectBuffs)
+	{
+		EQApplicationPacket* in = *p;
+		*p = nullptr;
+
+		if (in->size != sizeof(InspectBuffs_Struct)) {
+			LogNetcode("TOB::ENCODE(OP_InspectBuffs) wrong size [{}]", in->size);
+			delete in;
+			return;
+		}
+		auto emu = reinterpret_cast<InspectBuffs_Struct*>(in->pBuffer);
+		constexpr size_t slots = sizeof(emu->spell_id) / sizeof(emu->spell_id[0]);
+
+		uint32 count = 0;
+		for (size_t i = 0; i < slots; ++i) {
+			if (emu->spell_id[i] > 0) {
+				++count;
+			}
+		}
+
+		SerializeBuffer buf;
+		buf.WriteUInt32(count);
+		buf.WriteUInt32(0);  // target spawn id: 0 -> client uses its current target's name
+		buf.WriteUInt8(0);   // "cast by you" header flag
+		for (size_t i = 0; i < slots; ++i) {
+			if (emu->spell_id[i] <= 0) {
+				continue;
+			}
+			buf.WriteUInt32(emu->spell_id[i]);
+			buf.WriteInt32(emu->tics_remaining[i]); // client: seconds = ticks * 6, < 0 = permanent
+			buf.WriteUInt64(0);                     // caster id (0 = no " [caster]" suffix)
+		}
+
+		auto outapp = new EQApplicationPacket(OP_InspectBuffs, buf.size());
+		outapp->WriteData(buf.buffer(), buf.size());
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+
+	ENCODE(OP_VetClaimReply)
+	{
+		EQApplicationPacket* in = *p;
+		*p = nullptr;
+
+		if (in->size != sizeof(VeteranClaim)) {
+			LogNetcode("TOB::ENCODE(OP_VetClaimReply) wrong size [{}]", in->size);
+			delete in;
+			return;
+		}
+		auto emu = reinterpret_cast<VeteranClaim*>(in->pBuffer);
+
+		SerializeBuffer buf;
+		buf.WriteLengthString(std::string(emu->name, strnlen(emu->name, sizeof(emu->name))));
+		buf.WriteUInt32(emu->claim_id);
+		buf.WriteUInt8(0);
+		if (emu->action == 0) {          // success: let the client decrement this claim by one
+			buf.WriteUInt32(1);
+			buf.WriteUInt32(emu->claim_id);
+			buf.WriteUInt32(1);
+		} else {
+			buf.WriteUInt32(0);
+		}
+		buf.WriteUInt32(emu->action);    // 0 ok, 1/3 unavailable, 2 not allowed, 4 need free slot (ToB)
+
+		auto outapp = new EQApplicationPacket(OP_VetClaimReply, buf.size());
+		outapp->WriteData(buf.buffer(), buf.size());
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+
+	ENCODE(OP_VetRewardsAvaliable)
+	{
+		EQApplicationPacket* in = *p;
+		*p = nullptr;
+
+		constexpr uint32 tob_max_items = 15; // fixed array in the client entry, not clamped by the client
+		constexpr uint32 emu_max_items = sizeof(InternalVeteranReward::items) / sizeof(InternalVeteranRewardItem);
+
+		uint32 count = in->size / sizeof(InternalVeteranReward);
+		auto rewards = reinterpret_cast<InternalVeteranReward*>(in->pBuffer);
+
+		SerializeBuffer buf;
+		buf.WriteUInt32(count);
+		for (uint32 i = 0; i < count; ++i) {
+			const auto& r = rewards[i];
+			uint32 items = std::min({ r.claim_count, emu_max_items, tob_max_items });
+
+			buf.WriteUInt32(r.claim_id);
+			buf.WriteUInt32(r.number_available);
+			buf.WriteUInt32(items);
+			buf.WriteUInt8(1);  // enabled
+			buf.WriteUInt32(0); // new in ToB, purpose unknown
+			for (uint32 j = 0; j < items; ++j) {
+				const auto& it = r.items[j];
+				// written even when the name is empty, so the stream never goes out of step
+				buf.WriteLengthString(std::string(it.item_name, strnlen(it.item_name, sizeof(it.item_name) - 1)));
+				buf.WriteUInt32(it.item_id);
+				buf.WriteUInt32(it.charges);
+			}
+		}
+
+		auto outapp = new EQApplicationPacket(OP_VetRewardsAvaliable, buf.size());
+		outapp->WriteData(buf.buffer(), buf.size());
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+
+
+	// ---- alt currency, group make leader/follow2, guild bank, adventure merchant ----
+
+	// Zone to client: AdvLootCorpseItems_Struct followed by item_count AdvLootCorpseItem_Struct (see
+	// Corpse::SendAdvancedLootItems). The item links arrive in server format and are converted here.
+	ENCODE(OP_AdvLootCorpseItems)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		if (in->size < sizeof(AdvLootCorpseItems_Struct)) {
+			LogNetcode("[{}] Malformed OP_AdvLootCorpseItems ({} bytes), dropped", __FUNCTION__, in->size);
+			delete in;
+			return;
+		}
+
+		auto header = reinterpret_cast<const AdvLootCorpseItems_Struct *>(in->pBuffer);
+		const uint64 expected_size = sizeof(AdvLootCorpseItems_Struct) + uint64(header->item_count) * sizeof(AdvLootCorpseItem_Struct);
+		if (in->size != expected_size) {
+			LogNetcode("[{}] Malformed OP_AdvLootCorpseItems ({} bytes for {} items), dropped", __FUNCTION__, in->size, header->item_count);
+			delete in;
+			return;
+		}
+
+		auto items = reinterpret_cast<const AdvLootCorpseItem_Struct *>(in->pBuffer + sizeof(AdvLootCorpseItems_Struct));
+
+		SerializeBuffer buf;
+		buf.WriteUInt8(header->present);
+		buf.WriteUInt8(header->shared);
+		buf.WriteUInt32(header->unlock_seconds);
+		buf.WriteUInt32(header->corpse_id);
+		buf.WriteUInt32(header->item_count);
+		buf.WriteString(std::string(header->corpse_name, strnlen(header->corpse_name, sizeof(header->corpse_name))));
+
+		for (uint32 i = 0; i < header->item_count; ++i) {
+			const AdvLootCorpseItem_Struct &item = items[i];
+
+			structs::AdvLootItemTrailer_Struct trailer{};
+			trailer.unknown004 = structs::ADVLOOT_TRAILER_UNKNOWN004;
+			trailer.unknown008 = structs::ADVLOOT_TRAILER_UNKNOWN008;
+
+			std::string link_out;
+			ServerToTOBConvertLinks(link_out, std::string(item.item_link, strnlen(item.item_link, sizeof(item.item_link))), false);
+
+			buf.WriteUInt64(item.item_id);
+			buf.WriteUInt32(item.icon);
+			buf.WriteUInt32(item.shared_quantity);
+			buf.WriteUInt32(item.stack_size);
+			buf.WriteUInt8(0);
+			buf.WriteUInt32(0);
+			buf.WriteUInt32(item.personal_quantity);
+			buf.WriteString(std::string(item.item_name, strnlen(item.item_name, sizeof(item.item_name))));
+			buf.WriteUInt32(trailer.unknown000);
+			buf.WriteUInt32(trailer.unknown004);
+			buf.WriteUInt32(trailer.unknown008);
+			buf.WriteUInt32(trailer.unknown012);
+			buf.WriteUInt32(trailer.unknown016);
+			buf.WriteLengthString(link_out);
+		}
+
+		auto outapp = new EQApplicationPacket(OP_AdvLootCorpseItems, std::move(buf));
+		delete in;
+		dest->FastQueuePacket(&outapp, ack_req);
+	}
+
+	// OP_AdvLoot and OP_AdvLootMasterLooter, zone to client. The zone sends one AdvLoot*_Struct per subtype
+	// (eq_packet_structs.h); the wire layouts are written here.
+	static constexpr uint32 TOB_ADVLOOT_RESULT_ENTRY_COUNT = 1; // entries in a loot result; the client expects one
+	static constexpr uint32 TOB_ADVLOOT_ASK_CORPSE_COUNT   = 1; // corpses listed in an ask; the server asks per corpse
+	static constexpr uint8  TOB_ADVLOOT_COIN_RECEIVED      = 1; // the coin message is shown to the player
+
+	// the body when the packet is exactly one T, otherwise nullptr
+	template <typename T>
+	static const T *TOBAdvLootBody(const EQApplicationPacket *in)
+	{
+		return in->size == sizeof(T) ? reinterpret_cast<const T *>(in->pBuffer) : nullptr;
+	}
+
+	static std::string TOBAdvLootName(const char *name, size_t field_size)
+	{
+		return std::string(name, strnlen(name, field_size));
+	}
+
+	ENCODE(OP_AdvLoot)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		SerializeBuffer buf;
+		bool valid = in->size >= sizeof(uint16);
+		const uint16 subtype = valid ? in->ReadUInt16(0) : 0;
+
+		switch (subtype) {
+		case AdvLootClearPending: {
+			auto b = TOBAdvLootBody<AdvLootClearPending_Struct>(in);
+			if (!b) { valid = false; break; }
+			buf.WriteUInt16(b->subtype);
+			buf.WriteUInt32(b->corpse_id);
+			buf.WriteUInt64(b->item_id);
+			buf.WriteUInt32(0);
+			break;
+		}
+		case AdvLootCoin: {
+			auto b = TOBAdvLootBody<AdvLootCoin_Struct>(in);
+			if (!b) { valid = false; break; }
+			buf.WriteUInt16(b->subtype);
+			buf.WriteUInt8(b->split);
+			buf.WriteUInt64(b->copper);
+			buf.WriteUInt8(TOB_ADVLOOT_COIN_RECEIVED);
+			buf.WriteUInt32(0); // no bonus suffix
+			break;
+		}
+		case AdvLootLootResult: {
+			auto b = TOBAdvLootBody<AdvLootResult_Struct>(in);
+			if (!b) { valid = false; break; }
+			buf.WriteUInt16(b->subtype);
+			buf.WriteUInt16(b->result);
+			buf.WriteUInt32(TOB_ADVLOOT_RESULT_ENTRY_COUNT);
+			buf.WriteUInt32(b->sequence);
+			buf.WriteUInt8(0);
+			break;
+		}
+		case AdvLootGive: {
+			auto b = TOBAdvLootBody<AdvLootGiveNotice_Struct>(in);
+			if (!b) { valid = false; break; }
+			buf.WriteUInt16(b->subtype);
+			buf.WriteUInt32(b->transaction_id);
+			buf.WriteUInt32(b->corpse_id);
+			buf.WriteUInt64(b->item_id);
+			buf.WriteUInt16(b->quantity);
+			buf.WriteUInt8(b->leave);
+			buf.WriteString(TOBAdvLootName(b->player_name, sizeof(b->player_name)));
+			break;
+		}
+		case AdvLootAsk: {
+			auto b = TOBAdvLootBody<AdvLootAskNotice_Struct>(in);
+			if (!b) { valid = false; break; }
+			buf.WriteUInt16(b->subtype);
+			buf.WriteUInt32(b->transaction_id);
+			buf.WriteUInt64(b->item_id);
+			buf.WriteUInt32(b->state);
+			buf.WriteUInt8(0);
+			buf.WriteUInt32(b->time_left);
+			buf.WriteUInt32(TOB_ADVLOOT_ASK_CORPSE_COUNT);
+			buf.WriteUInt32(b->corpse_id);
+			buf.WriteUInt32(b->quantity);
+			break;
+		}
+		case AdvLootState: {
+			auto b = TOBAdvLootBody<AdvLootStateNotice_Struct>(in);
+			if (!b) { valid = false; break; }
+			buf.WriteUInt16(b->subtype);
+			buf.WriteUInt32(b->transaction_id);
+			buf.WriteUInt32(b->time_left);
+			buf.WriteUInt32(b->state);
+			buf.WriteUInt8(0);
+			break;
+		}
+		case AdvLootRollResult: {
+			if (in->size < sizeof(AdvLootRollResult_Struct)) { valid = false; break; }
+			auto b = reinterpret_cast<const AdvLootRollResult_Struct *>(in->pBuffer);
+			if (in->size != sizeof(AdvLootRollResult_Struct) + uint64(b->roller_count) * sizeof(AdvLootRoller_Struct)) {
+				valid = false;
+				break;
+			}
+			auto rollers = reinterpret_cast<const AdvLootRoller_Struct *>(in->pBuffer + sizeof(AdvLootRollResult_Struct));
+			buf.WriteUInt16(b->subtype);
+			buf.WriteUInt32(b->transaction_id);
+			buf.WriteUInt32(b->best_choice);
+			buf.WriteUInt8(0);
+			buf.WriteUInt16(b->roller_count);
+			for (uint16 i = 0; i < b->roller_count; ++i) {
+				buf.WriteUInt16(rollers[i].roll);
+				buf.WriteString(TOBAdvLootName(rollers[i].name, sizeof(rollers[i].name)));
+			}
+			break;
+		}
+		case AdvLootSync: {
+			auto b = TOBAdvLootBody<AdvLootSyncReply_Struct>(in);
+			if (!b) { valid = false; break; }
+			// no corpses, no transactions, no choices; the corpses follow one by one
+			buf.WriteUInt16(b->subtype);
+			buf.WriteUInt32(0);
+			buf.WriteString(TOBAdvLootName(b->master_looter_name, sizeof(b->master_looter_name)));
+			buf.WriteUInt32(0);
+			buf.WriteUInt8(0);
+			buf.WriteUInt8(0);
+			break;
+		}
+		default:
+			valid = false;
+			break;
+		}
+
+		if (!valid) {
+			LogNetcode("[{}] Malformed OP_AdvLoot subtype [{}] ({} bytes), dropped", __FUNCTION__, subtype, in->size);
+			delete in;
+			return;
+		}
+
+		auto outapp = new EQApplicationPacket(OP_AdvLoot, std::move(buf));
+		delete in;
+		dest->FastQueuePacket(&outapp, ack_req);
+	}
+
+	ENCODE(OP_AdvLootMasterLooter)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		auto b = TOBAdvLootBody<AdvLootMasterLooter_Struct>(in);
+		if (!b) {
+			LogNetcode("[{}] Malformed OP_AdvLootMasterLooter ({} bytes), dropped", __FUNCTION__, in->size);
+			delete in;
+			return;
+		}
+
+		SerializeBuffer buf;
+		buf.WriteUInt32(0);
+		buf.WriteString(TOBAdvLootName(b->name, sizeof(b->name)));
+
+		auto outapp = new EQApplicationPacket(OP_AdvLootMasterLooter, std::move(buf));
+		delete in;
+		dest->FastQueuePacket(&outapp, ack_req);
+	}
+
+	// Client to server: the layout depends on the subtype. A request too short for its subtype is invalidated;
+	// subtypes the server has no handler for are passed on with the fields zero.
+	DECODE(OP_AdvLoot)
+	{
+		DECODE_LENGTH_ATLEAST(structs::AdvLootSubtype_Struct);
+
+		const unsigned char *buf  = __packet->pBuffer;
+		const size_t         size = __packet->size;
+		const uint16 wire_subtype = reinterpret_cast<const structs::AdvLootSubtype_Struct *>(buf)->subtype;
+
+		AdvLootRequest_Struct request{};
+		bool valid = true;
+
+		switch (static_cast<structs::TOBAdvLootSubtype>(wire_subtype)) {
+		case structs::TOBAdvLootSubtype::Sync:
+			request.subtype = AdvLootSync;
+			break;
+		case structs::TOBAdvLootSubtype::Leave: {
+			valid = size >= sizeof(structs::AdvLootLeave_Struct);
+			if (valid) {
+				auto eq = reinterpret_cast<const structs::AdvLootLeave_Struct *>(buf);
+				request.subtype   = AdvLootLeave;
+				request.item_id   = static_cast<uint32>(eq->item_id); // the client sends 64 bits; item ids fit in 32
+				request.corpse_id = eq->corpse_id;
+				request.quantity  = eq->quantity;
+			}
+			break;
+		}
+		case structs::TOBAdvLootSubtype::Loot: {
+			valid = size >= sizeof(structs::AdvLootLoot_Struct);
+			if (valid) {
+				auto eq = reinterpret_cast<const structs::AdvLootLoot_Struct *>(buf);
+				request.subtype   = AdvLootLoot;
+				request.item_id   = static_cast<uint32>(eq->item_id);
+				request.corpse_id = eq->corpse_id;
+				request.quantity  = eq->quantity;
+				request.sequence  = eq->sequence;
+			}
+			break;
+		}
+		case structs::TOBAdvLootSubtype::Choice: {
+			valid = size >= sizeof(structs::AdvLootChoice_Struct);
+			if (valid) {
+				auto eq = reinterpret_cast<const structs::AdvLootChoice_Struct *>(buf);
+				request.subtype        = AdvLootChoice;
+				request.transaction_id = eq->transaction_id;
+				request.corpse_id      = eq->corpse_id;
+				request.item_id        = static_cast<uint32>(eq->item_id);
+				request.choice         = eq->choice;
+			}
+			break;
+		}
+		case structs::TOBAdvLootSubtype::Ask: {
+			valid = size >= sizeof(structs::AdvLootAsk_Struct);
+			if (valid) {
+				auto eq = reinterpret_cast<const structs::AdvLootAsk_Struct *>(buf);
+				request.subtype        = AdvLootAsk;
+				request.transaction_id = eq->transaction_id;
+				request.item_id        = static_cast<uint32>(eq->item_id);
+				request.state          = eq->state;
+				request.corpse_id      = eq->corpse_id;
+			}
+			break;
+		}
+		case structs::TOBAdvLootSubtype::Give: {
+			// the player name follows the fixed part
+			valid = size >= sizeof(structs::AdvLootGive_Struct);
+			if (valid) {
+				auto eq = reinterpret_cast<const structs::AdvLootGive_Struct *>(buf);
+				request.subtype        = AdvLootGive;
+				request.transaction_id = eq->transaction_id;
+				request.corpse_id      = eq->corpse_id;
+				request.item_id        = static_cast<uint32>(eq->item_id);
+				request.quantity       = eq->quantity;
+				request.leave          = eq->leave != 0 ? 1 : 0;
+
+				std::string player_name;
+				__packet->SetReadPosition(sizeof(structs::AdvLootGive_Struct));
+				__packet->ReadString(player_name, TOB_NAME_MAX_CHARS);
+				valid = !__packet->ReadError(); // an unterminated name is malformed
+				strn0cpy(request.player_name, player_name.c_str(), sizeof(request.player_name));
+			}
+			break;
+		}
+		case structs::TOBAdvLootSubtype::State: {
+			valid = size >= sizeof(structs::AdvLootState_Struct);
+			if (valid) {
+				auto eq = reinterpret_cast<const structs::AdvLootState_Struct *>(buf);
+				request.subtype        = AdvLootState;
+				request.transaction_id = eq->transaction_id;
+				request.state          = eq->state;
+			}
+			break;
+		}
+		case structs::TOBAdvLootSubtype::Roll: {
+			valid = size >= sizeof(structs::AdvLootRoll_Struct);
+			if (valid) {
+				auto eq = reinterpret_cast<const structs::AdvLootRoll_Struct *>(buf);
+				request.subtype        = AdvLootRoll;
+				request.transaction_id = eq->transaction_id;
+			}
+			break;
+		}
+		default:
+			request.subtype = wire_subtype;
+			break;
+		}
+
+		if (!valid) {
+			LogNetcode("TOB OP_AdvLoot subtype [{}] too short ([{}] bytes)", wire_subtype, size);
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+
+		delete[] __packet->pBuffer;
+		__packet->size    = sizeof(AdvLootRequest_Struct);
+		__packet->pBuffer = new unsigned char[__packet->size];
+		memcpy(__packet->pBuffer, &request, sizeof(request));
+	}
+
+	DECODE(OP_AdvLootMisc)
+	{
+		DECODE_LENGTH_ATLEAST(structs::AdvLootSubtype_Struct);
+
+		const unsigned char *buf  = __packet->pBuffer;
+		const size_t         size = __packet->size;
+		const uint16 wire_subtype = reinterpret_cast<const structs::AdvLootSubtype_Struct *>(buf)->subtype;
+
+		AdvLootMisc_Struct request{};
+
+		if (wire_subtype == static_cast<uint16>(structs::TOBAdvLootMiscSubtype::FreeGrab)) {
+			if (size < sizeof(structs::AdvLootMiscFreeGrab_Struct)) {
+				LogNetcode("TOB OP_AdvLootMisc free grab too short ([{}] bytes)", size);
+				__packet->SetOpcode(OP_Unknown);
+				return;
+			}
+
+			auto eq = reinterpret_cast<const structs::AdvLootMiscFreeGrab_Struct *>(buf);
+			request.subtype        = AdvLootMiscFreeGrab;
+			request.transaction_id = eq->transaction_id;
+			request.corpse_id      = eq->corpse_id;
+		}
+		else {
+			request.subtype = wire_subtype; // no handler on the server
+		}
+
+		delete[] __packet->pBuffer;
+		__packet->size    = sizeof(AdvLootMisc_Struct);
+		__packet->pBuffer = new unsigned char[__packet->size];
+		memcpy(__packet->pBuffer, &request, sizeof(request));
+	}
+
+	ENCODE(OP_AltCurrency)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		if (in->size < sizeof(uint32)) {
+			delete in;
+			return;
+		}
+
+		const uint32 action = *reinterpret_cast<uint32 *>(in->pBuffer);
+
+		if (action == AlternateCurrencyMode::Populate) {
+			if (in->size < sizeof(AltCurrencyPopulate_Struct)) {
+				delete in;
+				return;
+			}
+			auto *emu = reinterpret_cast<AltCurrencyPopulate_Struct *>(in->pBuffer);
+
+			// clamp the count to what is actually in the emu buffer
+			const uint32 max_entries = (in->size - sizeof(AltCurrencyPopulate_Struct)) / sizeof(AltCurrencyPopulateEntry_Struct);
+			const uint32 count       = std::min<uint32>(emu->count, max_entries);
+
+			SerializeBuffer buffer;
+			buffer.WriteUInt32(emu->opcode);
+			buffer.WriteUInt32(count);
+			for (uint32 i = 0; i < count; ++i) {
+				buffer.WriteUInt32(emu->entries[i].currency_number);
+				buffer.WriteUInt32(emu->entries[i].unknown00);
+				buffer.WriteUInt32(emu->entries[i].currency_number2);
+				buffer.WriteUInt32(emu->entries[i].item_id);
+				buffer.WriteUInt32(emu->entries[i].item_icon);
+				buffer.WriteUInt32(emu->entries[i].stack_size);
+				buffer.WriteUInt32(0);  // sort_order: new ToB field, meaning not confirmed
+				buffer.WriteUInt8((emu->entries[i].stack_size > 0) ? 1 : 0); // display
+			}
+			auto outapp = new EQApplicationPacket(OP_AltCurrency, std::move(buffer));
+			dest->FastQueuePacket(&outapp, ack_req);
+		}
+		else {
+			if (in->size < sizeof(AltCurrencyUpdate_Struct)) {
+				delete in;
+				return;
+			}
+			auto *emu   = reinterpret_cast<AltCurrencyUpdate_Struct *>(in->pBuffer);
+			auto outapp = new EQApplicationPacket(OP_AltCurrency, sizeof(structs::AltCurrencyUpdate_Struct));
+			auto *eq    = reinterpret_cast<structs::AltCurrencyUpdate_Struct *>(outapp->pBuffer);
+
+			eq->opcode = emu->opcode;
+			strn0cpy(eq->name, emu->name, sizeof(eq->name));
+			eq->currency_number = emu->currency_number;
+			eq->unknown072      = emu->unknown072;
+			eq->delta           = 0;            // server does not know the delta; message is suppressed below
+			eq->amount          = emu->amount;  // ToB offset 0x50
+			eq->show_message    = 0;            // 1 = client prints "You gained %delta %name" (eqstr 0x3426)
+			dest->FastQueuePacket(&outapp, ack_req);
+		}
+
+		delete in;
+	}
+
+	DECODE(OP_GroupMakeLeader)
+	{
+		DECODE_LENGTH_ATLEAST(structs::GroupMakeLeader_Struct);
+		SETUP_DIRECT_DECODE(GroupMakeLeader_Struct, structs::GroupMakeLeader_Struct);  // emu buffer is zeroed (456)
+
+		emu->Unknown000 = eq->unknown000;
+		strn0cpy(emu->CurrentLeader, eq->current_leader, sizeof(emu->CurrentLeader));
+		strn0cpy(emu->NewLeader, eq->new_leader, sizeof(emu->NewLeader));
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	// The client sends 0x4ddc (OP_GroupFollow) or 0x29d3 with the same 176-byte body.
+	// Uses the same decoder as OP_GroupFollow.
+	DECODE(OP_GroupFollow2) { DECODE_FORWARD(OP_GroupFollow); }
+
+	ENCODE(OP_AdventureMerchantSell)
+	{
+		ENCODE_LENGTH_EXACT(Adventure_Sell_Struct);
+		SETUP_DIRECT_ENCODE(Adventure_Sell_Struct, structs::Adventure_Sell_Struct);
+
+		eq->merchant_type  = 1;   // 1 = LDoN
+		OUT(npcid);
+		eq->inventory_slot = ServerToTOBTypelessSlot(emu->slot, EQ::invtype::typePossessions);
+		OUT(charges);
+		OUT(sell_price);
+
+		FINISH_ENCODE();
+	}
+
+	DECODE(OP_AdventureMerchantSell)
+	{
+		DECODE_LENGTH_EXACT(structs::Adventure_Sell_Struct);
+		SETUP_DIRECT_DECODE(Adventure_Sell_Struct, structs::Adventure_Sell_Struct);
+
+		IN(npcid);
+		emu->slot = TOBToServerTypelessSlot(eq->inventory_slot, invtype::typePossessions);
+		IN(charges);
+		IN(sell_price);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	// OP_GuildBank: the encoder only reads what the emu packet holds, and the decoder checks the size before reading the action.
+	ENCODE(OP_GuildBank)
+	{
+		auto in = *p;
+		*p = nullptr;
+
+		if (in->size < sizeof(uint32)) {
+			delete in;
+			return;
+		}
+
+		auto outapp = new EQApplicationPacket(OP_GuildBank, in->size + 4); // all of them are 4 bytes bigger
+
+		switch (in->ReadUInt32()) {
+		case EmuGuildBankAcknowledge:
+			if (in->size >= 8) {
+				outapp->WriteUInt32(TOBGuildBankAcknowledge);
+				outapp->WriteUInt32(in->ReadUInt32());
+				outapp->WriteUInt32(0);
+			}
+			break;
+		case EmuGuildBankDeposit: // ack
+			if (in->size >= 12) {
+				outapp->WriteUInt32(TOBGuildBankDeposit);
+				outapp->WriteUInt32(in->ReadUInt32());
+				outapp->WriteUInt32(0);
+				outapp->WriteUInt32(in->ReadUInt32());
+			}
+			break;
+		case EmuGuildBankItemUpdate: {
+			if (in->size < sizeof(GuildBankItemUpdate_Struct) ||
+			    outapp->size < sizeof(structs::GuildBankItemUpdate_Struct)) {
+				break;
+			}
+			auto emu = (GuildBankItemUpdate_Struct *)in->pBuffer;
+			auto eq  = (structs::GuildBankItemUpdate_Struct *)outapp->pBuffer;
+			eq->action = TOBGuildBankItemUpdate;
+			OUT(display);
+			OUT(slot_id);
+			OUT(area);
+			OUT(item_id);
+			OUT(icon_id);
+			OUT(quantity);
+			OUT(permissions);
+			OUT(allow_merge);
+			OUT(is_useable);
+			OUT_str(item_name);
+			OUT_str(donator);
+			OUT_str(who_for);
+			break;
+		}
+		default:
+			break;
+		}
+		delete in;
+		dest->FastQueuePacket(&outapp);
+	}
+
+	DECODE(OP_GuildBank)
+	{
+		if (__packet->size < sizeof(uint32)) {
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+		// all actions are 1 off due to the removal of one of the enums
+		switch (__packet->ReadUInt32()) {
+		case TOBGuildBankPromote: {
+			DECODE_LENGTH_EXACT(structs::GuildBankPromote_Struct);
+			SETUP_DIRECT_DECODE(GuildBankPromote_Struct, structs::GuildBankPromote_Struct);
+			emu->Action = EmuGuildBankPromote;
+			IN(Unknown04);
+			IN(Slot);
+			IN(Slot2);
+			FINISH_DIRECT_DECODE();
+			return;
+		}
+		case TOBGuildBankViewItem: {
+			DECODE_LENGTH_EXACT(structs::GuildBankViewItem_Struct);
+			SETUP_DIRECT_DECODE(GuildBankViewItem_Struct, structs::GuildBankViewItem_Struct);
+			emu->Action = EmuGuildBankViewItem;
+			IN(Unknown04);
+			IN(SlotID);
+			IN(Area);
+			IN(Unknown12);
+			IN(Unknown16);
+			FINISH_DIRECT_DECODE();
+			return;
+		}
+		case TOBGuildBankDeposit: {
+			__packet->WriteUInt32(EmuGuildBankDeposit);
+			return;
+		}
+		case TOBGuildBankPermissions: {
+			DECODE_LENGTH_EXACT(structs::GuildBankPermissions_Struct);
+			SETUP_DIRECT_DECODE(GuildBankPermissions_Struct, structs::GuildBankPermissions_Struct);
+			emu->Action = EmuGuildBankPermissions;
+			IN(Unknown04);
+			IN(SlotID);
+			IN(Unknown10);
+			IN(ItemID);
+			IN(Permissions);
+			strn0cpy(emu->MemberName, eq->MemberName, sizeof(emu->MemberName));
+			FINISH_DIRECT_DECODE();
+			return;
+		}
+		case TOBGuildBankWithdraw:
+		case TOBGuildBankSplitStacks:
+		case TOBGuildBankMergeStacks: {
+			const uint32 wire_action = *reinterpret_cast<uint32 *>(__packet->pBuffer);
+			DECODE_LENGTH_EXACT(structs::GuildBankWithdrawItem_Struct);
+			SETUP_DIRECT_DECODE(GuildBankWithdrawItem_Struct, structs::GuildBankWithdrawItem_Struct);
+			emu->Action = wire_action + 1;   // server: 7 withdraw, 8 split, 9 merge
+			IN(Unknown04);
+			IN(SlotID);
+			IN(Area);
+			IN(Unknown12);
+			IN(Quantity);
+			FINISH_DIRECT_DECODE();
+			return;
+		}
+		default:
+			LogNetcode("Unhandled OP_GuildBank action");
+			__packet->SetOpcode(OP_Unknown); /* invalidate the packet */
+			return;
+		}
+	}
+
+	// ---- LFGuild, projectile, tribute info ----
+
+	ENCODE(OP_LFGuild)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		if (in->size < sizeof(uint32)) {
+			delete in;
+			return;
+		}
+
+		const uchar *src  = in->pBuffer;
+		const uint32 size = in->size;
+		uint32 command = 0;
+		memcpy(&command, src, sizeof(command));
+
+		SerializeBuffer buf;
+
+		switch (command) {
+		case structs::LFGuildPlayerStatus: {   // player status. Body is byte-identical to the server struct; only header + u64 time differ.
+			if (size < sizeof(::LFGuild_PlayerToggle_Struct)) {
+				LogNetcode("TOB::ENCODE(OP_LFGuild) player toggle too short [{}]", size);
+				delete in;
+				return;
+			}
+			auto emu = reinterpret_cast<const ::LFGuild_PlayerToggle_Struct *>(src);
+			structs::LFGuild_PlayerToggle_Struct eq{};
+			eq.Command = structs::LFGuildPlayerStatus;
+			// ToB comment field is 524 (server Comment[256] + Unknown328[268]); the server only fills Comment
+			strn0cpy(eq.Comment, emu->Comment, sizeof(emu->Comment));
+			eq.TimeZone   = static_cast<int32>(emu->TimeZone);
+			eq.Toggle     = emu->Toggle;
+			eq.TimePosted = emu->TimePosted;    // u32 unix time -> u64
+			auto outapp = new EQApplicationPacket(OP_LFGuild, sizeof(eq));
+			memcpy(outapp->pBuffer, &eq, sizeof(eq));
+			dest->FastQueuePacket(&outapp, ack_req);
+			delete in;
+			return;
+		}
+		case structs::LFGuildGuildStatus: {   // guild status
+			if (size < sizeof(::LFGuild_GuildToggle_Struct)) {
+				LogNetcode("TOB::ENCODE(OP_LFGuild) guild toggle too short [{}]", size);
+				delete in;
+				return;
+			}
+			auto emu = reinterpret_cast<const ::LFGuild_GuildToggle_Struct *>(src);
+			structs::LFGuild_GuildToggle_Struct eq{};
+			eq.Command = structs::LFGuildGuildStatus;
+			// ToB comment field is 512; the server only fills Comment[256]
+			strn0cpy(eq.Comment, emu->Comment, sizeof(emu->Comment));
+			eq.FromLevel  = emu->FromLevel;
+			eq.ToLevel    = emu->ToLevel;
+			eq.Classes    = emu->Classes;
+			eq.AACount    = emu->AACount;
+			eq.TimeZone   = static_cast<int32>(emu->TimeZone);
+			eq.Toggle     = emu->Toggle;
+			eq.TimePosted = emu->TimePosted;
+			strn0cpy(eq.Name, emu->Name, sizeof(eq.Name));
+			auto outapp = new EQApplicationPacket(OP_LFGuild, sizeof(eq));
+			memcpy(outapp->pBuffer, &eq, sizeof(eq));
+			dest->FastQueuePacket(&outapp, ack_req);
+			delete in;
+			return;
+		}
+		case structs::LFGuildPlayerSearch: {   // player search results. Emu wire: u32 3, u32 ?, u32 count, entries.
+			struct Entry { std::string name, comment; uint32 level, cls, aa, tz; };
+			std::vector<Entry> entries;
+			in->SetReadPosition(0);
+			in->ReadSkip(EMU_LFGUILD_HEADER_SIZE);
+			uint32 count = in->ReadUInt32();
+			if (!in->ReadError()) {
+				count = std::min<uint32>(count, TOB_LFGUILD_MAX_RESULTS);
+				for (uint32 i = 0; i < count; ++i) {
+					Entry e{};
+					in->ReadString(e.name, TOB_NAME_MAX_CHARS);
+					e.level = in->ReadUInt32();
+					e.cls   = in->ReadUInt32();
+					e.aa    = in->ReadUInt32();
+					e.tz    = in->ReadUInt32();
+					in->ReadString(e.comment, TOB_NOTE_MAX_CHARS);
+					if (in->ReadError()) {
+						break;
+					}
+					if (e.cls > TOB_LFGUILD_MAX_CLASS) { e.cls = 0; }
+					if (static_cast<int32>(e.tz) < TOB_TIMEZONE_NONE || static_cast<int32>(e.tz) > TOB_TIMEZONE_MAX) { e.tz = static_cast<uint32>(TOB_TIMEZONE_NONE); }
+					entries.push_back(std::move(e));
+				}
+			}
+			buf.WriteUInt32(structs::LFGuildPlayerSearch);
+			TOBWriteZeros(buf, structs::LFGuild_HeaderSize - sizeof(uint32)); // command, then the unknown header bytes
+			buf.WriteUInt32(static_cast<uint32>(entries.size()));
+			for (const auto &e : entries) {
+				buf.WriteString(e.name);
+				buf.WriteUInt32(e.level);
+				buf.WriteUInt32(e.cls);
+				buf.WriteUInt32(e.aa);
+				buf.WriteUInt32(e.tz);
+				buf.WriteString(e.comment);
+			}
+			break;
+		}
+		case structs::LFGuildGuildSearch: {   // guild search results: entries {cstr name, u32 timezone, cstr comment}
+			struct Entry { std::string name, comment; uint32 tz; };
+			std::vector<Entry> entries;
+			in->SetReadPosition(0);
+			in->ReadSkip(EMU_LFGUILD_HEADER_SIZE);
+			uint32 count = in->ReadUInt32();
+			if (!in->ReadError()) {
+				count = std::min<uint32>(count, TOB_LFGUILD_MAX_RESULTS);
+				for (uint32 i = 0; i < count; ++i) {
+					Entry e{};
+					in->ReadString(e.name, TOB_NAME_MAX_CHARS);
+					e.tz = in->ReadUInt32();
+					in->ReadString(e.comment, TOB_NOTE_MAX_CHARS);
+					if (in->ReadError()) {
+						break;
+					}
+					// ToB indexes the timezone-name table with this value WITHOUT a range check
+					if (static_cast<int32>(e.tz) < TOB_TIMEZONE_NONE || static_cast<int32>(e.tz) > TOB_TIMEZONE_MAX) { e.tz = static_cast<uint32>(TOB_TIMEZONE_NONE); }
+					entries.push_back(std::move(e));
+				}
+			}
+			buf.WriteUInt32(structs::LFGuildGuildSearch);
+			TOBWriteZeros(buf, structs::LFGuild_HeaderSize - sizeof(uint32)); // command, then the unknown header bytes
+			buf.WriteUInt32(static_cast<uint32>(entries.size()));
+			for (const auto &e : entries) {
+				buf.WriteString(e.name);
+				buf.WriteUInt32(e.tz);
+				buf.WriteString(e.comment);
+			}
+			break;
+		}
+		default: {  // 2, 5 (ignored by the client), 6 (show window), anything else: widen the header 8 -> 0x18
+			const uint32 tail = size > EMU_LFGUILD_HEADER_SIZE ? size - EMU_LFGUILD_HEADER_SIZE : 0;
+			buf.WriteUInt32(command);
+			TOBWriteZeros(buf, structs::LFGuild_HeaderSize - sizeof(command));
+			TOBWriteBytes(buf, src + EMU_LFGUILD_HEADER_SIZE, tail);
+			break;
+		}
+		}
+
+		// all commands that are rebuilt through the buffer
+		auto outapp = new EQApplicationPacket(OP_LFGuild, std::move(buf));
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+
+	DECODE(OP_LFGuild)
+	{
+		const uint32 size = __packet->size;
+		if (size < sizeof(uint32)) {
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+		unsigned char *eq_buffer = __packet->pBuffer;
+		uint32 command = 0;
+		memcpy(&command, eq_buffer, sizeof(command));
+
+		auto replace = [&](uint32 new_size) -> unsigned char * {
+			__packet->size    = new_size;
+			__packet->pBuffer = new unsigned char[new_size]{};
+			return __packet->pBuffer;
+		};
+
+		switch (command) {
+		case structs::LFGuildPlayerStatus: {
+			if (size != sizeof(structs::LFGuild_PlayerToggle_Struct)) { break; }
+			auto eq  = reinterpret_cast<const structs::LFGuild_PlayerToggle_Struct *>(eq_buffer);
+			auto emu = reinterpret_cast<::LFGuild_PlayerToggle_Struct *>(replace(sizeof(::LFGuild_PlayerToggle_Struct)));
+			emu->Command = structs::LFGuildPlayerStatus;
+			strn0cpy(emu->Comment, eq->Comment, sizeof(emu->Comment));
+			emu->TimeZone   = eq->TimeZone;
+			emu->Toggle     = eq->Toggle;
+			emu->TimePosted = static_cast<uint32>(eq->TimePosted);
+			delete[] eq_buffer;
+			return;
+		}
+		case structs::LFGuildGuildStatus: {
+			if (size != sizeof(structs::LFGuild_GuildToggle_Struct)) { break; }
+			auto eq  = reinterpret_cast<const structs::LFGuild_GuildToggle_Struct *>(eq_buffer);
+			auto emu = reinterpret_cast<::LFGuild_GuildToggle_Struct *>(replace(sizeof(::LFGuild_GuildToggle_Struct)));
+			emu->Command = structs::LFGuildGuildStatus;
+			strn0cpy(emu->Comment, eq->Comment, sizeof(emu->Comment));   // clamp to the server's 256
+			emu->FromLevel  = eq->FromLevel;
+			emu->ToLevel    = eq->ToLevel;
+			emu->Classes    = eq->Classes;
+			emu->AACount    = eq->AACount;
+			emu->TimeZone   = eq->TimeZone;
+			emu->Toggle     = eq->Toggle;
+			emu->TimePosted = static_cast<uint32>(eq->TimePosted);
+			strn0cpy(emu->Name, eq->Name, sizeof(emu->Name));
+			delete[] eq_buffer;
+			return;
+		}
+		case structs::LFGuildPlayerSearch: {
+			if (size != sizeof(structs::LFGuild_SearchPlayer_Struct)) { break; }
+			auto eq  = reinterpret_cast<const structs::LFGuild_SearchPlayer_Struct *>(eq_buffer);
+			auto emu = reinterpret_cast<::LFGuild_SearchPlayer_Struct *>(replace(sizeof(::LFGuild_SearchPlayer_Struct)));
+			emu->Command   = structs::LFGuildPlayerSearch;
+			emu->FromLevel = eq->FromLevel;
+			emu->ToLevel   = eq->ToLevel;
+			emu->MinAA     = eq->MinAA;
+			emu->TimeZone  = static_cast<uint32>(eq->TimeZone);
+			emu->Classes   = eq->Classes;
+			delete[] eq_buffer;
+			return;
+		}
+		case structs::LFGuildGuildSearch: {
+			if (size != sizeof(structs::LFGuild_SearchGuild_Struct)) { break; }
+			auto eq  = reinterpret_cast<const structs::LFGuild_SearchGuild_Struct *>(eq_buffer);
+			auto emu = reinterpret_cast<::LFGuild_SearchGuild_Struct *>(replace(sizeof(::LFGuild_SearchGuild_Struct)));
+			emu->Command  = structs::LFGuildGuildSearch;
+			emu->Level    = eq->Level;
+			emu->AAPoints = eq->AAPoints;
+			emu->TimeZone = static_cast<uint32>(eq->TimeZone);
+			emu->Class    = eq->Class;
+			delete[] eq_buffer;
+			return;
+		}
+		default:
+			break;
+		}
+
+		LogNetcode("TOB::DECODE(OP_LFGuild) unexpected command [{}] size [{}]", command, size);
+		__packet->SetOpcode(OP_Unknown);
+	}
+
+
+
+
+	ENCODE(OP_SomeItemPacketMaybe)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		if (in->size != sizeof(Arrow_Struct)) {
+			LogNetcode("TOB::ENCODE(OP_SomeItemPacketMaybe) wrong size [{}] expected [{}]", in->size, sizeof(Arrow_Struct));
+			delete in;
+			return;
+		}
+		auto emu = reinterpret_cast<const Arrow_Struct *>(in->pBuffer);
+
+		// ToB has no model-name string any more: it formats "IT%u" from a number.
+		char model[sizeof(emu->model_name) + 1] = {};
+		memcpy(model, emu->model_name, sizeof(emu->model_name));
+		uint32 it_number = 0;
+		if ((model[0] == 'I' || model[0] == 'i') && (model[1] == 'T' || model[1] == 't')) {
+			it_number = static_cast<uint32>(strtoul(model + 2, nullptr, 10));
+		} else if (emu->item_id <= 0xffff) {
+			it_number = emu->item_id;           // EQEmu comment: item_id is "1 to about 150ish" (the IT number)
+		}
+
+		SerializeBuffer buf;
+		buf.WriteFloat(emu->src_y);             // S[0]
+		buf.WriteFloat(emu->src_x);             // S[1]
+		buf.WriteFloat(emu->src_z);             // S[2]
+		buf.WriteUInt32(0);                     // S[3..5] vector, zeroed by the ctor when tiny
+		buf.WriteUInt32(0);
+		buf.WriteUInt32(0);
+		buf.WriteFloat(emu->velocity);          // S[6]
+		buf.WriteFloat(emu->launch_angle);      // S[7]
+		buf.WriteFloat(emu->tilt);              // S[8]
+		buf.WriteUInt32(0);                     // S[9]
+		buf.WriteUInt32(0);                     // S[10]
+		buf.WriteFloat(emu->arc);               // S[11]
+		buf.WriteUInt32(0);                     // S[12] unknown
+		buf.WriteUInt32(0);                     // S[13] unknown
+		buf.WriteUInt32(0);                     // S[14] unknown
+		buf.WriteUInt32(emu->source_id);        // S[15] source spawn
+		buf.WriteUInt32(emu->target_id);        // S[16] target spawn
+		buf.WriteUInt32(it_number);             // S[17] "IT%u" model
+		buf.WriteUInt32(0);                     // S[18] (unknown)
+		buf.WriteUInt32(0);                     // S[19] (unknown)
+		buf.WriteUInt8(0);                      // 0x50 (unknown)
+		buf.WriteUInt8(emu->item_type); // 0x51 item type
+		buf.WriteUInt8(emu->skill); // 0x52 skill
+		buf.WriteUInt8(0);                      // 0x53 (unknown flag)
+
+		auto outapp = new EQApplicationPacket(OP_SomeItemPacketMaybe, buf.size());   // 84
+		outapp->WriteData(buf.buffer(), buf.size());
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+	// Optional trailer the zone appends after the tribute name's NUL for ToB clients (zone/tribute.cpp):
+	//   uint32 magic = EQ::TRIBUTE_ITEMS_TRAILER_MAGIC; uint32 count; EQ::InternalSerializedItem_Struct items[count];
+	// The instance pointers are only valid because the zone's QueuePacket encodes synchronously.
+	static std::vector<EQ::InternalSerializedItem_Struct> TOBReadTributeItemTrailer(EQApplicationPacket *in, size_t name_off)
+	{
+		std::vector<EQ::InternalSerializedItem_Struct> items;
+		if (in->size <= name_off) {
+			return items;
+		}
+		auto nul = static_cast<const uint8 *>(memchr(in->pBuffer + name_off, 0, in->size - name_off));
+		if (!nul) {
+			return items;
+		}
+		in->SetReadPosition(static_cast<uint32>(nul + 1 - in->pBuffer));
+		const uint32 magic = in->ReadUInt32();
+		const uint32 n     = in->ReadUInt32();
+		if (!in->ReadError() && magic == EQ::TRIBUTE_ITEMS_TRAILER_MAGIC &&
+		    n <= MAX_TRIBUTE_TIERS &&
+		    in->ReadRemaining() >= n * sizeof(EQ::InternalSerializedItem_Struct)) {
+			items.resize(n);
+			memcpy(items.data(), in->pBuffer + in->GetReadPosition(), n * sizeof(EQ::InternalSerializedItem_Struct)); // unaligned-safe
+		}
+		return items;
+	}
+
+	static inline uint32 TOBFromNet32(uint32 v)   // server fills TributeAbility_Struct with htonl()
+	{
+		return (v >> 24) | ((v >> 8) & 0x0000ff00u) | ((v << 8) & 0x00ff0000u) | (v << 24);
+	}
+
+	ENCODE(OP_TributeInfo)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		if (in->size < sizeof(TributeAbility_Struct)) {
+			LogNetcode("TOB::ENCODE(OP_TributeInfo) too short [{}]", in->size);
+			delete in;
+			return;
+		}
+		auto emu = reinterpret_cast<const TributeAbility_Struct *>(in->pBuffer);
+
+		uint32 tier_count = std::min<uint32>(TOBFromNet32(emu->tier_count), MAX_TRIBUTE_TIERS);
+
+		// optional item trailer after the NUL-terminated name
+		auto items = TOBReadTributeItemTrailer(in, sizeof(TributeAbility_Struct));
+
+		SerializeBuffer buf;
+		buf.WriteUInt32(TOBFromNet32(emu->tribute_id));
+		buf.WriteUInt32(tier_count);
+		for (uint32 i = 0; i < tier_count; ++i) {
+			const uint32 item_id = TOBFromNet32(emu->tiers[i].tribute_item_id);
+			// tier+0 item id, +4 level, +8 cost (level first showed the item id in the Level column)
+			buf.WriteUInt32(item_id);
+			buf.WriteUInt32(TOBFromNet32(emu->tiers[i].level));
+			buf.WriteUInt32(TOBFromNet32(emu->tiers[i].cost));
+
+			const EQ::ItemInstance *inst = (i < items.size()) ? static_cast<const EQ::ItemInstance *>(items[i].inst) : nullptr;
+			if (inst && inst->GetItem()) {
+				SerializeItem(buf, inst, items[i].slot_id, 0, ItemPacketInvalid);   // same stream as OP_ItemPreviewRequest
+			} else {
+				// No instance: emit a complete stream for a blank definition so the reader stays in sync.
+				// The client then lists level/cost with an empty name. (ItemInstance copies the ItemData,
+				// so the stack object is safe.)
+				EQ::ItemData blank;
+				memset(&blank, 0, sizeof(blank));
+				blank.ID = item_id;
+				EQ::ItemInstance tmp(&blank, 0);
+				SerializeItem(buf, &tmp, 0, 0, ItemPacketInvalid);
+			}
+		}
+		buf.WriteUInt8(0);                                          // flag
+
+		auto outapp = new EQApplicationPacket(OP_TributeInfo, buf.size());
+		outapp->WriteData(buf.buffer(), buf.size());
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+
+	// alt currency sell-back and group roles
+	ENCODE(OP_AltCurrencySell)
+	{
+		ENCODE_LENGTH_EXACT(AltCurrencySellItem_Struct);
+		SETUP_DIRECT_ENCODE(AltCurrencySellItem_Struct, structs::AltCurrencySellItem_Struct);
+
+		OUT(merchant_entity_id);
+		eq->inventory_slot = ServerToTOBTypelessSlot(emu->slot_id, EQ::invtype::typePossessions);
+		eq->unknown010 = 0;
+		OUT(charges);
+		OUT(cost);
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_GroupRoles)
+	{
+		ENCODE_LENGTH_EXACT(GroupRole_Struct);
+		SETUP_DIRECT_ENCODE(GroupRole_Struct, structs::GroupRole_Struct);
+
+		memcpy(eq->Name1, emu->Name1, sizeof(eq->Name1));
+		memcpy(eq->Name2, emu->Name2, sizeof(eq->Name2));
+		OUT(RoleNumber);
+		OUT(Toggle);
+		eq->unknown161 = 0;
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_PetitionUpdate)
+	{
+		ENCODE_LENGTH_EXACT(PetitionUpdate_Struct);
+		SETUP_DIRECT_ENCODE(PetitionUpdate_Struct, structs::PetitionUpdate_Struct);
+
+		OUT(petnumber);
+		OUT(color);
+		OUT(status);
+		eq->senttime = static_cast<uint32>(emu->senttime);
+		strn0cpy(eq->accountid, emu->accountid, sizeof(eq->accountid));
+		strn0cpy(eq->gmsenttoo, emu->gmsenttoo, sizeof(eq->gmsenttoo));
+		OUT(quetotal);
+		strn0cpy(eq->charname, emu->charname, sizeof(eq->charname));
+		eq->unknown180 = 0;
+
+		FINISH_ENCODE();
+	}
+
+	// guild tribute: S2C layouts grew a u64 guild id / 4 bytes of padding
+	ENCODE(OP_GuildTributeFavorAndTimer)
+	{
+		ENCODE_LENGTH_EXACT(GuildTributeFavorTimer_Struct);
+		SETUP_DIRECT_ENCODE(GuildTributeFavorTimer_Struct, structs::GuildTributeFavorTimer_Struct);
+
+		eq->guild_id = ServerToTOBGuildID(emu->guild_id);
+		OUT(guild_favor);
+		OUT(tribute_timer);
+		OUT(trophy_timer);
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_GuildSendActiveTributes)
+	{
+		ENCODE_LENGTH_EXACT(GuildTributeSendActive_Struct);
+		SETUP_DIRECT_ENCODE(GuildTributeSendActive_Struct, structs::GuildTributeSendActive_Struct);
+
+		OUT(not_used);
+		OUT(guild_favor);
+		OUT(tribute_timer);
+		OUT(tribute_enabled);
+		OUT(tribute_id_1);
+		OUT(tribute_id_2);
+		OUT(tribute_id_1_tier);
+		OUT(tribute_id_2_tier);
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_GuildTributeToggleReply)
+	{
+		ENCODE_LENGTH_EXACT(GuildTributeSendActive_Struct);
+		SETUP_DIRECT_ENCODE(GuildTributeSendActive_Struct, structs::GuildTributeSendActive_Struct);
+
+		OUT(not_used);
+		OUT(guild_favor);
+		OUT(tribute_timer);
+		OUT(tribute_enabled);
+		OUT(tribute_id_1);
+		OUT(tribute_id_2);
+		OUT(tribute_id_1_tier);
+		OUT(tribute_id_2_tier);
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_GuildOptInOut)
+	{
+		ENCODE_LENGTH_EXACT(GuildTributeOptInOutReply_Struct);
+		SETUP_DIRECT_ENCODE(GuildTributeOptInOutReply_Struct, structs::GuildTributeOptInOutReply_Struct);
+
+		eq->guild_id = ServerToTOBGuildID(emu->guild_id);
+		TOBCopyStr(eq->player_name, emu->player_name);
+		OUT(tribute_toggle);
+		OUT(tribute_trophy_toggle);
+		OUT(no_donations);
+		OUT(time);
+		OUT(command);
+
+		FINISH_ENCODE();
+	}
+
+	// same stream as OP_TributeInfo with a leading guild id the client skips; tier names come from the
+	// optional item trailer after the name (zone/tribute.cpp)
+	ENCODE(OP_SendGuildTributes)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		if (in->size < sizeof(GuildTributeAbility_Struct)) {
+			LogNetcode("TOB::ENCODE(OP_SendGuildTributes) too short [{}]", in->size);
+			delete in;
+			return;
+		}
+		auto emu = reinterpret_cast<const GuildTributeAbility_Struct *>(in->pBuffer);
+		const auto &ab = emu->ability;
+
+		const uint32 tribute_id = TOBFromNet32(ab.tribute_id);
+		if (tribute_id == TRIBUTE_NONE) {
+			delete in;
+			return;
+		}
+		uint32 tier_count = std::min<uint32>(TOBFromNet32(ab.tier_count), MAX_TRIBUTE_TIERS);
+
+		auto items = TOBReadTributeItemTrailer(in, sizeof(GuildTributeAbility_Struct));
+
+		SerializeBuffer buf;
+		buf.WriteUInt32(emu->guild_id);                 // skipped by the client
+		buf.WriteUInt32(tribute_id);
+		buf.WriteUInt32(tier_count);
+		for (uint32 i = 0; i < tier_count; ++i) {
+			const uint32 item_id = TOBFromNet32(ab.tiers[i].tribute_item_id);
+			buf.WriteUInt32(item_id);                           // same tier order as OP_TributeInfo
+			buf.WriteUInt32(TOBFromNet32(ab.tiers[i].level));
+			buf.WriteUInt32(TOBFromNet32(ab.tiers[i].cost));
+
+			const EQ::ItemInstance *inst = (i < items.size()) ? static_cast<const EQ::ItemInstance *>(items[i].inst) : nullptr;
+			if (inst && inst->GetItem()) {
+				SerializeItem(buf, inst, items[i].slot_id, 0, ItemPacketInvalid);
+			} else {
+				EQ::ItemData blank;
+				memset(&blank, 0, sizeof(blank));
+				blank.ID = item_id;
+				EQ::ItemInstance tmp(&blank, 0);
+				SerializeItem(buf, &tmp, 0, 0, ItemPacketInvalid);
+			}
+		}
+		buf.WriteUInt8(0);
+
+		auto outapp = new EQApplicationPacket(OP_SendGuildTributes, buf.size());
+		outapp->WriteData(buf.buffer(), buf.size());
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+
+	// byte 36 is the generic '---' theme the points-merchant buy check reads
+	ENCODE(OP_AdventurePointsUpdate)
+	{
+		ENCODE_LENGTH_EXACT(AdventurePoints_Update_Struct);
+		SETUP_DIRECT_ENCODE(AdventurePoints_Update_Struct, AdventurePoints_Update_Struct);
+
+		memcpy(eq, emu, sizeof(AdventurePoints_Update_Struct));
+		eq->ldon_generic_points = emu->ldon_available_points;
+
+		FINISH_ENCODE();
+	}
+
+	// LFG/LFP search results: rows carry a 16-bit guild id in the emu buffer; ToB reads a u64.
+	static uint64 TOBLfgGuildId(uint16 emu_guild)
+	{
+		// zone/worldserver.cpp writes CLE->GuildID() truncated to u16, so GUILD_NONE arrives as 0xFFFF.
+		// ToB spawn packets write "no guild" as u32 -1, u32 0; mirror that.
+		return emu_guild == EMU_GUILD_NONE_U16 ? 0x00000000FFFFFFFFull : static_cast<uint64>(emu_guild);
+	}
+
+	// Emu wire (built by WorldServer::HandleLFGMatches):
+	//   u32 0x74af; repeat { cstr comments; cstr name; u16 class; u16 level; u16 zone; u16 guild; u16 anon }
+	// ToB wire:
+	//   u32 hdr;    repeat { cstr comments; cstr name; u16 class; u16 level; u16 zone; u64 guild; u16 anon }
+	ENCODE(OP_LFGGetMatchesResponse)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		const uint32 size = in->size;
+		in->SetReadPosition(0);
+		const uint32 hdr = in->ReadUInt32();
+
+		if (in->ReadError()) {
+			LogNetcode("TOB::ENCODE(OP_LFGGetMatchesResponse) too short [{}]", size);
+			delete in;
+			return;
+		}
+
+		SerializeBuffer buf;
+		buf.WriteUInt32(hdr);
+
+		while (in->ReadRemaining() > 0) {
+			const uint32 row_start = in->GetReadPosition();
+			std::string comments, name;
+			// the client copies both strings into 64-byte locals with no bound: clamp to 63
+			in->ReadString(comments, TOB_NAME_MAX_CHARS);
+			in->ReadString(name, TOB_NAME_MAX_CHARS);
+			const uint16 class_ = in->ReadUInt16();
+			const uint16 level  = in->ReadUInt16();
+			const uint16 zone   = in->ReadUInt16();
+			const uint16 guild  = in->ReadUInt16();
+			const uint16 anon   = in->ReadUInt16();
+			if (in->ReadError()) {
+				LogNetcode("TOB::ENCODE(OP_LFGGetMatchesResponse) truncated row at [{}] of [{}]", row_start, size);
+				break;
+			}
+			buf.WriteString(comments);
+			buf.WriteString(name);
+			buf.WriteUInt16(class_);
+			buf.WriteUInt16(level);
+			buf.WriteUInt16(zone);
+			buf.WriteUInt64(TOBLfgGuildId(guild));
+			buf.WriteUInt16(anon);
+		}
+
+		auto outapp = new EQApplicationPacket(OP_LFGGetMatchesResponse, std::move(buf));
+		delete in;
+		dest->FastQueuePacket(&outapp, ack_req);
+	}
+
+	// Emu wire (WorldServer::HandleLFPMatches):
+	//   u32 0x74af; repeat { cstr comments; u16 from; u16 to; u32 classes; u16 count;
+	//                        count x { cstr name; u16 class; u16 level; u16 zone; u16 guild } }
+	// ToB wire: identical except member guild is u64.
+	ENCODE(OP_LFPGetMatchesResponse)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		const uint32 size = in->size;
+		in->SetReadPosition(0);
+		const uint32 hdr = in->ReadUInt32();
+
+		if (in->ReadError()) {
+			LogNetcode("TOB::ENCODE(OP_LFPGetMatchesResponse) too short [{}]", size);
+			delete in;
+			return;
+		}
+
+		SerializeBuffer buf;
+		buf.WriteUInt32(hdr);
+
+		bool ok = true;
+		while (ok && in->ReadRemaining() > 0) {
+			const uint32 group_start = in->GetReadPosition();
+			std::string comments;
+			in->ReadString(comments, TOB_NAME_MAX_CHARS);
+			const uint16 from    = in->ReadUInt16();
+			const uint16 to      = in->ReadUInt16();
+			const uint32 classes = in->ReadUInt32();
+			uint16 count         = in->ReadUInt16();
+			if (in->ReadError()) {
+				LogNetcode("TOB::ENCODE(OP_LFPGetMatchesResponse) truncated group at [{}] of [{}]", group_start, size);
+				break;
+			}
+			// the client's local member array holds MAX_GROUP_MEMBERS entries and does not check count
+			if (count > MAX_GROUP_MEMBERS) {
+				LogNetcode("TOB::ENCODE(OP_LFPGetMatchesResponse) clamping member count [{}]", count);
+				count = MAX_GROUP_MEMBERS;
+			}
+
+			SerializeBuffer members;
+			uint16 written = 0;
+			for (uint16 i = 0; i < count; ++i) {
+				const uint32 member_start = in->GetReadPosition();
+				std::string name;
+				in->ReadString(name, TOB_NAME_MAX_CHARS);
+				const uint16 class_ = in->ReadUInt16();
+				const uint16 level  = in->ReadUInt16();
+				const uint16 zone   = in->ReadUInt16();
+				const uint16 guild  = in->ReadUInt16();
+				if (in->ReadError()) {
+					LogNetcode("TOB::ENCODE(OP_LFPGetMatchesResponse) truncated member at [{}] of [{}]", member_start, size);
+					ok = false;
+					break;
+				}
+				members.WriteString(name);
+				members.WriteUInt16(class_);
+				members.WriteUInt16(level);
+				members.WriteUInt16(zone);
+				members.WriteUInt64(TOBLfgGuildId(guild));
+				++written;
+			}
+
+			buf.WriteString(comments);
+			buf.WriteUInt16(from);
+			buf.WriteUInt16(to);
+			buf.WriteUInt32(classes);
+			buf.WriteUInt16(written);
+			TOBWriteBytes(buf, members.buffer(), members.size());
+		}
+
+		auto outapp = new EQApplicationPacket(OP_LFPGetMatchesResponse, std::move(buf));
+		delete in;
+		dest->FastQueuePacket(&outapp, ack_req);
+	}
+
+	// ToB: group/raid assist target slots; client index = server Number - 1 (group -1, raid MA1..3 0..2)
+	ENCODE(OP_SetGroupTarget)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		if (in->pBuffer == nullptr || in->size < 2 * sizeof(uint32)) {
+			delete in;
+			return;
+		}
+		uint32 target_id = 0, number = 0;
+		memcpy(&target_id, in->pBuffer, sizeof(uint32));
+		memcpy(&number, in->pBuffer + sizeof(uint32), sizeof(uint32));
+		if (number > TOB_SET_GROUP_TARGET_MAX_NUMBER) {
+			delete in;
+			return;
+		}
+
+		auto outapp = new EQApplicationPacket(OP_SetGroupTarget, 2 * sizeof(uint32));
+		int32 tob_index = static_cast<int32>(number) - 1;
+		memcpy(outapp->pBuffer, &target_id, sizeof(uint32));
+		memcpy(outapp->pBuffer + sizeof(uint32), &tob_index, sizeof(int32));
+		delete in;
+		dest->FastQueuePacket(&outapp, ack_req);
+	}
+
+	ENCODE(OP_SetTitleReply)
+	{
+		ENCODE_LENGTH_EXACT(SetTitleReply_Struct);
+		SETUP_DIRECT_ENCODE(SetTitleReply_Struct, structs::SetTitleReply_Struct);
+		OUT(is_suffix);
+		strn0cpy(eq->title, emu->title, std::min(sizeof(eq->title), sizeof(emu->title)));
+		OUT(entity_id);
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_SendFindableNPCs)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		if (in->size != sizeof(FindableNPC_Struct)) {
+			LogNetcode("TOB::ENCODE(OP_SendFindableNPCs): wrong size [{}], expected [{}]", in->size, sizeof(FindableNPC_Struct));
+			delete in;
+			return;
+		}
+
+		FindableNPC_Struct *emu = (FindableNPC_Struct *)in->pBuffer;
+
+		// ToB: u32 count, then {u32 action, u32 id, name, last_name, u32 race, u32 class}.
+		// The client keeps a limited number of bytes of the names; the emu arrays may be unterminated.
+		size_t name_len = strnlen(emu->Name, sizeof(emu->Name));
+		if (name_len > TOB_FINDABLE_NAME_MAX_CHARS) { name_len = TOB_FINDABLE_NAME_MAX_CHARS; }
+		size_t last_len = strnlen(emu->LastName, sizeof(emu->LastName));
+		if (last_len > TOB_FINDABLE_LAST_NAME_MAX_CHARS) { last_len = TOB_FINDABLE_LAST_NAME_MAX_CHARS; }
+
+		SerializeBuffer buffer;
+		buffer.WriteUInt32(1);
+		buffer.WriteUInt32(emu->Action);
+		buffer.WriteUInt32(emu->EntityID);
+		buffer.WriteString(std::string(emu->Name, name_len));
+		buffer.WriteString(std::string(emu->LastName, last_len));
+		buffer.WriteUInt32(emu->Race);
+		buffer.WriteUInt32(emu->Class);
+
+		auto outapp = new EQApplicationPacket(OP_SendFindableNPCs, std::move(buffer));
+		dest->FastQueuePacket(&outapp, ack_req);
+
+		delete in;
+	}
+
 	ENCODE(OP_SendMaxCharacters) {
 		ENCODE_LENGTH_EXACT(MaxCharacters_Struct);
 		SETUP_DIRECT_ENCODE(MaxCharacters_Struct, structs::MaxCharacters_Struct);
@@ -3087,8 +6525,10 @@ namespace TOB
 			OUT(rate);
 			OUT(tab_display);
 			eq->unknown028 = 256;
-			// TODO: ldon_category (+16), alt_currency1 (+20), alt_currency2 (+24) not in
-			//   MerchantClick_Struct -- always 0; alt-currency/LDON merchants may not open correctly
+			// points merchants (adventure, alt currency, loyalty) use the regular merchant window
+			eq->ldon_category = 0;
+			eq->alt_currency1 = emu->alt_currency;
+			eq->alt_currency2 = emu->alt_currency;
 		}
 		// close (command==0): player_id stays 0 (SETUP zeroed it) -- byte at offset 4 = 0 -> close path
 
@@ -3168,7 +6608,23 @@ namespace TOB
 			// so either read path works; each case ignores the field it doesn't use.
 			eq->lock_id = sas->parameter;
 
-			dest->FastQueuePacket(&outapp, ack_req);
+			if (eq->type != structs::TOBAppearance::None) {
+				dest->FastQueuePacket(&outapp, ack_req);
+			}
+			else {
+				delete outapp; // no ToB equivalent (GuildID goes out as OP_GuildMemberGuildID below)
+			}
+
+			// ToB takes guild membership changes from OP_GuildMemberGuildID {u32 spawn_id; u64 guild_id}
+			// ("You have joined %1"), not from SpawnAppearance.
+			if (sas->type == AppearanceType::GuildID) {
+				auto gp    = new EQApplicationPacket(OP_GuildMemberGuildID, sizeof(structs::GuildMemberGuildID_Struct));
+				auto gid_s = reinterpret_cast<structs::GuildMemberGuildID_Struct *>(gp->pBuffer);
+				gid_s->spawn_id = sas->spawn_id;
+				gid_s->guild_id = ServerToTOBGuildID(sas->parameter);
+				dest->FastQueuePacket(&gp, ack_req);
+			}
+
 			delete in;
 			return;
 		}
@@ -3234,43 +6690,6 @@ namespace TOB
 		FINISH_ENCODE();
 	}
 
-	ENCODE(OP_CompletedTasks)
-	{
-		EQApplicationPacket *in = *p;
-		*p = nullptr;
-
-		uint32 count = in->ReadUInt32();
-		uint32 out_size = sizeof(uint32); // count
-
-		std::vector<structs::CompletedTask_Struct> tasks;
-		tasks.reserve(count);
-		for (uint32 i = 0; i < count; ++i) {
-			structs::CompletedTask_Struct task;
-			task.task_id = in->ReadUInt32();
-			out_size += sizeof(task.task_id);
-			in->ReadString(task.title);
-			out_size += task.title.size() + 1;
-			task.completed_time = in->ReadUInt32();
-			out_size += sizeof(uint64); // zero-extended to uint64
-			tasks.emplace_back(std::move(task));
-		}
-
-		SerializeBuffer buf(out_size);
-		buf.WriteUInt32(count);
-		for (const auto& task : tasks) {
-			buf.WriteUInt32(task.task_id);
-			buf.WriteString(task.title);
-			buf.WriteUInt64(static_cast<uint64>(task.completed_time));
-		}
-
-		uchar *emu_buffer = in->pBuffer;
-		in->size = buf.size();
-		in->pBuffer = new uint8[buf.size()];
-		memcpy(in->pBuffer, buf.buffer(), buf.size());
-		delete[] emu_buffer;
-		dest->FastQueuePacket(&in, ack_req);
-	}
-
 	ENCODE(OP_TaskActivity)
 	{
 		EQApplicationPacket *in = *p;
@@ -3303,23 +6722,7 @@ namespace TOB
 		task.flag            = in->ReadUInt8();
 		in->ReadString(task.zones2);
 
-		uint32 out_size = 5 * sizeof(uint32)                        // task_slot_index..list_group
-		                + sizeof(int32)                              // activity_type
-		                + sizeof(uint8)                              // optional_byte
-		                + task.target_name.size() + 1
-		                + sizeof(uint32) + task.item_list.size()
-		                + sizeof(uint32)                             // goal_count
-		                + sizeof(uint32) + task.skill_list.size()
-		                + sizeof(uint32) + task.spell_list.size()
-		                + sizeof(uint32) + task.zones.size()         // length-prefixed
-		                + 1                                          // empty string (new TOB field)
-		                + sizeof(uint32)                             // dz_switch_id
-		                + task.description_override.size() + 1
-		                + sizeof(uint32)                             // done_count
-		                + sizeof(uint8)                              // flag
-		                + task.zones2.size() + 1;
-
-		SerializeBuffer buf(out_size);
+		SerializeBuffer buf;
 		buf.WriteUInt32(task.task_slot_index);
 		buf.WriteUInt32(task.task_type);
 		buf.WriteUInt32(task.task_id);
@@ -3332,8 +6735,10 @@ namespace TOB
 		buf.WriteUInt32(task.goal_count);
 		buf.WriteLengthString(task.skill_list);
 		buf.WriteLengthString(task.spell_list);
-		buf.WriteLengthString(task.zones);  // converted null-term → length-prefixed
-		buf.WriteString("");                // new TOB field
+		// the length-prefixed string is shown as extra objective text (it put " 54 54" after the task
+		// description) and the Zone column reads the null-terminated one (was empty -> "ALL")
+		buf.WriteLengthString("");
+		buf.WriteString(task.zones);
 		buf.WriteUInt32(task.dz_switch_id);
 		buf.WriteString(task.description_override);
 		buf.WriteUInt32(task.done_count);
@@ -3426,95 +6831,6 @@ namespace TOB
 		memcpy(in->pBuffer, buf.buffer(), buf.size());
 		delete[] emu_buffer;
 		dest->FastQueuePacket(&in, ack_req);
-	}
-
-	ENCODE(OP_TaskHistoryReply)
-	{
-		EQApplicationPacket *in = *p;
-		*p = nullptr;
-
-		in->SetReadPosition(0);
-		uint32 TaskIndex     = in->ReadUInt32();
-		uint32 ActivityCount = in->ReadUInt32();
-		if (ActivityCount > 20)
-			ActivityCount = 20;
-
-		struct Act {
-			uint32      type;
-			std::string target_name;
-			std::string item_list;
-			uint32      goal_count;
-			uint32      unknown04;
-			uint32      unknown08;
-			uint32      zone_id;
-			uint32      unknown16;
-			std::string desc;
-		};
-
-		std::vector<Act> acts;
-		acts.reserve(ActivityCount);
-
-		for (uint32 i = 0; i < ActivityCount; ++i) {
-			Act a;
-			a.type = in->ReadUInt32();
-			while (uint8 c = in->ReadUInt8()) a.target_name += c;
-			while (uint8 c = in->ReadUInt8()) a.item_list   += c;
-			a.goal_count = in->ReadUInt32();
-			a.unknown04  = in->ReadUInt32();
-			a.unknown08  = in->ReadUInt32();
-			a.zone_id    = in->ReadUInt32();
-			a.unknown16  = in->ReadUInt32();
-			while (uint8 c = in->ReadUInt8()) a.desc += c;
-			acts.push_back(std::move(a));
-		}
-
-		// TOB wire format per activity (sub_1401841E0 @ 0x1401841E0):
-		//   wire[1]  uint32         ActivityType          → act-1
-		//   wire[2]  null-term      target_name           → act+0   (max 63 stored)
-		//   wire[3]  uint32 (CSB)   GoalCount assumed     → act+340  // TODO: confirm field order via live capture
-		//   wire[4]  uint32 (direct) ZoneID assumed       → act+48   // TODO: confirm field order via live capture
-		//   wire[5]  uint32 (CSB)   unknown               → act+348  // TODO: identify field
-		//   wire[6]  uint32 (CSB)   unknown               → act+356  // TODO: identify field
-		//   wire[7]  null-term      item_list             → act+364 (CXStr, max 1023)
-		//   wire[8]  null-term      unknown               → act+64   // TODO: identify field; sending empty
-		//   wire[9]  uint32 (direct) unknown              → act+51   // TODO: identify field
-		//   wire[10] null-term      description_override assumed → act+208 (max 127) // TODO: confirm
-		//   wire[11] null-term      unknown               → act+128  // TODO: identify field; sending empty
-		uint32 OutSize = 8;
-		for (const auto& a : acts) {
-			OutSize += 4;                        // wire[1]: ActivityType
-			OutSize += a.target_name.size() + 1; // wire[2]: target_name
-			OutSize += 16;                       // wire[3-6]: 4x uint32
-			OutSize += a.item_list.size() + 1;   // wire[7]: item_list
-			OutSize += 1;                        // wire[8]: empty string
-			OutSize += 4;                        // wire[9]: uint32
-			OutSize += a.desc.size() + 1;        // wire[10]: description_override
-			OutSize += 1;                        // wire[11]: empty string
-		}
-
-		auto outapp = new EQApplicationPacket(OP_TaskHistoryReply, OutSize);
-		outapp->WriteUInt32(TaskIndex);
-		outapp->WriteUInt32(static_cast<uint32>(acts.size()));
-
-		for (const auto& a : acts) {
-			outapp->WriteUInt32(a.type);                            // wire[1]
-			for (char c : a.target_name) outapp->WriteUInt8(c);
-			outapp->WriteUInt8(0);                                  // wire[2]
-			outapp->WriteUInt32(a.goal_count);                      // wire[3] TODO: confirm order
-			outapp->WriteUInt32(a.zone_id);                         // wire[4] TODO: confirm order
-			outapp->WriteUInt32(0);                                 // wire[5] TODO: identify
-			outapp->WriteUInt32(0);                                 // wire[6] TODO: identify
-			for (char c : a.item_list) outapp->WriteUInt8(c);
-			outapp->WriteUInt8(0);                                  // wire[7]
-			outapp->WriteUInt8(0);                                  // wire[8] TODO: identify; sending empty
-			outapp->WriteUInt32(0);                                 // wire[9] TODO: identify
-			for (char c : a.desc) outapp->WriteUInt8(c);
-			outapp->WriteUInt8(0);                                  // wire[10] TODO: confirm desc here
-			outapp->WriteUInt8(0);                                  // wire[11] TODO: identify; sending empty
-		}
-
-		delete in;
-		dest->FastQueuePacket(&outapp, ack_req);
 	}
 
 	ENCODE(OP_TaskSelectWindow)
@@ -3644,6 +6960,264 @@ namespace TOB
 		ENCODE_FORWARD(OP_TaskSelectWindow);
 	}
 
+	ENCODE(OP_Trader)
+	{
+		if ((*p)->size < sizeof(uint32)) {
+			delete *p;
+			*p = nullptr;
+			return;
+		}
+		uint32 action = *(uint32 *) (*p)->pBuffer;
+
+		switch (action) {
+			case TraderOn: {
+				ENCODE_LENGTH_EXACT(Trader_ShowItems_Struct);
+				SETUP_DIRECT_ENCODE(Trader_ShowItems_Struct, structs::Trader_ShowItems_Struct);
+
+				eq->action = structs::TOBBazaarTraderBuyerActions::BeginTraderMode;
+				OUT(entity_id);
+
+				LogTrading("(TOB) TraderOn action <green>[{}] entity_id <green>[{}]", action, eq->entity_id);
+				FINISH_ENCODE();
+				break;
+			}
+			case TraderOff: {
+				ENCODE_LENGTH_EXACT(Trader_ShowItems_Struct);
+				SETUP_DIRECT_ENCODE(Trader_ShowItems_Struct, structs::Trader_ShowItems_Struct);
+
+				eq->action = structs::TOBBazaarTraderBuyerActions::EndTraderMode;
+				OUT(entity_id);
+
+				LogTrading("(TOB) TraderOff action <green>[{}] entity_id <green>[{}]", action, eq->entity_id);
+				FINISH_ENCODE();
+				break;
+			}
+			case ListTraderItems: {
+				ENCODE_LENGTH_EXACT(Trader_Struct);
+				SETUP_DIRECT_ENCODE(Trader_Struct, structs::ClickTrader_Struct);
+				LogTrading("(TOB)  action <green>[{}]", action);
+
+				eq->action = structs::TOBBazaarTraderBuyerActions::ListTraderItems;
+				std::transform(
+					std::begin(emu->items),
+					std::end(emu->items),
+					std::begin(eq->items),
+					[&](uint64 x) {
+						return static_cast<uint32>(x);
+					}
+				);
+				std::copy_n(
+					std::begin(emu->item_cost),
+					EQ::invtype::BAZAAR_SIZE,
+					std::begin(eq->item_cost)
+				);
+
+				FINISH_ENCODE();
+				break;
+			}
+			case TraderAck2: {
+				LogTrading("(TOB) TraderAck2 action");
+				EQApplicationPacket *in = *p;
+				*p = nullptr;
+
+				dest->FastQueuePacket(&in);
+				break;
+			}
+			case PriceUpdate: {
+				SETUP_DIRECT_ENCODE(TraderPriceUpdate_Struct, structs::TraderPriceUpdate_Struct);
+				switch (emu->SubAction) {
+					case BazaarPriceChange_AddItem: {
+						auto outapp = std::make_unique<EQApplicationPacket>(
+							OP_Trader,
+							sizeof(structs::TraderStatus_Struct)
+						);
+
+						auto data        = (structs::TraderStatus_Struct *) outapp->pBuffer;
+						data->action     = emu->Action;
+						data->sub_action = BazaarPriceChange_AddItem;
+						LogTrading(
+							"(TOB) PriceUpdate action <green>[{}] AddItem subaction <yellow>[{}]",
+							data->action,
+							data->sub_action
+						);
+
+						dest->QueuePacket(outapp.get());
+						break;
+					}
+					case BazaarPriceChange_RemoveItem: {
+						auto outapp = std::make_unique<EQApplicationPacket>(
+							OP_Trader,
+							sizeof(structs::TraderStatus_Struct)
+						);
+
+						auto data        = (structs::TraderStatus_Struct *) outapp->pBuffer;
+						data->action     = emu->Action;
+						data->sub_action = BazaarPriceChange_RemoveItem;
+						LogTrading(
+							"(TOB) PriceUpdate action <green>[{}] RemoveItem subaction <yellow>[{}]",
+							data->action,
+							data->sub_action
+						);
+
+						dest->QueuePacket(outapp.get());
+						break;
+					}
+					case BazaarPriceChange_UpdatePrice: {
+						auto outapp = std::make_unique<EQApplicationPacket>(
+							OP_Trader,
+							sizeof(structs::TraderStatus_Struct)
+						);
+
+						auto data        = (structs::TraderStatus_Struct *) outapp->pBuffer;
+						data->action     = emu->Action;
+						data->sub_action = BazaarPriceChange_UpdatePrice;
+						LogTrading(
+							"(TOB) PriceUpdate action <green>[{}] UpdatePrice subaction <yellow>[{}]",
+							data->action,
+							data->sub_action
+						);
+
+						dest->QueuePacket(outapp.get());
+						break;
+					}
+				}
+
+				FINISH_ENCODE();
+				break;
+			}
+			case BuyTraderItem: {
+				EQApplicationPacket *in = *p;
+				*p = nullptr;
+
+				auto eq = (structs::TraderBuy_Struct *) in->pBuffer;
+				LogTrading(
+					"(TOB) BuyTraderItem action <green>[{}] item_id <green>[{}] item_sn <green>[{}] buyer <green>[{}]",
+					action,
+					eq->item_id,
+					eq->serial_number,
+					eq->buyer_name
+				);
+				dest->FastQueuePacket(&in);
+				break;
+			}
+			default: {
+				LogTrading("(TOB) action <red>[{}]", action);
+				EQApplicationPacket *in = *p;
+				*p = nullptr;
+
+				dest->FastQueuePacket(&in);
+			}
+		}
+	}
+
+	ENCODE(OP_TraderBuy)
+	{
+		ENCODE_LENGTH_EXACT(TraderBuy_Struct);
+		SETUP_DIRECT_ENCODE(TraderBuy_Struct, structs::TraderBuy_Struct);
+		LogTrading(
+			"(TOB) item_id <green>[{}] price <green>[{}] quantity <green>[{}] trader_id <green>[{}]",
+			emu->item_id,
+			emu->price,
+			emu->quantity,
+			emu->trader_id
+		);
+		__packet->SetOpcode(OP_TraderShop);
+		OUT(action);
+		OUT(method);
+		OUT(sub_action);
+		OUT(trader_id);
+		OUT(item_id);
+		OUT(price);
+		OUT(already_sold);
+		OUT(quantity);
+		OUT_str(buyer_name);
+		OUT_str(seller_name);
+		OUT_str(item_name);
+		OUT_str(serial_number);
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_TraderDelItem)
+	{
+		ENCODE_LENGTH_EXACT(TraderDelItem_Struct);
+		SETUP_DIRECT_ENCODE(TraderDelItem_Struct, structs::TraderDelItem_Struct);
+		LogTrading(
+			"(TOB) trader_id <green>[{}] item_id <green>[{}]",
+			emu->trader_id,
+			emu->item_id
+		);
+
+		eq->TraderID = emu->trader_id;
+		auto serial  = fmt::format("{:016}\n", emu->item_id);
+		strn0cpy(eq->SerialNumber, serial.c_str(), sizeof(eq->SerialNumber));
+		LogTrading("(TOB) TraderID <green>[{}], SerialNumber: <green>[{}]", emu->trader_id, emu->item_id);
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_TraderShop)
+	{
+		if ((*p)->size < sizeof(uint32)) {
+			delete *p;
+			*p = nullptr;
+			return;
+		}
+		auto action = *(uint32 *) (*p)->pBuffer;
+
+		switch (action) {
+			case ClickTrader: {
+				ENCODE_LENGTH_EXACT(TraderClick_Struct);
+				SETUP_DIRECT_ENCODE(TraderClick_Struct, structs::TraderClick_Struct);
+				LogTrading(
+					"(TOB) ClickTrader action <green>[{}] trader_id <green>[{}]",
+					action,
+					emu->TraderID
+				);
+
+				eq->action      = structs::TOBBazaarTraderBuyerActions::ClickTrader; // Seen on Live
+				eq->trader_id   = emu->TraderID;
+				eq->unknown_008 = emu->Approval;
+
+				FINISH_ENCODE();
+				break;
+			}
+			case structs::TOBBazaarTraderBuyerActions::BuyTraderItem: {
+				ENCODE_LENGTH_EXACT(structs::TraderBuy_Struct);
+				SETUP_DIRECT_ENCODE(TraderBuy_Struct, structs::TraderBuy_Struct);
+				LogTrading(
+					"(TOB) item_id <green>[{}] price <green>[{}] quantity <green>[{}] trader_id <green>[{}]",
+					eq->item_id,
+					eq->price,
+					eq->quantity,
+					eq->trader_id
+				);
+
+				OUT(action);
+				OUT(method);
+				OUT(trader_id);
+				OUT(item_id);
+				OUT(price);
+				OUT(already_sold);
+				OUT(quantity);
+				OUT_str(buyer_name);
+				OUT_str(seller_name);
+				OUT_str(item_name);
+				OUT_str(serial_number);
+
+				FINISH_ENCODE();
+				break;
+			}
+			default: {
+				LogTrading("(TOB) Unhandled action <red>[{}]", action);
+				EQApplicationPacket *in = *p;
+				*p = nullptr;
+
+				dest->FastQueuePacket(&in);
+			}
+		}
+	}
+
 	ENCODE(OP_Track)
 	{
 		SETUP_VAR_ENCODE(Track_Struct);
@@ -3715,48 +7289,47 @@ namespace TOB
 		emu->unknown44[0] = Count;
 		emu->unknown52 = 0;
 
-		ALLOC_LEN_ENCODE(__packet->size + (Count * 4));
+		SerializeBuffer buffer;
+		TOBWriteBytes(buffer, __emu_buffer, sizeof(WhoAllReturnStruct));
 
-		char *InBuffer  = (char *)__emu_buffer + sizeof(WhoAllReturnStruct);
-		char *OutBuffer = (char *)__packet->pBuffer;
-
-		memcpy(OutBuffer, __emu_buffer, sizeof(WhoAllReturnStruct));
-		OutBuffer += sizeof(WhoAllReturnStruct);
+		char *InBuffer = (char *)__emu_buffer + sizeof(WhoAllReturnStruct);
 
 		for (int i = 0; i < Count; ++i) {
 			uint32 x;
 
 			x = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
-			VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, x);   // FormatMSGID
+			buffer.WriteUInt32(x);                         // FormatMSGID
 
 			InBuffer += 4;                                 // skip server PIDMSGID
-			VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0);           // PIDMSGID = 0 (no surname)
-			VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, 0xffffffff);  // extra uint32 before Name
+			buffer.WriteUInt32(0);                         // PIDMSGID = 0 (no surname)
+			buffer.WriteUInt32(0xffffffff);                // extra uint32 before Name
 
 			char Name[64];
 
 			VARSTRUCT_DECODE_STRING(Name, InBuffer);       // Char Name
-			VARSTRUCT_ENCODE_STRING(OutBuffer, Name);
+			buffer.WriteString(Name);
 
 			x = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
-			VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, x);   // RankMSGID
+			buffer.WriteUInt32(x);                         // RankMSGID
 
 			VARSTRUCT_DECODE_STRING(Name, InBuffer);       // Guild Name
-			VARSTRUCT_ENCODE_STRING(OutBuffer, Name);
+			buffer.WriteString(Name);
 
 			for (int j = 0; j < 7; ++j) {
 				x = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
-				VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, x);
+				buffer.WriteUInt32(x);
 			}
 
 			VARSTRUCT_DECODE_STRING(Name, InBuffer);       // Account
-			VARSTRUCT_ENCODE_STRING(OutBuffer, Name);
+			buffer.WriteString(Name);
 
 			x = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
-			VARSTRUCT_ENCODE_TYPE(uint32, OutBuffer, x);   // Unknown100
+			buffer.WriteUInt32(x);                         // Unknown100
 		}
 
-		FINISH_ENCODE();
+		auto outapp = new EQApplicationPacket(OP_WhoAllResponse, std::move(buffer));
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete __packet;
 	}
 
 	ENCODE(OP_ZoneChange)
@@ -3784,22 +7357,23 @@ namespace TOB
 	ENCODE(OP_ZonePlayerToBind)
 	{
 		SETUP_VAR_ENCODE(ZonePlayerToBind_Struct);
-		ALLOC_LEN_ENCODE(sizeof(structs::ZonePlayerToBind_Struct) + strlen(emu->zone_name));
+		// 20 fixed bytes + zone name with terminator + 4 trailing uint32s actually written below
+		SerializeBuffer buffer;
+		buffer.WriteUInt16(emu->bind_zone_id);
+		buffer.WriteUInt16(emu->bind_instance_id);
+		buffer.WriteFloat(emu->x);
+		buffer.WriteFloat(emu->y);
+		buffer.WriteFloat(emu->z);
+		buffer.WriteFloat(emu->heading);
+		buffer.WriteString(emu->zone_name);
+		buffer.WriteUInt32(60);
+		buffer.WriteUInt32(0);
+		buffer.WriteUInt32(51);
+		buffer.WriteUInt32(41);
 
-		__packet->SetWritePosition(0);
-		__packet->WriteUInt16(emu->bind_zone_id);
-		__packet->WriteUInt16(emu->bind_instance_id);
-		__packet->WriteFloat(emu->x);
-		__packet->WriteFloat(emu->y);
-		__packet->WriteFloat(emu->z);
-		__packet->WriteFloat(emu->heading);
-		__packet->WriteString(emu->zone_name);
-		__packet->WriteUInt32(60);
-		__packet->WriteUInt32(0);
-		__packet->WriteUInt32(51);
-		__packet->WriteUInt32(41);
-
-		FINISH_ENCODE();
+		auto outapp = new EQApplicationPacket(OP_ZonePlayerToBind, std::move(buffer));
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete __packet;
 	}
 
 	ENCODE(OP_ZoneSpawns)
@@ -4030,14 +7604,9 @@ namespace TOB
 
 			buffer.WriteUInt8(0);
 			buffer.WriteUInt32(emu->deity);
-			if (emu->NPC) {
-				buffer.WriteInt32(-1);
-				buffer.WriteUInt32(0);
-			}
-			else { //guilds will probably need a ton of work
-				buffer.WriteUInt32(emu->guildID);
-				buffer.WriteUInt32(0);
-			}
+			// ToB guild ids are u64 and 0 means "no guild"; the server's 0xFFFFFFFF made the client
+			// think everyone (NPCs too) was in guild 4294967295
+			buffer.WriteUInt64(emu->NPC ? 0 : ServerToTOBGuildID(emu->guildID));
 			buffer.WriteUInt32(emu->class_);
 
 			/*
@@ -4327,10 +7896,21 @@ namespace TOB
 
 	DECODE(OP_BlockedBuffs)
 	{
+		// The ToB client sends up to 60 blocked spell ids, but the server struct only holds
+		// BLOCKED_BUFF_COUNT (20). Writing them all overran the heap on every zone-in.
+		if (__packet->size < 4) {
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
 		uint32 count = __packet->ReadUInt32();
+		if (__packet->size < 6 + 4ull * count) {
+			LogNetcode("Wrong size on incoming OP_BlockedBuffs: [{}] bytes for [{}] ids", __packet->size, count);
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
 		std::vector<int32> blocked_spell_ids;
 		blocked_spell_ids.reserve(count);
-		for (int i = 0; i < count; ++i)
+		for (uint32 i = 0; i < count; ++i)
 			blocked_spell_ids.push_back(static_cast<int32>(__packet->ReadUInt32()));
 
 		bool pet = __packet->ReadUInt8() == 1;
@@ -4338,17 +7918,20 @@ namespace TOB
 
 		__packet->SetReadPosition(0); // reset the packet read to pass it along
 
+		unsigned char* __eq_buffer = __packet->pBuffer;
 		__packet->size = sizeof(BlockedBuffs_Struct);
 		__packet->pBuffer = new unsigned char[__packet->size]{};
 		BlockedBuffs_Struct* emu = (BlockedBuffs_Struct*)__packet->pBuffer;
 
+		const uint32 kept = std::min<uint32>(count, BLOCKED_BUFF_COUNT);
 		memset(emu->SpellID, -1, sizeof(emu->SpellID));
-		for (int i = 0; i < count; ++i)
+		for (uint32 i = 0; i < kept; ++i)
 			emu->SpellID[i] = blocked_spell_ids[i];
 
-		emu->Count = count;
+		emu->Count = kept;
 		emu->Pet = pet;
 		emu->Initialise = init;
+		delete[] __eq_buffer;
 	}
 
 	DECODE(OP_BookButton)
@@ -4398,6 +7981,247 @@ namespace TOB
 		FINISH_DIRECT_DECODE();
 	}
 
+	DECODE(OP_Barter)
+	{
+		if (__packet->size < sizeof(uint32)) {
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+		auto action = *(uint32 *) __packet->pBuffer;
+
+		switch (action) {
+			case structs::TOBBuyerActions::BuyerRemoveItem: {
+				auto emu = (BuyerGeneric_Struct *) __packet->pBuffer;
+				emu->action = Barter_BuyerItemRemove;
+				LogTradingDetail("(TOB) Buyer Remove Item");
+
+				break;
+			}
+			case structs::TOBBuyerActions::BuyerInspectBegin: {
+				LogTradingDetail("(TOB) Buyer Inspect Begin Item");
+
+				auto emu = (BuyerGeneric_Struct *) __packet->pBuffer;
+				emu->action = Barter_BuyerInspectBegin;
+
+				break;
+			}
+			case structs::TOBBuyerActions::BuyerInspectEnd: {
+				LogTradingDetail("(TOB) Buyer Inspect End Item ");
+
+				auto emu = (BuyerGeneric_Struct *) __packet->pBuffer;
+				emu->action = Barter_BuyerInspectEnd;
+
+				break;
+			}
+			case structs::TOBBuyerActions::BuyerWelcomeMessage: {
+				LogTradingDetail("(TOB) Buyer Welcome Message Update");
+				SETUP_DIRECT_DECODE(BuyerWelcomeMessageUpdate_Struct, structs::BuyerWelcomeMessageUpdate_Struct);
+
+				emu->action = Barter_WelcomeMessageUpdate;
+				strn0cpy(emu->welcome_message, eq->welcome_message, sizeof(emu->welcome_message));
+
+				FINISH_DIRECT_DECODE();
+				break;
+			}
+			case structs::TOBBuyerActions::BuyerItemInspect: {
+				SETUP_DIRECT_DECODE(BarterItemSearchLinkRequest_Struct, structs::BarterItemSearchLinkRequest_Struct);
+				LogTradingDetail("(TOB) Seller ID <green>[{}] Inspecting Item <green>[{}] from Buyer ID <green>[{}] ",
+								 eq->seller_id,
+								 eq->item_id,
+								 eq->buyer_id
+				);
+
+				emu->action      = Barter_BarterItemInspect;
+				emu->item_id     = eq->item_id;
+				emu->searcher_id = eq->seller_id;
+
+				FINISH_DIRECT_DECODE();
+				break;
+			}
+			default: {
+				auto emu = (BuyerGeneric_Struct *) __packet->pBuffer;
+				LogTradingDetail("(TOB) Pass thru OP_Barter packet action <red>[{}]", emu->action);
+			}
+		}
+	}
+
+	DECODE(OP_BazaarSearch)
+	{
+		if (__packet->size < sizeof(uint8)) {
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+		char *Buffer = (char *)__packet->pBuffer;
+
+		uint8 SubAction = VARSTRUCT_DECODE_TYPE(uint8, Buffer);
+		LogTrading("(TOB) action <green>[{}]", SubAction);
+
+		if ((SubAction != BazaarInspectItem) || (__packet->size != sizeof(structs::NewBazaarInspect_Struct)))
+			return;
+
+		SETUP_DIRECT_DECODE(NewBazaarInspect_Struct, structs::NewBazaarInspect_Struct);
+
+		IN(Beginning.Action);
+		memcpy(emu->Name, eq->Name, sizeof(emu->Name));
+		IN(SerialNumber);
+		LogTrading("(TOB) action <green>[{}] serial_number <green>[{}]", eq->Beginning.Action, eq->SerialNumber);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_BuyerItems)
+	{
+		if (__packet->size < sizeof(uint32)) {
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+		auto action = *(uint32 *) __packet->pBuffer;
+
+		switch (action) {
+			case structs::TOBBuyerActions::BuyerModifyBuyLine:
+			case structs::TOBBuyerActions::BuyerBuyLine: {
+				// client-controlled counts and strings: bounds-checked packet reads
+				BuyerBuyLines_Struct buyer_buy_lines{};
+				__packet->SetReadPosition(0);
+
+				buyer_buy_lines.action = __packet->ReadUInt32();
+
+				buyer_buy_lines.no_items = 1;
+				if (action == structs::TOBBuyerActions::BuyerBuyLine) {
+					buyer_buy_lines.no_items = std::min<uint16>(__packet->ReadUInt16(), MAX_BUYER_LINES);
+				}
+
+				buyer_buy_lines.buy_lines.reserve(buyer_buy_lines.no_items);
+				for (int i = 0; i < buyer_buy_lines.no_items && !__packet->ReadError(); i++) {
+					BuyerLineItems_Struct b{};
+					b.slot           = __packet->ReadUInt32();
+					b.enabled        = __packet->ReadUInt8();
+					b.item_id        = __packet->ReadUInt32();
+					__packet->ReadString(b.item_name, 64);
+					b.item_icon      = __packet->ReadUInt32();
+					b.item_quantity  = __packet->ReadUInt32();
+					b.item_toggle    = __packet->ReadUInt8();
+					b.item_cost      = __packet->ReadUInt32();
+					auto trade_items = std::min<uint32>(__packet->ReadUInt32(), MAX_BUYER_COMPENSATION_ITEMS);
+					buyer_buy_lines.buy_lines.push_back(b);
+
+					if (trade_items > 0) {
+						buyer_buy_lines.buy_lines[i].trade_items.reserve(trade_items);
+						for (uint32 x = 0; x < trade_items && !__packet->ReadError(); x++) {
+							BuyerLineTradeItems_Struct blti{};
+							blti.item_id       = __packet->ReadUInt32();
+							blti.item_quantity = __packet->ReadUInt32();
+							blti.item_icon     = __packet->ReadUInt32();
+							__packet->ReadString(blti.item_name, 64);
+							buyer_buy_lines.buy_lines[i].trade_items.push_back(blti);
+						}
+					}
+					__packet->ReadSkip(std::min<uint32>(TOB_BUYER_LINE_TRAILER_SIZE, __packet->ReadRemaining())); // trailing padding
+				}
+
+				if (__packet->ReadError()) {
+					LogNetcode("TOB::DECODE(OP_BuyerItems) malformed buy line packet, size [{}]", __packet->size);
+					__packet->SetOpcode(OP_Unknown);
+					return;
+				}
+
+				std::stringstream           ss{};
+				cereal::BinaryOutputArchive ar(ss);
+				{
+					ar(buyer_buy_lines);
+				}
+
+				auto new_size   = sizeof(BuyerGeneric_Struct) + ss.str().length();
+				auto new_packet = new unsigned char[new_size];
+				delete[] __packet->pBuffer;
+				__packet->size    = new_size;
+				__packet->pBuffer = new_packet;
+				auto emu = (BuyerGeneric_Struct *) __packet->pBuffer;
+				emu->action = Barter_BuyerItemUpdate;
+
+				if (action == structs::TOBBuyerActions::BuyerBuyLine) {
+					emu->action = Barter_BuyerItemStart;
+				}
+
+				memcpy(emu->payload, ss.str().data(), ss.str().length());
+				__packet->SetOpcode(OP_Barter);
+
+				break;
+			}
+			case structs::TOBBuyerActions::BuyerSellItem: {
+				BuyerLineSellItem_Struct sell_item{};
+				__packet->SetReadPosition(0);
+
+				sell_item.action          = __packet->ReadUInt32();
+				sell_item.purchase_method = __packet->ReadUInt32();
+				__packet->ReadSkip(4);
+				sell_item.buyer_entity_id = __packet->ReadUInt32();
+				sell_item.buyer_id        = __packet->ReadUInt32();
+				__packet->ReadSkip(11);
+				sell_item.slot    = __packet->ReadUInt32();
+				sell_item.enabled = __packet->ReadUInt8();
+				sell_item.item_id = __packet->ReadUInt32();
+				std::string item_name;
+				__packet->ReadString(item_name, sizeof(sell_item.item_name) - 1);
+				strn0cpy(sell_item.item_name, item_name.c_str(), sizeof(sell_item.item_name));
+				sell_item.item_icon      = __packet->ReadUInt32();
+				sell_item.item_quantity  = __packet->ReadUInt32();
+				sell_item.item_toggle    = __packet->ReadUInt8();
+				sell_item.item_cost      = __packet->ReadUInt32();
+				sell_item.no_trade_items = std::min<uint32>(__packet->ReadUInt32(), MAX_BUYER_COMPENSATION_ITEMS);
+
+				if (sell_item.no_trade_items > 0) {
+					sell_item.trade_items.reserve(sell_item.no_trade_items);
+					for (uint32 x = 0; x < sell_item.no_trade_items && !__packet->ReadError(); x++) {
+						BuyerLineTradeItems_Struct blti{};
+						blti.item_id       = __packet->ReadUInt32();
+						blti.item_quantity = __packet->ReadUInt32();
+						blti.item_icon     = __packet->ReadUInt32();
+						__packet->ReadString(blti.item_name, 64);
+						sell_item.trade_items.push_back(blti);
+					}
+				}
+
+				if (sell_item.purchase_method) {
+					sell_item.buyer_entity_id = __packet->ReadUInt32();
+					sell_item.buyer_id        = __packet->ReadUInt32();
+					sell_item.zone_id         = __packet->ReadUInt32();
+					__packet->ReadString(sell_item.buyer_name, 64);
+				}
+				else {
+					__packet->ReadSkip(TOB_BUYER_LINE_TRAILER_SIZE);
+				}
+
+				sell_item.seller_quantity = __packet->ReadUInt32();
+
+				if (__packet->ReadError()) {
+					LogNetcode("TOB::DECODE(OP_BuyerItems) malformed sell item packet, size [{}]", __packet->size);
+					__packet->SetOpcode(OP_Unknown);
+					return;
+				}
+
+				std::stringstream           ss{};
+				cereal::BinaryOutputArchive ar(ss);
+				{
+					ar(sell_item);
+				}
+
+				auto new_size   = sizeof(BuyerGeneric_Struct) + ss.str().length();
+				auto new_packet = new unsigned char[new_size];
+				delete[] __packet->pBuffer;
+				__packet->size    = new_size;
+				__packet->pBuffer = new_packet;
+				auto emu = (BuyerGeneric_Struct *) __packet->pBuffer;
+				emu->action = Barter_SellItem;
+
+				memcpy(emu->payload, ss.str().data(), ss.str().length());
+				__packet->SetOpcode(OP_Barter);
+
+				break;
+			}
+		}
+	}
+
 	DECODE(OP_CastSpell)
 	{
 		DECODE_LENGTH_EXACT(structs::CastSpell_Struct);
@@ -4426,7 +8250,7 @@ namespace TOB
 		VARSTRUCT_DECODE_STRING(Sender, InBuffer);
 		VARSTRUCT_DECODE_STRING(Target, InBuffer);
 
-		//packet seems the same as rof2 with 4 more empty bytes before language
+		//4 empty bytes before language
 		InBuffer += 8;
 
 		uint32 Language = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
@@ -4661,6 +8485,556 @@ namespace TOB
 		FINISH_DIRECT_DECODE();
 	}
 
+// -----------------------------------------------------------------------------------------------------
+	DECODE(OP_GuildInvite)
+	{
+		DECODE_LENGTH_EXACT(structs::GuildInvite_Struct);
+		SETUP_DIRECT_DECODE(GuildCommand_Struct, structs::GuildInvite_Struct);
+
+		TOBCopyStr(emu->othername, eq->othername);
+		TOBCopyStr(emu->myname, eq->myname);
+		emu->guildeqid = static_cast<uint16>(TOBToServerGuildID(eq->guild_id));
+		emu->officer   = eq->rank;                 // 8 when sent from /guildinvite
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_GuildInviteAccept)
+	{
+		DECODE_LENGTH_EXACT(structs::GuildInviteAccept_Struct);
+		SETUP_DIRECT_DECODE(GuildInviteAccept_Struct, structs::GuildInviteAccept_Struct);
+
+		TOBCopyStr(emu->inviter, eq->inviter);
+		TOBCopyStr(emu->new_member, eq->new_member);
+		emu->response = eq->response;              // rank on accept, 9 on decline (popup case 100)
+		emu->guild_id = TOBToServerGuildID(eq->guild_id);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_GuildRemove)
+	{
+		DECODE_LENGTH_EXACT(structs::GuildRemove_Struct);
+		SETUP_DIRECT_DECODE(GuildCommand_Struct, structs::GuildRemove_Struct);
+
+		TOBCopyStr(emu->othername, eq->othername);
+		TOBCopyStr(emu->myname, eq->myname);
+		emu->guildeqid = static_cast<uint16>(TOBToServerGuildID(eq->guild_id));
+		emu->officer   = eq->officer;
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_GuildDemote)
+	{
+		DECODE_LENGTH_EXACT(structs::GuildDemote_Struct);
+		SETUP_DIRECT_DECODE(GuildDemoteStruct, structs::GuildDemote_Struct);
+
+		TOBCopyStr(emu->name, eq->name); // NOTE: ToB sends this empty
+		TOBCopyStr(emu->target, eq->target);
+		IN(rank);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_GuildPromote)
+	{
+		DECODE_LENGTH_EXACT(structs::GuildPromote_Struct);
+		SETUP_DIRECT_DECODE(GuildPromoteStruct, structs::GuildPromote_Struct);
+
+		TOBCopyStr(emu->target, eq->target);
+		TOBCopyStr(emu->name, eq->name);
+		// ToB sends the new rank once (@136). Handle_OP_GuildPromote takes the new rank from myrank
+		// (the emu layout), so fill both; the client's own myrank field is uninitialised.
+		emu->rank   = eq->rank;
+		emu->myrank = eq->rank;
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_GuildManageBanker)
+	{
+		DECODE_LENGTH_EXACT(structs::GuildManageBanker_Struct);
+		SETUP_DIRECT_DECODE(GuildManageBanker_Struct, structs::GuildManageBanker_Struct);
+
+		emu->unknown0 = 0;
+		TOBCopyStr(emu->myname, eq->myname);
+		TOBCopyStr(emu->member, eq->member);
+		emu->enabled = eq->enabled;
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_GuildPublicNote)
+	{
+		DECODE_LENGTH_EXACT(structs::GuildPublicNote_Struct);
+		SETUP_DIRECT_DECODE(GuildUpdate_PublicNote, structs::GuildPublicNote_Struct);
+
+		emu->unknown0 = TOBToServerGuildID(eq->guild_id);
+		TOBCopyStr(emu->name, eq->name);
+		TOBCopyStr(emu->target, eq->target);
+		TOBCopyStr(emu->note, eq->note);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_GuildStatus)
+	{
+		DECODE_LENGTH_EXACT(structs::GuildStatus_Struct);
+		SETUP_DIRECT_DECODE(GuildStatus_Struct, structs::GuildStatus_Struct);
+
+		TOBCopyStr(emu->Name, eq->Name);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_SetGuildMOTD)
+	{
+		DECODE_LENGTH_EXACT(structs::GuildMOTD_Struct);
+		SETUP_DIRECT_DECODE(GuildMOTD_Struct, structs::GuildMOTD_Struct);
+
+		emu->unknown0 = TOBToServerGuildID(eq->guild_id);
+		TOBCopyStr(emu->name, eq->name);
+		TOBCopyStr(emu->setby_name, eq->setby_name);
+		emu->unknown132 = eq->unknown136;
+		TOBCopyStr(emu->motd, eq->motd);
+
+		FINISH_DIRECT_DECODE();
+	}
+	DECODE(OP_GetGuildMOTD) { DECODE_FORWARD(OP_SetGuildMOTD); }
+
+	DECODE(OP_GuildUpdate)
+	{
+		DECODE_LENGTH_ATLEAST(structs::GuildUpdateHeader_Struct);
+
+		constexpr uint32 EMU_HDR = EMU_GUILD_UPDATE_HEADER_SIZE;
+		constexpr uint32 TOB_HDR = sizeof(structs::GuildUpdateHeader_Struct);
+
+		unsigned char *__eq_buffer = __packet->pBuffer;
+		auto hdr = reinterpret_cast<structs::GuildUpdateHeader_Struct *>(__eq_buffer);
+		const uint32 payload = __packet->size - TOB_HDR;
+
+		uint32 action = hdr->action;
+		if (action == TOBGuildUpdateRankNames)        { action = GuildUpdateRanks; }
+		else if (action == TOBGuildUpdatePermissions) { action = GuildUpdatePermissions; }
+
+		// keep the server's largest struct size so fixed-size casts on the server stay in bounds
+		const uint32 emu_size = std::max<uint32>(EMU_HDR + payload, sizeof(GuildUpdateURLAndChannel_Struct));
+		auto buf = new unsigned char[emu_size] {};
+		uint32 gid = TOBToServerGuildID(hdr->guild_id);
+		memcpy(buf + EMU_GUILD_UPDATE_ACTION_OFFSET,   &action,         sizeof(action));
+		memcpy(buf + EMU_GUILD_UPDATE_UNKNOWN4_OFFSET, &hdr->unknown4, sizeof(hdr->unknown4));
+		memcpy(buf + EMU_GUILD_UPDATE_UNKNOWN8_OFFSET, &hdr->unknown8, sizeof(hdr->unknown8));
+		memcpy(buf + EMU_GUILD_UPDATE_NAME_OFFSET,     hdr->name,      sizeof(hdr->name));
+		buf[EMU_GUILD_UPDATE_NAME_OFFSET + sizeof(hdr->name) - 1] = '\0';
+		memcpy(buf + EMU_GUILD_UPDATE_GUILD_ID_OFFSET, &gid,           sizeof(gid));
+		if (payload) {
+			memcpy(buf + EMU_HDR, __eq_buffer + TOB_HDR, payload);
+		}
+
+		__packet->pBuffer = buf;
+		__packet->size    = emu_size;
+		delete[] __eq_buffer;
+	}
+
+	// OP_GuildLeader (0x1710) is {name[64], target[64]}, which matches the emu GuildMakeLeader: opcode only.
+
+
+	// OP_Emote, C2S: u32 type + char[1024]
+	DECODE(OP_Emote)
+	{
+		if (__packet->size < sizeof(uint32) + 1) {
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+		unsigned char *__eq_buffer = __packet->pBuffer;
+		size_t eq_size = __packet->size;
+
+		size_t msg_cap = eq_size - sizeof(uint32);
+		std::string old_message((const char *)&__eq_buffer[4], strnlen((const char *)&__eq_buffer[4], msg_cap));
+		std::string new_message;
+		TOBToServerConvertLinks(new_message, old_message);
+
+		__packet->size = sizeof(Emote_Struct);
+		__packet->pBuffer = new unsigned char[__packet->size] {};
+		Emote_Struct *emu = (Emote_Struct *)__packet->pBuffer;
+		memcpy(&emu->type, __eq_buffer, sizeof(uint32));
+		strn0cpy(emu->message, new_message.c_str(), sizeof(emu->message));
+
+		delete[] __eq_buffer;
+	}
+
+	// OP_InspectRequest 0x6ea6, C2S:
+	DECODE(OP_InspectRequest)
+	{
+		DECODE_LENGTH_EXACT(structs::Inspect_Struct);
+		SETUP_DIRECT_DECODE(Inspect_Struct, structs::Inspect_Struct);
+		IN(TargetID);
+		IN(PlayerID);
+		FINISH_DIRECT_DECODE();
+	}
+
+	// OP_GMLastName 0x00a0, C2S: (195 bytes)
+	DECODE(OP_GMLastName)
+	{
+		DECODE_LENGTH_ATLEAST(structs::GMLastName_Struct);
+		SETUP_DIRECT_DECODE(GMLastName_Struct, structs::GMLastName_Struct);
+		strn0cpy(emu->name, eq->name, std::min(sizeof(emu->name), sizeof(eq->name)));
+		strn0cpy(emu->gmname, eq->gmname, std::min(sizeof(emu->gmname), sizeof(eq->gmname)));
+		strn0cpy(emu->lastname, eq->lastname, std::min(sizeof(emu->lastname), sizeof(eq->lastname)));
+		// emu->unknown[] stays zero (the "update clients" flag is left to the server)
+		FINISH_DIRECT_DECODE();
+	}
+
+	// OP_RaidInvite 0x482c, C2S: serialized raid object
+	//   u32 action; cstr player_name; u32 unknown1; [cstr leader_name; u32 parameter; [cstr text]]
+	DECODE(OP_RaidInvite)
+	{
+		const size_t size = __packet->size;
+		__packet->SetReadPosition(0);
+
+		char player_name[64] = {}, leader_name[64] = {};
+		uint32 action = __packet->ReadUInt32();
+		std::string player_name_str;
+		__packet->ReadString(player_name_str, sizeof(player_name) - 1);
+		if (__packet->ReadError()) {
+			LogNetcode("TOB OP_RaidInvite too short ([{}] bytes)", size);
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+		const uint32 unknown1 = __packet->ReadUInt32();   // missing fields stay 0
+		std::string leader_name_str;
+		__packet->ReadString(leader_name_str, sizeof(leader_name) - 1);
+		const uint32 parameter = __packet->ReadUInt32();
+		strn0cpy(player_name, player_name_str.c_str(), sizeof(player_name));
+		strn0cpy(leader_name, leader_name_str.c_str(), sizeof(leader_name));
+
+		// ToB raid-options loot commands use the "2" variants; the server handles them as the plain loot commands
+		switch (action) {
+			case RaidCommandLootType2: action = RaidCommandLootType; break;
+			case RaidCommandAddLooter2: action = RaidCommandAddLooter; break;
+			case RaidCommandRemoveLooter2: action = RaidCommandRemoveLooter; break;
+			default: break;
+		}
+
+		unsigned char *__eq_buffer = __packet->pBuffer;   // keep the original buffer until we are done reading it
+
+		if (action == raidSetMotd || action == raidSetNote) {
+			std::string text;
+			if (!__packet->ReadError() && __packet->ReadRemaining() > 0) {
+				const char *s = reinterpret_cast<const char *>(__packet->pBuffer + __packet->GetReadPosition());
+				text.assign(s, strnlen(s, __packet->ReadRemaining()));
+			}
+			if (action == raidSetMotd) {
+				__packet->size = sizeof(RaidMOTD_Struct);
+				__packet->pBuffer = new unsigned char[__packet->size] {};
+				auto emu = (RaidMOTD_Struct *)__packet->pBuffer;
+				emu->general.action = action;
+				emu->general.unknown1 = unknown1;
+				emu->general.parameter = parameter;
+				strn0cpy(emu->general.player_name, player_name, sizeof(emu->general.player_name));
+				strn0cpy(emu->general.leader_name, leader_name, sizeof(emu->general.leader_name));
+				strn0cpy(emu->motd, text.c_str(), sizeof(emu->motd));
+			}
+			else {
+				__packet->size = sizeof(RaidNote_Struct);
+				__packet->pBuffer = new unsigned char[__packet->size] {};
+				auto emu = (RaidNote_Struct *)__packet->pBuffer;
+				emu->general.action = action;
+				emu->general.unknown1 = unknown1;
+				emu->general.parameter = parameter;
+				strn0cpy(emu->general.player_name, player_name, sizeof(emu->general.player_name));
+				strn0cpy(emu->general.leader_name, leader_name, sizeof(emu->general.leader_name));
+				strn0cpy(emu->note, text.c_str(), sizeof(emu->note));
+			}
+		}
+		else {
+			__packet->size = sizeof(RaidGeneral_Struct);
+			__packet->pBuffer = new unsigned char[__packet->size] {};
+			auto emu = (RaidGeneral_Struct *)__packet->pBuffer;
+			emu->action = action;
+			emu->unknown1 = unknown1;
+			emu->parameter = parameter;
+			strn0cpy(emu->player_name, player_name, sizeof(emu->player_name));
+			strn0cpy(emu->leader_name, leader_name, sizeof(emu->leader_name));
+		}
+
+		delete[] __eq_buffer;
+	}
+
+	DECODE(OP_TributeItem)
+	{
+		DECODE_LENGTH_EXACT(structs::TributeItem_Struct);
+		SETUP_DIRECT_DECODE(TributeItem_Struct, structs::TributeItem_Struct);
+
+		emu->slot = TOBToServerSlot(eq->inventory_slot);
+		IN(quantity);
+		IN(tribute_master_id);
+		IN(tribute_points);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_GuildTributeDonatePlat)
+	{
+		DECODE_LENGTH_EXACT(structs::GuildTributeDonatePlatRequest_Struct);
+		SETUP_DIRECT_DECODE(GuildTributeDonatePlatRequest_Struct, structs::GuildTributeDonatePlatRequest_Struct);
+
+		IN(quantity);
+		IN(tribute_master_id);
+		emu->unknown08 = eq->unknown08;
+		emu->guild_id = TOBToServerGuildID(eq->guild_id);
+		emu->unknown16 = 0;
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_GuildTributeDonateItem)
+	{
+		DECODE_LENGTH_EXACT(structs::GuildTributeDonateItemRequest_Struct);
+		SETUP_DIRECT_DECODE(GuildTributeDonateItemRequest_Struct, structs::GuildTributeDonateItemRequest_Struct);
+
+		// server struct splits the slot into type/slot/sub_index/aug_index; convert through the server slot id
+		// after the IN()s.
+		uint32 server_slot = TOBToServerSlot(eq->slot);
+		emu->type = eq->slot.Type;
+		emu->slot = static_cast<uint16>(server_slot);
+		emu->sub_index = eq->slot.SubIndex;
+		emu->aug_index = eq->slot.AugIndex;
+		emu->unknown10 = 0;
+		IN(quantity);
+		IN(tribute_master_id);
+		IN(unknown20);
+		emu->guild_id = TOBToServerGuildID(eq->guild_id);
+		emu->unknown28 = 0;
+		emu->unknown32 = 0;
+
+		FINISH_DIRECT_DECODE();
+	}
+	DECODE(OP_GuildTributeToggleReq)
+	{
+		DECODE_LENGTH_EXACT(structs::GuildTributeToggleReq_Struct);
+		SETUP_DIRECT_DECODE(GuildTributeToggleReq_Struct, structs::GuildTributeToggleReq_Struct);
+
+		emu->command = eq->command & 0xFF; // the client writes a u8 (1 on, 0 off); the rest is stack garbage
+		emu->unknown4 = 0;
+		emu->unknown8 = 0;
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_AltCurrencySell)
+	{
+		DECODE_LENGTH_EXACT(structs::AltCurrencySellItem_Struct);
+		SETUP_DIRECT_DECODE(AltCurrencySellItem_Struct, structs::AltCurrencySellItem_Struct);
+
+		IN(merchant_entity_id);
+		emu->slot_id = TOBToServerTypelessSlot(eq->inventory_slot, invtype::typePossessions);
+		IN(charges);
+		IN(cost);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_ShopSendParcel)
+	{
+		DECODE_LENGTH_EXACT(structs::Parcel_Struct);
+		SETUP_DIRECT_DECODE(Parcel_Struct, structs::Parcel_Struct);
+
+		IN(npc_id);
+		IN(quantity);
+		IN(money_flag);
+		emu->item_slot = TOBToServerTypelessSlot(eq->inventory_slot, invtype::typePossessions);
+		strn0cpy(emu->send_to, eq->send_to, sizeof(emu->send_to));
+		strn0cpy(emu->note, eq->note, sizeof(emu->note));
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_AltCurrencySellSelection)
+	{
+		DECODE_LENGTH_EXACT(structs::AltCurrencySelectItem_Struct);
+		SETUP_DIRECT_DECODE(AltCurrencySelectItem_Struct, structs::AltCurrencySelectItem_Struct);
+
+		memset(emu, 0, sizeof(AltCurrencySelectItem_Struct));
+		IN(merchant_entity_id);
+		emu->slot_id = TOBToServerTypelessSlot(eq->inventory_slot, invtype::typePossessions);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_GroupRoles)
+	{
+		DECODE_LENGTH_EXACT(structs::GroupRole_Struct);
+		SETUP_DIRECT_DECODE(GroupRole_Struct, structs::GroupRole_Struct);
+
+		memset(emu, 0, sizeof(GroupRole_Struct));
+		memcpy(emu->Name1, eq->Name1, sizeof(emu->Name1));
+		memcpy(emu->Name2, eq->Name2, sizeof(emu->Name2));
+		IN(RoleNumber);
+		IN(Toggle);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	// Modify Benefits button / window close: one command byte, then stack garbage
+	DECODE(OP_GuildModifyBenefits)
+	{
+		DECODE_LENGTH_EXACT(structs::GuildTributeModifyBenefits_Struct);
+		SETUP_DIRECT_DECODE(GuildTributeModifyBenefits_Struct, structs::GuildTributeModifyBenefits_Struct);
+
+		memset(emu, 0, sizeof(GuildTributeModifyBenefits_Struct));
+		emu->command           = eq->command ? GUILD_TRIBUTES_MODIFY : GUILD_TRIBUTES_SAVE;
+		emu->tribute_master_id = eq->tribute_master_id;
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_GuildOptInOut)
+	{
+		DECODE_LENGTH_EXACT(structs::GuildTributeOptInOutReq_Struct);
+		SETUP_DIRECT_DECODE(GuildTributeOptInOutReq_Struct, structs::GuildTributeOptInOutReq_Struct);
+
+		emu->guild_id = TOBToServerGuildID(eq->guild_id);
+		IN(tribute_toggle);
+		TOBCopyStr(emu->player, eq->player);
+		IN(command);
+		IN(tribute_master_id);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_GuildSaveActiveTributes)
+	{
+		DECODE_LENGTH_EXACT(structs::GuildTributeSaveActive_Struct);
+		SETUP_DIRECT_DECODE(GuildTributeSaveActive_Struct, structs::GuildTributeSaveActive_Struct);
+
+		IN(command);
+		IN(master_tribute_id);
+		IN(tribute_id_1);
+		IN(tribute_id_2);
+		IN(tribute_1_tier);
+		IN(tribute_2_tier);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+
+
+	DECODE(OP_LoadSpellSet)
+	{
+		DECODE_LENGTH_EXACT(structs::LoadSpellSet_Struct);
+		SETUP_DIRECT_DECODE(LoadSpellSet_Struct, structs::LoadSpellSet_Struct);
+
+		constexpr uint32 wire_slots = sizeof(eq->spell) / sizeof(eq->spell[0]); // 16
+		uint32 used = std::min({ eq->count, wire_slots, static_cast<uint32>(EQ::spells::SPELL_GEM_COUNT) });
+
+		for (uint32 i = 0; i < EQ::spells::SPELL_GEM_COUNT; ++i) {
+			emu->spell[i] = 0xFFFFFFFF;  // no action
+		}
+		for (uint32 i = 0; i < used; ++i) { // bytes past count are uninitialised stack in the client
+			if (eq->spell[i] != 0) {
+				emu->spell[i] = eq->spell[i];
+			}
+		}
+		emu->unknown = eq->count;
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_VetClaimRequest)
+	{
+		// ToB: lenstr name, u32 claim_id, u8, u32 n, n x {u32,u32}, u32 action  (same object as VetClaimReply)
+		const uint32 size = __packet->size;
+		__packet->SetReadPosition(0);
+
+		uint32 claim_id = 0, action = 0;
+		std::string name;
+		__packet->ReadLengthString(name);
+		if (name.size() > TOB_NAME_MAX_CHARS) {
+			name.resize(TOB_NAME_MAX_CHARS);
+		}
+		bool ok = !__packet->ReadError();
+		if (ok) {
+			claim_id = __packet->ReadUInt32();
+			ok       = !__packet->ReadError();
+		}
+		if (ok && __packet->ReadRemaining() > 0) {
+			__packet->ReadSkip(1); // u8
+			const uint32 n = __packet->ReadUInt32();
+			if (!__packet->ReadError() && n <= __packet->ReadRemaining() / 8) {
+				__packet->ReadSkip(n * 8);
+				action = __packet->ReadUInt32();
+			}
+		}
+		if (!ok) {
+			LogNetcode("TOB::DECODE(OP_VetClaimRequest) malformed, size [{}]", size);
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+
+		delete[] __packet->pBuffer;
+		__packet->size = sizeof(VeteranClaim);
+		__packet->pBuffer = new unsigned char[__packet->size] {};
+		auto emu = reinterpret_cast<VeteranClaim*>(__packet->pBuffer);
+		strn0cpy(emu->name, name.c_str(), sizeof(emu->name));
+		emu->claim_id = claim_id;
+		emu->action = action;
+	}
+
+	// {u64 guild_id}: the client asks for a guild name it doesn't know (it shows "Unknown Guild"
+	// meanwhile). The server answers with OP_GuildRenameGuild.
+	DECODE(OP_GuildNameRequest)
+	{
+		DECODE_LENGTH_EXACT(uint64);
+		unsigned char *__eq_buffer = __packet->pBuffer;
+		uint64 gid = 0;
+		memcpy(&gid, __eq_buffer, sizeof(gid));
+		uint32 server_gid = TOBToServerGuildID(gid);
+		__packet->size = sizeof(uint32);
+		__packet->pBuffer = new unsigned char[sizeof(uint32)];
+		memcpy(__packet->pBuffer, &server_gid, sizeof(uint32));
+		delete[] __eq_buffer;
+	}
+
+	// ToB sends /mark and /rmark as MarkNPC_Struct {target id, number, name} on the mark opcodes (0x1793 group,
+	// 0x4187 raid). The server only handles marking through OP_DoGroupLeadershipAbility, so convert.
+	static void TOBMarkToLeadershipAbility(EQApplicationPacket *__packet, uint32 ability)
+	{
+		if (__packet->size < 2 * sizeof(uint32)) {
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+		uint32 number = 0;
+		memcpy(&number, __packet->pBuffer + sizeof(uint32), sizeof(uint32));
+		unsigned char *__eq_buffer = __packet->pBuffer;
+		__packet->size    = sizeof(DoGroupLeadershipAbility_Struct);
+		__packet->pBuffer = new unsigned char[__packet->size] {};
+		auto emu = reinterpret_cast<DoGroupLeadershipAbility_Struct *>(__packet->pBuffer);
+		emu->Ability   = ability;
+		emu->Parameter = number;
+		__packet->SetOpcode(OP_DoGroupLeadershipAbility);
+		delete[] __eq_buffer;
+	}
+
+	DECODE(OP_MarkRaidNPC) { TOBMarkToLeadershipAbility(__packet, RaidLeadershipAbility_MarkNPC); }
+	DECODE(OP_MarkNPC) { TOBMarkToLeadershipAbility(__packet, GroupLeadershipAbility_MarkNPC); }
+
+	DECODE(OP_FindPersonRequest)
+	{
+		DECODE_LENGTH_EXACT(structs::FindPersonRequest_Struct);
+		SETUP_DIRECT_DECODE(FindPersonRequest_Struct, structs::FindPersonRequest_Struct);
+
+		// Only request_type 1 refers to a spawn from OP_SendFindableNPCs (client sends id & 0xffff). Other
+		// types (find-list ids, zone connections, locations) aren't supported yet: id 0 gives an empty reply.
+		emu->npc_id = (eq->request_type == 1) ? static_cast<uint32>(eq->id) : 0;
+		IN(client_pos.x);
+		IN(client_pos.y);
+		IN(client_pos.z);
+
+		FINISH_DIRECT_DECODE();
+	}
+
 	DECODE(OP_GMTraining)
 	{
 		DECODE_LENGTH_EXACT(structs::GMTrainee_Struct);
@@ -4684,6 +9058,78 @@ namespace TOB
 		memcpy(emu->name1, eq->name1, sizeof(emu->name1));
 		memcpy(emu->name2, eq->name2, sizeof(emu->name2));
 
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_GroupFollow)
+	{
+		DECODE_LENGTH_ATLEAST(structs::GroupFollow_Struct);
+		SETUP_DIRECT_DECODE(GroupGeneric_Struct, structs::GroupFollow_Struct);
+		memcpy(emu->name1, eq->name1, sizeof(emu->name1));
+		memcpy(emu->name2, eq->name2, sizeof(emu->name2));
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_PetCommands)
+	{
+		DECODE_LENGTH_EXACT(structs::PetCommand_Struct);
+		SETUP_DIRECT_DECODE(PetCommand_Struct, structs::PetCommand_Struct);
+		IN(command);
+		IN(target);
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_Surname)
+	{
+		DECODE_LENGTH_ATLEAST(structs::Surname_Struct);
+		auto eq = reinterpret_cast<const structs::Surname_Struct *>(__packet->pBuffer);
+		__packet->SetReadPosition(sizeof(structs::Surname_Struct));
+		if (eq->length > __packet->ReadRemaining()) {
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+
+		unsigned char *__eq_buffer = __packet->pBuffer;
+		const int32    status      = eq->status;
+		const std::string surname(
+			reinterpret_cast<const char *>(__eq_buffer + sizeof(structs::Surname_Struct)),
+			eq->length
+		);
+
+		__packet->size    = sizeof(Surname_Struct);
+		__packet->pBuffer = new unsigned char[__packet->size]{};
+		auto emu = reinterpret_cast<Surname_Struct *>(__packet->pBuffer);
+		emu->unknown0064 = static_cast<uint32>(status);
+		strn0cpy(emu->lastname, surname.c_str(), sizeof(emu->lastname));
+		delete[] __eq_buffer;
+	}
+
+	DECODE(OP_ClickObject)
+	{
+		DECODE_LENGTH_EXACT(structs::ClickObject_Struct);
+		SETUP_DIRECT_DECODE(ClickObject_Struct, structs::ClickObject_Struct);
+		IN(drop_id);
+		IN(player_id);
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_RezzAnswer)
+	{
+		DECODE_LENGTH_ATLEAST(structs::Resurrect_Struct);
+		SETUP_DIRECT_DECODE(Resurrect_Struct, structs::Resurrect_Struct);
+		IN(unknown000);
+		IN(zone_id);
+		IN(instance_id);
+		IN(y);
+		IN(x);
+		IN(z);
+		IN(unknown020);
+		strn0cpy(emu->your_name, eq->your_name, sizeof(emu->your_name));
+		emu->unknown088 = static_cast<uint32>(eq->unknown088);
+		strn0cpy(emu->rezzer_name, eq->rezzer_name, sizeof(emu->rezzer_name));
+		IN(spellid);
+		strn0cpy(emu->corpse_name, eq->corpse_name, sizeof(emu->corpse_name));
+		IN(action);
 		FINISH_DIRECT_DECODE();
 	}
 
@@ -4727,6 +9173,7 @@ namespace TOB
 			// TODO: There should be a timer set here to detect short-mem cheats, and then checked when the 2 packet is sent
 			// The previous detection will still happen on scribing == 2, the new client just handles it better
 			__packet->SetOpcode(OP_Unknown);
+			delete[] __eq_buffer; // was leaked on every memorize start
 			return;
 		}
 
@@ -4754,8 +9201,14 @@ namespace TOB
 
 		Log(Logs::Detail, Logs::Netcode, "TOB::DECODE(OP_MoveItem)");
 
-		emu->from_slot = TOBToServerSlot(eq->from_slot);
-		emu->to_slot = TOBToServerSlot(eq->to_slot);
+		// general slots 11/12 (and bags in them) don't exist server-side: reject the move (invslot::SLOT_REJECT)
+		auto tob_extra_general = [](const structs::InventorySlot_Struct &s) {
+			return s.Type == invtype::typePossessions &&
+				(s.Slot == invslot::slotGeneral11 || s.Slot == invslot::slotGeneral12);
+		};
+
+		emu->from_slot = tob_extra_general(eq->from_slot) ? invslot::SLOT_REJECT : TOBToServerSlot(eq->from_slot);
+		emu->to_slot   = tob_extra_general(eq->to_slot) ? invslot::SLOT_REJECT : TOBToServerSlot(eq->to_slot);
 		IN(number_in_stack);
 
 		FINISH_DIRECT_DECODE();
@@ -4795,10 +9248,13 @@ namespace TOB
 		DECODE_LENGTH_EXACT(structs::RecipeAutoCombine_CS_Struct);
 		SETUP_DIRECT_DECODE(RecipeAutoCombine_Struct, structs::RecipeAutoCombine_CS_Struct);
 
-		IN(object_type);   // eq[+32] → emu[+0]
-		IN(some_id);       // eq[+36] → emu[+4]
-		emu->unknown1   = TOBToServerSlot(eq->container_slot);  // eq[+20] → emu[+8]
-		IN(recipe_id);     // eq[+4]  → emu[+12]
+		// For world containers the recipe id arrives at eq[+32] and eq[+4] is 0. Use eq[+4] when the client
+		// fills it, otherwise eq[+32]; container type comes from con_type (eq[+0]).
+		const bool recipe_at_32 = eq->recipe_id == 0;
+		emu->object_type = recipe_at_32 ? eq->con_type : eq->object_type;
+		IN(some_id);
+		emu->unknown1   = TOBToServerSlot(eq->container_slot);
+		emu->recipe_id  = recipe_at_32 ? eq->object_type : eq->recipe_id;
 		emu->reply_code = 0;  // junk in client request; server overwrites in reply
 
 		FINISH_DIRECT_DECODE();
@@ -4864,6 +9320,216 @@ namespace TOB
 		IN(parameter);
 
 		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_Trader)
+	{
+		if (__packet->size < sizeof(uint32)) {
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+		auto action = *(uint32 *)__packet->pBuffer;
+
+		switch (action) {
+			case structs::TOBBazaarTraderBuyerActions::BeginTraderMode: {
+				DECODE_LENGTH_EXACT(structs::BeginTrader_Struct);
+				SETUP_DIRECT_DECODE(ClickTrader_Struct, structs::BeginTrader_Struct);
+				LogTrading("(TOB) BeginTraderMode action <green>[{}]", action);
+
+				emu->action = TraderOn;
+				std::copy_n(eq->item_cost, invtype::BAZAAR_SIZE, emu->item_cost);
+				std::transform(
+					std::begin(eq->items),
+					std::end(eq->items),
+					std::begin(emu->serial_number),
+					[&](const structs::TraderItemSerial_Struct x) {
+						return Strings::ToUnsignedBigInt(x.serial_number,0);
+					}
+				);
+
+				FINISH_DIRECT_DECODE();
+				break;
+			}
+			case structs::TOBBazaarTraderBuyerActions::EndTraderMode: {
+				DECODE_LENGTH_EXACT(structs::Trader_ShowItems_Struct);
+				SETUP_DIRECT_DECODE(Trader_ShowItems_Struct, structs::Trader_ShowItems_Struct);
+				LogTrading("(TOB) EndTraderMode action <green>[{}]", action);
+
+				emu->action    = TraderOff;
+				emu->entity_id = eq->entity_id;
+
+				FINISH_DIRECT_DECODE();
+				break;
+			}
+			case structs::TOBBazaarTraderBuyerActions::ListTraderItems: {
+				LogTrading("(TOB) ListTraderItems action <green>[{}]", action);
+				break;
+			}
+			case structs::TOBBazaarTraderBuyerActions::PriceUpdate: {
+				DECODE_LENGTH_EXACT(structs::TraderPriceUpdate_Struct);
+				SETUP_DIRECT_DECODE(TraderPriceUpdate_Struct, structs::TraderPriceUpdate_Struct);
+				LogTrading("(TOB) PriceUpdate action <green>[{}]", action);
+
+				emu->Action       = PriceUpdate;
+				emu->SerialNumber = Strings::ToUnsignedBigInt(eq->serial_number, 0);
+				if (emu->SerialNumber == 0) {
+					LogTrading("(TOB) Price change with invalid serial number <red>[{}]", eq->serial_number);
+				}
+				emu->NewPrice = eq->new_price;
+
+				FINISH_DIRECT_DECODE();
+				break;
+			}
+			default: {
+				LogTrading("(TOB) Unhandled action <red>[{}]", action);
+			}
+		}
+	}
+
+	DECODE(OP_TraderBuy)
+	{
+		DECODE_LENGTH_EXACT(structs::TraderBuy_Struct);
+		SETUP_DIRECT_DECODE(TraderBuy_Struct, structs::TraderBuy_Struct);
+		LogTrading(
+			"(TOB) item_id <green>[{}] price <green>[{}] quantity <green>[{}] trader_id <green>[{}]",
+			eq->item_id,
+			eq->price,
+			eq->quantity,
+			eq->trader_id
+		);
+
+		IN(action);
+		IN(price);
+		IN(trader_id);
+		memcpy(emu->item_name, eq->item_name, sizeof(emu->item_name));
+		IN(item_id);
+		IN(quantity);
+
+		FINISH_DIRECT_DECODE();
+	}
+
+	DECODE(OP_TraderShop)
+	{
+		if (__packet->size < sizeof(uint32)) {
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+		uint32 action = *(uint32 *)__packet->pBuffer;
+
+		switch (action) {
+			case structs::TOBBazaarTraderBuyerActions::BazaarSearch: {
+				DECODE_LENGTH_EXACT(structs::BazaarSearch_Struct);
+				SETUP_DIRECT_DECODE(BazaarSearchCriteria_Struct, structs::BazaarSearch_Struct);
+				LogTrading(
+					"(TOB) BazaarSearch action <green>[{}]",
+					action
+				);
+
+				__packet->SetOpcode(OP_BazaarSearch);
+				emu->action = BazaarSearch;
+				emu->type   = eq->type == UINT32_MAX ? UINT8_MAX : eq->type;
+				IN(item_stat);
+				IN(max_cost);
+				IN(min_cost);
+				IN(max_level);
+				IN(min_level);
+				IN(race);
+				IN(slot);
+				IN(trader_id);
+				IN(_class);
+				IN(prestige);
+				IN(search_scope);
+				IN(max_results);
+				IN(augment);
+				IN_str(item_name);
+
+				FINISH_DIRECT_DECODE();
+				break;
+			}
+			case structs::TOBBazaarTraderBuyerActions::ClickTrader: {
+				DECODE_LENGTH_EXACT(structs::TraderClick_Struct);
+				SETUP_DIRECT_DECODE(TraderClick_Struct, structs::TraderClick_Struct);
+
+				emu->Code     = ClickTrader;
+				emu->TraderID = eq->trader_id;
+				emu->Approval = eq->unknown_008;
+				LogTrading("(TOB) ClickTrader action <green>[{}], trader_id <green>[{}], approval <green>[{}]",
+						   eq->action,
+						   eq->trader_id,
+						   eq->unknown_008
+				);
+				FINISH_DIRECT_DECODE();
+				break;
+			}
+			case structs::TOBBazaarTraderBuyerActions::BazaarInspect: {
+				DECODE_LENGTH_EXACT(structs::BazaarInspect_Struct);
+				SETUP_DIRECT_DECODE(BazaarInspect_Struct, structs::BazaarInspect_Struct);
+
+				__packet->SetOpcode(OP_BazaarSearch);
+				IN(item_id);
+				IN(trader_id);
+				emu->action        = BazaarInspect;
+				emu->serial_number = Strings::ToUnsignedInt(eq->serial_number, 0);
+				if (emu->serial_number == 0) {
+					LogTrading(
+						"(TOB) trader_id = <green>[{}] requested a BazaarInspect with an invalid serial number of <red>[{}]",
+						eq->trader_id,
+						eq->serial_number
+					);
+					FINISH_DIRECT_DECODE();
+					return;
+				}
+
+				LogTrading("(TOB) BazaarInspect action <green>[{}] item_id <green>[{}] serial_number <green>[{}]",
+						   action,
+						   eq->item_id,
+						   eq->serial_number
+				);
+				FINISH_DIRECT_DECODE();
+				break;
+			}
+			case structs::TOBBazaarTraderBuyerActions::FirstOpenSearch: {
+				__packet->SetOpcode(OP_BazaarSearch);
+				LogTrading("(TOB) First time opening Bazaar Search since zoning. Action <green>[{}]", action);
+				break;
+			}
+			case structs::TOBBazaarTraderBuyerActions::WelcomeMessage: {
+				__packet->SetOpcode(OP_BazaarSearch);
+				LogTrading("(TOB) WelcomeMessage action <green>[{}]", action);
+				break;
+			}
+			case structs::TOBBazaarTraderBuyerActions::BuyTraderItem: {
+				DECODE_LENGTH_EXACT(structs::TraderBuy_Struct);
+				SETUP_DIRECT_DECODE(TraderBuy_Struct, structs::TraderBuy_Struct);
+				LogTrading(
+					"(TOB) item_id <green>[{}] price <green>[{}] quantity <green>[{}] trader_id <green>[{}]",
+					eq->item_id,
+					eq->price,
+					eq->quantity,
+					eq->trader_id
+				);
+
+				__packet->SetOpcode(OP_TraderBuy);
+				IN(action);
+				IN(method);
+				IN(trader_id);
+				IN(item_id);
+				IN(price);
+				IN(already_sold);
+				IN(quantity);
+				IN_str(buyer_name);
+				IN_str(seller_name);
+				IN_str(item_name);
+				IN_str(serial_number);
+
+				FINISH_DIRECT_DECODE();
+				break;
+			}
+			default: {
+				LogTrading("(TOB) Unhandled action <red>[{}]", action);
+			}
+			return;
+		}
 	}
 
 	DECODE(OP_TradeSkillCombine)
@@ -5584,8 +10250,13 @@ namespace TOB
 		//u32 ScriptIndex;
 		buffer.WriteUInt32(inst->IsScaling() ? (inst->GetExp() / 100) : 0);
 
-		//u64 MerchantSlot;
-		buffer.WriteUInt64(inst->GetMerchantSlot() ? inst->GetMerchantSlot() : inst->GetSerialNumber());
+		//u64 MerchantSlot; = u32 instance_id + u32 parcel_item_id. The client echoes the high dword as
+		// ParcelRetrieve_Struct::parcel_item_id, so parcels need the item id there (was 0: retrieve failed)
+		uint64 merchant_slot = static_cast<uint32>(inst->GetMerchantSlot() ? inst->GetMerchantSlot() : inst->GetSerialNumber());
+		if (packet_type == ItemPacketParcel) {
+			merchant_slot |= static_cast<uint64>(inst->GetID()) << 32;
+		}
+		buffer.WriteUInt64(merchant_slot);
 
 		//u32 LastCastTime;
 		buffer.WriteUInt32(inst->GetRecastTimestamp());
@@ -5717,7 +10388,9 @@ namespace TOB
 		buffer.WriteInt32(0); //unsupported atm
 	}
 
-	static void ServerToTOBConvertLinks(std::string& message_out, const std::string& message_in)
+	// client_tags_brackets: the client turns [text] into dialog links itself for plain chat/special messages,
+	// but not inside OP_FormattedMessage arguments (NPC say), which need complete links.
+	static void ServerToTOBConvertLinks(std::string& message_out, const std::string& message_in, bool client_tags_brackets)
 	{
 		if (message_in.find('\x12') == std::string::npos) {
 			message_out = message_in;
@@ -5749,10 +10422,19 @@ namespace TOB
 						// and converts [text] -> [\x124text\x12]. Only send the content of the link in this case
 						char dialog_link[Links::MAX_LINK_SIZE];
 						size_t next_seg = segment_iter + 1;
-						if (!message_out.empty() && message_out.back() == '[' &&
+						if (client_tags_brackets && !message_out.empty() && message_out.back() == '[' &&
 							next_seg < segments.size() && !segments[next_seg].empty() && segments[next_seg].front() == ']') {
 							// only do this if it is enclosed by square brackets
 							Links::FormatDialogLinkContent(dialog_link, sizeof(dialog_link), keyword, phrase);
+						} else if (client_tags_brackets && keyword.size() > 2 && keyword.front() == '[' && keyword.back() == ']') {
+							// the brackets are part of the link text (quest::saylink(..., "[Text]")): the client would
+							// re-tag them and mangle the link, so emit "[content]" for it to turn into a link instead
+							message_out.push_back('[');
+							Links::FormatDialogLinkContent(dialog_link, sizeof(dialog_link),
+								keyword.substr(1, keyword.size() - 2), phrase);
+							message_out.append(dialog_link);
+							dialog_link[0] = ']';
+							dialog_link[1] = '\0';
 						} else {
 							Links::FormatDialogLink(dialog_link, sizeof(dialog_link), keyword, phrase);
 						}
@@ -5876,7 +10558,11 @@ namespace TOB
 			return structs::TOBAppearance::GM;
 		case AppearanceType::Anonymous:
 			return structs::TOBAppearance::Anonymous;
+		// ToB appearance 14 is the guild RANK, not the
+		// guild id; the id goes out as OP_GuildMemberGuildID (see ENCODE(OP_SpawnAppearance)).
 		case AppearanceType::GuildID:
+			return structs::TOBAppearance::None;
+		case AppearanceType::GuildRank:
 			return structs::TOBAppearance::GuildID;
 		case AppearanceType::AFK:
 			return structs::TOBAppearance::AFK;
@@ -5884,6 +10570,8 @@ namespace TOB
 			return structs::TOBAppearance::Pet;
 		case AppearanceType::Summoned:
 			return structs::TOBAppearance::Summoned;
+		case AppearanceType::Split:
+			return structs::TOBAppearance::Split;
 		case AppearanceType::SetType:
 			return structs::TOBAppearance::NPCName;
 		case AppearanceType::CancelSneakHide:
@@ -5908,6 +10596,10 @@ namespace TOB
 			return structs::TOBAppearance::GuildShow;
 		case AppearanceType::OfflineMode:
 			return structs::TOBAppearance::OfflineMode;
+		case AppearanceType::AdvancedLooting:
+			return structs::TOBAppearance::AdvancedLooting;
+		case AppearanceType::MasterLooterCandidate:
+			return structs::TOBAppearance::MasterLooterCandidate;
 		default:
 			return structs::TOBAppearance::None;
 		}
@@ -5942,14 +10634,16 @@ namespace TOB
 			return AppearanceType::GM;
 		case structs::TOBAppearance::Anonymous:
 			return AppearanceType::Anonymous;
-		case structs::TOBAppearance::GuildID:
-			return AppearanceType::GuildID;
+		case structs::TOBAppearance::GuildID: // ToB type 14 is the guild rank
+			return AppearanceType::GuildRank;
 		case structs::TOBAppearance::AFK:
 			return AppearanceType::AFK;
 		case structs::TOBAppearance::Pet:
 			return AppearanceType::Pet;
 		case structs::TOBAppearance::Summoned:
 			return AppearanceType::Summoned;
+		case structs::TOBAppearance::Split:
+			return AppearanceType::Split;
 		case structs::TOBAppearance::SetType:
 			return AppearanceType::NPCName;
 		case structs::TOBAppearance::CancelSneakHide:
@@ -5974,6 +10668,10 @@ namespace TOB
 			return AppearanceType::GuildShow;
 		case structs::TOBAppearance::OfflineMode:
 			return AppearanceType::OfflineMode;
+		case structs::TOBAppearance::AdvancedLooting:
+			return AppearanceType::AdvancedLooting;
+		case structs::TOBAppearance::MasterLooterCandidate:
+			return AppearanceType::MasterLooterCandidate;
 		default:
 			return AppearanceType::Die;
 		}
@@ -6544,12 +11242,15 @@ namespace TOB
 	static inline int TOBToServerBuffSlot(int index)
 	{
 		// we're a disc
-		if (index >= spells::LONG_BUFFS + spells::SHORT_BUFFS)
-			return index - spells::LONG_BUFFS - spells::SHORT_BUFFS + EQ::spells::LONG_BUFFS +
+		if (index >= spells::CLIENT_LONG_BUFFS + spells::CLIENT_SHORT_BUFFS)
+			return index - spells::CLIENT_LONG_BUFFS - spells::CLIENT_SHORT_BUFFS + EQ::spells::LONG_BUFFS +
 			EQ::spells::SHORT_BUFFS;
 		// we're a song
+		if (index >= spells::CLIENT_LONG_BUFFS)
+			return index - spells::CLIENT_LONG_BUFFS + EQ::spells::LONG_BUFFS;
+		// a long slot the server doesn't have (42..61): map past the end so server range checks reject it
 		if (index >= spells::LONG_BUFFS)
-			return index - spells::LONG_BUFFS + EQ::spells::LONG_BUFFS;
+			return EQ::spells::LONG_BUFFS + EQ::spells::SHORT_BUFFS + EQ::spells::DISC_BUFFS;
 		// we're a normal buff
 		return index; // as long as we guard against bad slots server side, we should be fine
 	}
@@ -6620,13 +11321,35 @@ void MessageComponent::ResolveArguments(uint32_t id, std::array<const char*, 9>&
 		Titanium::MessageComponent::ResolveArguments(id, args);
 		break;
 	}
+
+	// ToB added a seconds argument to the d:h:m lockout strings (e.g. 3519 "%1d:%2h:%3m:%4s ... %5");
+	// callers still pass the arguments without seconds, so insert seconds at that index and shift the rest right.
+	static const std::unordered_map<uint32_t, size_t> seconds_slot = {
+		{3501, 3}, {3504, 4}, {3519, 3}, {3540, 3}, {3561, 5}, {3591, 4}, {3592, 5},
+		{8017, 3}, {8946, 3}, {8947, 4}, {8979, 4}, {8987, 4},
+	};
+	auto it = seconds_slot.find(ResolveID(id));
+	if (it != seconds_slot.end()) {
+		for (size_t i = args.size() - 1; i > it->second; --i) {
+			args[i] = args[i - 1];
+		}
+		args[it->second] = "0";
+	}
+
+	// ToB appended "%1" (experience value) to the plain XP strings; the server never passes it
+	switch (id) {
+		case GAIN_XP:
+		case GAIN_GROUPXP:
+		case GAIN_RAIDEXP:
+			if (!args[0]) {
+				args[0] = "";
+			}
+			break;
+		default:
+			break;
+	}
 }
 
-// TODO: verify that zone/client.cpp's raw FormattedMessage_Struct path is unreachable for TOB
-// clients. That path builds the packet using the server struct layout (3x uint32 header +
-// null-terminated strings), which is incompatible with the TOB wire format serialized below.
-// There is no ENCODE(OP_FormattedMessage) in tob.cpp to fix it up, so if that path is reachable
-// it would deliver a malformed packet.
 std::unique_ptr<EQApplicationPacket> MessageComponent::Formatted(uint32_t color, uint32_t id,
 	const FormattedArgs& args) const
 {
@@ -6648,7 +11371,7 @@ std::unique_ptr<EQApplicationPacket> MessageComponent::Formatted(uint32_t color,
 		for (auto a : resolved_args) {
 			if (a != nullptr) {
 				std::string new_message;
-				::TOB::ServerToTOBConvertLinks(new_message, a);
+				::TOB::ServerToTOBConvertLinks(new_message, a, false);
 				buffer.WriteLengthString(new_message);
 			} else
 				buffer.WriteUInt32(0);
@@ -6719,11 +11442,12 @@ std::unique_ptr<EQApplicationPacket> BuffComponent::BuffDefinition(Mob* mob, con
 	affect->affect.initial_duration = buff.initialduration;
 	affect->affect.hit_count = buff.hit_number;
 	affect->affect.viral_timer = 0;
-	affect->affect.modifier = static_cast<float>(buff.instrument_mod) / 10.f;
+	// the client multiplies most effect values by this; 0 would zero the buff
+	affect->affect.modifier = buff.instrument_mod > 0 ? static_cast<float>(buff.instrument_mod) / 10.f : 1.0f;
 	affect->affect.y = static_cast<float>(buff.caston_y);
 	affect->affect.x = static_cast<float>(buff.caston_x);
 	affect->affect.z = static_cast<float>(buff.caston_z);
-	affect->affect.type = 2;
+	affect->affect.type = 0; // ToB: any non-zero type reverses the buff (negative regen, red max HP/mana)
 	affect->affect.level = buff.casterlevel > 0 ? buff.casterlevel : mob->GetLevel();
 
 	//no idea if these are right; eqlib doesn't seem to know either

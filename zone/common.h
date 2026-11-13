@@ -176,7 +176,8 @@ enum class LootResponse : uint8 {
 	Normal2 = 3, // acts exactly the same as Normal, maybe group vs ungroup? No idea
 	Hostiles = 4,
 	TooFar = 5,
-	LootAll = 6 // SoD+
+	LootAll = 6, // SoD+
+	AdvancedLoot = 10 // TOB+: use the Advanced Loot window for this corpse
 };
 
 enum class LootRequestType : uint8 {

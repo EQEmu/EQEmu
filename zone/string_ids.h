@@ -329,6 +329,7 @@
 #define QUEUED_TELL					2458	//[queued]
 #define QUEUE_TELL_FULL				2459	//[zoning and queue is full]
 #define TRADER_BUSY_TWO             3192    //Sorry, that action cannot be performed while trading.
+#define NOT_FAST_CAMP_ZONE 10031 //You are not in a zone that allows fast camping.
 #define SUSPEND_MINION_UNSUSPEND	3267	//%1 tells you, 'I live again...'
 #define SUSPEND_MINION_SUSPEND		3268	//%1 tells you, 'By your command, master.'
 #define ONLY_SUMMONED_PETS			3269	//This effect only works with summoned pets.

@@ -362,6 +362,8 @@ bool Group::AddMember(Mob* new_member, std::string new_member_name, uint32 chara
 		Bot::UpdateGroupCastingRoles(this);
 	}
 
+	AnnounceAdvancedLootMasterLooter(); // rebuilds the master looter's Give-to list
+
 	return true;
 }
 
@@ -1057,6 +1059,7 @@ void Group::SendUpdate(uint32 type, Mob* member)
 	auto outapp = new EQApplicationPacket(OP_GroupUpdate, sizeof(GroupUpdate2_Struct));
 	GroupUpdate2_Struct* gu = (GroupUpdate2_Struct*)outapp->pBuffer;
 	gu->action = type;
+	gu->group_id = GetID();
 	strcpy(gu->yourname,member->GetName());
 
 	int x = 0;
@@ -2367,6 +2370,35 @@ void Group::ChangeLeader(Mob* newleader)
 		}
 	}
 	safe_delete(outapp);
+
+	AnnounceAdvancedLootMasterLooter();
+}
+
+// TOB+ Advanced Loot: the member given the Master Looter role in the group window, else the leader
+Client *Group::GetAdvancedLootMasterLooter()
+{
+	if (!m_advloot_master_looter.empty()) {
+		for (Mob *m : members) {
+			if (m && m->IsClient() && Strings::EqualFold(m->GetCleanName(), m_advloot_master_looter)) {
+				return m->CastToClient();
+			}
+		}
+	}
+
+	return leader && leader->IsClient() ? leader->CastToClient() : nullptr;
+}
+
+void Group::AnnounceAdvancedLootMasterLooter()
+{
+	if (!GetAdvancedLootMasterLooter()) {
+		return;
+	}
+
+	for (Mob *m : members) {
+		if (m && m->IsClient() && m->CastToClient()->ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+			m->CastToClient()->QueueAdvancedLootMasterLooterRefresh();
+		}
+	}
 }
 
 const char *Group::GetClientNameByIndex(uint8 index)

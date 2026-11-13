@@ -62,6 +62,22 @@ bool Client::Process() {
 			SendAllPackets();
 		}
 
+		if (m_advloot_master_looter_refresh.Enabled() && m_advloot_master_looter_refresh.Check()) {
+			m_advloot_master_looter_refresh.Disable();
+
+			Mob *master_looter = nullptr;
+			if (GetRaid()) {
+				master_looter = GetRaid()->GetAdvancedLootMasterLooter();
+			}
+			else if (GetGroup()) {
+				master_looter = GetGroup()->GetAdvancedLootMasterLooter();
+			}
+
+			if (master_looter && master_looter->IsClient()) {
+				Corpse::AnnounceAdvancedLootMasterLooter(this, master_looter->GetCleanName());
+			}
+		}
+
 		if (adventure_request_timer) {
 			if (adventure_request_timer->Check()) {
 				safe_delete(adventure_request_timer);
@@ -193,25 +209,7 @@ bool Client::Process() {
 		}
 
 		if (camp_timer.Check()) {
-			Raid *myraid = entity_list.GetRaidByClient(this);
-			if (myraid) {
-				myraid->MemberZoned(this);
-			}
-			LeaveGroup();
-			Save();
-			if (IsInAGuild()) {
-				guild_mgr.UpdateDbMemberOnline(CharacterID(), false);
-				guild_mgr.SendGuildMemberUpdateToWorld(GetName(), GuildID(), 0, time(nullptr));
-			}
-
-			if (GetMerc())
-			{
-				GetMerc()->Save();
-				GetMerc()->Depop();
-			}
-			instalog = true;
-
-			camp_timer.Disable();
+			CompleteCamp();
 		}
 
 		if (IsStunned() && stunned_timer.Check())
@@ -838,6 +836,50 @@ void Client::BulkSendInventoryItems()
 	safe_delete(outapp);
 }
 
+void Client::CompleteCamp()
+{
+	Raid *myraid = entity_list.GetRaidByClient(this);
+	if (myraid) {
+		myraid->MemberZoned(this);
+	}
+	LeaveGroup();
+	Save();
+	if (IsInAGuild()) {
+		guild_mgr.UpdateDbMemberOnline(CharacterID(), false);
+		guild_mgr.SendGuildMemberUpdateToWorld(GetName(), GuildID(), 0, time(nullptr));
+	}
+
+	if (GetMerc())
+	{
+		GetMerc()->Save();
+		GetMerc()->Depop();
+	}
+
+	instalog = true;
+
+	camp_timer.Disable();
+}
+
+bool Client::IsFastCampZone() const
+{
+	if (!RuleB(Character, EnableFastCamp) || !zone) {
+		return false;
+	}
+
+	if (zone->IsCity() || !zone->CanDoCombat()) {
+		return true;
+	}
+
+	const std::string here = Strings::ToLower(zone->GetShortName());
+	for (auto z : Strings::Split(RuleS(Character, FastCampZones), ',')) {
+		if (Strings::ToLower(Strings::Trim(z)) == here) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void Client::BulkSendMerchantInventory(int merchant_id, int npcid) {
 	const EQ::ItemData* handy_item = nullptr;
 	const EQ::ItemData *item = nullptr;
@@ -934,7 +976,8 @@ void Client::BulkSendMerchantInventory(int merchant_id, int npcid) {
 				inst->SetCharges(item_charges);
 				inst->SetMerchantCount(-1);
 				inst->SetMerchantSlot(ml.slot);
-				inst->SetPrice(item_price);
+				// ToB shows the item price as the alt currency cost (only ToB opens class 70 here)
+				inst->SetPrice(npc && npc->GetClass() == Class::AlternateCurrencyMerchant ? ml.alt_currency_cost : item_price);
 
 				SendItemPacket(ml.slot - 1, inst, ItemPacketMerchant);
 				safe_delete(inst);

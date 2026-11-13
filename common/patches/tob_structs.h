@@ -20,6 +20,9 @@ Copyright (C) 2001-2026 EQEmu Development Team
 
 #include "common/eq_packet_structs.h"
 #include "common/skills.h"
+#include "common/strings.h"
+
+#include "fmt/format.h"
 
 namespace TOB {
 	namespace structs {
@@ -35,6 +38,9 @@ namespace TOB {
 		static const uint32 BLOCKED_BUFF_COUNT = 60; // this might not be needed?
 		static const uint32 BUFF_COUNT = 62;
 		static const uint32 MAX_PP_LANGUAGE = 32;
+		// Group id sent in the group roster when the sender has no real one (raid group updates). The client reads
+		// 0 as "no group", and the Advanced Loot window then ignores the roster.
+		static const uint32 GROUP_ID_PLACEHOLDER = 1;
 #pragma pack(1)
 		
 		struct LoginInfo_Struct {
@@ -270,7 +276,7 @@ namespace TOB {
 			AFK,
 			Pet,
 			Summoned,
-			Unknown18,
+			Split, // Loot Settings "Auto Split Coin"
 			Unknown19,
 			SetType,
 			NPCName,
@@ -292,8 +298,8 @@ namespace TOB {
 			GuildShow,
 			OfflineMode,
 			Unknown39,
-			Unknown40,
-			Unknown41,
+			AdvancedLooting, // Loot Settings "Use Advanced Looting"
+			MasterLooterCandidate, // Loot Settings "Master Looter Candidate"
 			Birthdate,
 			EncounterLock
 		};
@@ -504,7 +510,7 @@ namespace TOB {
 			/*016*/	float	z;
 			/*020*/	float	heading;
 			/*024*/	uint32	type;	//unknown... values
-			/*032*/	uint8	unknown032[144]; // this is mostly a string passed to the teleport function (follow starting at 0x1401F71BA), it appears to be an override for a message
+			/*032*/	uint8	unknown032[144]; // this is mostly a string passed to the teleport function, it appears to be an override for a message
 			/*172*/	uint32	unknown172;
 			/*176*/
 		};
@@ -893,8 +899,8 @@ namespace TOB {
 			/*132*/ float y;
 			/*136*/ float x;
 			/*140*/ float z;
-			/*144*/ uint8 type;
-			/*145*/ uint8 level;
+			/*144*/ uint8 level; // caster level used by the spell formulas
+			/*145*/ uint8 type;  // non-zero = effects are subtracted (reversed); normal buffs send 0
 			/*146*/ uint8 charges; //no idea if these are right; eqlib doesn't seem to know either
 			/*147*/ uint8 activatable;
 			/*148*/ uint32 unknown1; //might be some timer, not sure though
@@ -922,7 +928,7 @@ namespace TOB {
 		//This is what we call OP_Action
 		//To the client though this is basically a missile hit though
 		//OP_Action is basically "instant missile hit" to the client
-		//@0x1402024C0 MissileHitInfo::Deserialize(CUnSerializeBuffer *buffer);
+		// MissileHitInfo::Deserialize(CUnSerializeBuffer *buffer);
 		struct MissileHitInfo
 		{
 			uint16 target;
@@ -1077,6 +1083,741 @@ namespace TOB {
 			/*012*/	int32	auto_loot;
 			/*016*/	uint32	unknown16;
 			/*020*/
+		};
+
+		// OP_RezzRequest / OP_RezzComplete: an 8-byte field at 88 (shifts everything after it by 4)
+		// and 24 extra bytes at the end; the client copies 0x100 bytes.
+		struct Resurrect_Struct {
+			/*000*/ uint32 unknown000;
+			/*004*/ uint16 zone_id;
+			/*006*/ uint16 instance_id;
+			/*008*/ float y;
+			/*012*/ float x;
+			/*016*/ float z;
+			/*020*/ uint32 unknown020;
+			/*024*/ char your_name[64];
+			/*088*/ uint64 unknown088;
+			/*096*/ char rezzer_name[64];
+			/*160*/ int32 spellid;
+			/*164*/ char corpse_name[64];
+			/*228*/ uint32 action;
+			/*232*/ uint8 unknown232[24];
+			/*256*/
+		};
+
+		// OP_ManaUpdate / OP_EnduranceUpdate
+		struct ManaUpdate_Struct
+		{
+			/*00*/ uint16 spawn_id;
+			/*02*/ uint32 cur_mana;
+			/*06*/ uint32 max_mana;
+			/*10*/
+		};
+
+		struct EnduranceUpdate_Struct
+		{
+			/*00*/ uint16 spawn_id;
+			/*02*/ uint32 cur_end;
+			/*06*/ uint32 max_end;
+			/*10*/
+		};
+
+		// OP_MobManaUpdate / OP_MobEnduranceUpdate: percent is int32 now
+		struct MobManaUpdate_Struct
+		{
+			/*00*/ int16  spawn_id;
+			/*02*/ int32  mana;      // percent 0..100
+			/*06*/
+		};
+
+		struct MobEnduranceUpdate_Struct
+		{
+			/*00*/ int16  spawn_id;
+			/*02*/ int32  endurance; // percent 0..100
+			/*06*/
+		};
+
+		struct ClickObject_Struct {
+			/*00*/ uint32 drop_id;
+			/*04*/ uint32 player_id;
+			/*08*/ uint32 unknown08;
+		};
+
+		struct PetCommand_Struct {
+			/*00*/ uint32 command;
+			/*04*/ uint32 target;
+			/*08*/ uint32 unknown08;
+		};
+
+		struct GroupFollow_Struct {
+			/*000*/ char name1[64]; // inviter
+			/*064*/ char name2[64]; // invitee
+			/*128*/ uint8 unknown128[48];
+			/*176*/
+		};
+
+// -----------------------------------------------------------------------------------------------------
+		// S2C 0x13ff
+		struct GuildMemberAdd_Struct {
+		/*000*/ uint64 guild_id;
+		/*008*/ uint32 level;
+		/*012*/ uint32 class_;
+		/*016*/ uint32 rank;
+		/*020*/ uint8  guild_show;        // read as a byte
+		/*021*/ uint8  pad021[3];
+		/*024*/ uint32 zone_id;           // non-zero = online
+		/*028*/ uint32 last_on;
+		/*032*/ char   player_name[64];
+		/*096*/
+		};
+
+		// S2C 0x70cf
+		struct GuildMemberLevel_Struct {
+		/*000*/ uint64 guild_id;
+		/*008*/ char   player_name[64];
+		/*072*/ uint32 level;
+		/*076*/ uint32 class_;            // client overwrites member class with this
+		/*080*/
+		};
+
+		// S2C 0x3b2f (SetGuildRank / GuildMemberRankAltBanker)
+		struct GuildMemberRank_Struct {
+		/*000*/ uint64 guild_id;
+		/*008*/ uint32 rank;
+		/*012*/ char   player_name[64];
+		/*076*/ uint32 alt_banker;        // bit1 = alt
+		/*080*/ uint8  guild_show;        // seen 1
+		/*081*/ uint8  self_perm_flag; // only used when player_name == me
+		/*082*/ uint8  pad082[6];
+		/*088*/
+		};
+
+		// S2C 0x4ea8
+		struct GuildMemberPublicNote_Struct {
+		/*000*/ uint64 guild_id;
+		/*008*/ char   player_name[64];
+		/*072*/ char   public_note[256];
+		/*328*/
+		};
+
+		// S2C 0x5460
+		struct GuildRenameMember_Struct {
+		/*000*/ uint64 guild_id;
+		/*008*/ char   player_name[64];
+		/*072*/ char   new_player_name[64];
+		/*136*/
+		};
+
+		// S2C 0x614e
+		struct GuildMemberDelete_Struct {
+		/*000*/ uint64 guild_id;
+		/*008*/ char   player_name[64];
+		/*072*/
+		};
+
+		// S2C 0x5b63 (GuildMemberDetails / GuildMemberUpdate)
+		struct GuildMemberDetails_Struct {
+		/*000*/ uint64 guild_id;
+		/*008*/ char   player_name[64];
+		/*072*/ uint32 zone_id;
+		/*076*/ uint32 last_on;
+		/*080*/ uint32 offline_mode;      // 1 = offline
+		/*084*/ uint32 pad084;
+		/*088*/
+		};
+
+		// S2C 0x408a
+		struct GuildRenameGuild_Struct {
+		/*000*/ uint64 guild_id;
+		/*008*/ char   new_guild_name[64];
+		/*072*/
+		};
+
+		// S2C 0x73dc
+		struct GuildDelete_Struct {
+		/*000*/ uint64 guild_id;
+		/*008*/
+		};
+
+		// S2C 0x1dab: a spawn joined / left a guild (ToB does not take this from SpawnAppearance)
+		struct GuildMemberGuildID_Struct {
+		/*000*/ uint32 spawn_id;
+		/*004*/ uint64 guild_id;
+		/*012*/
+		};
+		static_assert(sizeof(GuildMemberGuildID_Struct) == 12, "TOB GuildMemberGuildID_Struct");
+
+		// S2C 0x7c20 / 0x45b8, C2S 0x6e0d / 0x34e3
+		struct GuildMOTD_Struct {
+		/*000*/ uint64 guild_id;
+		/*008*/ char   name[64];
+		/*072*/ char   setby_name[64];
+		/*136*/ uint32 unknown136;
+		/*140*/ char   motd[512];
+		/*652*/ uint32 pad652;
+		/*656*/
+		};
+
+		// C2S/S2C 0x26db
+		struct GuildInvite_Struct {
+		/*000*/ char   othername[64];     // invitee (S2C: compared with my name)
+		/*064*/ char   myname[64];        // inviter
+		/*128*/ char   guild_name[64];    // only used if use_guild_name != 0
+		/*192*/ uint64 unknown192;        // filled by the client
+		/*200*/ uint64 guild_id;
+		/*208*/ uint32 my_rank;
+		/*212*/ uint32 rank;              // S2C: must be 1..8 or the client ignores the invite
+		/*216*/ uint8  use_guild_name;
+		/*217*/ uint8  pad217[7];
+		/*224*/
+		};
+
+		// C2S/S2C 0x1c99
+		struct GuildInviteAccept_Struct {
+		/*000*/ char   inviter[64];
+		/*064*/ char   new_member[64];
+		/*128*/ uint32 response;          // accept: rank, decline: 9 (client tests >= 9)
+		/*132*/ uint32 pad132;
+		/*136*/ uint64 guild_id;
+		/*144*/ uint32 action;            // 1 accept, 2 decline
+		/*148*/ uint32 pad148;
+		/*152*/
+		};
+
+		// C2S 0x3ab0
+		struct GuildRemove_Struct {
+		/*000*/ char   othername[64];
+		/*064*/ char   myname[64];
+		/*128*/ uint64 guild_id;
+		/*136*/ uint32 officer; // sender's rank
+		/*140*/ uint32 unknown140;
+		/*144*/
+		};
+
+		// C2S 0x118c (ToB leaves 'name' empty)
+		struct GuildDemote_Struct {
+		/*000*/ char   name[64];
+		/*064*/ char   target[64];
+		/*128*/ uint32 rank;
+		/*132*/
+		};
+
+		// C2S 0x1ea1
+		struct GuildPromote_Struct {
+		/*000*/ char   target[64];
+		/*064*/ char   name[64];
+		/*128*/ uint64 guild_id;
+		/*136*/ uint32 rank;
+		/*140*/ uint32 myrank;            // uninitialised stack in the client: ignore
+		/*144*/
+		};
+
+		// C2S 0x6108
+		struct GuildManageBanker_Struct {
+		/*000*/ uint64 unknown0;
+		/*008*/ char   myname[64];
+		/*072*/ char   member[64];
+		/*136*/ uint32 enabled;           // flags, bit1 = alt
+		/*140*/ uint32 pad140;
+		/*144*/
+		};
+
+		// C2S 0x2817
+		struct GuildPublicNote_Struct {
+		/*000*/ uint64 guild_id;
+		/*008*/ char   name[64];
+		/*072*/ char   target[64];
+		/*136*/ char   note[256];
+		/*392*/
+		};
+
+		// C2S 0x1cfd
+		struct GuildStatus_Struct {
+		/*000*/ char   Name[64];
+		/*064*/ uint8  Unknown064[80];
+		/*144*/
+		};
+
+		// C2S 0x6079
+		struct GuildOpenGuildWindow_Struct {
+		/*000*/ uint64 guild_id;
+		/*008*/ uint32 unknown8;
+		/*012*/
+		};
+
+		// 0x1ae6 header (payload follows at 0x58)
+		struct GuildUpdateHeader_Struct {
+		/*000*/ uint32 action;
+		/*004*/ uint32 unknown4;
+		/*008*/ uint32 unknown8;
+		/*012*/ uint32 unknown12;         // new in ToB
+		/*016*/ char   name[64];
+		/*080*/ uint64 guild_id;
+		/*088*/
+		};
+
+
+		// S2C OP_SetTitleReply 0x5051: is_suffix@0, title@4 (128 bytes in ToB), entity_id@0x84
+		struct SetTitleReply_Struct {
+			/*000*/ uint32 is_suffix;
+			/*004*/ char   title[128];
+			/*132*/ uint32 entity_id;
+			/*136*/
+		};
+
+		// OP_InspectRequest 0x5564: writes {target spawn id, own spawn id} as u32s
+		struct Inspect_Struct {
+			/*00*/ uint32 TargetID;
+			/*04*/ uint32 PlayerID;
+			/*08*/
+		};
+
+		// OP_GMLastName, C2S, 195 bytes
+		struct GMLastName_Struct {
+			/*000*/ char  name[64];
+			/*040*/ char  gmname[64];
+			/*080*/ char  lastname[64];
+			/*0c0*/ uint8 unknown192[3];
+			/*0c3*/
+		};
+
+		// OP_RaidDelegateAbility 0x8ea0, both directions: emu DelegateAbility_Struct behind an 8-byte prefix.
+		// S2C reader reads type@8 slot@0xc action@0x10 entity@0x1c name@0x24 from the raw buffer.
+		// C2S writer: u64 (always 0), 7 x u32, then a NUL-terminated name (variable length).
+		struct DelegateAbility_Struct {
+		/*000*/	uint64 unknown000;       // 0
+		/*008*/	uint32 DelegateAbility;  // ToB enum: 0 = new (eqstr 0x2c27/0x2c28), 1 = main assist, 2 = main marker
+		/*00c*/	uint32 MemberNumber;
+		/*010*/	uint32 Action;           // 1 = clear, else set (same as emu ClearDelegate/SetDelegate)
+		/*014*/	uint32 Unknown012;
+		/*018*/	uint32 Unknown016;
+		/*01c*/	uint32 EntityID;
+		/*020*/	uint32 Unknown024;
+		/*024*/	char   Name[64];
+		/*064*/
+		};
+
+		// OP_TributeItem (both ways)
+		struct TributeItem_Struct {
+		/*00*/	InventorySlot_Struct	inventory_slot;
+		/*12*/	uint32	quantity;
+		/*16*/	uint32	tribute_master_id;
+		/*20*/	int32	tribute_points;
+		/*24*/
+		};
+
+		// OP_MercenaryTimer (S2C 0x6d3f). SuspendedTime widened to 64 bits.
+		struct MercenaryStatus_Struct {
+		/*00*/	uint32	MercEntityID;
+		/*04*/	uint32	UpdateInterval;
+		/*08*/	uint32	MercUnk01;
+		/*12*/	uint32	MercState;		// ToB enum: server 5 ("normal") == ToB 6
+		/*16*/	uint64	SuspendedTime;
+		/*24*/
+		};
+
+		// OP_MercenarySuspendResponse (S2C 0x1e9b). Client reads *(u64*)p.
+		struct SuspendMercenaryResponse_Struct {
+		/*00*/	uint64	SuspendTime;
+		/*08*/
+		};
+
+		// OP_GuildTributeDonatePlat (C2S 0x56f6)
+		struct GuildTributeDonatePlatRequest_Struct {
+		/*00*/	uint32	quantity;
+		/*04*/	uint32	tribute_master_id;
+		/*08*/	uint32	unknown08;
+		/*12*/	uint32	unknown12;
+		/*16*/	uint64	guild_id;
+		/*24*/	uint32	unknown24;
+		/*28*/	uint32	unknown28;
+		/*32*/
+		};
+
+		// OP_GuildTributeDonateItem (C2S 0x647c)
+		struct GuildTributeDonateItemRequest_Struct {
+		/*00*/	InventorySlot_Struct	slot;
+		/*12*/	uint32	quantity;
+		/*16*/	uint32	tribute_master_id;
+		/*20*/	uint32	unknown20;
+		/*24*/	uint64	guild_id;
+		/*32*/	uint64	unknown32;
+		/*40*/
+		};
+
+		// OP_GuildTributeToggleReq (C2S 0x5c3b)
+		struct GuildTributeToggleReq_Struct {
+		/*00*/	uint32	command;
+		/*04*/	uint32	unknown04;
+		/*08*/
+		};
+
+		// OP_ShopSendParcel C2S: ToB's 6-byte slot + 2 pad (same pattern as AltCurrencySell)
+		struct Parcel_Struct
+		{
+		/*000*/ uint32 npc_id;
+		/*004*/ TypelessInventorySlot_Struct inventory_slot;
+		/*010*/ uint16 unknown010;
+		/*012*/ uint32 quantity;
+		/*016*/ uint32 money_flag;
+		/*020*/ char   send_to[64];
+		/*084*/ char   note[128];
+		/*212*/ uint32 unknown_212;
+		/*216*/ uint32 unknown_216;
+		/*220*/ uint32 unknown_220;
+		/*224*/
+		};
+
+		// OP_AltCurrencySell 0x58ca, both directions
+		struct AltCurrencySellItem_Struct
+		{
+		/*000*/ uint32 merchant_entity_id;
+		/*004*/ TypelessInventorySlot_Struct inventory_slot;
+		/*010*/ uint16 unknown010;
+		/*012*/ uint32 charges;
+		/*016*/ uint32 cost;
+		/*020*/
+		};
+		static_assert(sizeof(AltCurrencySellItem_Struct) == 20, "TOB AltCurrencySellItem_Struct must be 20 bytes");
+
+		// OP_AltCurrencySellSelection 0x3181 C2S; the S2C reply is the emu 88-byte struct
+		struct AltCurrencySelectItem_Struct
+		{
+		/*000*/ uint32 merchant_entity_id;
+		/*004*/ TypelessInventorySlot_Struct inventory_slot;
+		/*010*/ char   unknown010[64];
+		/*074*/ uint8  unknown074[6];
+		/*080*/
+		};
+		static_assert(sizeof(AltCurrencySelectItem_Struct) == 80, "TOB AltCurrencySelectItem_Struct must be 80 bytes");
+
+		// OP_GroupRoles 0x5205, both directions, 168 bytes
+		struct GroupRole_Struct
+		{
+		/*000*/ char   Name1[64];        // member whose role changes
+		/*064*/ char   Name2[64];        // group leader
+		/*128*/ uint8  unknown128[8];
+		/*136*/ uint32 unknown136;
+		/*140*/ uint32 RoleNumber;       // 1 main tank, 2 main assist, 3 puller
+		/*144*/ uint8  unknown144[16];
+		/*160*/ uint8  Toggle;
+		/*161*/ uint8  unknown161;       // 0 on S2C
+		/*162*/ uint8  unknown162[6];
+		/*168*/
+		};
+		static_assert(sizeof(GroupRole_Struct) == 168, "TOB GroupRole_Struct must be 168 bytes");
+
+		// OP_PetitionUpdate (S2C 0x71fe) (GM petition queue): senttime is 32-bit on the wire
+		struct PetitionUpdate_Struct {
+		/*000*/	uint32	petnumber;
+		/*004*/	uint32	color;      // 0 green, 1 yellow, 2 red
+		/*008*/	uint32	status;     // 0xFFFFFFFF / 0xFFFFFFFD removes the entry
+		/*012*/	uint32	senttime;
+		/*016*/	char	accountid[32];
+		/*048*/	char	gmsenttoo[64];
+		/*112*/	int32	quetotal;
+		/*116*/	char	charname[64];
+		/*180*/	uint32	unknown180; // 0 -> client uses senttime
+		/*184*/
+		};
+
+		// OP_GuildTributeFavorAndTimer (S2C 0x009e) reads favor/timers at +8/+12/+16
+		struct GuildTributeFavorTimer_Struct {
+		/*00*/	uint64	guild_id;          // not read by the client
+		/*08*/	uint32	guild_favor;
+		/*12*/	uint32	tribute_timer;
+		/*16*/	uint32	trophy_timer;
+		/*20*/
+		};
+
+		// OP_GuildSendActiveTributes (S2C 0x37cc) and OP_GuildTributeToggleReply (S2C 0x285a)
+		struct GuildTributeSendActive_Struct {
+		/*00*/	uint32	not_used;
+		/*04*/	uint32	guild_favor;
+		/*08*/	uint32	tribute_timer;
+		/*12*/	uint32	tribute_enabled;   // client reads the low byte
+		/*16*/	uint8	unknown16[12];     // server: 8
+		/*28*/	uint32	tribute_id_1;
+		/*32*/	uint32	tribute_id_2;
+		/*36*/	uint32	tribute_id_1_tier;
+		/*40*/	uint32	tribute_id_2_tier;
+		/*44*/
+		};
+
+		// OP_GuildOptInOut (S2C 0x4413): member row update
+		struct GuildTributeOptInOutReply_Struct {
+		/*00*/	uint64	guild_id;
+		/*08*/	char	player_name[64];
+		/*72*/	uint32	tribute_toggle;
+		/*76*/	uint32	tribute_trophy_toggle;
+		/*80*/	uint32	no_donations;
+		/*84*/	uint32	time;
+		/*88*/	uint32	command;           // client reads the low byte
+		/*92*/
+		};
+
+		// OP_GuildOptInOut (C2S 0x4413) (opt-in checkbox)
+		struct GuildTributeOptInOutReq_Struct {
+		/*00*/	uint64	guild_id;
+		/*08*/	uint32	tribute_toggle;
+		/*12*/	char	player[64];
+		/*76*/	uint32	command;           // always 0
+		/*80*/	uint32	tribute_master_id;
+		/*84*/	uint32	unknown84;         // uninitialised
+		/*88*/
+		};
+
+		// OP_GuildModifyBenefits (C2S 0x51e6), Modify Benefits button / window close. Only byte 0 and the
+		// master id are initialised; the benefit choices go in OP_GuildSaveActiveTributes just before it.
+		struct GuildTributeModifyBenefits_Struct {
+		/*00*/	uint8	command;           // 1 = enter modify mode, 0 = save
+		/*01*/	uint8	unknown01[79];
+		/*80*/	uint32	tribute_master_id;
+		/*84*/	uint32	unknown84;
+		/*88*/
+		};
+
+		// OP_GuildSaveActiveTributes (C2S 0x7161).
+		struct GuildTributeSaveActive_Struct {
+		/*00*/	uint32	command;
+		/*04*/	uint8	unknown04[20];
+		/*24*/	uint32	master_tribute_id;
+		/*28*/	uint32	tribute_id_1;
+		/*32*/	uint32	tribute_id_2;
+		/*36*/	uint32	tribute_1_tier;
+		/*40*/	uint32	tribute_2_tier;
+		/*44*/	uint8	unknown44[12];
+		/*56*/
+		};
+
+		struct DynamicZoneInfo_Struct
+		{
+		/*000*/ uint32 client_id;
+		/*004*/ uint32 unknown004;
+		/*008*/ uint8  assigned;          // client reads one byte; 0 clears the window
+		/*009*/ uint8  padding009[3];
+		/*012*/ uint32 max_players;
+		/*016*/ uint32 unknown016;        // new in ToB, purpose unknown
+		/*020*/ char   dz_name[128];
+		/*148*/ char   leader_name[64];
+		/*212*/ uint8  dz_type;           // 1 = expedition; window auto-opens on first assignment only when 1
+		/*213*/ uint8  padding213[3];
+		/*216*/
+		};
+
+		struct DynamicZoneMemberListName_Struct
+		{
+		/*000*/ uint32 client_id;
+		/*004*/ uint32 unknown004;
+		/*008*/ uint8  add_name;          // 1 add, 0 remove
+		/*009*/ uint8  padding009[3];
+		/*012*/ uint32 unknown012;        // new in ToB, not read
+		/*016*/ char   name[64];
+		/*080*/
+		};
+
+		struct ExpeditionExpireWarning
+		{
+		/*000*/ uint32 client_id;
+		/*004*/ uint32 unknown004;
+		/*008*/ uint32 minutes_remaining;
+		/*012*/
+		};
+
+		struct LoadSpellSet_Struct
+		{
+		/*000*/ uint8  spell[16];         // client fills min(count,14); bytes past count are uninitialised
+		/*016*/ uint32 count;
+		/*020*/
+		};
+
+
+
+		// OP_AltCurrency action 8 entry: 29 bytes
+		struct AltCurrencyPopulateEntry_Struct
+		{
+		/*000*/ uint32 currency_number;
+		/*004*/ uint32 unknown00;          // always 1
+		/*008*/ uint32 currency_number2;
+		/*012*/ uint32 item_id;
+		/*016*/ uint32 item_icon;
+		/*020*/ uint32 stack_size;
+		/*024*/ uint32 sort_order; // NEW in ToB; used as a sort key. Position inferred.
+		/*028*/ uint8  display;
+		/*029*/
+		};
+
+		struct AltCurrencyPopulate_Struct
+		{
+		/*000*/ uint32 opcode;             // 8
+		/*004*/ uint32 count;
+		/*008*/ AltCurrencyPopulateEntry_Struct entries[0];
+		};
+
+		// OP_AltCurrency action 7. The client reads the fields without a size check.
+		struct AltCurrencyUpdate_Struct
+		{
+		/*000*/ uint32 opcode;             // 7
+		/*004*/ char   name[64];
+		/*068*/ uint32 currency_number;
+		/*072*/ uint32 unknown072;         // 1
+		/*076*/ uint32 delta;              // only printed when show_message != 0 (eqstr 0x3426)
+		/*080*/ uint32 amount;             // new total
+		/*084*/ uint32 unknown084;
+		/*088*/ uint8  show_message;
+		/*089*/ uint8  unknown089[3];
+		/*092*/
+		};
+
+		// OP_GroupMakeLeader C2S, 136 bytes
+		struct GroupMakeLeader_Struct
+		{
+		/*000*/ uint32 unknown000;         // client writes 8
+		/*004*/ char   current_leader[64];
+		/*068*/ char   new_leader[64];
+		/*132*/ uint32 unknown132;
+		/*136*/
+		};
+
+		// OP_AdventureMerchantSell, 24 bytes
+		struct Adventure_Sell_Struct
+		{
+		/*000*/ uint32 merchant_type;      // 1 LDoN, 2 Discord, 4 NK, 5 DR (the server sends 1)
+		/*004*/ uint32 npcid;
+		/*008*/ TypelessInventorySlot_Struct inventory_slot;
+		/*014*/ uint16 unknown014;            // pad: the 6-byte ToB slot left the struct at 22 bytes
+		/*016*/ uint32 charges;
+		/*020*/ uint32 sell_price;
+		/*024*/
+		};
+
+		// OP_GuildBank.
+		struct GuildBankItemUpdate_Struct
+		{
+		/*000*/ uint32 action;
+		/*004*/ uint32 not_used004;
+		/*008*/ uint32 not_used008;
+		/*012*/ uint16 slot_id;
+		/*014*/ uint16 area;
+		/*016*/ uint32 display;
+		/*020*/ uint32 item_id;
+		/*024*/ uint32 icon_id;
+		/*028*/ uint32 quantity;
+		/*032*/ uint32 permissions;
+		/*036*/ uint8  allow_merge;
+		/*037*/ uint8  is_useable;
+		/*038*/ char   item_name[64];
+		/*102*/ char   donator[64];
+		/*166*/ char   who_for[64];
+		/*230*/
+		};
+		struct GuildBankPromote_Struct      { uint32 Action; uint32 Unknown04; uint32 Unknown08; uint32 Slot; uint32 Slot2; uint32 unknown20; };
+		struct GuildBankPermissions_Struct  { uint32 Action; uint32 Unknown04; uint32 Unknown08; uint16 SlotID; uint16 Unknown10; uint32 ItemID; uint32 Permissions; char MemberName[64]; };
+		struct GuildBankViewItem_Struct     { uint32 Action; uint32 Unknown04; uint32 Unknown08; uint16 SlotID; uint16 Area; uint32 Unknown12; uint32 Unknown16; };
+		struct GuildBankWithdrawItem_Struct { uint32 Action; uint32 Unknown04; uint32 Unknown08; uint16 SlotID; uint16 Area; uint32 Unknown12; uint32 Quantity; };
+		// NOTE: the ToB client sends action 3 with a 24-byte body and action 5 with an 88-byte body.
+
+
+
+		// OP_LFGuild. Every ToB body starts at 0x18. C2S bytes 4..0x18 are uninitialised stack.
+		struct LFGuild_PlayerToggle_Struct // command 0, both directions
+		{
+		/*000*/ uint32 Command;                     // 0
+		/*004*/ uint8  Unknown004[20];
+		/*018*/ uint8  Unknown018[64];              // not used by the window
+		/*058*/ char   Comment[524];                // server: Comment[256] + Unknown328[268]
+		/*264*/ int32  TimeZone;
+		/*268*/ uint8  Toggle;
+		/*269*/ uint8  Unknown269[7];
+		/*270*/ uint64 TimePosted;                  // u64 in ToB
+		/*278*/ uint8  Unknown278[8];
+		/*280*/
+		};
+		static_assert(sizeof(LFGuild_PlayerToggle_Struct) == 0x280, "TOB LFGuild player toggle");
+
+		struct LFGuild_GuildToggle_Struct // command 1, both directions
+		{
+		/*000*/ uint32 Command;                     // 1
+		/*004*/ uint8  Unknown004[28];              // 20 header bytes + 8 unused
+		/*020*/ char   Comment[512];
+		/*220*/ uint32 FromLevel;
+		/*224*/ uint32 ToLevel;
+		/*228*/ uint32 Classes;                     // bits 1..16
+		/*22c*/ uint32 AACount;
+		/*230*/ int32  TimeZone;
+		/*234*/ uint8  Toggle;
+		/*235*/ uint8  Unknown235[3];
+		/*238*/ uint64 TimePosted;                  // u64 in ToB
+		/*240*/ char   Name[64];                    // not read by the client
+		/*280*/
+		};
+		static_assert(sizeof(LFGuild_GuildToggle_Struct) == 0x280, "TOB LFGuild guild toggle");
+
+		struct LFGuild_SearchPlayer_Struct          // command 3, C2S, 48 bytes
+		{
+		/*00*/ uint32 Command;                      // 3
+		/*04*/ uint8  Unknown004[20];
+		/*18*/ uint32 FromLevel;
+		/*1c*/ uint32 ToLevel;
+		/*20*/ uint32 MinAA;
+		/*24*/ int32  TimeZone;
+		/*28*/ uint32 Classes;
+		/*2c*/ uint32 Unknown02c;                   // uninitialised
+		/*30*/
+		};
+		static_assert(sizeof(LFGuild_SearchPlayer_Struct) == 0x30, "TOB LFGuild search player");
+
+		struct LFGuild_SearchGuild_Struct           // command 4, C2S, 40 bytes
+		{
+		/*00*/ uint32 Command;                      // 4
+		/*04*/ uint8  Unknown004[20];
+		/*18*/ uint32 Level;
+		/*1c*/ uint32 AAPoints;
+		/*20*/ int32  TimeZone;
+		/*24*/ uint32 Class;
+		/*28*/
+		};
+		static_assert(sizeof(LFGuild_SearchGuild_Struct) == 0x28, "TOB LFGuild search guild");
+
+		// S2C command 3/4 result lists: u32 Command; uint8 Unknown004[20]; u32 Count; then serialized entries.
+		static constexpr uint32 LFGuild_HeaderSize = 0x18;
+
+		// OP_LFGuild commands (the same numbers are used by the server). 2 and 5 are ignored by the client, 6 shows the window.
+		enum LFGuildCommand : uint32 {
+			LFGuildPlayerStatus = 0,
+			LFGuildGuildStatus  = 1,
+			LFGuildPlayerSearch = 3,
+			LFGuildGuildSearch  = 4,
+		};
+
+
+		struct FindPerson_Point {
+			float y;
+			float x;
+			float z;
+		};
+
+		// C2S OP_FindPersonRequest, 40 bytes
+		struct FindPersonRequest_Struct {
+			/*00*/ uint32           request_type; // 1 = findable spawn, 2 = find-list id, 3/4 = by name, 5/7 = location, 6 = zone connection
+			/*04*/ uint16           id;           // client copies only 16 bits
+			/*06*/ uint16           unknown06;    // uninitialised
+			/*08*/ uint32           unknown08;
+			/*12*/ uint32           unknown12;
+			/*16*/ FindPerson_Point client_pos;
+			/*28*/ FindPerson_Point dest;
+			/*40*/
+		};
+		static_assert(sizeof(FindPersonRequest_Struct) == 40, "TOB FindPersonRequest_Struct must be 40 bytes");
+
+		struct GroupJoin_Struct {
+			/*000*/ char owner_name[64]; // merc
+			/*064*/ char membername[64];
+			/*128*/ uint8 merc;
+			/*129*/ uint8 padding129[3];
+			/*132*/ uint32 level;
+			/*136*/ uint8 unknown136[12];
+			/*148*/
 		};
 
 		struct GroupGeneric_Struct {
@@ -1316,6 +2057,482 @@ namespace TOB {
 			/*21*/  uint8   Lucky; // set to 1 to message a lucky beg
 		};
 
+
+	//Bazaar / Trader / Barter actions
+	enum TOBBazaarTraderBuyerActions {
+		Zero             = 0,
+		BeginTraderMode  = 1,
+		EndTraderMode    = 2,
+		PriceUpdate      = 3,
+		EndTransaction   = 4,
+		BazaarSearch     = 7,
+		WelcomeMessage   = 9,
+		BuyTraderItem    = 10,
+		ListTraderItems  = 11,
+		BazaarInspect    = 18,
+		ClickTrader      = 28,
+		ItemMove         = 19,
+		ReconcileItems   = 20,
+		FirstOpenSearch  = 26
+	};
+	
+	enum TOBBuyerActions {
+		BuyerSearchResults   = 0x00,
+		BuyerBuyLine         = 0x06,
+		BuyerModifyBuyLine   = 0x07,
+		BuyerRemoveItem      = 0x08,
+		BuyerSellItem        = 0x09,
+		BuyerBuyItem         = 0x0a,
+		BuyerInspectBegin    = 0x0b,
+		BuyerInspectEnd      = 0x0c,
+		BuyerAppearance      = 0x0d,
+		BuyerSendBuyLine     = 0x0e,
+		BuyerItemInspect     = 0x0f,
+		BuyerBrowsingBuyLine = 0x10,
+		BarterWelcomeMessage = 0x11,
+		BuyerWelcomeMessage  = 0x13,
+		BuyerGreeting        = 0x14,
+		BuyerInventoryFull   = 0x16
+	};
+	
+	struct BarterItemSearchLinkRequest_Struct {
+		uint32 action;
+		uint32 unknown_004;
+		uint32 seller_id;
+		uint32 buyer_id;
+		uint32 unknown_016;
+		uint32 slot_id; // 0xffffffff main buy line 0x0 trade_item_1, 0x1 trade_item_2
+		uint32 item_id;
+		uint32 unknown_028;
+	};
+	
+	struct BuyerWelcomeMessageUpdate_Struct {
+		uint32 action;
+		char   unknown_004[64];
+		uint32 unknown_068;
+		char   welcome_message[256];
+	};
+	
+	struct Buyer_SetAppearance_Struct {
+		uint32	action;
+		uint32	entity_id;
+		char	unknown[64];
+		uint32	enabled;
+	};
+	
+	struct BuyerRemoveItem_Struct {
+		uint32	action;
+		uint32	unknown004;
+		uint32	slot_id;
+		uint32	toggle;
+	};
+	
+	struct BuyerLineSellItem_Struct {
+		uint32                     action;
+		uint32                     purchase_method; // 0 direct merchant, 1 via /barter window
+		uint32                     unknown008;
+		uint32                     buyer_entity_id;
+		uint32                     seller_entity_id;
+		char                       unknown[15];
+		uint32                     slot;
+		uint8                      enabled;
+		uint32                     item_id;
+		char                       item_name[64];
+		uint32                     item_icon;
+		uint32                     item_quantity;
+		uint8                      item_toggle;
+		uint32                     item_cost;
+		uint32                     no_trade_items;
+		BuyerLineTradeItems_Struct trade_items[10];
+		char                       unknown2[13];
+		uint32                     seller_quantity;
+	};
+	
+	struct BuyerLineItemsSearch_Struct {
+		uint32                     slot;
+		uint8                      enabled;
+		uint32                     item_id;
+		char                       item_name[64];
+		uint32                     item_icon;
+		uint32                     item_quantity;
+		uint8                      item_toggle;
+		uint32                     item_cost;
+		uint32                     buyer_id;
+		BuyerLineTradeItems_Struct trade_items[MAX_BUYER_COMPENSATION_ITEMS];
+	};
+	
+	struct BuyerLineSearch_Struct {
+		uint32                                   action;
+		uint32                                   no_items;
+		std::vector<BuyerLineItemsSearch_Struct> buy_line;
+	};
+	
+	struct BuyerStart_Struct {
+		uint32                     action;
+		uint16                     no_buyer_lines;
+		uint32                     slot;
+		uint8                      enabled;
+		uint32                     item_id;
+		char                       item_name[1];    // vary length
+		uint32                     item_icon;
+		uint32                     item_quantity;
+		uint8                      toggle;
+		uint32                     item_cost;
+		uint32                     no_trade_items;
+		BuyerLineTradeItems_Struct trade_items[1]; // size is actually no_trade_items.  If 0, then this is not in packet
+		char                       unknown[13];
+	};
+	
+	struct BuyerItemSearchResultEntry_Struct {
+		char   item_name[64];
+		uint32 item_id;
+		uint32 item_icon;
+		uint32 unknown_072;
+	};
+	
+	struct BuyerItemSearchResults_Struct {
+		uint32                            action;
+		uint32                            result_count;
+		BuyerItemSearchResultEntry_Struct results[];
+	};
+	
+	enum {
+		BazaarTrader_StartTraderMode  = 1,
+		BazaarTrader_EndTraderMode    = 2,
+		BazaarTrader_UpdatePrice      = 3,
+		BazaarTrader_EndTransaction   = 4,
+		BazaarSearchResults           = 7,
+		BazaarWelcome                 = 9,
+		BazaarBuyItem                 = 10,
+		BazaarTrader_ShowItems        = 11,
+		BazaarSearchDone              = 12,
+		BazaarTrader_CustomerBrowsing = 13,
+		BazaarInspectItem             = 18,
+		BazaarSearchDone2             = 19,
+		BazaarTrader_StartTraderMode2 = 22
+	};
+	
+	enum {
+		BazaarPriceChange_Fail        = 0,
+		BazaarPriceChange_UpdatePrice = 1,
+		BazaarPriceChange_RemoveItem  = 2,
+		BazaarPriceChange_AddItem     = 3
+	};
+	
+	struct BazaarWindowStart_Struct {
+		uint8   Action;
+		uint8   Unknown001;
+		uint16  Unknown002;
+	};
+	
+	struct BazaarDeliveryCost_Struct {
+		uint32 action;
+		uint32 voucher_delivery_cost;
+		float  parcel_deliver_cost; //percentage of item cost
+		uint32 unknown_010;
+	};
+	
+	struct BazaarWelcome_Struct {
+		uint32 action;
+		uint32 unknown_004;
+		uint32 num_of_traders;
+		uint32 num_of_items;
+	};
+	
+	struct BazaarSearch_Struct {
+	/*000*/ uint32 action;
+	/*004*/ uint8  search_scope;//1 all traders 0 local traders
+	/*005*/ uint8  unknown_005{0};
+	/*006*/ uint16 unknown_006{0};
+	/*008*/ uint32 unknown_008{0};
+	/*012*/ uint32 unknown_012{0};
+	/*016*/ uint32 trader_id;
+	/*020*/ uint32 _class;
+	/*024*/ uint32 race;
+	/*028*/ uint32 item_stat;
+	/*032*/ uint32 slot;
+	/*036*/ uint32 type;
+	/*040*/ char   item_name[64];
+	/*104*/ uint32 min_cost;
+	/*108*/ uint32 max_cost;
+	/*112*/ uint32 min_level;
+	/*116*/ uint32 max_level;
+	/*120*/ uint32 max_results;
+	/*124*/ uint32 prestige;
+	/*128*/ uint32 augment;
+	};
+	
+	struct BazaarInspect_Struct {
+		uint32 action;
+		uint32 unknown_004;
+		uint32 trader_id;
+		char   serial_number[17];
+		char   unknown_029[3];
+		uint32 item_id;
+		uint32 unknown_036;
+	};
+	
+	struct NewBazaarInspect_Struct {
+	/*000*/	BazaarWindowStart_Struct Beginning;
+	/*004*/	char Name[64];
+	/*068*/	uint32 Unknown068;
+	/*072*/	int32 SerialNumber;
+	/*076*/	uint32 Unknown076;
+	/*080*/	uint32 SellerID;
+	/*084*/	uint32 Unknown084;
+	};
+	
+	struct BazaarReturnDone_Struct{
+		uint32 Type;
+		uint32 TraderID;
+		uint32 Unknown008;
+		uint32 Unknown012;
+		uint32 Unknown016;
+	};
+	
+	struct BazaarSearchDetails_Struct { //24+name+17
+	/*014*/	uint32	trader_id;
+	/*018*/	char	serial_num[17];
+	/*022*/	uint32	cost;
+	/*026*/	uint32	quanity;
+	/*030*/	uint32	id;
+	/*034*/	uint32	icon;
+	/*038*/	char	name[1];
+	/*039*/	uint32	stat;
+	};
+	
+	struct BazaarSearchResults_Struct { //14
+	/*000*/    uint32                     unknown000;
+	/*004*/    uint16                     zone_id;
+	/*006*/    uint32                     entity_id;
+	/*010*/    uint32                     num_items;
+	/*014*/    BazaarSearchDetails_Struct items[];
+	};
+	
+	struct TraderItemSerial_Struct {
+		char	serial_number[17];
+		uint8	unknown_018;
+	
+		void operator=(uint32 a) {
+			auto _tmp = fmt::format("{:016}", a);
+			strn0cpy(this->serial_number, _tmp.c_str(), sizeof(this->serial_number));
+		}
+	};
+	
+	struct BeginTrader_Struct {
+	/*0000*/    uint32                  action;
+	/*0004*/    TraderItemSerial_Struct items[200];
+	/*3604*/    uint32                  item_cost[200];
+	/*4404*/
+	};
+	
+	struct ClickTrader_Struct {
+	/*0000*/    uint32                  action;
+	/*0004*/    TraderItemSerial_Struct items[200];
+	/*3604*/    uint32                  item_cost[200];
+	/*4404*/
+	};
+	
+	struct GetItems_Struct {
+		uint32	items[200];
+	};
+	
+	struct BecomeTrader_Struct {
+		uint32 entity_id;
+		uint32 action;
+	};
+	
+	struct BazaarWindowRemoveTrader_Struct {
+		uint32 action;
+		uint32 trader_id;
+	};
+	
+	struct TraderPriceUpdate_Struct {
+		uint32 action;
+		char   serial_number[17];
+		char   unknown_021[3];
+		uint32 unknown_024;
+		uint32 new_price;
+	};
+	
+	struct Trader_ShowItems_Struct {
+	/*000*/	uint32 action;
+	/*004*/	uint32 entity_id;
+	/*008*/	uint32 unknown_008;
+	/*012*/
+	};
+	
+	struct TraderStatus_Struct {
+	/*000*/	uint32 action;
+	/*004*/	uint32 sub_action;
+	/*008*/	uint32 uknown_008;
+	/*012*/
+	};
+	
+	struct TraderBuy_Struct {
+	/*000*/ uint32	action;
+	/*004*/	uint32	method;
+	/*008*/ uint32	sub_action;
+	/*012*/	uint32	unknown_012;
+	/*016*/ uint32	trader_id;
+	/*020*/ char	buyer_name[64];
+	/*084*/ char	seller_name[64];
+	/*148*/ char	unknown_148[32];
+	/*180*/ char	item_name[64];
+	/*244*/ char	serial_number[17];
+	/*261*/ char	unknown_261[3];
+	/*264*/ uint32	item_id;
+	/*268*/ uint32	price;
+	/*272*/ uint32	already_sold;
+	/*276*/ uint32	unknown_276;
+	/*280*/ uint32	quantity;
+	/*284*/
+	};
+	
+	struct TraderItemUpdate_Struct{
+		uint32 unknown0;
+		uint32 traderid;
+		uint8  fromslot;
+		uint8  toslot; //7?
+		uint16 charges;
+	};
+	
+	struct MoneyUpdate_Struct{
+		int32 platinum;
+		int32 gold;
+		int32 silver;
+		int32 copper;
+	};
+	
+	struct TraderDelItem_Struct{
+		/*000*/ uint32 Unknown000;
+		/*004*/ uint32 TraderID;
+		/*008*/ char   SerialNumber[17];
+		/*024*/ uint32 Unknown012;
+		/*028*/
+	};
+	
+	struct TraderClick_Struct{
+		/*000*/	uint32 action;
+		/*004*/	uint32 trader_id;
+		/*008*/	uint32 unknown_008;
+		/*012*/
+	};
+
+	// ---- OP_AdvLoot / OP_AdvLootMisc, client to server ----
+	// Every body starts with a u16 subtype; the rest depends on it. Sizes are the minimum the server accepts.
+	enum class TOBAdvLootSubtype : uint16 {
+		Sync   = 3,
+		Leave  = 7,
+		Loot   = 8,
+		Ask    = 0xa,
+		Choice = 0xb,
+		Give   = 0xe,
+		State  = 0x11,
+		Roll   = 0x12,
+	};
+
+	enum class TOBAdvLootMiscSubtype : uint16 {
+		FreeGrab = 0xf,
+	};
+
+	struct AdvLootSubtype_Struct {
+		/*000*/ uint16 subtype;
+		/*002*/
+	};
+
+	struct AdvLootLeave_Struct {
+		/*000*/ uint16 subtype;
+		/*002*/ uint64 item_id;
+		/*010*/ uint32 corpse_id;
+		/*014*/ uint32 quantity;
+		/*018*/
+	};
+
+	struct AdvLootLoot_Struct {
+		/*000*/ uint16 subtype;
+		/*002*/ uint64 item_id;
+		/*010*/ uint32 corpse_id;
+		/*014*/ uint32 quantity;
+		/*018*/ uint32 sequence;	// echoed in the result so the window can drop the request
+		/*022*/ uint8  flag;
+		/*023*/
+	};
+
+	struct AdvLootChoice_Struct {
+		/*000*/ uint16 subtype;
+		/*002*/ uint32 transaction_id;
+		/*006*/ uint32 corpse_id;
+		/*010*/ uint64 item_id;
+		/*018*/ uint16 count;		// entries in the trailing list, not used
+		/*020*/ uint32 choice;		// first list entry; a NUL-terminated string follows it
+		/*024*/
+	};
+
+	// master looter asking for need/greed
+	struct AdvLootAsk_Struct {
+		/*000*/ uint16 subtype;
+		/*002*/ uint32 transaction_id;
+		/*006*/ uint64 item_id;
+		/*014*/ uint32 state;
+		/*018*/ uint8  unknown018;
+		/*019*/ uint32 time;
+		/*023*/ uint32 count;		// entries in the trailing list
+		/*027*/ uint32 corpse_id;	// first list entry
+		/*031*/ uint32 quantity;
+		/*035*/
+	};
+
+	// master looter giving an item or leaving it; a NUL-terminated player name follows
+	struct AdvLootGive_Struct {
+		/*000*/ uint16 subtype;
+		/*002*/ uint32 transaction_id;	// the row's ask id, 0 when it was never asked
+		/*006*/ uint32 corpse_id;
+		/*010*/ uint64 item_id;
+		/*018*/ uint16 quantity;
+		/*020*/ uint8  leave;			// 1 = Leave On Corpse / Leave All, 0 = give
+		/*021*/
+	};
+
+	struct AdvLootState_Struct {
+		/*000*/ uint16 subtype;
+		/*002*/ uint32 transaction_id;
+		/*006*/ uint32 time;
+		/*010*/ uint32 state;
+		/*014*/	// one more byte follows; the server does not read it
+	};
+
+	struct AdvLootRoll_Struct {
+		/*000*/ uint16 subtype;
+		/*002*/ uint32 transaction_id;
+		/*006*/
+	};
+
+	struct AdvLootMiscFreeGrab_Struct {
+		/*000*/ uint16 subtype;
+		/*002*/ uint32 transaction_id;
+		/*006*/ uint32 corpse_id;
+		/*010*/ // a string follows
+	};
+
+	// ---- OP_AdvLootCorpseItems, server to client ----
+	// Variable length, built with SerializeBuffer:
+	//   header:  u8 present, u8 shared, u32 unlock_seconds, u32 corpse_id, u32 item_count, cstr corpse_name
+	//   per item: u64 item_id, u32 icon, u32 shared_quantity, u32 stack_size, u8 unknown, u32 unknown,
+	//             u32 personal_quantity, cstr item_name, AdvLootItemTrailer_Struct, lenstr item_link
+	struct AdvLootItemTrailer_Struct {
+		/*000*/ uint32 unknown000;
+		/*004*/ uint32 unknown004;
+		/*008*/ uint32 unknown008;
+		/*012*/ uint32 unknown012;
+		/*016*/ uint32 unknown016;
+		/*020*/
+	};
+
+	// values the client expects in AdvLootItemTrailer_Struct
+	constexpr uint32 ADVLOOT_TRAILER_UNKNOWN004 = 0xFFFF;
+	constexpr uint32 ADVLOOT_TRAILER_UNKNOWN008 = 0xFFFF;
+
 #pragma pack()
 
 
@@ -1397,6 +2614,14 @@ namespace TOB {
 		bool preview_enable;
 		std::vector<TaskSelectWindowSelector_Struct> selectors;
 	};
+
+		// OP_Surname, both directions. The surname follows the header without a terminator.
+		struct Surname_Struct {
+			/*000*/ EqGuid character; // the character the surname belongs to
+			/*008*/ int32  status;    // 0 from the client; 1 from the server when the surname was accepted
+			/*012*/ uint32 length;    // surname length in bytes
+			/*016*/
+		};
 
 	};	//end namespace structs
 };	//end namespace tob

@@ -45,7 +45,7 @@ struct ClientComponents
 	{
 		switch (version) {
 		case Version::TOB:
-			buffComponent = std::make_unique<TOB::BuffComponent>(TOB::spells::LONG_BUFFS, TOB::spells::SHORT_BUFFS);
+			buffComponent = std::make_unique<TOB::BuffComponent>(TOB::spells::CLIENT_LONG_BUFFS, TOB::spells::CLIENT_SHORT_BUFFS);
 			messageComponent = std::make_unique<TOB::MessageComponent>();
 			break;
 		case Version::RoF2:

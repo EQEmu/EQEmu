@@ -47,6 +47,8 @@
 	void Handle_OP_AdventureMerchantSell(const EQApplicationPacket *app);
 	void Handle_OP_AdventureRequest(const EQApplicationPacket *app);
 	void Handle_OP_AdventureStatsRequest(const EQApplicationPacket *app);
+	void Handle_OP_AdvLoot(const EQApplicationPacket *app);
+	void Handle_OP_AdvLootMisc(const EQApplicationPacket *app);
 	void Handle_OP_AggroMeterLockTarget(const EQApplicationPacket *app);
 	void Handle_OP_AltCurrencyMerchantRequest(const EQApplicationPacket *app);
 	void Handle_OP_AltCurrencyPurchase(const EQApplicationPacket *app);
@@ -177,6 +179,8 @@
 	void Handle_OP_GuildInviteAccept(const EQApplicationPacket *app);
 	void Handle_OP_GuildLeader(const EQApplicationPacket *app);
 	void Handle_OP_GuildManageBanker(const EQApplicationPacket *app);
+	void Handle_OP_GuildNameRequest(const EQApplicationPacket *app);
+	void Handle_OP_GuildOpenGuildWindow(const EQApplicationPacket *app);
 	void Handle_OP_GuildPeace(const EQApplicationPacket *app);
 	void Handle_OP_GuildPromote(const EQApplicationPacket *app);
 	void Handle_OP_GuildPublicNote(const EQApplicationPacket *app);

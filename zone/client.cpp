@@ -699,7 +699,7 @@ Client::~Client() {
 	entity_list.RemoveMobFromCloseLists(this);
 	m_close_mobs.clear();
 
-	if (ClientVersion() == EQ::versions::ClientVersion::RoF2 && RuleB (Parcel, EnableParcelMerchants)) {
+	if (ClientVersion() >= EQ::versions::ClientVersion::RoF2 && RuleB (Parcel, EnableParcelMerchants)) {
 		DoParcelCancel();
 	}
 
@@ -3862,13 +3862,26 @@ void Client::MessageString(const CZClientMessageString_Struct* msg)
 		}
 		else
 		{
-			uint32_t outsize = sizeof(FormattedMessage_Struct) + msg->args_size;
-			auto outapp = std::make_unique<EQApplicationPacket>(OP_FormattedMessage, outsize);
-			auto outbuf = reinterpret_cast<FormattedMessage_Struct*>(outapp->pBuffer);
-			outbuf->string_id = msg->string_id;
-			outbuf->type = msg->chat_type;
-			memcpy(outbuf->message, msg->args, msg->args_size);
-			QueuePacket(outapp.get());
+			// Split the null-delimited args and go through the normal MessageString path, so each client
+			// patch formats the packet itself. The raw FormattedMessage_Struct built here before crashed the
+			// ToB client (e.g. "%1 is now available to you." sent to an expedition leader at creation).
+			std::array<std::string, 9> args;
+			size_t count = 0;
+			const char *pos = msg->args;
+			size_t remaining = msg->args_size;
+			while (remaining > 0 && count < args.size()) {
+				size_t len = strnlen(pos, remaining);
+				args[count++] = std::string(pos, len);
+				if (len >= remaining) {
+					break;
+				}
+				pos += len + 1;
+				remaining -= len + 1;
+			}
+
+			auto arg = [&](size_t i) -> const char * { return i < count ? args[i].c_str() : nullptr; };
+			MessageString(msg->chat_type, msg->string_id, arg(0), arg(1), arg(2), arg(3), arg(4), arg(5), arg(6),
+				arg(7), arg(8));
 		}
 	}
 }
@@ -11740,6 +11753,9 @@ void Client::ReconnectUCS()
 		case EQ::versions::ClientVersion::RoF2:
 			connection_type = EQ::versions::ucsRoF2Combined;
 			break;
+		case EQ::versions::ClientVersion::TOB:
+			connection_type = EQ::versions::ucsTOBCombined;
+			break;
 		default:
 			connection_type = EQ::versions::ucsUnknown;
 			break;
@@ -13257,7 +13273,7 @@ void Client::SendMerchantEnd()
 {
 	SetMerchantSessionEntityID(0);
 
-	if (ClientVersion() == EQ::versions::ClientVersion::RoF2 && RuleB(Parcel, EnableParcelMerchants)) {
+	if (ClientVersion() >= EQ::versions::ClientVersion::RoF2 && RuleB(Parcel, EnableParcelMerchants)) {
 		DoParcelCancel();
 		SetEngagedWithParcelMerchant(false);
 	}

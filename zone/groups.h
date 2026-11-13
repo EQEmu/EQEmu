@@ -151,6 +151,9 @@ public:
 	void	QueueHPPacketsForNPCHealthAA(Mob* sender, const EQApplicationPacket* app);
 	void	QueueClients(Mob *sender, const EQApplicationPacket *app, bool ack_required = true, bool ignore_sender = true, float distance = 0);
 	void	ChangeLeader(Mob* newleader);
+	void	AnnounceAdvancedLootMasterLooter();
+	void	SetAdvancedLootMasterLooter(const std::string &name) { m_advloot_master_looter = name; }
+	Client	*GetAdvancedLootMasterLooter();
 	const char *GetClientNameByIndex(uint8 index);
 	void	UpdateXTargetMarkedNPC(uint32 Number, Mob *m);
 	void	SetDirtyAutoHaters();
@@ -169,6 +172,7 @@ public:
 	bool AnyMemberHasDzLockout(const std::string& expedition, const std::string& event);
 
 	Mob*	members[MAX_GROUP_MEMBERS] {nullptr};
+	std::string m_advloot_master_looter; // group window Master Looter role; empty = the leader
 	char	membername[MAX_GROUP_MEMBERS][64] {""};
 	uint8	MemberRoles[MAX_GROUP_MEMBERS] {0};
 	bool	disbandcheck {false};

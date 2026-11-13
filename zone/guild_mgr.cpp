@@ -589,7 +589,7 @@ void ZoneGuildManager::ProcessWorldPacket(ServerPacket *pack)
 		case ServerOP_GuildMemberLevelUpdate: {
 			if (is_zone_loaded) {
 				auto s_in = (ServerOP_GuildMessage_Struct *) pack->pBuffer;
-				entity_list.SendGuildMemberLevel(s_in->guild_id, s_in->player_level, s_in->player_name);
+				entity_list.SendGuildMemberLevel(s_in->guild_id, s_in->player_level, s_in->player_class, s_in->player_name);
 			}
 			break;
 		}
@@ -1456,7 +1456,8 @@ uint8* ZoneGuildManager::MakeGuildMembers(uint32 guild_id, const char* prefix_na
 	auto gms = (Internal_GuildMembers_Struct*)retbuffer;
 
 	//fill in the global header
-	strcpy(gms->player_name, prefix_name);
+	strn0cpy(gms->player_name, prefix_name, sizeof(gms->player_name));
+	gms->guild_id    = guild_id;
 	gms->count       = members.size();
 	gms->name_length = name_len;
 	gms->note_length = note_len;
@@ -1536,13 +1537,14 @@ uint8* ZoneGuildManager::MakeGuildMembers(uint32 guild_id, const char* prefix_na
 	return(retbuffer);
 }
 
-void ZoneGuildManager::SendToWorldMemberLevelUpdate(uint32 guild_id, uint32 level, std::string player_name)
+void ZoneGuildManager::SendToWorldMemberLevelUpdate(uint32 guild_id, uint32 level, uint32 class_id, std::string player_name)
 {
 	auto s_outapp = new ServerPacket(ServerOP_GuildMemberLevelUpdate, sizeof(ServerOP_GuildMessage_Struct));
 	auto *s_out = (ServerOP_GuildMessage_Struct *) s_outapp->pBuffer;
 
 	s_out->guild_id     = guild_id;
 	s_out->player_level = level;
+	s_out->player_class = class_id;
 	strn0cpy(s_out->player_name, player_name.c_str(), sizeof(s_out->player_name));
 
 	worldserver.SendPacket(s_outapp);
