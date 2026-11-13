@@ -206,6 +206,8 @@ namespace EQ
 		const int16 OVERFLOW_END   = 20999;
 
 		// TOB+ only: key ring r, index i is KEYRING_BEGIN + r * KEYRING_STRIDE + i (kept in the inventory table).
+		// The range is the server's own choice: it starts above OVERFLOW_END (20999) and the client never sees
+		// these numbers (the ToB patch converts them to the client's key ring inventory types).
 		// Rings: 0 mount, 1 illusion, 2 familiar, 3 Hero's Forge, 4 teleportation, 5 activated items.
 		const int16 KEYRING_BEGIN     = 22000;
 		const int16 KEYRING_STRIDE    = 1000;

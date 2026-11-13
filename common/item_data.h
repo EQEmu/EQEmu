@@ -121,11 +121,14 @@ namespace EQ
 			/*----*/ ItemTypeCount,
 			/*----*/ ItemTypeCollectible,
 			/*----*/ ItemTypeContainer,
-			/*----*/ ItemTypeMount = 68,          // Live types the TOB key rings take
-			/*----*/ ItemTypeIllusion,
-			/*----*/ ItemTypeFamiliar,            // 70
-			/*----*/ ItemTypeHeroForgeOrnament,
-			/*----*/ ItemTypeTeleportation,
+			// Item types 68..72 are the ItemType values Live items use for the TOB+ key rings (mount, illusion,
+			// familiar, Hero's Forge ornament, teleportation). Older clients never see them; the values come
+			// from the item database.
+			/*----*/ ItemTypeMount = 68,
+			/*----*/ ItemTypeIllusion = 69,
+			/*----*/ ItemTypeFamiliar = 70,
+			/*----*/ ItemTypeHeroForgeOrnament = 71,
+			/*----*/ ItemTypeTeleportation = 72,
 			/*----*/ ItemTypeAll     = 0xFF
 
 /*
