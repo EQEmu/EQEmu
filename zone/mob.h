@@ -371,6 +371,7 @@ public:
 	int CheckBaneDamage(const EQ::ItemInstance *item);
 	uint16 GetSpecializeSkillValue(int32 spell_id) const;
 	void SendSpellBarDisable();
+	void SendTargetResistedMessage(Mob *target, uint16 spell_id);
 	void SendSpellBarEnable(int32 spellid);
 	void ZeroCastingVars();
 	virtual void SpellProcess();

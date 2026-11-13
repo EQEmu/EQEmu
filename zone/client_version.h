@@ -191,7 +191,7 @@ void InterruptSpell(Client* c, uint32_t message, uint32_t spawn_id, const char* 
 void InterruptSpellOther(Mob* sender, uint32_t message, uint32_t spawn_id, const char* name,
 	const char* spell_link);
 
-void SendFullBuffRefresh(Mob* sender, bool remove = false, bool ackreq = true);
+void SendFullBuffRefresh(Mob* sender, bool remove = false, bool ackreq = true, bool with_definitions = false);
 void SendSingleBuffChange(Mob* sender, const Buffs_Struct& buff, int slot, bool remove = false, bool ackreq = true);
 
 } // namespace ClientPatch

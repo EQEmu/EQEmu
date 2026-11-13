@@ -29,6 +29,7 @@ set(zone_sources
 	client_version.cpp
 	combat_record.cpp
 	corpse.cpp
+	corpse_advloot.cpp
 	dialogue_window.cpp
 	doors.cpp
 	dynamic_zone.cpp
@@ -51,6 +52,7 @@ set(zone_sources
 	heal_rotation.cpp
 	horse.cpp
 	inventory.cpp
+	key_rings.cpp
 	loot.cpp
 	main.cpp
 	map.cpp

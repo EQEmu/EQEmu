@@ -121,6 +121,14 @@ namespace EQ
 			/*----*/ ItemTypeCount,
 			/*----*/ ItemTypeCollectible,
 			/*----*/ ItemTypeContainer,
+			// Item types 68..72 are the ItemType values Live items use for the TOB+ key rings (mount, illusion,
+			// familiar, Hero's Forge ornament, teleportation). Older clients never see them; the values come
+			// from the item database.
+			/*----*/ ItemTypeMount = 68,
+			/*----*/ ItemTypeIllusion = 69,
+			/*----*/ ItemTypeFamiliar = 70,
+			/*----*/ ItemTypeHeroForgeOrnament = 71,
+			/*----*/ ItemTypeTeleportation = 72,
 			/*----*/ ItemTypeAll     = 0xFF
 
 /*
@@ -350,6 +358,10 @@ namespace EQ
 		int16 slot_id;
 		const void * inst;
 	};
+
+	// OP_TributeInfo / OP_SendGuildTributes for ToB carry {magic, count, InternalSerializedItem_Struct[count]}
+	// after the name; the patch serializes the item instances
+	constexpr uint32 TRIBUTE_ITEMS_TRAILER_MAGIC = 0x49424F54;
 
 	struct ItemData {
 		// Non packet based fields

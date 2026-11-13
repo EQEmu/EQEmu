@@ -63,6 +63,8 @@ namespace AppearanceType {
 	constexpr uint32 AntiCheat             = 51; // Sent by the client randomly telling the server how long since last action has occurred
 	constexpr uint32 GuildShow             = 52;
 	constexpr uint32 OfflineMode           = 53; // Offline Mode
+	constexpr uint32 AdvancedLooting       = 54; // TOB+: Loot Settings "Use Advanced Looting", 0 = Off, 1 = On
+	constexpr uint32 MasterLooterCandidate = 55; // TOB+: Loot Settings "Master Looter Candidate", 0 = Off, 1 = On
 }
 
 namespace Animation {
@@ -728,6 +730,17 @@ namespace AlternateCurrencyMode {
 	constexpr uint32 Update   = 7;
 	constexpr uint32 Populate = 8;
 }
+
+// OP_Camp body on ToB and newer clients
+namespace CampMode {
+	constexpr uint32 Camp         = 0;   // /camp
+	constexpr uint32 Desktop      = 1;   // /camp desktop
+	constexpr uint32 ServerSelect = 2;   // /camp server
+	constexpr uint32 FastOffset   = 100; // added for "/camp fast"
+}
+
+// MerchantClick_Struct::alt_currency for loyalty merchants: the client's loyalty token id
+constexpr uint32 LOYALTY_MERCHANT_CURRENCY = 999999;
 
 typedef enum {
 	FilterNone = 0,

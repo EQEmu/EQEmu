@@ -23,6 +23,7 @@
 #include "common/strings.h"
 #include "common/textures.h"
 
+#include <algorithm>
 #include <iostream>
 
 std::list<EQ::ItemInstance*> dirty_inst;
@@ -76,6 +77,19 @@ EQ::ItemInstance* ItemInstQueue::pop_back()
 	return inst;
 }
 
+// Remove a specific item from the queue (and take control of memory)
+EQ::ItemInstance* ItemInstQueue::remove(const EQ::ItemInstance* inst)
+{
+	auto it = std::find(m_list.begin(), m_list.end(), inst);
+	if (it == m_list.end()) {
+		return nullptr;
+	}
+
+	EQ::ItemInstance* found = *it;
+	m_list.erase(it);
+	return found;
+}
+
 // Look at item at front of queue
 EQ::ItemInstance* ItemInstQueue::peek_front() const
 {
@@ -116,6 +130,12 @@ EQ::InventoryProfile::~InventoryProfile()
 	}
 
 	m_trade.clear();
+
+	for (auto iter = m_keyring.begin(); iter != m_keyring.end(); ++iter) {
+		safe_delete(iter->second);
+	}
+
+	m_keyring.clear();
 }
 
 void EQ::InventoryProfile::SetInventoryVersion(versions::MobVersion inventory_version) {
@@ -157,7 +177,9 @@ EQ::ItemInstance* EQ::InventoryProfile::GetItem(int16 slot_id) const
 	}
 
 	// Non bag slots
-	if (EQ::ValueWithin(slot_id, invslot::TRADE_BEGIN, invslot::TRADE_END)) {
+	if (invslot::IsKeyRingSlot(slot_id)) {
+		result = _GetItem(m_keyring, slot_id);
+	} else if (EQ::ValueWithin(slot_id, invslot::TRADE_BEGIN, invslot::TRADE_END)) {
 		result = _GetItem(m_trade, slot_id);
 	} else if (EQ::ValueWithin(slot_id, invslot::SHARED_BANK_BEGIN, invslot::SHARED_BANK_END)) {
 		result = _GetItem(m_shbank, slot_id);
@@ -254,6 +276,15 @@ int16 EQ::InventoryProfile::PushCursor(const ItemInstance &inst) {
 
 EQ::ItemInstance* EQ::InventoryProfile::GetCursorItem() {
 	return m_cursor.peek_front();
+}
+
+EQ::ItemInstance* EQ::InventoryProfile::PopCursorQueueItem(const ItemInstance* inst) {
+	// the front of the queue is the cursor itself
+	if (!inst || m_cursor.empty() || m_cursor.peek_front() == inst) {
+		return nullptr;
+	}
+
+	return m_cursor.remove(inst);
 }
 
 // Swap items in inventory
@@ -470,6 +501,12 @@ EQ::ItemInstance* EQ::InventoryProfile::PopItem(int16 slot_id)
 	} else if (EQ::ValueWithin(slot_id, invslot::TRADE_BEGIN, invslot::TRADE_END)) {
 		p = m_trade[slot_id];
 		m_trade.erase(slot_id);
+	} else if (invslot::IsKeyRingSlot(slot_id)) {
+		auto it = m_keyring.find(slot_id);
+		if (it != m_keyring.end()) {
+			p = it->second;
+			m_keyring.erase(it);
+		}
 	} else {
 	// Is slot inside bag?
 		ItemInstance* bag_inst = GetItem(InventoryProfile::CalcSlotId(slot_id));
@@ -1217,6 +1254,9 @@ bool EQ::InventoryProfile::SupportsClickCasting(int16 slot_id)
 		if (inventory::StaticLookup(m_mob_version)->AllowClickCastFromBag) {
 			return true;
 		}
+	} else if (invslot::IsKeyRingSlot(slot_id)) {
+		// TOB+ key ring items are used straight from the ring
+		return m_mob_version == versions::MobVersion::TOB;
 	}
 
 	return false;
@@ -1277,6 +1317,11 @@ int EQ::InventoryProfile::GetSlotByItemInst(ItemInstance *inst) {
 	}
 
 	i = GetSlotByItemInstCollection(m_trade, inst);
+	if (i != INVALID_INDEX) {
+		return i;
+	}
+
+	i = GetSlotByItemInstCollection(m_keyring, inst);
 	if (i != INVALID_INDEX) {
 		return i;
 	}
@@ -1442,6 +1487,9 @@ int16 EQ::InventoryProfile::_PutItem(int16 slot_id, ItemInstance* inst)
 		result = slot_id;
 	} else if (EQ::ValueWithin(slot_id, invslot::TRADE_BEGIN, invslot::TRADE_END)) {
 		m_trade[slot_id] = inst;
+		result = slot_id;
+	} else if (invslot::IsKeyRingSlot(slot_id)) {
+		m_keyring[slot_id] = inst;
 		result = slot_id;
 	} else {
 		// Slot must be within a bag

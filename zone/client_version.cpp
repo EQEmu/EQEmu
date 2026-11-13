@@ -57,17 +57,19 @@ static bool ShouldSendTargetBuffs(Client* c) {
 		Raid* raid = c->GetRaid();
 		if (raid) {
 			uint32 gid = raid->GetGroup(c);
-			if (gid < MAX_RAID_GROUPS && raid->GroupCount(gid) >= 3) {
+			if (gid < MAX_RAID_GROUPS && raid->GroupCount(gid) >= RuleI(Character, LeadershipMinGroupSize)) {
 				if (raid->GetLeadershipAA(groupAAInspectBuffs, gid))
 					return true;
 			}
 		}
 	} else {
 		Group* group = c->GetGroup();
-		if (group && group->GroupCount() >= 3) {
+		if (group && group->GroupCount() >= RuleI(Character, LeadershipMinGroupSize)) {
 			if (group->GetLeadershipAA(groupAAInspectBuffs)) {
 				return true;
 			}
+		} else if (!group && c->GetSoloLeadershipAA(groupAAInspectBuffs)) {
+			return true;
 		}
 	}
 
@@ -91,14 +93,23 @@ static void SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, Mob* so
 	ClientPatch::GetClientComponent<ClientPatch::IBuff>(target)->SetRefreshType(packet, type);
 }
 
-void ClientPatch::SendFullBuffRefresh(Mob* sender, bool remove, bool ackreq) {
+void ClientPatch::SendFullBuffRefresh(Mob* sender, bool remove, bool ackreq, bool with_definitions) {
 	bool suspended = zone->BuffTimersSuspended();
 	std::vector<uint32_t> slots;
 
 	// first, send to self if self is client
 	if (sender->IsClient()) {
 		Client* c = sender->CastToClient();
-		FastQueuePacket(c, &IBuff::RefreshBuffs, GetClientComponent<IBuff>(c), OP_RefreshBuffs, sender, false, suspended, slots);
+		IBuff* component = GetClientComponent<IBuff>(c);
+		// only needed on zone in, buffs added later already got a definition from SendSingleBuffChange
+		if (with_definitions && component && component->NeedsBuffDefinitionsOnRefresh()) {
+			Buffs_Struct* buffs = sender->GetBuffs();
+			for (int slot = 0; slot < sender->GetMaxTotalSlots(); ++slot)
+				if (IsValidSpell(buffs[slot].spellid))
+					FastQueuePacket(c, &IBuff::BuffDefinition, component, sender, buffs[slot], slot, false);
+		}
+
+		FastQueuePacket(c, &IBuff::RefreshBuffs, component, OP_RefreshBuffs, sender, false, suspended, slots);
 	}
 
 	// next, send to owner if self is a pet to a client
@@ -131,6 +142,8 @@ void ClientPatch::SendSingleBuffChange(Mob* sender, const Buffs_Struct& buff, in
 	if (sender->IsClient()) {
 		Client* c = sender->CastToClient();
 		IBuff* component = GetClientComponent<IBuff>(c);
+		if (remove)
+			FastQueuePacket(c, &IBuff::BuffRemovePrelude, component, sender, buff, static_cast<uint32_t>(slot));
 		FastQueuePacket(c, &IBuff::BuffDefinition, component, sender, buff,  slot, remove);
 		FastQueuePacket(c, &IBuff::RefreshBuffs, component, OP_RefreshBuffs, sender, remove, suspended, slots);
 

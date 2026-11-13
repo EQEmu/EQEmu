@@ -115,10 +115,13 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_AdventureMerchantSell] = &Client::Handle_OP_AdventureMerchantSell;
 	ConnectedOpcodes[OP_AdventureRequest] = &Client::Handle_OP_AdventureRequest;
 	ConnectedOpcodes[OP_AdventureStatsRequest] = &Client::Handle_OP_AdventureStatsRequest;
+	ConnectedOpcodes[OP_AdvLoot] = &Client::Handle_OP_AdvLoot;
+	ConnectedOpcodes[OP_AdvLootMisc] = &Client::Handle_OP_AdvLootMisc;
 	ConnectedOpcodes[OP_AggroMeterLockTarget] = &Client::Handle_OP_AggroMeterLockTarget;
 	ConnectedOpcodes[OP_AltCurrencyMerchantRequest] = &Client::Handle_OP_AltCurrencyMerchantRequest;
 	ConnectedOpcodes[OP_AltCurrencyPurchase] = &Client::Handle_OP_AltCurrencyPurchase;
 	ConnectedOpcodes[OP_AltCurrencyReclaim] = &Client::Handle_OP_AltCurrencyReclaim;
+	ConnectedOpcodes[OP_AltCurrencyReclaimAll] = &Client::Handle_OP_AltCurrencyReclaimAll;
 	ConnectedOpcodes[OP_AltCurrencySell] = &Client::Handle_OP_AltCurrencySell;
 	ConnectedOpcodes[OP_AltCurrencySellSelection] = &Client::Handle_OP_AltCurrencySellSelection;
 	ConnectedOpcodes[OP_Animation] = &Client::Handle_OP_Animation;
@@ -198,8 +201,12 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_EnvDamage] = &Client::Handle_OP_EnvDamage;
 	ConnectedOpcodes[OP_EvolveItem] = &Client::Handle_OP_EvolveItem;
 	ConnectedOpcodes[OP_FaceChange] = &Client::Handle_OP_FaceChange;
+	ConnectedOpcodes[OP_FactionList] = &Client::Handle_OP_FactionList;
 	ConnectedOpcodes[OP_FeignDeath] = &Client::Handle_OP_FeignDeath;
 	ConnectedOpcodes[OP_FindPersonRequest] = &Client::Handle_OP_FindPersonRequest;
+	ConnectedOpcodes[OP_InspectBuffs] = &Client::Handle_OP_InspectBuffs;
+	ConnectedOpcodes[OP_FindZoneConnectionsRequest] = &Client::Handle_OP_FindZoneConnectionsRequest;
+	ConnectedOpcodes[OP_FindLocationListRequest] = &Client::Handle_OP_FindZoneConnectionsRequest;
 	ConnectedOpcodes[OP_Fishing] = &Client::Handle_OP_Fishing;
 	ConnectedOpcodes[OP_FloatListThing] = &Client::Handle_OP_MovementHistoryList;
 	ConnectedOpcodes[OP_Forage] = &Client::Handle_OP_Forage;
@@ -246,6 +253,8 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_GuildInviteAccept] = &Client::Handle_OP_GuildInviteAccept;
 	ConnectedOpcodes[OP_GuildLeader] = &Client::Handle_OP_GuildLeader;
 	ConnectedOpcodes[OP_GuildManageBanker] = &Client::Handle_OP_GuildManageBanker;
+	ConnectedOpcodes[OP_GuildNameRequest] = &Client::Handle_OP_GuildNameRequest;
+	ConnectedOpcodes[OP_GuildOpenGuildWindow] = &Client::Handle_OP_GuildOpenGuildWindow;
 	ConnectedOpcodes[OP_GuildPeace] = &Client::Handle_OP_GuildPeace;
 	ConnectedOpcodes[OP_GuildPromote] = &Client::Handle_OP_GuildPromote;
 	ConnectedOpcodes[OP_GuildPublicNote] = &Client::Handle_OP_GuildPublicNote;
@@ -271,6 +280,7 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_ItemLinkClick] = &Client::Handle_OP_ItemLinkClick;
 	ConnectedOpcodes[OP_ItemLinkResponse] = &Client::Handle_OP_ItemLinkResponse;
 	ConnectedOpcodes[OP_ItemName] = &Client::Handle_OP_ItemName;
+	ConnectedOpcodes[OP_ItemOverflow] = &Client::Handle_OP_ItemOverflow;
 	ConnectedOpcodes[OP_ItemPreview] = &Client::Handle_OP_ItemPreview;
 	ConnectedOpcodes[OP_ItemPreviewRequest] = &Client::Handle_OP_ItemPreviewRequest;
 	ConnectedOpcodes[OP_ItemVerifyRequest] = &Client::Handle_OP_ItemVerifyRequest;
@@ -517,6 +527,29 @@ int Client::HandlePacket(const EQApplicationPacket *app)
 // Finish client connecting state
 void Client::CompleteConnect()
 {
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+		// the default for a new TOB character is set before the player profile goes out (Handle_Connect_OP_ZoneEntry)
+		SetAdvancedLooting(GetBucket("advanced_looting") == "1");
+
+		// tell the client so its Loot Settings checkboxes match the server
+		SendAppearancePacket(AppearanceType::AdvancedLooting, IsAdvancedLooting() ? 1 : 0, false, false, this);
+		SendAppearancePacket(AppearanceType::Split, m_pp.autosplit ? 1 : 0, false, false, this);
+
+		// Advanced Loot timings: ask length (the client draws an ask's countdown against it), an unknown value, and
+		// the corpse reservation, all in seconds
+		if (RuleB(Character, EnableAdvancedLoot)) {
+			const int unlock_seconds = RuleI(Character, AdvancedLootUnlockSeconds) > 0 ?
+				RuleI(Character, AdvancedLootUnlockSeconds) : RuleI(NPC, CorpseUnlockTimer) / 1000;
+
+			auto settings = new EQApplicationPacket(OP_AdvLootSettings, 12);
+			settings->WriteUInt32(std::max(1, RuleI(Character, AdvancedLootAskSeconds)));
+			settings->WriteUInt32(ADVLOOT_SETTINGS_UNKNOWN_SECONDS);
+			settings->WriteUInt32(std::max(0, unlock_seconds));
+			QueuePacket(settings);
+			safe_delete(settings);
+		}
+	}
+
 	UpdateWho();
 	client_state = CLIENT_CONNECTED;
 	SendAllPackets();
@@ -844,7 +877,7 @@ void Client::CompleteConnect()
 		}
 	}
 
-	if(ClientVersion() == EQ::versions::ClientVersion::RoF2 && RuleB(Parcel, EnableParcelMerchants)) {
+	if(ClientVersion() >= EQ::versions::ClientVersion::RoF2 && RuleB(Parcel, EnableParcelMerchants)) {
 		SendParcelStatus();
 	}
 
@@ -880,6 +913,14 @@ void Client::CompleteConnect()
 
 	if (ClientVersion() >= EQ::versions::ClientVersion::SoD)
 		entity_list.SendFindableNPCList(this);
+
+	// TOB+ only asks for the zone connections the first time the Find window opens, so push them every zone
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB)
+		SendFindZoneConnections();
+
+	// TOB+ login notice for items waiting in the Item Overflow window (not on every zone)
+	if (!ingame && IsItemOverflowEnabled() && m_inv.CursorSize() > 1)
+		MessageString(Chat::Yellow, ITEM_OVERFLOW_COUNT, std::to_string(m_inv.CursorSize() - 1).c_str());
 
 	if (IsInAGuild()) {
 		if (ingame) {
@@ -934,7 +975,7 @@ void Client::CompleteConnect()
 		delete pack;
 	}
 
-	ClientPatch::SendFullBuffRefresh(this);
+	ClientPatch::SendFullBuffRefresh(this, false, true, true);
 
 	// TODO: load these states
 	// We at least will set them to the correct state for now
@@ -992,6 +1033,7 @@ void Client::CompleteConnect()
 
 	RecordStats();
 	AutoGrantAAPoints();
+	GrantVeteranAAs();
 
 	// set initial position for mob tracking
 	m_last_seen_mob_position.reserve(entity_list.GetMobList().size());
@@ -1699,12 +1741,24 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 	if ((m_pp.RestTimer > RuleI(Character, RestRegenTimeToActivate)) && (m_pp.RestTimer > RuleI(Character, RestRegenRaidTimeToActivate)))
 		m_pp.RestTimer = 0;
 
+	/* TOB characters start with Use Advanced Looting and Auto Split Coin on; after that the player's own Loot Settings
+	   choice wins. The client takes the Auto Split checkbox from the profile, so this has to happen before it is sent. */
+	if (
+		RuleB(Character, EnableAdvancedLoot) &&
+		ClientVersion() >= EQ::versions::ClientVersion::TOB &&
+		GetBucket("advanced_looting").empty()
+	) {
+		SetBucket("advanced_looting", "1");
+		m_pp.autosplit = 1;
+	}
+
 	SendMembership();
 	
 	outapp = new EQApplicationPacket(OP_PlayerProfile, sizeof(PlayerProfile_Struct));
 
 	/* The entityid field in the Player Profile is used by the Client in relation to Group Leadership AA */
 	m_pp.entityid = GetID();
+	m_pp.keyring_unlock_mask = GetKeyRingUnlockMask();
 	memcpy(outapp->pBuffer, &m_pp, outapp->size);
 	outapp->priority = 6;
 	FastQueuePacket(&outapp);
@@ -1888,6 +1942,29 @@ void Client::Handle_OP_AAAction(const EQApplicationPacket *app)
 		LogAA("Activating AA [{}]", action->ability);
 		ActivateAlternateAdvancementAbility(action->ability, action->target_id);
 	}
+	else if (ClientVersion() >= EQ::versions::ClientVersion::TOB && (action->action == aaActionBuy || action->action == aaActionTrainShift || action->action == aaActionBuyAll)) {
+		// ToB's Train (also shift-click) and Buy All send the ability id from the GroupID slot
+		// of OP_SendAATable, not the rank id: buy the next rank (Buy All: every affordable rank)
+		AA::Ability *ability = zone->GetAlternateAdvancementAbility(action->ability);
+		if (!ability) {
+			LogAA("ToB AA buy: unknown ability id [{}]", action->ability);
+			return;
+		}
+
+		const int max_buys = action->action == aaActionBuyAll ? MAX_AA_BUY_ALL_RANKS : 1;
+		for (int i = 0; i < max_buys; ++i) {
+			const uint32 points = GetAA(ability->first_rank_id);
+			auto ability_rank   = zone->GetAlternateAdvancementAbilityAndRank(ability->id, points + 1);
+			if (!ability_rank.second || (i > 0 && !CanPurchaseAlternateAdvancementRank(ability_rank.second, true, true))) {
+				break;
+			}
+
+			PurchaseAlternateAdvancementRank(ability_rank.second->id);
+			if (GetAA(ability->first_rank_id) == points) {
+				break;
+			}
+		}
+	}
 	else if (action->action == aaActionBuy) {
 		PurchaseAlternateAdvancementRank(action->ability);
 	}
@@ -1932,6 +2009,111 @@ void Client::Handle_OP_AcceptNewTask(const EQApplicationPacket *app)
 			task_state->AcceptNewTask(this, ant->task_id, ant->task_master_id, std::time(nullptr));
 		}
 		task_state->ClearLastOffers();
+	}
+}
+
+void Client::Handle_OP_AdvLoot(const EQApplicationPacket *app)
+{
+	if (app->size != sizeof(AdvLootRequest_Struct)) {
+		LogError("Wrong size: OP_AdvLoot, size=[{}], expected [{}]", app->size, sizeof(AdvLootRequest_Struct));
+		return;
+	}
+
+	const auto *request = reinterpret_cast<const AdvLootRequest_Struct *>(app->pBuffer);
+	LogLootDetail("[{}] OP_AdvLoot subtype [{}]", GetCleanName(), request->subtype);
+
+	switch (request->subtype) {
+		case AdvLootSync: {
+			Corpse::SendAdvancedLootSync(this);
+			break;
+		}
+		case AdvLootLeave: {
+			Corpse *corpse = entity_list.GetCorpseByID(request->corpse_id);
+			if (corpse) {
+				corpse->AdvancedLeaveItem(this, request->item_id);
+			}
+			break;
+		}
+		case AdvLootLoot: {
+			Corpse *corpse = entity_list.GetCorpseByID(request->corpse_id);
+			if (corpse) {
+				corpse->AdvancedLootItem(this, request->item_id, request->sequence);
+			}
+			else {
+				SendAdvLootResult(this, AdvLootResultGone, request->sequence); // lets the window drop the request
+			}
+			break;
+		}
+		case AdvLootChoice: {
+			Corpse *corpse = entity_list.GetCorpseByID(request->corpse_id);
+			if (corpse) {
+				corpse->AdvancedChoice(this, request->transaction_id, request->item_id, request->choice);
+			}
+			break;
+		}
+		case AdvLootAsk: {
+			// master looter
+			Corpse *corpse = entity_list.GetCorpseByID(request->corpse_id);
+			if (corpse) {
+				corpse->AdvancedAsk(this, request->transaction_id, request->item_id, request->state);
+			}
+			break;
+		}
+		case AdvLootGive: {
+			// master looter; transaction_id is the row's ask id, 0 when it was never asked
+			Corpse *corpse = entity_list.GetCorpseByID(request->corpse_id);
+			if (corpse) {
+				corpse->AdvancedGiveItem(
+					this,
+					request->transaction_id,
+					request->item_id,
+					static_cast<uint16>(request->quantity),
+					request->leave != 0,
+					request->player_name
+				);
+			}
+			break;
+		}
+		case AdvLootState: {
+			// master looter
+			Corpse *corpse = Corpse::FindAdvancedLootTransaction(request->transaction_id, this);
+			if (corpse) {
+				corpse->AdvancedSetState(this, request->transaction_id, request->state);
+			}
+			break;
+		}
+		case AdvLootRoll: {
+			// master looter, after the ask completed
+			Corpse *corpse = Corpse::FindAdvancedLootTransaction(request->transaction_id, this);
+			if (corpse) {
+				corpse->AdvancedRoll(this, request->transaction_id);
+			}
+			break;
+		}
+		default:
+			break;
+	}
+}
+
+void Client::Handle_OP_AdvLootMisc(const EQApplicationPacket *app)
+{
+	if (app->size != sizeof(AdvLootMisc_Struct)) {
+		LogError("Wrong size: OP_AdvLootMisc, size=[{}], expected [{}]", app->size, sizeof(AdvLootMisc_Struct));
+		return;
+	}
+
+	const auto *request = reinterpret_cast<const AdvLootMisc_Struct *>(app->pBuffer);
+	LogLootDetail("[{}] OP_AdvLootMisc subtype [{}]", GetCleanName(), request->subtype);
+
+	if (request->subtype == AdvLootMiscFreeGrab) {
+		Corpse *corpse = entity_list.GetCorpseByID(request->corpse_id);
+		if (!corpse || !corpse->HasAdvancedLootTransaction(request->transaction_id)) {
+			corpse = Corpse::FindAdvancedLootTransaction(request->transaction_id, nullptr, this);
+		}
+
+		if (corpse) {
+			corpse->AdvancedFreeGrab(this, request->transaction_id);
+		}
 	}
 }
 
@@ -2737,6 +2919,16 @@ void Client::Handle_OP_AltCurrencyReclaim(const EQApplicationPacket *app)
 
 	/* Item to Currency Storage */
 	if (reclaim->reclaim_flag == 1) {
+		// TOB+ has a separate Reclaim All button, so Reclaim takes the stack on the cursor when there is one
+		const auto cursor = m_inv.GetCursorItem();
+		if (ClientVersion() >= EQ::versions::ClientVersion::TOB && cursor && cursor->GetID() == item_id) {
+			const uint32 count = std::max<int16>(cursor->GetCharges(), 1);
+			DeleteItemInInventory(EQ::invslot::slotCursor, 0, true);
+			SendCursorBuffer();
+			AddAlternateCurrencyValue(reclaim->currency_id, count);
+			return;
+		}
+
 		uint32 removed = NukeItem(item_id, invWhereWorn | invWherePersonal | invWhereCursor);
 		if (removed > 0) {
 			AddAlternateCurrencyValue(reclaim->currency_id, removed);
@@ -2757,6 +2949,25 @@ void Client::Handle_OP_AltCurrencyReclaim(const EQApplicationPacket *app)
 		else {
 			SummonItem(item_id, reclaim->count, 0, 0, 0, 0, 0, 0, false, EQ::invslot::slotCursor);
 			AddAlternateCurrencyValue(reclaim->currency_id, -((int)reclaim->count));
+		}
+	}
+}
+
+// TOB+ Reclaim All button: every carried currency item goes back into its currency
+void Client::Handle_OP_AltCurrencyReclaimAll(const EQApplicationPacket *app)
+{
+	if (IsTrader()) {
+		TraderEndTrader();
+	}
+
+	if (IsBuyer()) {
+		ToggleBuyerMode(false);
+	}
+
+	for (const auto &currency : zone->AlternateCurrencies) {
+		const uint32 removed = NukeItem(currency.item_id, invWhereWorn | invWherePersonal | invWhereCursor);
+		if (removed > 0) {
+			AddAlternateCurrencyValue(currency.id, removed);
 		}
 	}
 }
@@ -4256,7 +4467,7 @@ void Client::Handle_OP_Bug(const EQApplicationPacket *app)
 
 void Client::Handle_OP_Camp(const EQApplicationPacket *app)
 {
-	if (ClientVersion() == EQ::versions::ClientVersion::RoF2 && RuleB(Parcel, EnableParcelMerchants) && GetEngagedWithParcelMerchant()) {
+	if (ClientVersion() >= EQ::versions::ClientVersion::RoF2 && RuleB(Parcel, EnableParcelMerchants) && GetEngagedWithParcelMerchant()) {
 		Stand();
 		MessageString(Chat::Yellow, TRADER_BUSY_TWO);
 		return;
@@ -4266,12 +4477,33 @@ void Client::Handle_OP_Camp(const EQApplicationPacket *app)
 		worldserver.StopLFP(CharacterID());
 	
 	if (ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+		// ToB body: u32 camp mode (CampMode), + CampMode::FastOffset for "/camp fast"
+		uint32 camp_mode = 0;
+		if (app->size >= sizeof(uint32)) {
+			memcpy(&camp_mode, app->pBuffer, sizeof(uint32));
+		}
+		const bool wants_instant = camp_mode >= CampMode::FastOffset;
+
 		if (!GetGM()) {
 			camp_timer.Start(29000, true);
 		}
 
-		auto outapp = new EQApplicationPacket(OP_Camp, 1);
-		FastQueuePacket(&outapp);
+		if (IsFastCampZone()) {
+			// OP_Logout {u8 cancel, u8 instant}: instant 0 = "Fast camp now?" prompt + countdown,
+			// 1 = log out now; either way the client answers with OP_Logout (Handle_OP_Logout)
+			auto outapp = new EQApplicationPacket(OP_Logout, 2);
+			outapp->pBuffer[0] = 0;
+			outapp->pBuffer[1] = wants_instant ? 1 : 0;
+			FastQueuePacket(&outapp);
+		}
+		else {
+			if (wants_instant) {
+				MessageString(Chat::Yellow, NOT_FAST_CAMP_ZONE);
+			}
+
+			auto outapp = new EQApplicationPacket(OP_Camp, 1); // 0 = plain 30 second countdown
+			FastQueuePacket(&outapp);
+		}
 	}
 	else {
 		if (GetGM())
@@ -4338,7 +4570,7 @@ void Client::Handle_OP_CancelTrade(const EQApplicationPacket *app)
 		trade->Reset();
 	}
 
-	if (ClientVersion() == EQ::versions::ClientVersion::RoF2 && RuleB(Parcel, EnableParcelMerchants)) {
+	if (ClientVersion() >= EQ::versions::ClientVersion::RoF2 && RuleB(Parcel, EnableParcelMerchants)) {
 		DoParcelCancel();
 		SetEngagedWithParcelMerchant(false);
 	}
@@ -4642,6 +4874,8 @@ void Client::Handle_OP_ClearNPCMarks(const EQApplicationPacket *app)
 
 	if (g)
 		g->ClearAllNPCMarks();
+	else
+		ClearSoloNPCMarks(true);
 }
 
 void Client::Handle_OP_ClearSurname(const EQApplicationPacket *app)
@@ -5940,35 +6174,15 @@ void Client::Handle_OP_DoGroupLeadershipAbility(const EQApplicationPacket *app)
 			Group* g = GetGroup();
 			if (g)
 				g->MarkNPC(GetTarget(), dglas->Parameter);
+			else if (!IsRaidGrouped() && RuleB(Character, SoloMarkNPC))
+				SoloMarkNPC(GetTarget(), dglas->Parameter);
 		}
 		break;
 	}
 
 	case groupAAInspectBuffs:
 	{
-		Mob *Target = GetTarget();
-
-		if (!Target || !Target->IsClient())
-			return;
-
-		if (IsRaidGrouped()) {
-			Raid *raid = GetRaid();
-			if (!raid)
-				return;
-			uint32 group_id = raid->GetGroup(this);
-			if (group_id > 11 || raid->GroupCount(group_id) < 3)
-				return;
-			Target->CastToClient()->InspectBuffs(this, raid->GetLeadershipAA(groupAAInspectBuffs, group_id));
-			return;
-		}
-
-		Group *g = GetGroup();
-
-		if (!g || (g->GroupCount() < 3))
-			return;
-
-		Target->CastToClient()->InspectBuffs(this, g->GetLeadershipAA(groupAAInspectBuffs));
-
+		InspectTargetBuffs(false);
 		break;
 	}
 
@@ -6030,7 +6244,18 @@ void Client::Handle_OP_DuelDecline(const EQApplicationPacket *app)
 	initiator->CastToClient()->SetDuelTarget(0);
 	initiator->CastToClient()->SetDueling(false);
 	Client* other = (GetID() == initiator->GetID()) ? entity->CastToClient() : initiator->CastToClient();
-	other->MessageString(Chat::NPCQuestSay, DUEL_DECLINE, GetName());
+	if (other->ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+		// ToB keeps the pending challenge in client state; its own decline packet clears it and prints the
+		// "%1 has declined" message (otherwise a later challenge shows as "accepted" immediately)
+		auto outapp = new EQApplicationPacket(OP_DuelDecline, sizeof(DuelResponse_Struct));
+		auto dr = (DuelResponse_Struct *) outapp->pBuffer;
+		dr->target_id = other->GetID();
+		dr->entity_id = GetID();
+		dr->unknown   = 0;
+		other->FastQueuePacket(&outapp);
+	} else {
+		other->MessageString(Chat::NPCQuestSay, DUEL_DECLINE, GetName());
+	}
 	return;
 }
 
@@ -6411,6 +6636,16 @@ void Client::Handle_OP_FaceChange(const EQApplicationPacket *app)
 	return;
 }
 
+void Client::Handle_OP_FactionList(const EQApplicationPacket *app)
+{
+	// TOB+ sends an empty request when its Faction window has no data yet
+	if (ClientVersion() < EQ::versions::ClientVersion::TOB) {
+		return;
+	}
+
+	SendFactionList();
+}
+
 void Client::Handle_OP_FeignDeath(const EQApplicationPacket *app)
 {
 	if (!HasSkill(EQ::skills::SkillFeignDeath)) {
@@ -6455,8 +6690,51 @@ void Client::Handle_OP_FeignDeath(const EQApplicationPacket *app)
 	return;
 }
 
+// How close a Find window destination has to be to a zone point (the client echoes back the exact location
+// we sent in the zone connection row, so this only absorbs float formatting)
+constexpr float FindZonePointMatchTolerance = 1.0f;
+
 void Client::Handle_OP_FindPersonRequest(const EQApplicationPacket *app)
 {
+	// Find windows with zone connection rows ask for a path to a zone point, by number or by location
+	if (app->size == sizeof(FindPersonRequestEx_Struct)) {
+		auto *t = (FindPersonRequestEx_Struct *) app->pBuffer;
+
+		if (t->request_type == FindPersonRequestLocation || t->request_type == FindPersonRequestZonePoint) {
+			if (!zone) {
+				SendPath(nullptr);
+				return;
+			}
+
+			// only ever path to a zone point the server knows, never to a client supplied location
+			const bool by_number = t->request_type == FindPersonRequestZonePoint;
+			LinkedListIterator<ZonePoint *> iterator(zone->zone_point_list);
+			iterator.Reset();
+			while (iterator.MoreElements()) {
+				ZonePoint *zp = iterator.GetData();
+				iterator.Advance();
+				if (!zp || !(zp->client_version_mask & ClientVersionBit())) {
+					continue;
+				}
+
+				const bool matches = by_number ?
+					zp->number == t->zone_point_number :
+					std::fabs(zp->x - t->dest.x) <= FindZonePointMatchTolerance &&
+					std::fabs(zp->y - t->dest.y) <= FindZonePointMatchTolerance &&
+					std::fabs(zp->z - t->dest.z) <= FindZonePointMatchTolerance;
+				if (matches) {
+					SendPathToLocation(glm::vec3(zp->x, zp->y, zp->z), 0.0f, true);
+					return;
+				}
+			}
+			SendPath(nullptr);
+			return;
+		}
+
+		SendPath(entity_list.GetMob(t->request.npc_id));
+		return;
+	}
+
 	if (app->size != sizeof(FindPersonRequest_Struct))
 		printf("Error in FindPersonRequest_Struct. Expected size of: %zu, but got: %i\n", sizeof(FindPersonRequest_Struct), app->size);
 	else {
@@ -6466,6 +6744,30 @@ void Client::Handle_OP_FindPersonRequest(const EQApplicationPacket *app)
 
 		SendPath(m);
 	}
+}
+
+void Client::Handle_OP_InspectBuffs(const EQApplicationPacket *app)
+{
+	if (app->size != sizeof(InspectBuffsRequest_Struct)) {
+		LogError(
+			"Wrong size: OP_InspectBuffs, size=[{}], expected [{}]",
+			app->size,
+			sizeof(InspectBuffsRequest_Struct)
+		);
+		return;
+	}
+
+	auto *request = (InspectBuffsRequest_Struct *) app->pBuffer;
+	InspectTargetBuffs(request->only_mine == 1);
+}
+
+void Client::Handle_OP_FindZoneConnectionsRequest(const EQApplicationPacket *app)
+{
+	if (ClientVersion() < EQ::versions::ClientVersion::TOB) {
+		return;
+	}
+
+	SendFindZoneConnections();
 }
 
 void Client::Handle_OP_Fishing(const EQApplicationPacket *app)
@@ -6710,7 +7012,10 @@ void Client::Handle_OP_GMGoto(const EQApplicationPacket *app)
 
 void Client::Handle_OP_GMHideMe(const EQApplicationPacket *app)
 {
-	if (app->size != sizeof(SpawnAppearance_Struct)) {
+	// TOB sends /hideme as an empty toggle (its SpawnAppearance invisibility follow-up is ignored for GMs)
+	const bool tob_toggle = app->size == 0 && ClientVersion() >= EQ::versions::ClientVersion::TOB;
+
+	if (!tob_toggle && app->size != sizeof(SpawnAppearance_Struct)) {
 		LogError("Wrong size: OP_GMHideMe, size=[{}], expected [{}]", app->size, sizeof(SpawnAppearance_Struct));
 		return;
 	}
@@ -6718,6 +7023,11 @@ void Client::Handle_OP_GMHideMe(const EQApplicationPacket *app)
 	if (!GetGM()) {
 		Message(Chat::Red, "Your account has been reported for hacking.");
 		RecordPlayerEventLog(PlayerEvent::POSSIBLE_HACK, PlayerEvent::PossibleHackEvent{.message = "Used /hideme"});
+		return;
+	}
+
+	if (tob_toggle) {
+		SetHideMe(!GetHideMe());
 		return;
 	}
 
@@ -7146,6 +7456,9 @@ void Client::Handle_OP_GroupAcknowledge(const EQApplicationPacket *app)
 	return;
 }
 
+// GroupCancel_Struct::toggle when the invitee declined the invite
+constexpr uint8 GroupCancelDeclined = 3;
+
 void Client::Handle_OP_GroupCancelInvite(const EQApplicationPacket *app)
 {
 	if (app->size != sizeof(GroupCancel_Struct)) {
@@ -7170,7 +7483,11 @@ void Client::Handle_OP_GroupCancelInvite(const EQApplicationPacket *app)
 		safe_delete(pack);
 	}
 
-	if (!GetMerc())
+	// ToB sends this on its own (toggle 1) for every repeat invite while one is pending,
+	// so only treat an actual decline as a reason to clear group state
+	const bool tob_ignore = ClientVersion() >= EQ::versions::ClientVersion::TOB && (gf->toggle != GroupCancelDeclined || GetGroup());
+
+	if (!GetMerc() && !tob_ignore)
 	{
 		Group::RemoveFromGroup(this);
 	}
@@ -7609,6 +7926,47 @@ void Client::Handle_OP_GroupRoles(const EQApplicationPacket *app)
 			g->DelegatePuller(grs->Name1, grs->Toggle);
 		else
 			g->UnDelegatePuller(grs->Name1, grs->Toggle);
+		break;
+	}
+	case GroupRoleMarkNPC: // clients without OP_DelegateAbility delegate marking here
+	{
+		if (!g->IsLeader(this) || ClientVersion() < EQ::versions::ClientVersion::TOB) {
+			break;
+		}
+
+		grs->Name1[sizeof(grs->Name1) - 1] = '\0';
+		if (grs->Toggle) {
+			if (g->IsGroupMember(grs->Name1)) {
+				g->DelegateMarkNPC(grs->Name1);
+			}
+		} else if (!strcasecmp(g->GetNPCMarkerName(), grs->Name1)) {
+			g->UnDelegateMarkNPC(grs->Name1);
+		}
+		break;
+	}
+	case 5: // Master Looter (TOB+ Advanced Loot): only the leader hands it out; unset goes back to the leader
+	{
+		if (!g->IsLeader(this) || ClientVersion() < EQ::versions::ClientVersion::TOB) {
+			break;
+		}
+
+		grs->Name1[sizeof(grs->Name1) - 1] = '\0';
+		if (grs->Toggle && !g->IsGroupMember(grs->Name1)) {
+			break;
+		}
+
+		g->SetAdvancedLootMasterLooter(grs->Toggle ? grs->Name1 : "");
+
+		auto outapp = new EQApplicationPacket(OP_GroupRoles, sizeof(GroupRole_Struct));
+		memcpy(outapp->pBuffer, grs, sizeof(GroupRole_Struct));
+		for (Mob *m : g->members) {
+			if (m && m->IsClient() && m->CastToClient()->ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+				m->CastToClient()->QueuePacket(outapp);
+			}
+		}
+		safe_delete(outapp);
+
+		g->AnnounceAdvancedLootMasterLooter();
 		break;
 	}
 	default:
@@ -8455,6 +8813,38 @@ void Client::Handle_OP_GuildLeader(const EQApplicationPacket *app)
 	return;
 }
 
+// ToB asks for names of guilds it hasn't seen (it shows "Unknown Guild" meanwhile and re-asks on every miss).
+void Client::Handle_OP_GuildNameRequest(const EQApplicationPacket *app)
+{
+	if (app->size != sizeof(uint32)) {
+		return;
+	}
+
+	uint32 guild_id = 0;
+	memcpy(&guild_id, app->pBuffer, sizeof(uint32));
+	if (guild_id == GUILD_NONE || !m_guild_names_sent.insert(guild_id).second) {
+		return; // answered already: the client caches the name, so a repeat means it doesn't exist
+	}
+
+	auto outapp = new EQApplicationPacket(OP_GuildRenameGuild, sizeof(GuildRenameGuild_Struct));
+	auto gr     = (GuildRenameGuild_Struct *) outapp->pBuffer;
+	gr->guild_id = guild_id;
+	strn0cpy(gr->new_guild_name, guild_mgr.GetGuildNameByID(guild_id).c_str(), sizeof(gr->new_guild_name));
+	FastQueuePacket(&outapp);
+}
+
+// Sent when the guild window opens (RoF2 0x0276 / ToB 0x6079). The window exists now, so ToB can take the
+// guild URL and channel (sending them earlier crashes the ToB client).
+void Client::Handle_OP_GuildOpenGuildWindow(const EQApplicationPacket *app)
+{
+	if (!IsInAGuild() || ClientVersion() < EQ::versions::ClientVersion::TOB) {
+		return;
+	}
+
+	SendGuildURL(true);
+	SendGuildChannel(true);
+}
+
 void Client::Handle_OP_GuildManageBanker(const EQApplicationPacket *app)
 {
 
@@ -9195,6 +9585,42 @@ void Client::Handle_OP_ItemName(const EQApplicationPacket *app)
 	return;
 }
 
+void Client::Handle_OP_ItemOverflow(const EQApplicationPacket *app)
+{
+	if (!IsItemOverflowEnabled() || app->size != sizeof(ItemOverflow_Struct)) {
+		return;
+	}
+
+	auto in = reinterpret_cast<const ItemOverflow_Struct *>(app->pBuffer);
+
+	switch (in->action) {
+		case ItemOverflowList:
+			SendItemOverflowList();
+			break;
+		case ItemOverflowRetrieve:
+			RetrieveOverflowItem(in->item_index);
+			break;
+		case ItemOverflowRetrieveAll: {
+			// like Live, retrieve until a placement fails
+			std::vector<uint64> indexes;
+			for (auto it = m_inv.cursor_cbegin(); it != m_inv.cursor_cend(); ++it) {
+				if (it != m_inv.cursor_cbegin() && *it) {
+					indexes.push_back(static_cast<uint32>((*it)->GetSerialNumber()));
+				}
+			}
+
+			for (const auto index : indexes) {
+				if (!RetrieveOverflowItem(index)) {
+					break;
+				}
+			}
+			break;
+		}
+		default:
+			break;
+	}
+}
+
 void Client::Handle_OP_ItemPreview(const EQApplicationPacket *app)
 {
 	VERIFY_PACKET_LENGTH(OP_ItemPreview, app, ItemPreview_Struct);
@@ -9436,6 +9862,14 @@ void Client::Handle_OP_ItemVerifyRequest(const EQApplicationPacket *app)
 		return;
 	}
 
+	// key ring items stay in their ring when the ring is switched off or locked; they cannot be clicked then
+	if (
+		EQ::invslot::IsKeyRingSlot(slot_id) &&
+		(!IsKeyRingEnabled() || !IsKeyRingUnlocked(EQ::invslot::KeyRingFromSlot(slot_id)))
+	) {
+		return;
+	}
+
 	const EQ::ItemInstance* inst = m_inv[slot_id];
 	if (!inst) {
 		Message(Chat::Red, "Error: item not found in inventory slot #%i", slot_id);
@@ -9452,6 +9886,17 @@ void Client::Handle_OP_ItemVerifyRequest(const EQApplicationPacket *app)
 
 	spell_id = item->Click.Effect;
 	bool is_casting_bard_song = false;
+
+	// TOB+ sends no target for a single target beneficial click when nothing is targeted
+	if (
+		ClientVersion() >= EQ::versions::ClientVersion::TOB &&
+		target_id == 0 &&
+		IsValidSpell(spell_id) &&
+		spells[spell_id].target_type == ST_Target &&
+		IsBeneficialSpell(spell_id)
+	) {
+		target_id = GetID();
+	}
 
 	if (spell_id > 0) {
 
@@ -10252,6 +10697,24 @@ void Client::Handle_OP_LoadSpellSet(const EQApplicationPacket *app)
 void Client::Handle_OP_Logout(const EQApplicationPacket *app)
 {
 	LogDebug("[{}] sent a logout packet", GetName());
+
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+		// ToB fast camp: in a fast camp zone OP_Logout arrives when the player accepts the prompt (or at once for
+		// /camp fast), before camp_timer fires; finish the camp now so this is a clean logout, not a linkdead
+		if (GetGM() || (camp_timer.Enabled() && IsFastCampZone())) {
+			if (camp_timer.Enabled()) {
+				CompleteCamp();
+			}
+			SendLogoutPackets();
+			Disconnect();
+			return;
+		}
+
+		// anywhere else the camp has to run its full countdown first
+		if (!instalog && !(camp_timer.Enabled() && camp_timer.GetRemainingTime() <= 3000)) {
+			return;
+		}
+	}
 
 	SendLogoutPackets();
 
@@ -14612,6 +15075,98 @@ void Client::Handle_OP_ShopPlayerSell(const EQApplicationPacket *app)
 	return;
 }
 
+void Client::SendMerchantClose(uint32 npc_id)
+{
+	auto outapp = new EQApplicationPacket(OP_ShopRequest, sizeof(MerchantClick_Struct));
+	auto mco    = (MerchantClick_Struct *) outapp->pBuffer;
+	mco->npc_id  = npc_id;
+	mco->command = MerchantActions::Close;
+	QueuePacket(outapp);
+	safe_delete(outapp);
+}
+
+// ToB opens adventure / alt currency merchants with the regular merchant window; the currency
+// goes in MerchantClick_Struct::alt_currency
+void Client::SendPointsMerchantWindow(NPC *npc)
+{
+	const uint32 merchant_id = npc->MerchantType;
+	if (!merchant_id || !npc->IsMerchantOpen() || npc->IsEngaged() || npc->Charmed() || GetFeigned() || IsInvisible()) {
+		if (!npc->IsMerchantOpen()) {
+			npc->SayString(zone->random.Int(MERCHANT_CLOSED_ONE, MERCHANT_CLOSED_THREE));
+		}
+		SendMerchantClose(npc->GetID());
+		return;
+	}
+
+	uint32 currency = 0;
+	if (npc->GetClass() == Class::AlternateCurrencyMerchant) {
+		currency = npc->GetAltCurrencyType();
+	} else if (npc->GetClass() == Class::LoyaltyMerchant) {
+		currency = LOYALTY_MERCHANT_CURRENCY;
+	}
+
+	auto outapp = new EQApplicationPacket(OP_ShopRequest, sizeof(MerchantClick_Struct));
+	auto mco    = (MerchantClick_Struct *) outapp->pBuffer;
+	mco->npc_id      = npc->GetID();
+	mco->player_id   = GetID();
+	mco->command     = MerchantActions::Open;
+	mco->rate        = 1.0f;
+	mco->tab_display  = SellBuy;
+	mco->alt_currency = currency;
+	QueuePacket(outapp);
+	safe_delete(outapp);
+
+	// alt currency: the ToB Buy button reads this list (sent after the window is open)
+	if (npc->GetClass() == Class::AlternateCurrencyMerchant) {
+		SendAlternateCurrencyMerchantList(npc);
+	}
+
+	BulkSendMerchantInventory(merchant_id, npc->GetNPCTypeID());
+	SetMerchantSessionEntityID(npc->GetID());
+}
+
+// same list as the RoF2 OP_AltCurrencyMerchantReply: "cur|1|cur|count^name|id|cost|0|1|races|classes^..."
+void Client::SendAlternateCurrencyMerchantList(NPC *npc)
+{
+	const uint32 currency_id = npc->GetAltCurrencyType();
+	if (!currency_id || !zone->GetCurrencyItemID(currency_id)) {
+		return;
+	}
+
+	std::stringstream ss;
+	std::stringstream item_ss;
+	ss << currency_id << "|1|" << currency_id;
+	uint32 count = 0;
+
+	const auto faction_id = npc->GetPrimaryFaction();
+	for (const auto &ml : zone->merchanttable[npc->MerchantType]) {
+		if (count >= 255) {
+			break;
+		}
+
+		if (GetLevel() < ml.level_required) {
+			continue;
+		}
+
+		if (faction_id && GetModCharacterFactionLevel(faction_id) < ml.faction_required) {
+			continue;
+		}
+
+		const EQ::ItemData *item = database.GetItem(ml.item);
+		if (item) {
+			item_ss << "^" << item->Name << "|" << item->ID << "|" << ml.alt_currency_cost << "|0|1|"
+					<< item->Races << "|" << item->Classes;
+			count++;
+		}
+	}
+
+	ss << "|" << count << item_ss.str();
+
+	auto outapp = new EQApplicationPacket(OP_AltCurrencyMerchantReply, ss.str().length() + 1);
+	memcpy(outapp->pBuffer, ss.str().c_str(), ss.str().length());
+	FastQueuePacket(&outapp);
+}
+
 void Client::Handle_OP_ShopRequest(const EQApplicationPacket *app)
 {
 	if (app->size != sizeof(MerchantClick_Struct)) {
@@ -14628,6 +15183,31 @@ void Client::Handle_OP_ShopRequest(const EQApplicationPacket *app)
 	int tabs_to_display = None;
 	Mob *tmp            = entity_list.GetMob(mc->npc_id);
 
+	// ToB sends OP_ShopRequest for every merchant class (adventure, alt currency, ...) and stays
+	// busy until it gets a reply, so it always gets one: a points merchant window, or a close
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+		if (tmp && tmp->IsNPC() && DistanceSquared(m_Position, tmp->GetPosition()) <= USE_NPC_RANGE2) {
+			switch (tmp->GetClass()) {
+				case Class::Merchant:
+					break;
+				case Class::DiscordMerchant:
+				case Class::AdventureMerchant:
+				case Class::NorrathsKeepersMerchant:
+				case Class::DarkReignMerchant:
+				case Class::AlternateCurrencyMerchant:
+				case Class::LoyaltyMerchant:
+					SendPointsMerchantWindow(tmp->CastToNPC());
+					return;
+				default:
+					SendMerchantClose(mc->npc_id);
+					return;
+			}
+		} else {
+			SendMerchantClose(mc->npc_id);
+			return;
+		}
+	}
+
 	if (tmp == 0 || !tmp->IsNPC() || tmp->GetClass() != Class::Merchant) {
 		return;
 	}
@@ -14639,7 +15219,7 @@ void Client::Handle_OP_ShopRequest(const EQApplicationPacket *app)
 
 	merchant_id = tmp->CastToNPC()->MerchantType;
 
-	if (ClientVersion() == EQ::versions::ClientVersion::RoF2 && tmp->CastToNPC()->GetParcelMerchant()) {
+	if (ClientVersion() >= EQ::versions::ClientVersion::RoF2 && tmp->CastToNPC()->GetParcelMerchant()) {
 		tabs_to_display = SellBuyParcel;
 	}
 	else {
@@ -14909,6 +15489,16 @@ void Client::Handle_OP_SpawnAppearance(const EQApplicationPacket *app)
 			entity_list.QueueClients(this, app, true);
 		}
 	}
+	else if (sa->type == AppearanceType::AdvancedLooting) {
+		if (ClientVersion() >= EQ::versions::ClientVersion::TOB && IsAdvancedLooting() != (sa->parameter != 0)) {
+			SetAdvancedLooting(sa->parameter != 0);
+			SetBucket("advanced_looting", IsAdvancedLooting() ? "1" : "0");
+			LogLoot("[{}] Advanced Looting [{}]", GetCleanName(), IsAdvancedLooting() ? "on" : "off");
+		}
+	}
+	else if (sa->type == AppearanceType::MasterLooterCandidate) {
+		// TOB Loot Settings "Master Looter Candidate": nothing on the server uses it yet
+	}
 	else if (sa->type == AppearanceType::Split) {
 		m_pp.autosplit = (sa->parameter == 1);
 	}
@@ -15067,6 +15657,16 @@ void Client::Handle_OP_Surname(const EQApplicationPacket *app)
 
 	ChangeLastName(surname->lastname);
 	p_timers.Start(pTimerSurnameChange, 604800);
+
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+		auto reply_app = new EQApplicationPacket(OP_Surname, sizeof(SurnameReply_Struct));
+		auto reply     = reinterpret_cast<SurnameReply_Struct *>(reply_app->pBuffer);
+		reply->character_id = CharacterID();
+		reply->status       = 1;
+		strn0cpy(reply->lastname, surname->lastname, sizeof(reply->lastname));
+		FastQueuePacket(&reply_app);
+		return;
+	}
 
 	EQApplicationPacket* outapp = app->Copy();
 	outapp = app->Copy();
@@ -16848,6 +17448,13 @@ void Client::Handle_OP_RaidDelegateAbility(const EQApplicationPacket *app)
 			auto r = GetRaid();
 			if (r) {
 				r->DelegateAbilityMark(this, das->Name);
+			}
+			break;
+		}
+		case RaidDelegateMasterLooter: {
+			auto r = GetRaid();
+			if (r) {
+				r->DelegateAdvancedLootMasterLooter(this, das->Name);
 			}
 			break;
 		}

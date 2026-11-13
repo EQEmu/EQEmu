@@ -19,6 +19,8 @@
 #include "common/misc.h"
 #include "common/packet_dump.h"
 
+#include <algorithm>
+
 BasePacket::BasePacket(const unsigned char* buf, size_t len)
 {
 	if (len > 0) {
@@ -94,6 +96,86 @@ void BasePacket::DumpRaw(FILE *to) const
 	if (pBuffer && size)
 		dump_message_column(pBuffer, size, " ", to);
 	fprintf(to, "\n");
+}
+
+bool BasePacket::ReadCStringLength(size_t &len)
+{
+	if (_read_error || _rpos >= size) {
+		_read_error = true;
+		_rpos       = size;
+		return false;
+	}
+
+	const size_t remaining = size - _rpos;
+	len = strnlen(reinterpret_cast<const char *>(pBuffer + _rpos), remaining);
+	if (len == remaining) {
+		_read_error = true;
+		_rpos       = size;
+		return false;
+	}
+
+	return true;
+}
+
+void BasePacket::ReadString(char *str)
+{
+	size_t len;
+	if (!ReadCStringLength(len)) {
+		str[0] = '\0';
+		return;
+	}
+
+	memcpy(str, pBuffer + _rpos, len + 1);
+	_rpos += len + 1;
+}
+
+void BasePacket::ReadString(std::string &str)
+{
+	size_t len;
+	if (!ReadCStringLength(len)) {
+		str.clear();
+		return;
+	}
+
+	str.assign(reinterpret_cast<const char *>(pBuffer + _rpos), len);
+	_rpos += len + 1;
+}
+
+void BasePacket::ReadString(std::string &str, size_t max_len)
+{
+	size_t len;
+	if (!ReadCStringLength(len)) {
+		str.clear();
+		return;
+	}
+
+	str.assign(reinterpret_cast<const char *>(pBuffer + _rpos), std::min(len, max_len));
+	_rpos += len + 1;
+}
+
+void BasePacket::ReadLengthString(std::string &str)
+{
+	const uint32 len = ReadUInt32();
+	if (_read_error || ReadRemaining() < len) {
+		_read_error = true;
+		_rpos       = size;
+		str.clear();
+		return;
+	}
+
+	str.assign(reinterpret_cast<const char *>(pBuffer + _rpos), len);
+	_rpos += len;
+}
+
+void BasePacket::ReadSkip(uint32 count)
+{
+	if (_read_error || ReadRemaining() < count) {
+		_read_error = true;
+		_rpos       = size;
+		return;
+	}
+
+	_rpos += count;
 }
 
 void BasePacket::ReadString(char *str, uint32 Offset, uint32 MaxLength) const

@@ -696,10 +696,11 @@ Client::Client(EQStreamInterface *ieqs) : Mob(
 }
 
 Client::~Client() {
+	ClearSoloNPCMarks(false);
 	entity_list.RemoveMobFromCloseLists(this);
 	m_close_mobs.clear();
 
-	if (ClientVersion() == EQ::versions::ClientVersion::RoF2 && RuleB (Parcel, EnableParcelMerchants)) {
+	if (ClientVersion() >= EQ::versions::ClientVersion::RoF2 && RuleB (Parcel, EnableParcelMerchants)) {
 		DoParcelCancel();
 	}
 
@@ -3862,13 +3863,26 @@ void Client::MessageString(const CZClientMessageString_Struct* msg)
 		}
 		else
 		{
-			uint32_t outsize = sizeof(FormattedMessage_Struct) + msg->args_size;
-			auto outapp = std::make_unique<EQApplicationPacket>(OP_FormattedMessage, outsize);
-			auto outbuf = reinterpret_cast<FormattedMessage_Struct*>(outapp->pBuffer);
-			outbuf->string_id = msg->string_id;
-			outbuf->type = msg->chat_type;
-			memcpy(outbuf->message, msg->args, msg->args_size);
-			QueuePacket(outapp.get());
+			// Split the null-delimited args and go through the normal MessageString path, so each client
+			// patch formats the packet itself. The raw FormattedMessage_Struct built here before crashed the
+			// ToB client (e.g. "%1 is now available to you." sent to an expedition leader at creation).
+			std::array<std::string, 9> args;
+			size_t count = 0;
+			const char *pos = msg->args;
+			size_t remaining = msg->args_size;
+			while (remaining > 0 && count < args.size()) {
+				size_t len = strnlen(pos, remaining);
+				args[count++] = std::string(pos, len);
+				if (len >= remaining) {
+					break;
+				}
+				pos += len + 1;
+				remaining -= len + 1;
+			}
+
+			auto arg = [&](size_t i) -> const char * { return i < count ? args[i].c_str() : nullptr; };
+			MessageString(msg->chat_type, msg->string_id, arg(0), arg(1), arg(2), arg(3), arg(4), arg(5), arg(6),
+				arg(7), arg(8));
 		}
 	}
 }
@@ -4236,12 +4250,49 @@ float Client::CalcPriceMod(Mob* other, bool reverse)
 	return price_mod;
 }
 
+// TOB+ clients cannot buy leadership AAs, so groups and raids they lead get every ability at max rank.
+// Only the copies handed out here change; the player profile keeps what was bought.
+static uint32 LeadershipAAMaxRank(int aa)
+{
+	uint32 rank = 0;
+	while (rank < MAX_LEADERSHIP_TIERS && LeadershipAACosts[aa][rank]) {
+		++rank;
+	}
+	return rank;
+}
+
 void Client::GetGroupAAs(GroupLeadershipAA_Struct *into) const {
 	memcpy(into, &m_pp.leader_abilities.group, sizeof(GroupLeadershipAA_Struct));
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB && RuleB(Character, ToBLeadershipAlwaysOn)) {
+		for (int i = 0; i < MAX_GROUP_LEADERSHIP_AA_ARRAY; ++i) {
+			into->ranks[i] = LeadershipAAMaxRank(groupAAMarkNPC + i);
+		}
+	}
+}
+
+int Client::GetSoloLeadershipAA(int aa)
+{
+	if (RuleI(Character, LeadershipMinGroupSize) > 1 || IsRaidGrouped() || GetGroup()) {
+		return 0;
+	}
+
+	if (aa < groupAAMarkNPC || aa >= groupAAMarkNPC + MAX_GROUP_LEADERSHIP_AA_ARRAY) {
+		return 0;
+	}
+
+	// the player leads their own one-person group: the same ranks a group they led would get
+	GroupLeadershipAA_Struct ranks{};
+	GetGroupAAs(&ranks);
+	return ranks.ranks[aa - groupAAMarkNPC];
 }
 
 void Client::GetRaidAAs(RaidLeadershipAA_Struct *into) const {
 	memcpy(into, &m_pp.leader_abilities.raid, sizeof(RaidLeadershipAA_Struct));
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB && RuleB(Character, ToBLeadershipAlwaysOn)) {
+		for (int i = 0; i < MAX_RAID_LEADERSHIP_AA_ARRAY; ++i) {
+			into->ranks[i] = LeadershipAAMaxRank(raidAAMarkNPC + i);
+		}
+	}
 }
 
 void Client::EnteringMessages(Client* client)
@@ -8114,8 +8165,11 @@ FACTION_VALUE Client::GetReverseFactionCon(Mob* iOther) {
 
 bool Client::ReloadCharacterFaction(Client *c, uint32 facid, uint32 charid)
 {
-	if (database.SetCharacterFactionLevel(charid, facid, 0, 0, factionvalues))
+	if (database.SetCharacterFactionLevel(charid, facid, 0, 0, factionvalues)) {
+		// TOB+ keeps its own copy of the values for the Faction window
+		SendFactionList();
 		return true;
+	}
 	else
 		return false;
 }
@@ -8497,6 +8551,34 @@ void Client::SendFactionMessage(int32 tmpvalue, int32 faction_id, int32 faction_
 		faction_value = faction_before_hit;
 	}
 
+	// TOB+ prints the standing line itself from the update packet and refreshes its Faction window
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+		if (tmpvalue == 0) {
+			return;
+		}
+
+		int32 message_type = FactionUpdateAdjusted;
+		int32 direction    = tmpvalue;
+		if (faction_value >= this_faction_max) {
+			message_type = FactionUpdateAtCap;
+			direction    = 1;
+		} else if (faction_value <= this_faction_min) {
+			message_type = FactionUpdateAtCap;
+			direction    = -1;
+		} else if (totalvalue == faction_before_hit) {
+			message_type = FactionUpdateUnchanged;
+		}
+
+		// temp factions stay silent, same as the text below
+		SendFactionUpdate(faction_id, faction_before_hit, totalvalue, message_type, direction, temp != 1 && temp != 2);
+
+		// the client ignores updates for factions it has no row for, so a first value needs the whole list
+		if (faction_before_hit == 0 && totalvalue != 0) {
+			SendFactionList();
+		}
+		return;
+	}
+
 	// default to Faction# if we couldn't get the name from the ID
 	if (!content_db.GetFactionName(faction_id, name, sizeof(name))) {
 		snprintf(name, sizeof(name), "Faction%i", faction_id);
@@ -8522,6 +8604,54 @@ void Client::SendFactionMessage(int32 tmpvalue, int32 faction_id, int32 faction_
 			).c_str()
 		);
 	} //New Live faction message (14261)
+}
+
+void Client::SendFactionList()
+{
+	if (ClientVersion() < EQ::versions::ClientVersion::TOB) {
+		return;
+	}
+
+	std::vector<FactionListEntry_Struct> entries;
+	entries.reserve(factionvalues.size());
+	for (const auto &[faction_id, value] : factionvalues) {
+		if (faction_id > 0) {
+			entries.push_back(FactionListEntry_Struct{ faction_id, value });
+		}
+	}
+
+	auto outapp = new EQApplicationPacket(
+		OP_FactionList,
+		sizeof(FactionList_Struct) + entries.size() * sizeof(FactionListEntry_Struct)
+	);
+	auto fl   = reinterpret_cast<FactionList_Struct *>(outapp->pBuffer);
+	fl->count = static_cast<uint32>(entries.size());
+	if (!entries.empty()) {
+		memcpy(fl->entries, entries.data(), entries.size() * sizeof(FactionListEntry_Struct));
+	}
+
+	QueuePacket(outapp);
+	safe_delete(outapp);
+}
+
+void Client::SendFactionUpdate(int32 faction_id, int32 old_value, int32 new_value, int32 message_type, int32 direction, bool show_message)
+{
+	if (ClientVersion() < EQ::versions::ClientVersion::TOB || faction_id <= 0) {
+		return;
+	}
+
+	auto outapp = new EQApplicationPacket(OP_FactionUpdate, sizeof(FactionUpdate_Struct));
+	auto fu     = reinterpret_cast<FactionUpdate_Struct *>(outapp->pBuffer);
+
+	fu->show_message = show_message ? 1 : 0;
+	fu->message_type = message_type;
+	fu->faction_id   = static_cast<uint32>(faction_id);
+	fu->direction    = direction;
+	fu->old_value    = old_value;
+	fu->new_value    = new_value;
+
+	QueuePacket(outapp);
+	safe_delete(outapp);
 }
 
 void Client::LoadAccountFlags()
@@ -11740,6 +11870,9 @@ void Client::ReconnectUCS()
 		case EQ::versions::ClientVersion::RoF2:
 			connection_type = EQ::versions::ucsRoF2Combined;
 			break;
+		case EQ::versions::ClientVersion::TOB:
+			connection_type = EQ::versions::ucsTOBCombined;
+			break;
 		default:
 			connection_type = EQ::versions::ucsUnknown;
 			break;
@@ -12177,6 +12310,11 @@ void Client::SendPath(Mob* target)
 		return;
 	}
 
+	SendPathToLocation(glm::vec3(target->GetX(), target->GetY(), target->GetZ()), target->GetSize());
+}
+
+void Client::SendPathToLocation(const glm::vec3 &destination, float destination_size, bool allow_partial)
+{
 	std::vector<FindPerson_Point> points;
 
 	if (!RuleB(Pathing, Find) || !zone->pathing) {
@@ -12187,9 +12325,9 @@ void Client::SendPath(Mob* target)
 		a.x = GetX();
 		a.y = GetY();
 		a.z = GetZ();
-		b.x = target->GetX();
-		b.y = target->GetY();
-		b.z = target->GetZ();
+		b.x = destination.x;
+		b.y = destination.y;
+		b.z = destination.z;
 
 		points.push_back(a);
 		points.push_back(b);
@@ -12202,16 +12340,18 @@ void Client::SendPath(Mob* target)
 		);
 
 		glm::vec3 path_end(
-			target->GetX(),
-			target->GetY(),
-			target->GetZ() + (target->GetSize() < 6.0 ? 6 : target->GetSize()) * HEAD_POSITION
+			destination.x,
+			destination.y,
+			destination.z + (destination_size < 6.0 ? 6 : destination_size) * HEAD_POSITION
 		);
 
 		bool partial   = false;
 		bool stuck     = false;
 		auto path_list = zone->pathing->FindRoute(path_start, path_end, partial, stuck);
 
-		if (path_list.empty() || partial) {
+		// zone lines often sit off the nav mesh (edge of the map, z of 0), so for those a path that gets
+		// close is better than none
+		if (path_list.empty() || (partial && !allow_partial)) {
 			EQApplicationPacket outapp(OP_FindPersonReply, 0);
 			QueuePacket(&outapp);
 			return;
@@ -12256,15 +12396,66 @@ void Client::SendPath(Mob* target)
 		}
 
 		if (!leads_to_teleporter) {
-			p.x = target->GetX();
-			p.y = target->GetY();
-			p.z = target->GetZ();
+			p.x = destination.x;
+			p.y = destination.y;
+			p.z = destination.z;
 
 			points.push_back(p);
 		}
 	}
 
 	SendPathPacket(points);
+}
+
+// Find window: one "Zone Connection" row per zone point this client can use
+void Client::SendFindZoneConnections()
+{
+	constexpr size_t FindZoneConnectionsMaxRows = 200; // caps the packet size
+	constexpr float  ZonePointAnyCoordinate     = 999999.0f; // zone_points x/y value meaning any position
+	if (ClientVersion() < EQ::versions::ClientVersion::TOB || !zone) {
+		return;
+	}
+
+	std::vector<FindZoneConnection_Struct> rows;
+
+	LinkedListIterator<ZonePoint *> iterator(zone->zone_point_list);
+	iterator.Reset();
+	while (iterator.MoreElements() && rows.size() < FindZoneConnectionsMaxRows) {
+		ZonePoint *zp = iterator.GetData();
+		iterator.Advance();
+		if (!zp || !(zp->client_version_mask & ClientVersionBit()) || !zp->target_zone_id) {
+			continue;
+		}
+
+		// the "anywhere on this axis" value, so there is no spot to path to
+		if (std::fabs(zp->x) >= ZonePointAnyCoordinate || std::fabs(zp->y) >= ZonePointAnyCoordinate) {
+			continue;
+		}
+
+		FindZoneConnection_Struct r{};
+		r.row_type = FindPersonRequestLocation; // the client sends the loc back as the path destination
+		r.id       = zp->number;
+		r.zone_id  = zp->target_zone_id;
+		r.number   = zp->number;
+		r.loc.x    = zp->x;
+		r.loc.y    = zp->y;
+		r.loc.z    = zp->z;
+		rows.push_back(r);
+	}
+
+	auto outapp = new EQApplicationPacket(OP_FindZoneConnections, sizeof(uint32) + rows.size() * sizeof(FindZoneConnection_Struct));
+	auto out = (FindZoneConnections_Struct *) outapp->pBuffer;
+	out->count = static_cast<uint32>(rows.size());
+	if (!rows.empty()) {
+		memcpy(out->entries, rows.data(), rows.size() * sizeof(FindZoneConnection_Struct));
+	}
+	QueuePacket(outapp);
+	safe_delete(outapp);
+
+	// the window also has a "find list"; we have nothing for it, so send it empty
+	auto list = new EQApplicationPacket(OP_FindLocationList, sizeof(uint32));
+	QueuePacket(list);
+	safe_delete(list);
 }
 
 void Client::UseAugmentContainer(int container_slot)
@@ -13257,7 +13448,7 @@ void Client::SendMerchantEnd()
 {
 	SetMerchantSessionEntityID(0);
 
-	if (ClientVersion() == EQ::versions::ClientVersion::RoF2 && RuleB(Parcel, EnableParcelMerchants)) {
+	if (ClientVersion() >= EQ::versions::ClientVersion::RoF2 && RuleB(Parcel, EnableParcelMerchants)) {
 		DoParcelCancel();
 		SetEngagedWithParcelMerchant(false);
 	}
@@ -13299,4 +13490,90 @@ bool Client::UncompleteTask(int task_id)
 	);
 
 	return task_state->UncompleteTask(task_id);
+}
+
+static void SendSoloMarkNPC(Client *c, uint16 entity_id, int number, Mob *m)
+{
+	auto outapp = new EQApplicationPacket(OP_MarkNPC, sizeof(MarkNPC_Struct));
+	auto mark   = reinterpret_cast<MarkNPC_Struct *>(outapp->pBuffer);
+
+	mark->TargetID = entity_id;
+	mark->Number   = number;
+	if (m) {
+		strn0cpy(mark->Name, m->GetCleanName(), sizeof(mark->Name));
+	}
+
+	c->QueuePacket(outapp);
+	safe_delete(outapp);
+}
+
+void Client::SoloMarkNPC(Mob *target, int number)
+{
+	static_assert(sizeof(m_solo_marked_npcs) / sizeof(m_solo_marked_npcs[0]) == MAX_MARKED_NPCS);
+
+	if (!target || target->IsClient() || target->IsMerc() || number < 0 || number > MAX_MARKED_NPCS) {
+		return;
+	}
+
+	const uint16 entity_id = target->GetID();
+
+	// the client sends 0 to unmark, and a new number moves a marked NPC
+	for (int i = 0; i < MAX_MARKED_NPCS; ++i) {
+		if (m_solo_marked_npcs[i] == entity_id) {
+			if (i == number - 1) {
+				return;
+			}
+
+			m_solo_marked_npcs[i] = 0;
+			target->IsTargeted(-1);
+			SendSoloMarkNPC(this, entity_id, 0, target);
+		}
+	}
+
+	if (number == 0) {
+		return;
+	}
+
+	if (const uint16 old_id = m_solo_marked_npcs[number - 1]) {
+		Mob *old = entity_list.GetMob(old_id);
+		if (old) {
+			old->IsTargeted(-1);
+		}
+
+		SendSoloMarkNPC(this, old_id, 0, old);
+	}
+
+	m_solo_marked_npcs[number - 1] = entity_id;
+	target->IsTargeted(1);
+	SendSoloMarkNPC(this, entity_id, number, target);
+}
+
+void Client::UnMarkSoloNPC(uint16 entity_id)
+{
+	// the mob is going away; the client drops its mark with the spawn
+	for (auto &id : m_solo_marked_npcs) {
+		if (id == entity_id) {
+			id = 0;
+		}
+	}
+}
+
+void Client::ClearSoloNPCMarks(bool notify)
+{
+	for (auto &id : m_solo_marked_npcs) {
+		if (!id) {
+			continue;
+		}
+
+		Mob *m = entity_list.GetMob(id);
+		if (m) {
+			m->IsTargeted(-1);
+		}
+
+		if (notify) {
+			SendSoloMarkNPC(this, id, 0, m);
+		}
+
+		id = 0;
+	}
 }

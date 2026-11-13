@@ -2920,6 +2920,7 @@ bool NPC::Death(Mob* killer_mob, int64 damage, int32 spell, EQ::skills::SkillTyp
 					}
 				}
 			}
+			corpse->StartAdvancedLoot(killer->CastToClient());
 		} else if (killer_mob && is_ldon_treasure) {
 			Mob* ultimate_owner = killer_mob->GetUltimateOwner();
 			if (ultimate_owner->IsClient()) {

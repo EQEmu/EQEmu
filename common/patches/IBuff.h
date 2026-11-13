@@ -49,6 +49,11 @@ public:
         bool buff_timers_suspended, const std::vector<uint32_t>& slots) const = 0;
     virtual void SetRefreshType(std::unique_ptr<EQApplicationPacket>& packet, uint8_t refresh_type) const = 0;
 	virtual bool NeedsWearMessage() const = 0;
+	// clients that keep their own affect list in slot order get a definition per buff on a full refresh
+	virtual bool NeedsBuffDefinitionsOnRefresh() const { return false; }
+	// optional packet sent to the self client right before a single buff is removed
+	virtual std::unique_ptr<EQApplicationPacket> BuffRemovePrelude(Mob* mob, const Buffs_Struct& buff,
+		uint32_t slot) const;
 
     uint32_t ServerToPatchBuffSlot(uint32_t slot) const;
 
