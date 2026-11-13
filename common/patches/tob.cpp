@@ -5077,20 +5077,22 @@ namespace TOB
 			break;
 		}
 		case structs::TOBAdvLootSubtype::Give: {
-			// the player name follows the fixed part and needs at least its first byte
-			valid = size > sizeof(structs::AdvLootGive_Struct);
+			// the player name follows the fixed part
+			valid = size >= sizeof(structs::AdvLootGive_Struct);
 			if (valid) {
 				auto eq = reinterpret_cast<const structs::AdvLootGive_Struct *>(buf);
-				const char  *name       = reinterpret_cast<const char *>(buf + sizeof(structs::AdvLootGive_Struct));
-				const size_t name_bytes = size - sizeof(structs::AdvLootGive_Struct);
 				request.subtype        = AdvLootGive;
 				request.transaction_id = eq->transaction_id;
 				request.corpse_id      = eq->corpse_id;
 				request.item_id        = static_cast<uint32>(eq->item_id);
 				request.quantity       = eq->quantity;
 				request.leave          = eq->leave != 0 ? 1 : 0;
-				// request is zeroed, so the copy stays terminated; a name without a terminator is cut at the packet end
-				memcpy(request.player_name, name, std::min(strnlen(name, name_bytes), sizeof(request.player_name) - 1));
+
+				std::string player_name;
+				__packet->SetReadPosition(sizeof(structs::AdvLootGive_Struct));
+				__packet->ReadString(player_name, TOB_NAME_MAX_CHARS);
+				valid = !__packet->ReadError(); // an unterminated name is malformed
+				strn0cpy(request.player_name, player_name.c_str(), sizeof(request.player_name));
 			}
 			break;
 		}

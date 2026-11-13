@@ -31,7 +31,7 @@ enum {
 	FindNextAssisterSlot   = 2,
 	RaidDelegateMainAssist = 3,
 	RaidDelegateMainMarker = 4,
-	RaidDelegateMasterLooter = 100 // TOB+ Advanced Loot (no RoF2 equivalent)
+	RaidDelegateMasterLooter = 100 // Advanced Loot master looter
 };
 
 typedef enum {
