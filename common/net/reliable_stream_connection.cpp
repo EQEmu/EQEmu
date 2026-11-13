@@ -73,7 +73,7 @@ void EQ::Net::ReliableStreamConnectionManager::Attach(uv_loop_t *loop)
 		uv_udp_init(loop, &m_socket);
 		m_socket.data = this;
 		struct sockaddr_in recv_addr;
-		uv_ip4_addr("0.0.0.0", m_options.port, &recv_addr);
+		uv_ip4_addr(m_options.bind_address.c_str(), m_options.port, &recv_addr);
 		int rc = uv_udp_bind(&m_socket, (const struct sockaddr *)&recv_addr, UV_UDP_REUSEADDR);
 
 		rc = uv_udp_recv_start(

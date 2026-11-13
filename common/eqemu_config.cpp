@@ -95,6 +95,11 @@ void EQEmuConfig::parse_config()
 
 	WorldIP      = _root["server"]["world"]["tcp"].get("ip", "127.0.0.1").asString();
 	WorldTCPPort = Strings::ToUnsignedInt(_root["server"]["world"]["tcp"].get("port", "9000").asString());
+	MultiWorldSelectorBackendIP = _root["server"]["world"]["multi_world_selector"]
+		.get("backend_bind", "0.0.0.0").asString();
+	MultiWorldSelectorBackendPort = Strings::ToUnsignedInt(
+		_root["server"]["world"]["multi_world_selector"].get("backend_port", "9000").asString()
+	);
 
 	TelnetIP      = _root["server"]["world"]["telnet"].get("ip", "127.0.0.1").asString();
 	TelnetTCPPort = Strings::ToUnsignedInt(_root["server"]["world"]["telnet"].get("port", "9001").asString());

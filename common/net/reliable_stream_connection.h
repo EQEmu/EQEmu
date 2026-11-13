@@ -319,6 +319,7 @@ namespace EQ
 			size_t connection_close_time;
 			ReliableStreamEncodeType encode_passes[2];
 			int port;
+			std::string bind_address = "0.0.0.0";
 			double outgoing_data_rate;
 		};
 

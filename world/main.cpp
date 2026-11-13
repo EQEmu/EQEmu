@@ -305,7 +305,18 @@ int main(int argc, char **argv)
 
 	WorldBoot::CheckForPossibleConfigurationIssues();
 
-	EQStreamManagerInterfaceOptions opts(9000, false, false);
+	if (!IpUtil::IsIPAddress(Config->MultiWorldSelectorBackendIP) ||
+		Config->MultiWorldSelectorBackendPort == 0) {
+		LogError(
+			"Invalid server.world.multi_world_selector backend listener [{}:{}]",
+			Config->MultiWorldSelectorBackendIP,
+			Config->MultiWorldSelectorBackendPort
+		);
+		return 1;
+	}
+
+	EQStreamManagerInterfaceOptions opts(Config->MultiWorldSelectorBackendPort, false, false);
+	opts.reliable_stream_options.bind_address       = Config->MultiWorldSelectorBackendIP;
 	opts.reliable_stream_options.resend_delay_ms     = RuleI(Network, ResendDelayBaseMS);
 	opts.reliable_stream_options.resend_delay_factor = RuleR(Network, ResendDelayFactor);
 	opts.reliable_stream_options.resend_delay_min    = RuleI(Network, ResendDelayMinMS);

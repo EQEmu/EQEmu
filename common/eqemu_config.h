@@ -52,6 +52,8 @@ class EQEmuConfig
 		bool Locked;
 		uint16 WorldTCPPort;
 		std::string WorldIP;
+		std::string MultiWorldSelectorBackendIP;
+		uint16 MultiWorldSelectorBackendPort;
 		uint16 TelnetTCPPort;
 		std::string TelnetIP;
 		bool TelnetEnabled;

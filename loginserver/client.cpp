@@ -19,6 +19,9 @@
 #include "login_server.h"
 #include "encryption.h"
 #include "account_management.h"
+#include "common/multi_world_selector_notifier.h"
+
+#include <algorithm>
 
 extern LoginServer server;
 
@@ -278,6 +281,50 @@ void Client::SendPlayToWorld(const char *data)
 	m_selected_play_server_id = (unsigned int) play->server_number;
 	m_play_sequence_id        = sequence_in;
 	m_selected_play_server_id = server_id_in;
+
+	const auto &selector_config = server.selector_config;
+	if (selector_config.enabled) {
+		const auto &world_servers = server.server_manager->GetWorldServers();
+		const auto selected_world = std::find_if(
+			world_servers.begin(),
+			world_servers.end(),
+			[server_id_in](const std::unique_ptr<WorldServer> &world) {
+				return world->GetServerId() == server_id_in;
+			}
+		);
+
+		if (selected_world == world_servers.end()) {
+			LogWarning(
+				"Multi-World Selector notification skipped: server ID [{}] is not currently registered",
+				server_id_in
+			);
+		}
+		else if (selector_config.worlds.find((*selected_world)->GetServerShortName()) ==
+			selector_config.worlds.end()) {
+			LogWarning(
+				"Multi-World Selector notification skipped: World [{}] is not configured",
+				(*selected_world)->GetServerShortName()
+			);
+		}
+		else {
+			EQ::Net::MultiWorldSelector::ControlSelection selection{
+				.client_ip         = m_connection->GetRemoteAddr(),
+				.login_source_port = ntohs(m_connection->GetRemotePort()),
+				.world_short_name  = (*selected_world)->GetServerShortName()
+			};
+
+			std::string notification_error;
+			if (!EQ::Net::MultiWorldSelector::Notify(selector_config, selection, notification_error)) {
+				LogWarning(
+					"Multi-World Selector notification failed for client [{}] World [{}]: {}",
+					selection.client_ip,
+					selection.world_short_name,
+					notification_error
+				);
+			}
+		}
+	}
+
 	server.server_manager->SendUserLoginToWorldRequest(server_id_in, m_account_id, m_loginserver_name);
 }
 
