@@ -203,7 +203,7 @@ int Merc::GroupLeadershipAAHealthEnhancement()
 {
 	Group *g = GetGroup();
 
-	if(!g || (g->GroupCount() < 3))
+	if(!g || (g->GroupCount() < RuleI(Character, LeadershipMinGroupSize)))
 		return 0;
 
 	switch(g->GetLeadershipAA(groupAAHealthEnhancement))
@@ -225,7 +225,7 @@ int Merc::GroupLeadershipAAManaEnhancement()
 {
 	Group *g = GetGroup();
 
-	if(!g || (g->GroupCount() < 3))
+	if(!g || (g->GroupCount() < RuleI(Character, LeadershipMinGroupSize)))
 		return 0;
 
 	switch(g->GetLeadershipAA(groupAAManaEnhancement))
@@ -247,7 +247,7 @@ int Merc::GroupLeadershipAAHealthRegeneration()
 {
 	Group *g = GetGroup();
 
-	if(!g || (g->GroupCount() < 3))
+	if(!g || (g->GroupCount() < RuleI(Character, LeadershipMinGroupSize)))
 		return 0;
 
 	switch(g->GetLeadershipAA(groupAAHealthRegeneration))
@@ -269,7 +269,7 @@ int Merc::GroupLeadershipAAOffenseEnhancement()
 {
 	Group *g = GetGroup();
 
-	if(!g || (g->GroupCount() < 3))
+	if(!g || (g->GroupCount() < RuleI(Character, LeadershipMinGroupSize)))
 		return 0;
 
 	switch(g->GetLeadershipAA(groupAAOffenseEnhancement))

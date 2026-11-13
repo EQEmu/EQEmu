@@ -29,6 +29,7 @@ set(zone_sources
 	client_version.cpp
 	combat_record.cpp
 	corpse.cpp
+	corpse_advloot.cpp
 	dialogue_window.cpp
 	doors.cpp
 	dynamic_zone.cpp
@@ -42,6 +43,8 @@ set(zone_sources
 	expedition_request.cpp
 	fastmath.cpp
 	fearpath.cpp
+	fellowship.cpp
+	fellowship_manager.cpp
 	forage.cpp
 	global_loot_manager.cpp
 	groups.cpp
@@ -51,6 +54,7 @@ set(zone_sources
 	heal_rotation.cpp
 	horse.cpp
 	inventory.cpp
+	key_rings.cpp
 	loot.cpp
 	main.cpp
 	map.cpp
@@ -144,6 +148,7 @@ set(zone_headers
 	event_codes.h
 	expedition_request.h
 	fastmath.h
+	fellowship_manager.h
 	forage.h
 	global_loot_manager.h
 	groups.h

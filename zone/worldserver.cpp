@@ -36,6 +36,7 @@
 #include "zone/dialogue_window.h"
 #include "zone/dynamic_zone.h"
 #include "zone/entity.h"
+#include "zone/fellowship_manager.h"
 #include "zone/guild_mgr.h"
 #include "zone/mob.h"
 #include "zone/petitions.h"
@@ -810,6 +811,13 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 	case ServerOP_GuildMembersList:
 	{
 		guild_mgr.ProcessWorldPacket(pack);
+		break;
+	}
+	case ServerOP_FellowshipRefresh:
+	case ServerOP_FellowshipUpdate:
+	case ServerOP_FellowshipCampsite:
+	{
+		ZoneFellowshipManager::Instance()->ProcessWorldPacket(pack);
 		break;
 	}
 	case ServerOP_FlagUpdate: {

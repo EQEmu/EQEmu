@@ -18,6 +18,7 @@
 #include "cliententry.h"
 
 #include "world/clientlist.h"
+#include "world/fellowship_manager.h"
 #include "world/login_server_list.h"
 #include "world/login_server.h"
 #include "world/shared_task_manager.h"
@@ -293,9 +294,15 @@ void ClientListEntry::Camp(ZoneServer *iZS)
 		LSUpdate(m_zone_server);
 	}
 
+	const uint32 character_id = m_char_id;
+
 	ClearVars();
 
 	m_stale = 0;
+
+	if (character_id) {
+		WorldFellowshipManager::Instance()->OnClientListChange(character_id);
+	}
 }
 
 bool ClientListEntry::CheckStale()

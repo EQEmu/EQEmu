@@ -41,6 +41,7 @@
 #include "world/clientlist.h"
 #include "world/console.h"
 #include "world/dynamic_zone_manager.h"
+#include "world/fellowship_manager.h"
 #include "world/launcher_list.h"
 #include "world/lfplist.h"
 #include "world/login_server.h"
@@ -164,6 +165,9 @@ int main(int argc, char **argv)
 		->ReloadContentFlags();
 
 	SkillCaps::Instance()->SetContentDatabase(&content_db)->LoadSkillCaps();
+
+	WorldFellowshipManager::Instance()->SetDatabase(&database)->LoadFellowships();
+	WorldFellowshipManager::Instance()->RepairAfterLoad();
 
 	std::unique_ptr<EQ::Net::ServertalkServer> server_connection;
 	server_connection = std::make_unique<EQ::Net::ServertalkServer>();
@@ -389,6 +393,7 @@ int main(int argc, char **argv)
 
 		ClientList::Instance()->Process();
 		guild_mgr.Process();
+		WorldFellowshipManager::Instance()->Process();
 
 		if (parcel_prune_timer.Check()) {
 			if (RuleB(Parcel, EnableParcelMerchants) && RuleB(Parcel, EnablePruning)) {

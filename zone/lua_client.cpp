@@ -3642,6 +3642,70 @@ luabind::object Lua_Client::GetKeyRing(lua_State* L)
 	return lua_table;
 }
 
+bool Lua_Client::IsKeyRingUnlocked(int ring)
+{
+	Lua_Safe_Call_Bool();
+	return self->IsKeyRingUnlocked(ring);
+}
+
+void Lua_Client::UnlockKeyRing(int ring)
+{
+	Lua_Safe_Call_Void();
+	self->SetKeyRingUnlocked(ring, true);
+}
+
+void Lua_Client::LockKeyRing(int ring)
+{
+	Lua_Safe_Call_Void();
+	self->SetKeyRingUnlocked(ring, false);
+}
+
+bool Lua_Client::AddItemToKeyRing(uint32 item_id)
+{
+	Lua_Safe_Call_Bool();
+	return self->AddItemToKeyRing(item_id);
+}
+
+bool Lua_Client::RemoveItemFromKeyRing(uint32 item_id)
+{
+	Lua_Safe_Call_Bool();
+	return self->RemoveItemFromKeyRing(item_id);
+}
+
+luabind::object Lua_Client::GetKeyRingItems(lua_State* L, int ring)
+{
+	auto lua_table = luabind::newtable(L);
+
+	if (d_) {
+		auto self  = reinterpret_cast<NativeType *>(d_);
+		int  index = 1;
+		for (const auto item_id : self->GetKeyRingItemIDs(ring)) {
+			lua_table[index] = item_id;
+			index++;
+		}
+	}
+
+	return lua_table;
+}
+
+bool Lua_Client::AddItemToOverflow(uint32 item_id)
+{
+	Lua_Safe_Call_Bool();
+	return self->AddItemToOverflow(item_id);
+}
+
+bool Lua_Client::AddItemToOverflow(uint32 item_id, int16 charges)
+{
+	Lua_Safe_Call_Bool();
+	return self->AddItemToOverflow(item_id, charges);
+}
+
+int Lua_Client::GetItemOverflowCount()
+{
+	Lua_Safe_Call_Int();
+	return self->GetItemOverflowCount();
+}
+
 luabind::scope lua_register_client() {
 	return luabind::class_<Lua_Client, Lua_Mob>("Client")
 	.def(luabind::constructor<>())
@@ -3970,6 +4034,15 @@ luabind::scope lua_register_client() {
 	.def("IsTaskActivityActive", (bool(Lua_Client::*)(int,int))&Lua_Client::IsTaskActivityActive)
 	.def("IsTaskCompleted", (bool(Lua_Client::*)(int))&Lua_Client::IsTaskCompleted)
 	.def("KeyRingAdd", (bool(Lua_Client::*)(uint32))&Lua_Client::KeyRingAdd)
+	.def("IsKeyRingUnlocked", (bool(Lua_Client::*)(int))&Lua_Client::IsKeyRingUnlocked)
+	.def("UnlockKeyRing", (void(Lua_Client::*)(int))&Lua_Client::UnlockKeyRing)
+	.def("LockKeyRing", (void(Lua_Client::*)(int))&Lua_Client::LockKeyRing)
+	.def("AddItemToKeyRing", (bool(Lua_Client::*)(uint32))&Lua_Client::AddItemToKeyRing)
+	.def("RemoveItemFromKeyRing", (bool(Lua_Client::*)(uint32))&Lua_Client::RemoveItemFromKeyRing)
+	.def("GetKeyRingItems", (luabind::object(Lua_Client::*)(lua_State*,int))&Lua_Client::GetKeyRingItems)
+	.def("AddItemToOverflow", (bool(Lua_Client::*)(uint32))&Lua_Client::AddItemToOverflow)
+	.def("AddItemToOverflow", (bool(Lua_Client::*)(uint32,int16))&Lua_Client::AddItemToOverflow)
+	.def("GetItemOverflowCount", (int(Lua_Client::*)(void))&Lua_Client::GetItemOverflowCount)
 	.def("KeyRingCheck", (bool(Lua_Client::*)(uint32))&Lua_Client::KeyRingCheck)
 	.def("KeyRingClear", (bool(Lua_Client::*)(void))&Lua_Client::KeyRingClear)
 	.def("KeyRingList", (void(Lua_Client::*)(void))&Lua_Client::KeyRingList)

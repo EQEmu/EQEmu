@@ -47,6 +47,7 @@
 #include "common/strings.h"
 #include "common/zone_store.h"
 #include "world/clientlist.h"
+#include "world/fellowship_manager.h"
 #include "world/login_server_list.h"
 #include "world/login_server.h"
 #include "world/wguild_mgr.h"
@@ -1073,6 +1074,7 @@ bool Client::HandleDeleteCharacterPacket(const EQApplicationPacket *app) {
 	uint32 char_acct_id = database.GetAccountIDByChar((char*)app->pBuffer);
 	if(char_acct_id == GetAccountID()) {
 		LogInfo("Delete character: [{}]", (const char*)app->pBuffer);
+		WorldFellowshipManager::Instance()->RemoveCharacter(database.GetCharacterID((const char *) app->pBuffer));
 		database.DeleteCharacter((char *)app->pBuffer);
 		SendCharInfo();
 	}

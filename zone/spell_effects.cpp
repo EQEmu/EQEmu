@@ -152,7 +152,8 @@ bool Mob::SpellEffect(Mob* caster, int32 spell_id, float partial, int level_over
 		if (spells[spell_id].endurance_upkeep > 0)
 			SetEndurUpkeep(true);
 
-		ClientPatch::SendFullBuffRefresh(this);
+		// the hit count above is set after AddBuff already sent the buff, so resend its definition (TOB only)
+		ClientPatch::SendFullBuffRefresh(this, false, true, true);
 	}
 
 	if (IsClient()) {

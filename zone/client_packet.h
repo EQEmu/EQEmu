@@ -47,10 +47,13 @@
 	void Handle_OP_AdventureMerchantSell(const EQApplicationPacket *app);
 	void Handle_OP_AdventureRequest(const EQApplicationPacket *app);
 	void Handle_OP_AdventureStatsRequest(const EQApplicationPacket *app);
+	void Handle_OP_AdvLoot(const EQApplicationPacket *app);
+	void Handle_OP_AdvLootMisc(const EQApplicationPacket *app);
 	void Handle_OP_AggroMeterLockTarget(const EQApplicationPacket *app);
 	void Handle_OP_AltCurrencyMerchantRequest(const EQApplicationPacket *app);
 	void Handle_OP_AltCurrencyPurchase(const EQApplicationPacket *app);
 	void Handle_OP_AltCurrencyReclaim(const EQApplicationPacket *app);
+	void Handle_OP_AltCurrencyReclaimAll(const EQApplicationPacket *app);
 	void Handle_OP_AltCurrencySell(const EQApplicationPacket *app);
 	void Handle_OP_AltCurrencySellSelection(const EQApplicationPacket *app);
 	void Handle_OP_Animation(const EQApplicationPacket *app);
@@ -131,8 +134,13 @@
 	void Handle_OP_EnvDamage(const EQApplicationPacket *app);
 	void Handle_OP_EvolveItem(const EQApplicationPacket *app);
 	void Handle_OP_FaceChange(const EQApplicationPacket *app);
+	void Handle_OP_FactionList(const EQApplicationPacket *app);
 	void Handle_OP_FeignDeath(const EQApplicationPacket *app);
+	void Handle_OP_FellowshipAction(const EQApplicationPacket *app);
+	void Handle_OP_FellowshipCampfireListRequest(const EQApplicationPacket *app);
 	void Handle_OP_FindPersonRequest(const EQApplicationPacket *app);
+	void Handle_OP_FindZoneConnectionsRequest(const EQApplicationPacket *app);
+	void Handle_OP_InspectBuffs(const EQApplicationPacket *app);
 	void Handle_OP_Fishing(const EQApplicationPacket *app);
 	void Handle_OP_Forage(const EQApplicationPacket *app);
 	void Handle_OP_FriendsWho(const EQApplicationPacket *app);
@@ -177,6 +185,8 @@
 	void Handle_OP_GuildInviteAccept(const EQApplicationPacket *app);
 	void Handle_OP_GuildLeader(const EQApplicationPacket *app);
 	void Handle_OP_GuildManageBanker(const EQApplicationPacket *app);
+	void Handle_OP_GuildNameRequest(const EQApplicationPacket *app);
+	void Handle_OP_GuildOpenGuildWindow(const EQApplicationPacket *app);
 	void Handle_OP_GuildPeace(const EQApplicationPacket *app);
 	void Handle_OP_GuildPromote(const EQApplicationPacket *app);
 	void Handle_OP_GuildPublicNote(const EQApplicationPacket *app);
@@ -203,6 +213,7 @@
 	void Handle_OP_ItemLinkClick(const EQApplicationPacket *app);
 	void Handle_OP_ItemLinkResponse(const EQApplicationPacket *app);
 	void Handle_OP_ItemName(const EQApplicationPacket *app);
+	void Handle_OP_ItemOverflow(const EQApplicationPacket *app);
 	void Handle_OP_ItemPreview(const EQApplicationPacket *app);
 	void Handle_OP_ItemPreviewRequest(const EQApplicationPacket *app);
 	void Handle_OP_ItemVerifyRequest(const EQApplicationPacket *app);

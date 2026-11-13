@@ -329,6 +329,7 @@
 #define QUEUED_TELL					2458	//[queued]
 #define QUEUE_TELL_FULL				2459	//[zoning and queue is full]
 #define TRADER_BUSY_TWO             3192    //Sorry, that action cannot be performed while trading.
+#define NOT_FAST_CAMP_ZONE 10031 //You are not in a zone that allows fast camping.
 #define SUSPEND_MINION_UNSUSPEND	3267	//%1 tells you, 'I live again...'
 #define SUSPEND_MINION_SUSPEND		3268	//%1 tells you, 'By your command, master.'
 #define ONLY_SUMMONED_PETS			3269	//This effect only works with summoned pets.
@@ -482,6 +483,13 @@
 #define LDON_NO_LOCKPICK			7564	//You must have a lock pick in your inventory to do this.
 #define LDON_WAS_NOT_LOCKED			7565	//%1 was not locked.
 #define LDON_WAS_NOT_TRAPPED		7566	//%1 was not trapped
+#define TRANSACTION_INVENTORY_FULL	7624	//Transaction failed: Your inventory is full!
+#define ITEM_OVERFLOW_ADDED			8334	//Your inventory is full. %1 has been added to your overflow items! Type /itemoverflow to view them.
+#define ITEM_OVERFLOW_COUNT			11355	//You have %1 overflow items available. Type /itemoverflow to view them.
+#define ITEM_OVERFLOW_RETRIEVED		11356	//You have successfully retrieved overflow item %1 x %2.
+#define CURSOR_ITEM_BLOCKS			3599	//You may not do this while you have an item on your cursor.
+#define KEY_RING_FULL				14273	//Can not add the %1 to the %2 key ring because it is full.
+#define KEY_RING_WRONG_TYPE			14280	//Only %1 items may be placed in the %1 key ring.
 #define GAIN_SINGLE_AA_SINGLE_AA	8019	//You have gained an ability point!  You now have %1 ability point.
 #define GAIN_SINGLE_AA_MULTI_AA		8020	//You have gained an ability point!  You now have %1 ability points.
 #define GAIN_MULTI_AA_MULTI_AA		8021	//You have gained %1 ability point(s)!  You now have %2 ability point(s).
@@ -616,3 +624,19 @@
 #define GAIN_XP_BONUS				14541	//You gain experience (with a bonus)! // TODO: TOB - 14541 You gain experience (with a bonus)!%1
 #define GAIN_XP_PENALTY				14542	//You gain experience (with a penalty)! // TODO: TOB - 14542 You gain experience (with a penalty)!%1
 #define GENERIC_MISS				15041	//%1 missed %2
+// TOB+ fellowships
+#define ACTION_NOT_NOW_TRY_AGAIN	643	//You cannot perform that action right now. Please try again in a moment.
+#define FELLOWSHIP_CAMPFIRE_FAILED	806	//You can't create a campfire for some reason. Perhaps your wood is wet?
+#define FELLOWSHIP_NOT_MEMBER	4573	//You are not a member of a fellowship.
+#define FELLOWSHIP_NO_LONGER_MEMBER	4590	//You are no longer in a fellowship.
+#define FELLOWSHIP_DISBANDED	4591	//Your fellowship has disbanded.
+#define FELLOWSHIP_MEMBER_LEFT	4592	//%1 has left the fellowship.
+#define FELLOWSHIP_TARGET_COOLDOWN	6480	//Cannot add %1 to your fellowship for another %2 hours and %3 minutes.
+#define FELLOWSHIP_SELF_COOLDOWN	6481	//You cannot create or join a fellowship for another %1 hours and %2 minutes.
+#define FELLOWSHIP_NOT_ENOUGH_NEARBY	9196	//You do not have enough nearby fellowship members to create the camp.
+#define FELLOWSHIP_TARGET_IN_FELLOWSHIP	11010	//Target is already in a fellowship.
+#define FELLOWSHIP_FULL	11011	//Fellowship is full
+#define FELLOWSHIP_ADD_FAILED	11012	//Player failed to add.
+#define FELLOWSHIP_ALREADY_LEADER	11013	//That player is already the fellowship leader.
+#define FELLOWSHIP_CAMPSITE_UNREACHABLE	11016	//Your campsite is in an area that cannot be teleported to.
+#define FELLOWSHIP_NO_CAMPSITE	11017	//Your Fellowship does not have a campsite.

@@ -3379,6 +3379,56 @@ perl::array Perl_Client_GetKeyRing(Client* self)
 	return result;
 }
 
+bool Perl_Client_IsKeyRingUnlocked(Client* self, int ring) // @categories Inventory and Items
+{
+	return self->IsKeyRingUnlocked(ring);
+}
+
+void Perl_Client_UnlockKeyRing(Client* self, int ring) // @categories Inventory and Items
+{
+	self->SetKeyRingUnlocked(ring, true);
+}
+
+void Perl_Client_LockKeyRing(Client* self, int ring) // @categories Inventory and Items
+{
+	self->SetKeyRingUnlocked(ring, false);
+}
+
+bool Perl_Client_AddItemToKeyRing(Client* self, uint32 item_id) // @categories Inventory and Items
+{
+	return self->AddItemToKeyRing(item_id);
+}
+
+bool Perl_Client_RemoveItemFromKeyRing(Client* self, uint32 item_id) // @categories Inventory and Items
+{
+	return self->RemoveItemFromKeyRing(item_id);
+}
+
+perl::array Perl_Client_GetKeyRingItems(Client* self, int ring) // @categories Inventory and Items
+{
+	perl::array result;
+	for (const auto item_id : self->GetKeyRingItemIDs(ring)) {
+		result.push_back(item_id);
+	}
+
+	return result;
+}
+
+bool Perl_Client_AddItemToOverflow(Client* self, uint32 item_id) // @categories Inventory and Items
+{
+	return self->AddItemToOverflow(item_id);
+}
+
+bool Perl_Client_AddItemToOverflow(Client* self, uint32 item_id, int16 charges) // @categories Inventory and Items
+{
+	return self->AddItemToOverflow(item_id, charges);
+}
+
+int Perl_Client_GetItemOverflowCount(Client* self) // @categories Inventory and Items
+{
+	return self->GetItemOverflowCount();
+}
+
 void perl_register_client()
 {
 	perl::interpreter perl(PERL_GET_THX);
@@ -3707,6 +3757,15 @@ void perl_register_client()
 	package.add("IsTaskActivityActive", &Perl_Client_IsTaskActivityActive);
 	package.add("IsTaskCompleted", &Perl_Client_IsTaskCompleted);
 	package.add("KeyRingAdd", &Perl_Client_KeyRingAdd);
+	package.add("IsKeyRingUnlocked", &Perl_Client_IsKeyRingUnlocked);
+	package.add("UnlockKeyRing", &Perl_Client_UnlockKeyRing);
+	package.add("LockKeyRing", &Perl_Client_LockKeyRing);
+	package.add("AddItemToKeyRing", &Perl_Client_AddItemToKeyRing);
+	package.add("RemoveItemFromKeyRing", &Perl_Client_RemoveItemFromKeyRing);
+	package.add("GetKeyRingItems", &Perl_Client_GetKeyRingItems);
+	package.add("AddItemToOverflow", (bool(*)(Client*, uint32))&Perl_Client_AddItemToOverflow);
+	package.add("AddItemToOverflow", (bool(*)(Client*, uint32, int16))&Perl_Client_AddItemToOverflow);
+	package.add("GetItemOverflowCount", &Perl_Client_GetItemOverflowCount);
 	package.add("KeyRingCheck", &Perl_Client_KeyRingCheck);
 	package.add("KeyRingClear", &Perl_Client_KeyRingClear);
 	package.add("KeyRingList", (void(*)(Client*))&Perl_Client_KeyRingList);

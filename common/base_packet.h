@@ -22,6 +22,8 @@
 #include "common/types.h"
 
 #include <cstdio>
+#include <cstring>
+#include <string>
 
 class BasePacket
 {
@@ -37,6 +39,7 @@ public:
 	uint32 size = 0;
 	uint32 _wpos = 0;
 	uint32 _rpos = 0;
+	bool _read_error = false;
 	uint32 src_ip = 0;
 	uint32 dst_ip = 0;
 	uint16 src_port = 0;
@@ -72,29 +75,56 @@ public:
 	void WriteLengthString(uint32 len, const char *str) { *(uint32 *)(pBuffer + _wpos) = len; _wpos += sizeof(uint32); memcpy(pBuffer + _wpos, str, len); _wpos += len; }
 	void WriteData(const void *ptr, size_t n) { memcpy(pBuffer + _wpos, ptr, n); _wpos += n; }
 
-	uint8 ReadUInt8() { uint8 value = *(uint8 *)(pBuffer + _rpos); _rpos += sizeof(uint8); return value; }
+	// Cursor reads are bounds checked against size. A read that does not fit sets the read error flag, moves the
+	// cursor to the end and returns 0 (or an empty string).
+	uint8 ReadUInt8() { return ReadCursor<uint8>(); }
+	int8 ReadSInt8() { return ReadCursor<int8>(); }
+	uint16 ReadUInt16() { return ReadCursor<uint16>(); }
+	int16 ReadSInt16() { return ReadCursor<int16>(); }
+	uint32 ReadUInt32() { return ReadCursor<uint32>(); }
+	int32 ReadSInt32() { return ReadCursor<int32>(); }
+	uint64 ReadUInt64() { return ReadCursor<uint64>(); }
+	float ReadFloat() { return ReadCursor<float>(); }
 	uint8 ReadUInt8(uint32 Offset) const { uint8 value = *(uint8 *)(pBuffer + Offset); return value; }
-	int8 ReadSInt8() { int8 value = *(int8 *)(pBuffer + _rpos); _rpos += sizeof(int8); return value; }
 	int8 ReadSint8(uint32 Offset) const { int8 value = *(int8 *)(pBuffer + Offset); return value; }
-	uint16 ReadUInt16() { uint16 value = *(uint16 *)(pBuffer + _rpos); _rpos += sizeof(uint16); return value; }
 	uint16 ReadUInt16(uint32 Offset) const { uint16 value = *(uint16 *)(pBuffer + Offset); return value; }
-	int16 ReadSInt16() { int16 value = *(int16 *)(pBuffer + _rpos); _rpos += sizeof(int16); return value; }
 	int16 ReadSInt16(uint32 Offset) const { int16 value = *(int16 *)(pBuffer + Offset); return value; }
-	uint32 ReadUInt32() { uint32 value = *(uint32 *)(pBuffer + _rpos); _rpos += sizeof(uint32); return value; }
 	uint32 ReadUInt32(uint32 Offset) const { uint32 value = *(uint32 *)(pBuffer + Offset); return value; }
-	int32 ReadSInt32() { int32 value = *(int32 *)(pBuffer + _rpos); _rpos += sizeof(int32); return value; }
 	int32 ReadSint32(uint32 Offset) const { int32 value = *(int32 *)(pBuffer + Offset); return value; }
-	float ReadFloat() { float value = *(float *)(pBuffer + _rpos); _rpos += sizeof(float); return value; }
 	float ReadFloat(uint32 Offset) const { float value = *(float *)(pBuffer + Offset); return value; }
-	void ReadString(char *str) { uint32 len = static_cast<uint32>(strlen((char *)(pBuffer + _rpos))) + 1; memcpy(str, pBuffer + _rpos, len); _rpos += len; }
-	void ReadString(std::string &str) { str = reinterpret_cast<char *>(pBuffer + _rpos); _rpos += str.length() + 1; }
+	void ReadString(char *str);
+	void ReadString(std::string &str);
+	void ReadString(std::string &str, size_t max_len);
 	void ReadString(char *str, uint32 Offset, uint32 MaxLength) const;
-	void ReadLengthString(std::string& str) { uint32 len = *(uint32*)(pBuffer + _rpos); _rpos += sizeof(uint32); str.resize(len); memcpy(&str[0], pBuffer + _rpos, len); _rpos += len; }
+	void ReadLengthString(std::string &str);
+
+	bool ReadError() const { return _read_error; }
+	uint32 ReadRemaining() const { return (_read_error || _rpos >= size) ? 0 : size - _rpos; }
+	void ReadSkip(uint32 count);
 
 	uint32 GetWritePosition() { return _wpos; }
 	uint32 GetReadPosition() { return _rpos; }
 	void SetWritePosition(uint32 Newwpos) { _wpos = Newwpos; }
-	void SetReadPosition(uint32 Newrpos) { _rpos = Newrpos; }
+	void SetReadPosition(uint32 Newrpos) { _rpos = Newrpos; _read_error = false; }
+
+private:
+	template <typename T>
+	T ReadCursor()
+	{
+		if (_read_error || _rpos > size || size - _rpos < sizeof(T)) {
+			_read_error = true;
+			_rpos       = size;
+			return T{};
+		}
+
+		T value;
+		memcpy(&value, pBuffer + _rpos, sizeof(T));
+		_rpos += sizeof(T);
+		return value;
+	}
+
+	// returns the length of the NUL terminated string at the cursor, or false if it is unterminated
+	bool ReadCStringLength(size_t &len);
 };
 
 extern void DumpPacketHex(const BasePacket* app);

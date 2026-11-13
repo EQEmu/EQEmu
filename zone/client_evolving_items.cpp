@@ -91,7 +91,9 @@ void Client::ProcessEvolvingItem(const uint64 exp, const Mob *mob)
 	for (auto &[key, inst]: GetInv().GetWorn()) {
 		LogEvolveItemDetail(
 			"CharacterID <green>[{}] found equipped item ID <yellow>[{}]", CharacterID(), inst->GetID());
-		if (!inst->IsEvolving() || !inst->GetEvolveActivated()) {
+		// TOB has no activate toggle (Live dropped it), so equipped evolving items always progress there
+		const bool activated = inst->GetEvolveActivated() || ClientVersion() >= EQ::versions::ClientVersion::TOB;
+		if (!inst->IsEvolving() || !activated) {
 			LogEvolveItemDetail(
 				"CharacterID <green>[{}], item ID <yellow>[{}] not an evolving item.", CharacterID(), inst->GetID()
 			);

@@ -570,13 +570,18 @@ void Client::SendClearLeadershipAA()
 
 int Client::GroupLeadershipAAHealthEnhancement()
 {
+	// Live removed the leadership stat bonuses and the ToB client does not count them in its own HP/mana/regen
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB && !RuleB(Character, LeadershipStatBonusesForToB)) {
+		return 0;
+	}
+
 	if (IsRaidGrouped()) {
 		int bonus = 0;
 		Raid *raid = GetRaid();
 		if (!raid)
 			return 0;
 		uint32 group_id = raid->GetGroup(this);
-		if (group_id < 12 && raid->GroupCount(group_id) >= 3) {
+		if (group_id < MAX_RAID_GROUPS && raid->GroupCount(group_id) >= RuleI(Character, LeadershipMinGroupSize)) {
 			switch (raid->GetLeadershipAA(groupAAHealthEnhancement, group_id)) {
 			case 1:
 				bonus = 30;
@@ -607,10 +612,13 @@ int Client::GroupLeadershipAAHealthEnhancement()
 
 	Group *g = GetGroup();
 
-	if(!g || (g->GroupCount() < 3))
-		return 0;
+	int rank = 0;
+	if (g && g->GroupCount() >= RuleI(Character, LeadershipMinGroupSize))
+		rank = g->GetLeadershipAA(groupAAHealthEnhancement);
+	else if (!g)
+		rank = GetSoloLeadershipAA(groupAAHealthEnhancement);
 
-	switch(g->GetLeadershipAA(groupAAHealthEnhancement))
+	switch(rank)
 	{
 		case 0:
 			return 0;
@@ -627,13 +635,18 @@ int Client::GroupLeadershipAAHealthEnhancement()
 
 int Client::GroupLeadershipAAManaEnhancement()
 {
+	// Live removed the leadership stat bonuses and the ToB client does not count them in its own HP/mana/regen
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB && !RuleB(Character, LeadershipStatBonusesForToB)) {
+		return 0;
+	}
+
 	if (IsRaidGrouped()) {
 		int bonus = 0;
 		Raid *raid = GetRaid();
 		if (!raid)
 			return 0;
 		uint32 group_id = raid->GetGroup(this);
-		if (group_id < 12 && raid->GroupCount(group_id) >= 3) {
+		if (group_id < MAX_RAID_GROUPS && raid->GroupCount(group_id) >= RuleI(Character, LeadershipMinGroupSize)) {
 			switch (raid->GetLeadershipAA(groupAAManaEnhancement, group_id)) {
 			case 1:
 				bonus = 30;
@@ -664,10 +677,13 @@ int Client::GroupLeadershipAAManaEnhancement()
 
 	Group *g = GetGroup();
 
-	if(!g || (g->GroupCount() < 3))
-		return 0;
+	int rank = 0;
+	if (g && g->GroupCount() >= RuleI(Character, LeadershipMinGroupSize))
+		rank = g->GetLeadershipAA(groupAAManaEnhancement);
+	else if (!g)
+		rank = GetSoloLeadershipAA(groupAAManaEnhancement);
 
-	switch(g->GetLeadershipAA(groupAAManaEnhancement))
+	switch(rank)
 	{
 		case 0:
 			return 0;
@@ -684,13 +700,18 @@ int Client::GroupLeadershipAAManaEnhancement()
 
 int Client::GroupLeadershipAAHealthRegeneration()
 {
+	// Live removed the leadership stat bonuses and the ToB client does not count them in its own HP/mana/regen
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB && !RuleB(Character, LeadershipStatBonusesForToB)) {
+		return 0;
+	}
+
 	if (IsRaidGrouped()) {
 		int bonus = 0;
 		Raid *raid = GetRaid();
 		if (!raid)
 			return 0;
 		uint32 group_id = raid->GetGroup(this);
-		if (group_id < 12 && raid->GroupCount(group_id) >= 3) {
+		if (group_id < MAX_RAID_GROUPS && raid->GroupCount(group_id) >= RuleI(Character, LeadershipMinGroupSize)) {
 			switch (raid->GetLeadershipAA(groupAAHealthRegeneration, group_id)) {
 			case 1:
 				bonus = 4;
@@ -721,10 +742,13 @@ int Client::GroupLeadershipAAHealthRegeneration()
 
 	Group *g = GetGroup();
 
-	if(!g || (g->GroupCount() < 3))
-		return 0;
+	int rank = 0;
+	if (g && g->GroupCount() >= RuleI(Character, LeadershipMinGroupSize))
+		rank = g->GetLeadershipAA(groupAAHealthRegeneration);
+	else if (!g)
+		rank = GetSoloLeadershipAA(groupAAHealthRegeneration);
 
-	switch(g->GetLeadershipAA(groupAAHealthRegeneration))
+	switch(rank)
 	{
 		case 0:
 			return 0;
@@ -741,13 +765,18 @@ int Client::GroupLeadershipAAHealthRegeneration()
 
 int Client::GroupLeadershipAAOffenseEnhancement()
 {
+	// Live removed the leadership stat bonuses and the ToB client does not count them in its own HP/mana/regen
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB && !RuleB(Character, LeadershipStatBonusesForToB)) {
+		return 0;
+	}
+
 	if (IsRaidGrouped()) {
 		int bonus = 0;
 		Raid *raid = GetRaid();
 		if (!raid)
 			return 0;
 		uint32 group_id = raid->GetGroup(this);
-		if (group_id < 12 && raid->GroupCount(group_id) >= 3) {
+		if (group_id < MAX_RAID_GROUPS && raid->GroupCount(group_id) >= RuleI(Character, LeadershipMinGroupSize)) {
 			switch (raid->GetLeadershipAA(groupAAOffenseEnhancement, group_id)) {
 			case 1:
 				bonus = 10;
@@ -790,10 +819,13 @@ int Client::GroupLeadershipAAOffenseEnhancement()
 
 	Group *g = GetGroup();
 
-	if(!g || (g->GroupCount() < 3))
-		return 0;
+	int rank = 0;
+	if (g && g->GroupCount() >= RuleI(Character, LeadershipMinGroupSize))
+		rank = g->GetLeadershipAA(groupAAOffenseEnhancement);
+	else if (!g)
+		rank = GetSoloLeadershipAA(groupAAOffenseEnhancement);
 
-	switch(g->GetLeadershipAA(groupAAOffenseEnhancement))
+	switch(rank)
 	{
 		case 0:
 			return 0;
@@ -811,22 +843,70 @@ int Client::GroupLeadershipAAOffenseEnhancement()
 	return 0;
 }
 
-void Client::InspectBuffs(Client* Inspector, int Rank)
+// Leadership gated /inspectbuffs on the current target; only_mine is honoured by clients that can show it
+void Client::InspectTargetBuffs(bool only_mine)
+{
+	Mob *Target = GetTarget();
+
+	if (!Target || !Target->IsClient())
+		return;
+
+	if (IsRaidGrouped()) {
+		Raid *raid = GetRaid();
+		if (!raid)
+			return;
+		uint32 group_id = raid->GetGroup(this);
+		if (group_id >= MAX_RAID_GROUPS || raid->GroupCount(group_id) < RuleI(Character, LeadershipMinGroupSize))
+			return;
+		Target->CastToClient()->InspectBuffs(this, raid->GetLeadershipAA(groupAAInspectBuffs, group_id), only_mine);
+		return;
+	}
+
+	Group *g = GetGroup();
+
+	if (!g) {
+		if (const int rank = GetSoloLeadershipAA(groupAAInspectBuffs)) {
+			Target->CastToClient()->InspectBuffs(this, rank, only_mine);
+		}
+		return;
+	}
+
+	if (g->GroupCount() < RuleI(Character, LeadershipMinGroupSize))
+		return;
+
+	Target->CastToClient()->InspectBuffs(this, g->GetLeadershipAA(groupAAInspectBuffs), only_mine);
+}
+
+void Client::InspectBuffs(Client* Inspector, int Rank, bool only_mine)
 {
 	// At some point the removed the restriction of being a group member for this to work
 	// not sure when, but the way it's coded now, it wouldn't work with mobs.
 	if (!Inspector || Rank == 0)
 		return;
 
-	auto outapp = new EQApplicationPacket(OP_InspectBuffs, sizeof(InspectBuffs_Struct));
+	// TOB+ also shows the target, who cast each buff, and has the "mine" filter
+	const bool tob = Inspector->ClientVersion() >= EQ::versions::ClientVersion::TOB;
+	if (!tob)
+		only_mine = false;
+
+	auto outapp = new EQApplicationPacket(OP_InspectBuffs, tob ? sizeof(InspectBuffsDetailed_Struct) : sizeof(InspectBuffs_Struct));
 	InspectBuffs_Struct *ib = (InspectBuffs_Struct *)outapp->pBuffer;
+	InspectBuffsDetailed_Struct *ext = tob ? (InspectBuffsDetailed_Struct *)outapp->pBuffer : nullptr;
+	if (ext) {
+		ext->target_id = GetID();
+		ext->only_mine = only_mine ? 1 : 0;
+	}
 
 	uint32 buff_count = GetMaxTotalSlots();
 	uint32 packet_index = 0;
-	for (uint32 i = 0; i < buff_count; i++) {
+	for (uint32 i = 0; i < buff_count && packet_index < BUFF_COUNT; i++) {
 		if (!IsValidSpell(buffs[i].spellid))
 			continue;
+		if (only_mine && buffs[i].casterid != Inspector->GetID())
+			continue;
 		ib->spell_id[packet_index] = buffs[i].spellid;
+		if (ext)
+			ext->caster_id[packet_index] = buffs[i].casterid;
 		if (Rank > 1)
 			ib->tics_remaining[packet_index] = spells[buffs[i].spellid].buff_duration_formula == DF_Permanent ? 0xFFFFFFFF : buffs[i].ticsremaining;
 		packet_index++;
@@ -2149,6 +2229,88 @@ void Client::AutoGrantAAPoints() {
 		}
 	}
 
+	SendClearLeadershipAA();
+	SendClearPlayerAA();
+	SendAlternateAdvancementTable();
+	SendAlternateAdvancementPoints();
+	SendAlternateAdvancementStats();
+}
+
+namespace {
+	// Title string ids (dbstr type 1) of the first rank of each veteran reward AA. They are used instead of
+	// aa_ability ids because those can differ between databases.
+	constexpr int VeteranTitleLessonOfTheDevoted      = 1371;
+	constexpr int VeteranTitleInfusionOfTheFaithful   = 1372;
+	constexpr int VeteranTitleChaoticJester           = 1373;
+	constexpr int VeteranTitleExpedientRecovery       = 1374;
+	constexpr int VeteranTitleSteadfastServant        = 1375;
+	constexpr int VeteranTitleStaunchRecovery         = 1376;
+	constexpr int VeteranTitleIntensityOfTheResolute  = 1377;
+	constexpr int VeteranTitleThroneOfHeroes          = 4665;
+	constexpr int VeteranTitleArmorOfExperience       = 1037;
+
+	constexpr int SecondsPerYear = 365 * 24 * 60 * 60;
+}
+
+// Veteran reward AAs by account age, keyed by the title string of their first rank so the
+// aa_ability ids can differ between databases. Years are Live's reward schedule.
+void Client::GrantVeteranAAs()
+{
+	if (!RuleB(AA, GrantVeteranAAs)) {
+		return;
+	}
+
+	static const std::map<int, int> veteran_aa_years = {
+		{ VeteranTitleLessonOfTheDevoted, 1 },
+		{ VeteranTitleInfusionOfTheFaithful, 2 },
+		{ VeteranTitleChaoticJester, 3 },
+		{ VeteranTitleExpedientRecovery, 4 },
+		{ VeteranTitleSteadfastServant, 5 },
+		{ VeteranTitleStaunchRecovery, 6 },
+		{ VeteranTitleIntensityOfTheResolute, 7 },
+		{ VeteranTitleThroneOfHeroes, 8 },
+		{ VeteranTitleArmorOfExperience, 9 },
+	};
+
+	int years = RuleI(AA, VeteranAAYearsOverride);
+	if (years < 0) {
+		years = GetAccountAge() / SecondsPerYear;
+	}
+
+	bool granted = false;
+	for (auto &iter : zone->aa_abilities) {
+		auto ability = iter.second.get();
+		auto rank    = ability ? ability->first : nullptr;
+		if (!rank || !ability->grant_only) {
+			continue;
+		}
+
+		auto v = veteran_aa_years.find(rank->title_sid);
+		if (v == veteran_aa_years.end() || v->second > years) {
+			continue;
+		}
+
+		if (!CanUseAlternateAdvancementRank(rank) || HasAlreadyPurchasedRank(rank)) {
+			continue;
+		}
+
+		FinishAlternateAdvancementPurchase(rank, true, false);
+		MessageString(
+			Chat::Yellow,
+			AA_GAIN_ABILITY,
+			std::to_string(rank->title_sid).c_str(),
+			"0",
+			std::to_string(AA_POINTS).c_str()
+		);
+
+		granted = true;
+	}
+
+	if (!granted) {
+		return;
+	}
+
+	SaveAA();
 	SendClearLeadershipAA();
 	SendClearPlayerAA();
 	SendAlternateAdvancementTable();

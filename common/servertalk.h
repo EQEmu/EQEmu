@@ -130,6 +130,11 @@
 #define ServerOP_GuildSendGuildList				  0x007E
 #define ServerOP_GuildMembersList                 0x007F
 
+#define ServerOP_FellowshipAction                 0x0080
+#define ServerOP_FellowshipRefresh                0x0081
+#define ServerOP_FellowshipUpdate                 0x0082
+#define ServerOP_FellowshipCampsite               0x0083
+
 #define ServerOP_ParcelDelivery                   0x0090
 #define ServerOP_ParcelPrune                      0x0091
 
@@ -1792,6 +1797,61 @@ struct BazaarPurchaseMessaging_Struct {
 	uint32           buyer_id;
 	uint32           item_quantity_available;
 	uint32           id;
+};
+
+struct ServerFellowshipAction_Struct {
+	uint32 action;              // FellowshipAction or FellowshipServerAction
+	uint32 character_id;        // the actor
+	uint32 target_character_id;
+	uint32 fellowship_id;       // the actor's fellowship as the zone knows it
+	uint32 campfire_type;
+	uint16 zone_id;             // create campsite: the leader's position
+	uint16 instance_id;
+	float  x;
+	float  y;
+	float  z;
+	float  heading;
+	char   motd[1024];
+};
+
+struct ServerFellowshipRefreshMember_Struct {
+	uint32 character_id;
+	uint32 joined_at;
+	uint8  is_exp_sharing;
+};
+
+// the whole fellowship as world has it after a change; zones replace their copy with it
+struct ServerFellowshipRefresh_Struct {
+	uint32                               fellowship_id;
+	uint8                                deleted;
+	uint32                               leader_id;
+	uint32                               created_at;
+	char                                 motd[1024];
+	uint32                               member_count;
+	ServerFellowshipRefreshMember_Struct members[12];
+	FellowshipCampsite_Struct            campsite;
+	float                                campsite_heading;
+	uint32                               joined_character_id; // its zone drops the cached rejoin bucket
+	uint32                               removed_count;
+	uint32                               removed_character_ids[12];
+};
+
+struct ServerFellowshipUpdate_Struct {
+	uint32                  fellowship_id;   // 0 = string only, no roster
+	uint32                  string_id;       // sent before the roster, 0 = none
+	uint32                  string_type;
+	char                    string_argument[64];
+	uint32                  recipient_count;
+	uint32                  recipients[12];
+	FellowshipUpdate_Struct roster;
+};
+
+struct ServerFellowshipCampsite_Struct {
+	uint32                    fellowship_id;
+	uint8                     removed;
+	FellowshipCampsite_Struct campsite;
+	float                     campsite_heading;
+	char                      leader_name[64];
 };
 
 #pragma pack(pop)

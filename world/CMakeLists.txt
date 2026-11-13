@@ -28,6 +28,7 @@ set(world_sources
 	dynamic_zone_manager.cpp
 	eqemu_api_world_data_service.cpp
 	eql_config.cpp
+	fellowship_manager.cpp
 	launcher_link.cpp
 	launcher_list.cpp
 	lfplist.cpp
@@ -63,6 +64,7 @@ set(world_headers
 	dynamic_zone_manager.h
 	eqemu_api_world_data_service.h
 	eql_config.h
+	fellowship_manager.h
 	launcher_link.h
 	launcher_list.h
 	lfplist.h

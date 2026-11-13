@@ -64,6 +64,8 @@ namespace TOB
 				typeViewModHeroForgeKeyRingItems,
 				typeTeleportationKeyRingItems,
 				typeViewModTeleportationKeyRingItems,
+				typeActivatedKeyRingItems,
+				typeViewModActivatedKeyRingItems,
 				typeOverflow,
 				typeDragonHoard,
 				typeTradeskillDepot,
@@ -105,6 +107,14 @@ namespace TOB
 		const int16 TYPE_BEGIN = typePossessions;
 		const int16 TYPE_END = typeOther;
 		const int16 TYPE_COUNT = (TYPE_END - TYPE_BEGIN) + 1;
+
+		// the six key rings use the odd types 27..37, the even ones are their one-slot "stat" containers
+		inline bool IsKeyRingType(int16 inv_type) {
+			return inv_type >= typeMountKeyRingItems && inv_type <= typeActivatedKeyRingItems &&
+				((inv_type - typeMountKeyRingItems) % 2) == 0;
+		}
+		inline int KeyRingIndexFromType(int16 inv_type) { return (inv_type - typeMountKeyRingItems) / 2; }
+		inline int16 KeyRingTypeFromIndex(int ring) { return static_cast<int16>(typeMountKeyRingItems + ring * 2); }
 
 		int16 GetInvTypeSize(int16 inv_type);
 		const char* GetInvTypeName(int16 inv_type);
@@ -161,6 +171,10 @@ namespace TOB
 		using namespace enum_;
 
 		const int16 SLOT_INVALID = IINVALID;
+		// ToB has slots the server doesn't: general 11/12, shared bank past the second slot, and the bags
+		// in them. SLOT_INVALID would make Client::SwapItem destroy the cursor item, so moves into them are
+		// mapped to this value instead and rejected (the item stays on the cursor server-side).
+		const uint32 SLOT_REJECT = 0xFFFFFFFE;
 		const int16 SLOT_BEGIN = INULL;
 
 		const int16 POSSESSIONS_BEGIN = slotCharm;
@@ -317,7 +331,7 @@ namespace TOB
 			AltAbility = 0xFF
 		};
 
-		const int SPELL_ID_MAX = 71999;
+		const int SPELL_ID_MAX = 75000;
 		const int SPELLBOOK_SIZE = 1120;
 		const int SPELL_GEM_COUNT = static_cast<uint32>(CastingSlot::MaxGems);
 		const int SPELL_GEM_RECAST_TIMER = 15;
@@ -326,6 +340,11 @@ namespace TOB
 		const int SHORT_BUFFS = 30;
 		const int DISC_BUFFS = 1;
 		const int TOTAL_BUFFS = LONG_BUFFS + SHORT_BUFFS + DISC_BUFFS;
+		// The ToB client's affect array is 62 long + 30 short + 1 disc = 93 slots; the song window only
+		// shows slots 62..91. The server keeps LONG_BUFFS (42) as its
+		// own cap; these are only used to translate slot numbers on the wire.
+		const int CLIENT_LONG_BUFFS = 62;
+		const int CLIENT_SHORT_BUFFS = 30;
 		const int NPC_BUFFS = 400;
 		const int PET_BUFFS = NPC_BUFFS;
 		const int MERC_BUFFS = LONG_BUFFS;
