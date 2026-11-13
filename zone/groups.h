@@ -28,6 +28,9 @@ class Mob;
 
 #define MAX_MARKED_NPCS 3
 
+// OP_GroupRoles role number of the group NPC marker (clients without OP_DelegateAbility delegate it here)
+constexpr uint32 GroupRoleMarkNPC = 4;
+
 enum {
 	RoleAssist = 1,
 	RoleTank   = 2,

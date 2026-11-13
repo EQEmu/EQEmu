@@ -1481,12 +1481,13 @@ namespace TOB
 
 	ENCODE(OP_GroupCancelInvite)
 	{
+		constexpr uint16 GroupCancelUnknown160Value = 0x0100; // the client sends this value in the same field
 		ENCODE_LENGTH_EXACT(GroupCancel_Struct);
 		SETUP_DIRECT_ENCODE(GroupCancel_Struct, structs::GroupCancel_Struct);
 
 		memcpy(eq->name1, emu->name1, sizeof(eq->name1));
 		memcpy(eq->name2, emu->name2, sizeof(eq->name2));
-		eq->unknown160 = 0x0100;
+		eq->unknown160 = GroupCancelUnknown160Value;
 		OUT(toggle);
 
 		FINISH_ENCODE();
@@ -2933,12 +2934,14 @@ namespace TOB
 			};
 
 			*/
+			constexpr float  BardModifierScale = 10.0f;       // Buffs_Struct::bard_modifier is in tenths (10 = 1.0)
+			constexpr uint32 NoSpellId         = 0xFFFFFFFF;  // spell id of an empty affect
 			const bool has_buff = i < EQ::spells::LONG_BUFFS && i < static_cast<int>(BUFF_COUNT) &&
 				emu->buffs[i].spellid != 0 && emu->buffs[i].spellid != SPELL_UNKNOWN; // no IsValidSpell: world links this file without spells[]
 			if (has_buff) {
 				const auto& buff = emu->buffs[i];
 				// the client multiplies most effect values by this; 0 would zero the buff
-				out.WriteFloat(buff.bard_modifier > 0 ? static_cast<float>(buff.bard_modifier) / 10.f : 1.0f);
+				out.WriteFloat(buff.bard_modifier > 0 ? static_cast<float>(buff.bard_modifier) / BardModifierScale : 1.0f);
 				out.WriteUInt32(buff.player_id);
 				out.WriteUInt16(static_cast<uint16>(RuleI(World, Id)));
 				out.WriteUInt16(0);
@@ -2956,7 +2959,7 @@ namespace TOB
 				out.WriteUInt32(0);
 				out.WriteUInt32(0);
 				out.WriteUInt8(0);
-				out.WriteUInt32(0xFFFFFFFF);
+				out.WriteUInt32(NoSpellId);
 				out.WriteUInt32(0);
 				out.WriteUInt32(0);
 				out.WriteUInt32(0);
@@ -9405,11 +9408,12 @@ namespace TOB
 		// ToB: lenstr name, u32 unknown, u8 claim, u32 n, n x {u32 claim_id, u32 count}, u32 action  (same object as
 		// VetClaimReply). unknown is not the claim id (Live sends 0): the claim is pairs[0]; n == 0 is a list refresh.
 		constexpr size_t VeteranClaimPairSize = 2 * sizeof(uint32); // {u32 claim_id, u32 count}
+		constexpr uint32 NoVeteranClaim       = 0xFFFFFFFF;         // claim id when the request names no claim
 
 		const uint32 size = __packet->size;
 		__packet->SetReadPosition(0);
 
-		uint32 claim_id = 0xFFFFFFFF, action = 0;
+		uint32 claim_id = NoVeteranClaim, action = 0;
 		std::string name;
 		__packet->ReadLengthString(name);
 		if (name.size() > TOB_NAME_MAX_CHARS) {
@@ -12135,7 +12139,9 @@ std::unique_ptr<EQApplicationPacket> BuffComponent::BuffRemovePrelude(Mob* mob, 
 	if (buff.spellid <= 1 || slot >= mob->GetMaxTotalSlots())
 		return nullptr;
 
-	SerializeBuffer buffer(13 + 17 + strlen(buff.caster_name));
+	// the bytes of the packet apart from the caster name (and its terminator, counted here)
+	constexpr size_t RefreshBuffsFixedSize = 30;
+	SerializeBuffer buffer(RefreshBuffsFixedSize + strlen(buff.caster_name));
 
 	buffer.WriteUInt32(mob->GetID());
 	buffer.WriteInt32(0);								// tic timer must be 0, the client adds it to the time left

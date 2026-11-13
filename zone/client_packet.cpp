@@ -7455,6 +7455,9 @@ void Client::Handle_OP_GroupAcknowledge(const EQApplicationPacket *app)
 	return;
 }
 
+// GroupCancel_Struct::toggle when the invitee declined the invite
+constexpr uint8 GroupCancelDeclined = 3;
+
 void Client::Handle_OP_GroupCancelInvite(const EQApplicationPacket *app)
 {
 	if (app->size != sizeof(GroupCancel_Struct)) {
@@ -7481,7 +7484,7 @@ void Client::Handle_OP_GroupCancelInvite(const EQApplicationPacket *app)
 
 	// ToB sends this on its own (toggle 1) for every repeat invite while one is pending,
 	// so only treat an actual decline as a reason to clear group state
-	const bool tob_ignore = ClientVersion() >= EQ::versions::ClientVersion::TOB && (gf->toggle != 3 || GetGroup());
+	const bool tob_ignore = ClientVersion() >= EQ::versions::ClientVersion::TOB && (gf->toggle != GroupCancelDeclined || GetGroup());
 
 	if (!GetMerc() && !tob_ignore)
 	{
@@ -7924,7 +7927,7 @@ void Client::Handle_OP_GroupRoles(const EQApplicationPacket *app)
 			g->UnDelegatePuller(grs->Name1, grs->Toggle);
 		break;
 	}
-	case 4: // Mark NPC (TOB+ delegates it here; older clients use OP_DelegateAbility)
+	case GroupRoleMarkNPC: // clients without OP_DelegateAbility delegate marking here
 	{
 		if (!g->IsLeader(this) || ClientVersion() < EQ::versions::ClientVersion::TOB) {
 			break;

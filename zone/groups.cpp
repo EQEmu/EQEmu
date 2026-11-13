@@ -2079,14 +2079,14 @@ void Group::DelegateMarkNPC(const char *NewNPCMarkerName)
 		LogError("Unable to set group mark npc: [{}]\n", results.ErrorMessage().c_str());
 }
 
-// TOB+ has no OP_DelegateAbility; the group NPC marker is group role 4
+// Clients without OP_DelegateAbility delegate the group NPC marker as a group role
 static void SendMarkNPCRole(Client *c, const char *member_name, const std::string &leader_name, uint8 toggle)
 {
 	auto outapp = new EQApplicationPacket(OP_GroupRoles, sizeof(GroupRole_Struct));
 	auto grs = (GroupRole_Struct *) outapp->pBuffer;
 	strn0cpy(grs->Name1, member_name, sizeof(grs->Name1));
 	strn0cpy(grs->Name2, leader_name.c_str(), sizeof(grs->Name2));
-	grs->RoleNumber = 4;
+	grs->RoleNumber = GroupRoleMarkNPC;
 	grs->Toggle = toggle;
 	c->QueuePacket(outapp);
 	safe_delete(outapp);

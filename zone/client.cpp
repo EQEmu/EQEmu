@@ -12407,9 +12407,11 @@ void Client::SendPathToLocation(const glm::vec3 &destination, float destination_
 	SendPathPacket(points);
 }
 
-// TOB+ Find window: one "Zone Connection" row per zone point this client can use
+// Find window: one "Zone Connection" row per zone point this client can use
 void Client::SendFindZoneConnections()
 {
+	constexpr size_t FindZoneConnectionsMaxRows = 200; // caps the packet size
+	constexpr float  ZonePointAnyCoordinate     = 999999.0f; // zone_points x/y value meaning any position
 	if (ClientVersion() < EQ::versions::ClientVersion::TOB || !zone) {
 		return;
 	}
@@ -12418,15 +12420,15 @@ void Client::SendFindZoneConnections()
 
 	LinkedListIterator<ZonePoint *> iterator(zone->zone_point_list);
 	iterator.Reset();
-	while (iterator.MoreElements() && rows.size() < 200) {
+	while (iterator.MoreElements() && rows.size() < FindZoneConnectionsMaxRows) {
 		ZonePoint *zp = iterator.GetData();
 		iterator.Advance();
 		if (!zp || !(zp->client_version_mask & ClientVersionBit()) || !zp->target_zone_id) {
 			continue;
 		}
 
-		// 999999 means "anywhere on this axis", so there is no spot to path to
-		if (std::fabs(zp->x) >= 999999.0f || std::fabs(zp->y) >= 999999.0f) {
+		// the "anywhere on this axis" value, so there is no spot to path to
+		if (std::fabs(zp->x) >= ZonePointAnyCoordinate || std::fabs(zp->y) >= ZonePointAnyCoordinate) {
 			continue;
 		}
 
