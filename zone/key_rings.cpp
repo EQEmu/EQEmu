@@ -32,9 +32,9 @@
 // {ring type, index} to the cursor, lists the rings from OP_CharInventory and uses an item with
 // OP_ItemVerifyRequest on its ring slot.
 //
-// TODO: Stat Mount / Stat Illusion / Stat Familiar. The packet the window sends to pick the stat item is not
-// known yet (needs a Live capture). Until then the stat containers are refused in DECODE(OP_MoveItem) and the
-// profile sends no selection.
+// Unfinished: the Stat Mount / Stat Illusion / Stat Familiar selection is not implemented. The packet the
+// window sends to pick the stat item is not known yet (needs a Live capture). Until then the stat containers
+// are refused in DECODE(OP_MoveItem) and the profile sends no selection.
 
 namespace {
 	const char *KEY_RING_NAMES[EQ::invslot::KEYRING_COUNT] = {

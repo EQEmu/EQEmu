@@ -3143,8 +3143,9 @@ namespace TOB
 		out.WriteUInt32(0);
 
 		//ItemIndex keyring_item_index[6];
-		// TODO: Stat Mount / Stat Illusion / Stat Familiar. This is the selected stat item per ring, but the
-		// packet the Key Ring window sends to pick one is not known yet (needs a Live capture), so send none.
+		// Unfinished: Stat Mount / Stat Illusion / Stat Familiar are not implemented. This is the selected stat
+		// item per ring, but the packet the Key Ring window sends to pick one is not known yet (needs a Live
+		// capture), so every ring reports none (-1).
 		for (int i = 0; i < EQ::invslot::KEYRING_COUNT; ++i) {
 			/*
 			s16 slot1;
