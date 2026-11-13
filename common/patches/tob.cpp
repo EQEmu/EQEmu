@@ -110,68 +110,6 @@ namespace TOB
 		strn0cpy(dst, src, std::min(N, M));
 	}
 
-	// Bounded reader over a packet buffer. Never reads past `n`. After the first failed read `ok` is false
-	// and every later read returns 0 / "" (the bool overloads return false).
-	struct TOBBoundedReader {
-		const uint8 *p;
-		size_t       n;
-		size_t       pos = 0;
-		bool         ok  = true;
-
-		TOBBoundedReader(const uint8 *buf, size_t size) : p(buf), n(buf ? size : 0) {}
-
-		size_t       remaining() const { return n - pos; }
-		const uint8 *cursor() const { return p + pos; }
-
-		void skip(size_t count)
-		{
-			if (!ok || remaining() < count) { ok = false; pos = n; return; }
-			pos += count;
-		}
-
-		template <typename T>
-		T value()
-		{
-			if (!ok || remaining() < sizeof(T)) { ok = false; return T{}; }
-			T v;
-			memcpy(&v, p + pos, sizeof(v));
-			pos += sizeof(v);
-			return v;
-		}
-
-		uint8  u8()  { return value<uint8>(); }
-		uint16 u16() { return value<uint16>(); }
-		uint32 u32() { return value<uint32>(); }
-		bool   u8(uint8 &out)   { out = u8();  return ok; }
-		bool   u16(uint16 &out) { out = u16(); return ok; }
-		bool   u32(uint32 &out) { out = u32(); return ok; }
-
-		// NUL-terminated string, truncated to max_len characters (the full string is still consumed)
-		std::string cstr(size_t max_len)
-		{
-			if (!ok || pos >= n) { ok = false; return {}; }
-			const char *s = reinterpret_cast<const char *>(p + pos);
-			size_t len = strnlen(s, n - pos);
-			if (len == n - pos) { ok = false; pos = n; return {}; } // unterminated
-			pos += len + 1;
-			return std::string(s, std::min(len, max_len));
-		}
-
-		bool cstr(std::string &out, size_t max_len)
-		{
-			out = cstr(max_len);
-			return ok;
-		}
-
-		// NUL-terminated string into a fixed char array (always terminated, truncated to dst_size - 1)
-		bool cstr(char *dst, size_t dst_size)
-		{
-			std::string s = cstr(dst_size - 1);
-			strn0cpy(dst, s.c_str(), dst_size);
-			return ok;
-		}
-	};
-
 	void Register(EQStreamIdentifier& into)
 	{
 		//create our opcode manager if we havent already
@@ -4418,10 +4356,10 @@ namespace TOB
 		EQApplicationPacket *in = *p;
 		*p = nullptr;
 
-		TOBBoundedReader r(in->pBuffer, in->size);
-		uint32 task_index = r.u32();
-		uint32 count      = r.u32();
-		if (!r.ok || task_index > 49) { // client ignores index >= 50
+		in->SetReadPosition(0);
+		uint32 task_index = in->ReadUInt32();
+		uint32 count      = in->ReadUInt32();
+		if (in->ReadError() || task_index > 49) { // client ignores index >= 50
 			delete in;
 			return;
 		}
@@ -4438,16 +4376,16 @@ namespace TOB
 		acts.reserve(count);
 		for (uint32 i = 0; i < count; ++i) {
 			Act a;
-			a.type   = r.u32();
-			a.target = r.cstr(63);    // client cap 0x3f
-			a.items  = r.cstr(1023);
-			a.goal   = r.u32();
-			r.u32();
-			r.u32();
-			uint32 zone_id = r.u32();
-			r.u32();
-			a.desc = r.cstr(127);     // client cap 0x7f
-			if (!r.ok) {
+			a.type = in->ReadUInt32();
+			in->ReadString(a.target, 63);    // client cap 0x3f
+			in->ReadString(a.items, 1023);
+			a.goal = in->ReadUInt32();
+			in->ReadUInt32();
+			in->ReadUInt32();
+			uint32 zone_id = in->ReadUInt32();
+			in->ReadUInt32();
+			in->ReadString(a.desc, 127);     // client cap 0x7f
+			if (in->ReadError()) {
 				break;                // truncated emu packet: send the complete activities only
 			}
 			a.zone = std::to_string(zone_id);
@@ -4485,9 +4423,9 @@ namespace TOB
 		EQApplicationPacket *in = *p;
 		*p = nullptr;
 
-		TOBBoundedReader r(in->pBuffer, in->size);
-		uint32 count = r.u32();
-		if (!r.ok) {
+		in->SetReadPosition(0);
+		uint32 count = in->ReadUInt32();
+		if (in->ReadError()) {
 			delete in;
 			return;
 		}
@@ -4501,10 +4439,10 @@ namespace TOB
 		tasks.reserve(std::min<uint32>(count, 50));
 		for (uint32 i = 0; i < count && tasks.size() < 50; ++i) {
 			Done t;
-			t.task_id        = r.u32();
-			t.title          = r.cstr(63);
-			t.completed_time = r.u32();
-			if (!r.ok) {
+			t.task_id = in->ReadUInt32();
+			in->ReadString(t.title, 63);
+			t.completed_time = in->ReadUInt32();
+			if (in->ReadError()) {
 				break;
 			}
 			tasks.push_back(std::move(t));
@@ -5287,19 +5225,20 @@ namespace TOB
 		case 3: {   // player search results. Server (= RoF2 wire): u32 3, u32 ?, u32 count, entries.
 			struct Entry { std::string name, comment; uint32 level, cls, aa, tz; };
 			std::vector<Entry> entries;
-			TOBBoundedReader r(src, size);
-			uint32 count = 0;
-			r.skip(8);
-			if (r.u32(count)) {
+			in->SetReadPosition(0);
+			in->ReadSkip(8);
+			uint32 count = in->ReadUInt32();
+			if (!in->ReadError()) {
 				count = std::min<uint32>(count, 1000);
 				for (uint32 i = 0; i < count; ++i) {
 					Entry e{};
-					if (!r.cstr(e.name, 63) ||          // client strcpy's into 0x40
-					    !r.u32(e.level) ||
-					    !r.u32(e.cls) ||
-					    !r.u32(e.aa) ||
-					    !r.u32(e.tz) ||
-					    !r.cstr(e.comment, 255)) {    // client stages through 4 KB
+					in->ReadString(e.name, 63);          // client strcpy's into 0x40
+					e.level = in->ReadUInt32();
+					e.cls   = in->ReadUInt32();
+					e.aa    = in->ReadUInt32();
+					e.tz    = in->ReadUInt32();
+					in->ReadString(e.comment, 255);      // client stages through 4 KB
+					if (in->ReadError()) {
 						break;
 					}
 					if (e.cls > 17) { e.cls = 0; }                           // class-name table has 18 entries
@@ -5323,16 +5262,17 @@ namespace TOB
 		case 4: {   // guild search results: entries {cstr name, u32 timezone, cstr comment}
 			struct Entry { std::string name, comment; uint32 tz; };
 			std::vector<Entry> entries;
-			TOBBoundedReader r(src, size);
-			uint32 count = 0;
-			r.skip(8);
-			if (r.u32(count)) {
+			in->SetReadPosition(0);
+			in->ReadSkip(8);
+			uint32 count = in->ReadUInt32();
+			if (!in->ReadError()) {
 				count = std::min<uint32>(count, 1000);
 				for (uint32 i = 0; i < count; ++i) {
 					Entry e{};
-					if (!r.cstr(e.name, 63) ||
-					    !r.u32(e.tz) ||
-					    !r.cstr(e.comment, 255)) {
+					in->ReadString(e.name, 63);
+					e.tz = in->ReadUInt32();
+					in->ReadString(e.comment, 255);
+					if (in->ReadError()) {
 						break;
 					}
 					// ToB indexes the timezone-name table with this value WITHOUT a range check
@@ -5509,23 +5449,24 @@ namespace TOB
 	// Optional trailer the zone appends after the tribute name's NUL for ToB clients (zone/tribute.cpp):
 	//   uint32 magic = EQ::TRIBUTE_ITEMS_TRAILER_MAGIC; uint32 count; EQ::InternalSerializedItem_Struct items[count];
 	// The instance pointers are only valid because the zone's QueuePacket encodes synchronously.
-	static std::vector<EQ::InternalSerializedItem_Struct> TOBReadTributeItemTrailer(const uint8 *buf, size_t size, size_t name_off)
+	static std::vector<EQ::InternalSerializedItem_Struct> TOBReadTributeItemTrailer(EQApplicationPacket *in, size_t name_off)
 	{
 		std::vector<EQ::InternalSerializedItem_Struct> items;
-		if (size <= name_off) {
+		if (in->size <= name_off) {
 			return items;
 		}
-		auto nul = static_cast<const uint8 *>(memchr(buf + name_off, 0, size - name_off));
+		auto nul = static_cast<const uint8 *>(memchr(in->pBuffer + name_off, 0, in->size - name_off));
 		if (!nul) {
 			return items;
 		}
-		TOBBoundedReader r(nul + 1, size - static_cast<size_t>(nul + 1 - buf));
-		uint32 magic = 0, n = 0;
-		if (r.u32(magic) && magic == EQ::TRIBUTE_ITEMS_TRAILER_MAGIC &&
-		    r.u32(n) && n <= MAX_TRIBUTE_TIERS &&
-		    r.remaining() >= n * sizeof(EQ::InternalSerializedItem_Struct)) {
+		in->SetReadPosition(static_cast<uint32>(nul + 1 - in->pBuffer));
+		const uint32 magic = in->ReadUInt32();
+		const uint32 n     = in->ReadUInt32();
+		if (!in->ReadError() && magic == EQ::TRIBUTE_ITEMS_TRAILER_MAGIC &&
+		    n <= MAX_TRIBUTE_TIERS &&
+		    in->ReadRemaining() >= n * sizeof(EQ::InternalSerializedItem_Struct)) {
 			items.resize(n);
-			memcpy(items.data(), r.cursor(), n * sizeof(EQ::InternalSerializedItem_Struct)); // unaligned-safe
+			memcpy(items.data(), in->pBuffer + in->GetReadPosition(), n * sizeof(EQ::InternalSerializedItem_Struct)); // unaligned-safe
 		}
 		return items;
 	}
@@ -5550,7 +5491,7 @@ namespace TOB
 		uint32 tier_count = std::min<uint32>(TOBFromNet32(emu->tier_count), MAX_TRIBUTE_TIERS);
 
 		// optional item trailer after the NUL-terminated name
-		auto items = TOBReadTributeItemTrailer(in->pBuffer, in->size, sizeof(TributeAbility_Struct));
+		auto items = TOBReadTributeItemTrailer(in, sizeof(TributeAbility_Struct));
 
 		SerializeBuffer buf;
 		buf.WriteUInt32(TOBFromNet32(emu->tribute_id));
@@ -5717,7 +5658,7 @@ namespace TOB
 		}
 		uint32 tier_count = std::min<uint32>(TOBFromNet32(ab.tier_count), MAX_TRIBUTE_TIERS);
 
-		auto items = TOBReadTributeItemTrailer(in->pBuffer, in->size, sizeof(GuildTributeAbility_Struct));
+		auto items = TOBReadTributeItemTrailer(in, sizeof(GuildTributeAbility_Struct));
 
 		SerializeBuffer buf;
 		buf.WriteUInt32(emu->guild_id);                 // skipped by the client
@@ -5778,10 +5719,10 @@ namespace TOB
 		*p = nullptr;
 
 		const uint32 size = in->size;
-		TOBBoundedReader r(in->pBuffer, size);
-		uint32 hdr = 0;
+		in->SetReadPosition(0);
+		const uint32 hdr = in->ReadUInt32();
 
-		if (!r.u32(hdr)) {
+		if (in->ReadError()) {
 			LogNetcode("TOB::ENCODE(OP_LFGGetMatchesResponse) too short [{}]", size);
 			delete in;
 			return;
@@ -5790,18 +5731,19 @@ namespace TOB
 		SerializeBuffer buf(size + 64);
 		buf.WriteUInt32(hdr);
 
-		while (r.remaining() > 0) {
+		while (in->ReadRemaining() > 0) {
+			const uint32 row_start = in->GetReadPosition();
 			std::string comments, name;
-			uint16 class_ = 0, level = 0, zone = 0, guild = 0, anon = 0;
 			// the client copies both strings into 64-byte locals with no bound: clamp to 63
-			if (!r.cstr(comments, 63) ||
-			    !r.cstr(name, 63) ||
-			    !r.u16(class_) ||
-			    !r.u16(level) ||
-			    !r.u16(zone) ||
-			    !r.u16(guild) ||
-			    !r.u16(anon)) {
-				LogNetcode("TOB::ENCODE(OP_LFGGetMatchesResponse) truncated row at [{}] of [{}]", r.pos, size);
+			in->ReadString(comments, 63);
+			in->ReadString(name, 63);
+			const uint16 class_ = in->ReadUInt16();
+			const uint16 level  = in->ReadUInt16();
+			const uint16 zone   = in->ReadUInt16();
+			const uint16 guild  = in->ReadUInt16();
+			const uint16 anon   = in->ReadUInt16();
+			if (in->ReadError()) {
+				LogNetcode("TOB::ENCODE(OP_LFGGetMatchesResponse) truncated row at [{}] of [{}]", row_start, size);
 				break;
 			}
 			buf.WriteString(comments);
@@ -5829,10 +5771,10 @@ namespace TOB
 		*p = nullptr;
 
 		const uint32 size = in->size;
-		TOBBoundedReader r(in->pBuffer, size);
-		uint32 hdr = 0;
+		in->SetReadPosition(0);
+		const uint32 hdr = in->ReadUInt32();
 
-		if (!r.u32(hdr)) {
+		if (in->ReadError()) {
 			LogNetcode("TOB::ENCODE(OP_LFPGetMatchesResponse) too short [{}]", size);
 			delete in;
 			return;
@@ -5842,16 +5784,16 @@ namespace TOB
 		buf.WriteUInt32(hdr);
 
 		bool ok = true;
-		while (ok && r.remaining() > 0) {
+		while (ok && in->ReadRemaining() > 0) {
+			const uint32 group_start = in->GetReadPosition();
 			std::string comments;
-			uint16 from = 0, to = 0, count = 0;
-			uint32 classes = 0;
-			if (!r.cstr(comments, 63) ||
-			    !r.u16(from) ||
-			    !r.u16(to) ||
-			    !r.u32(classes) ||
-			    !r.u16(count)) {
-				LogNetcode("TOB::ENCODE(OP_LFPGetMatchesResponse) truncated group at [{}] of [{}]", r.pos, size);
+			in->ReadString(comments, 63);
+			const uint16 from    = in->ReadUInt16();
+			const uint16 to      = in->ReadUInt16();
+			const uint32 classes = in->ReadUInt32();
+			uint16 count         = in->ReadUInt16();
+			if (in->ReadError()) {
+				LogNetcode("TOB::ENCODE(OP_LFPGetMatchesResponse) truncated group at [{}] of [{}]", group_start, size);
 				break;
 			}
 			// the client's local member array holds MAX_GROUP_MEMBERS entries and does not check count
@@ -5863,14 +5805,15 @@ namespace TOB
 			SerializeBuffer members(count * 80);
 			uint16 written = 0;
 			for (uint16 i = 0; i < count; ++i) {
+				const uint32 member_start = in->GetReadPosition();
 				std::string name;
-				uint16 class_ = 0, level = 0, zone = 0, guild = 0;
-				if (!r.cstr(name, 63) ||
-				    !r.u16(class_) ||
-				    !r.u16(level) ||
-				    !r.u16(zone) ||
-				    !r.u16(guild)) {
-					LogNetcode("TOB::ENCODE(OP_LFPGetMatchesResponse) truncated member at [{}] of [{}]", r.pos, size);
+				in->ReadString(name, 63);
+				const uint16 class_ = in->ReadUInt16();
+				const uint16 level  = in->ReadUInt16();
+				const uint16 zone   = in->ReadUInt16();
+				const uint16 guild  = in->ReadUInt16();
+				if (in->ReadError()) {
+					LogNetcode("TOB::ENCODE(OP_LFPGetMatchesResponse) truncated member at [{}] of [{}]", member_start, size);
 					ok = false;
 					break;
 				}
@@ -7767,46 +7710,46 @@ namespace TOB
 		switch (action) {
 			case structs::TOBBuyerActions::BuyerModifyBuyLine:
 			case structs::TOBBuyerActions::BuyerBuyLine: {
-				// client-controlled counts and strings: read through the bounded reader
+				// client-controlled counts and strings: bounds-checked packet reads
 				BuyerBuyLines_Struct buyer_buy_lines{};
-				TOBBoundedReader     r(__packet->pBuffer, __packet->size);
+				__packet->SetReadPosition(0);
 
-				buyer_buy_lines.action = r.u32();
+				buyer_buy_lines.action = __packet->ReadUInt32();
 
 				buyer_buy_lines.no_items = 1;
 				if (action == structs::TOBBuyerActions::BuyerBuyLine) {
-					buyer_buy_lines.no_items = std::min<uint16>(r.u16(), MAX_BUYER_LINES);
+					buyer_buy_lines.no_items = std::min<uint16>(__packet->ReadUInt16(), MAX_BUYER_LINES);
 				}
 
 				buyer_buy_lines.buy_lines.reserve(buyer_buy_lines.no_items);
-				for (int i = 0; i < buyer_buy_lines.no_items && r.ok; i++) {
+				for (int i = 0; i < buyer_buy_lines.no_items && !__packet->ReadError(); i++) {
 					BuyerLineItems_Struct b{};
-					b.slot           = r.u32();
-					b.enabled        = r.u8();
-					b.item_id        = r.u32();
-					b.item_name      = r.cstr(64);
-					b.item_icon      = r.u32();
-					b.item_quantity  = r.u32();
-					b.item_toggle    = r.u8();
-					b.item_cost      = r.u32();
-					auto trade_items = std::min<uint32>(r.u32(), MAX_BUYER_COMPENSATION_ITEMS);
+					b.slot           = __packet->ReadUInt32();
+					b.enabled        = __packet->ReadUInt8();
+					b.item_id        = __packet->ReadUInt32();
+					__packet->ReadString(b.item_name, 64);
+					b.item_icon      = __packet->ReadUInt32();
+					b.item_quantity  = __packet->ReadUInt32();
+					b.item_toggle    = __packet->ReadUInt8();
+					b.item_cost      = __packet->ReadUInt32();
+					auto trade_items = std::min<uint32>(__packet->ReadUInt32(), MAX_BUYER_COMPENSATION_ITEMS);
 					buyer_buy_lines.buy_lines.push_back(b);
 
 					if (trade_items > 0) {
 						buyer_buy_lines.buy_lines[i].trade_items.reserve(trade_items);
-						for (uint32 x = 0; x < trade_items && r.ok; x++) {
+						for (uint32 x = 0; x < trade_items && !__packet->ReadError(); x++) {
 							BuyerLineTradeItems_Struct blti{};
-							blti.item_id       = r.u32();
-							blti.item_quantity = r.u32();
-							blti.item_icon     = r.u32();
-							blti.item_name     = r.cstr(64);
+							blti.item_id       = __packet->ReadUInt32();
+							blti.item_quantity = __packet->ReadUInt32();
+							blti.item_icon     = __packet->ReadUInt32();
+							__packet->ReadString(blti.item_name, 64);
 							buyer_buy_lines.buy_lines[i].trade_items.push_back(blti);
 						}
 					}
-					r.skip(std::min<size_t>(13, r.remaining())); // trailing padding
+					__packet->ReadSkip(std::min<uint32>(13, __packet->ReadRemaining())); // trailing padding
 				}
 
-				if (!r.ok) {
+				if (__packet->ReadError()) {
 					LogNetcode("TOB::DECODE(OP_BuyerItems) malformed buy line packet, size [{}]", __packet->size);
 					__packet->SetOpcode(OP_Unknown);
 					return;
@@ -7837,49 +7780,51 @@ namespace TOB
 			}
 			case structs::TOBBuyerActions::BuyerSellItem: {
 				BuyerLineSellItem_Struct sell_item{};
-				TOBBoundedReader         r(__packet->pBuffer, __packet->size);
+				__packet->SetReadPosition(0);
 
-				sell_item.action          = r.u32();
-				sell_item.purchase_method = r.u32();
-				r.skip(4);
-				sell_item.buyer_entity_id = r.u32();
-				sell_item.buyer_id        = r.u32();
-				r.skip(11);
-				sell_item.slot      = r.u32();
-				sell_item.enabled   = r.u8();
-				sell_item.item_id   = r.u32();
-				r.cstr(sell_item.item_name, sizeof(sell_item.item_name));
-				sell_item.item_icon      = r.u32();
-				sell_item.item_quantity  = r.u32();
-				sell_item.item_toggle    = r.u8();
-				sell_item.item_cost      = r.u32();
-				sell_item.no_trade_items = std::min<uint32>(r.u32(), MAX_BUYER_COMPENSATION_ITEMS);
+				sell_item.action          = __packet->ReadUInt32();
+				sell_item.purchase_method = __packet->ReadUInt32();
+				__packet->ReadSkip(4);
+				sell_item.buyer_entity_id = __packet->ReadUInt32();
+				sell_item.buyer_id        = __packet->ReadUInt32();
+				__packet->ReadSkip(11);
+				sell_item.slot    = __packet->ReadUInt32();
+				sell_item.enabled = __packet->ReadUInt8();
+				sell_item.item_id = __packet->ReadUInt32();
+				std::string item_name;
+				__packet->ReadString(item_name, sizeof(sell_item.item_name) - 1);
+				strn0cpy(sell_item.item_name, item_name.c_str(), sizeof(sell_item.item_name));
+				sell_item.item_icon      = __packet->ReadUInt32();
+				sell_item.item_quantity  = __packet->ReadUInt32();
+				sell_item.item_toggle    = __packet->ReadUInt8();
+				sell_item.item_cost      = __packet->ReadUInt32();
+				sell_item.no_trade_items = std::min<uint32>(__packet->ReadUInt32(), MAX_BUYER_COMPENSATION_ITEMS);
 
 				if (sell_item.no_trade_items > 0) {
 					sell_item.trade_items.reserve(sell_item.no_trade_items);
-					for (uint32 x = 0; x < sell_item.no_trade_items && r.ok; x++) {
+					for (uint32 x = 0; x < sell_item.no_trade_items && !__packet->ReadError(); x++) {
 						BuyerLineTradeItems_Struct blti{};
-						blti.item_id       = r.u32();
-						blti.item_quantity = r.u32();
-						blti.item_icon     = r.u32();
-						blti.item_name     = r.cstr(64);
+						blti.item_id       = __packet->ReadUInt32();
+						blti.item_quantity = __packet->ReadUInt32();
+						blti.item_icon     = __packet->ReadUInt32();
+						__packet->ReadString(blti.item_name, 64);
 						sell_item.trade_items.push_back(blti);
 					}
 				}
 
 				if (sell_item.purchase_method) {
-					sell_item.buyer_entity_id = r.u32();
-					sell_item.buyer_id        = r.u32();
-					sell_item.zone_id         = r.u32();
-					sell_item.buyer_name      = r.cstr(64);
+					sell_item.buyer_entity_id = __packet->ReadUInt32();
+					sell_item.buyer_id        = __packet->ReadUInt32();
+					sell_item.zone_id         = __packet->ReadUInt32();
+					__packet->ReadString(sell_item.buyer_name, 64);
 				}
 				else {
-					r.skip(13);
+					__packet->ReadSkip(13);
 				}
 
-				sell_item.seller_quantity = r.u32();
+				sell_item.seller_quantity = __packet->ReadUInt32();
 
-				if (!r.ok) {
+				if (__packet->ReadError()) {
 					LogNetcode("TOB::DECODE(OP_BuyerItems) malformed sell item packet, size [{}]", __packet->size);
 					__packet->SetOpcode(OP_Unknown);
 					return;
@@ -8375,19 +8320,24 @@ namespace TOB
 	//   u32 action; cstr player_name; u32 unknown1; [cstr leader_name; u32 parameter; [cstr text]]
 	DECODE(OP_RaidInvite)
 	{
-		const size_t     size = __packet->size;
-		TOBBoundedReader r(__packet->pBuffer, size);
+		const size_t size = __packet->size;
+		__packet->SetReadPosition(0);
 
-		uint32 action = 0, unknown1 = 0, parameter = 0;
 		char player_name[64] = {}, leader_name[64] = {};
-		if (!r.u32(action) || !r.cstr(player_name, sizeof(player_name))) {
+		uint32 action = __packet->ReadUInt32();
+		std::string player_name_str;
+		__packet->ReadString(player_name_str, sizeof(player_name) - 1);
+		if (__packet->ReadError()) {
 			LogNetcode("TOB OP_RaidInvite too short ([{}] bytes)", size);
 			__packet->SetOpcode(OP_Unknown);
 			return;
 		}
-		r.u32(unknown1);                                  // missing fields stay 0
-		r.cstr(leader_name, sizeof(leader_name));
-		r.u32(parameter);
+		const uint32 unknown1 = __packet->ReadUInt32();   // missing fields stay 0
+		std::string leader_name_str;
+		__packet->ReadString(leader_name_str, sizeof(leader_name) - 1);
+		const uint32 parameter = __packet->ReadUInt32();
+		strn0cpy(player_name, player_name_str.c_str(), sizeof(player_name));
+		strn0cpy(leader_name, leader_name_str.c_str(), sizeof(leader_name));
 
 		// ToB raid-options loot commands are 32/33/34; the server's RaidCommand values are 20/21/22
 		switch (action) {
@@ -8401,9 +8351,9 @@ namespace TOB
 
 		if (action == raidSetMotd || action == raidSetNote) {
 			std::string text;
-			if (r.ok && r.remaining() > 0) {
-				const char *s = reinterpret_cast<const char *>(r.cursor());
-				text.assign(s, strnlen(s, r.remaining()));
+			if (!__packet->ReadError() && __packet->ReadRemaining() > 0) {
+				const char *s = reinterpret_cast<const char *>(__packet->pBuffer + __packet->GetReadPosition());
+				text.assign(s, strnlen(s, __packet->ReadRemaining()));
 			}
 			if (action == raidSetMotd) {
 				__packet->size = sizeof(RaidMOTD_Struct);
@@ -8625,22 +8575,26 @@ namespace TOB
 	DECODE(OP_VetClaimRequest)
 	{
 		// ToB: lenstr name, u32 claim_id, u8, u32 n, n x {u32,u32}, u32 action  (same object as VetClaimReply)
-		const uint32     size = __packet->size;
-		TOBBoundedReader r(__packet->pBuffer, size);
+		const uint32 size = __packet->size;
+		__packet->SetReadPosition(0);
 
-		uint32 name_len = 0, claim_id = 0, n = 0, action = 0;
+		uint32 claim_id = 0, action = 0;
 		std::string name;
-		bool ok = r.u32(name_len) && name_len <= r.remaining();
-		if (ok) {
-			name.assign(reinterpret_cast<const char*>(r.cursor()), std::min<uint32>(name_len, 63));
-			r.skip(name_len);
-			ok = r.u32(claim_id);
+		__packet->ReadLengthString(name);
+		if (name.size() > 63) {
+			name.resize(63);
 		}
-		if (ok && r.remaining() > 0) {
-			r.skip(1); // u8
-			if (r.u32(n) && n <= r.remaining() / 8) {
-				r.skip(n * 8);
-				r.u32(action);
+		bool ok = !__packet->ReadError();
+		if (ok) {
+			claim_id = __packet->ReadUInt32();
+			ok       = !__packet->ReadError();
+		}
+		if (ok && __packet->ReadRemaining() > 0) {
+			__packet->ReadSkip(1); // u8
+			const uint32 n = __packet->ReadUInt32();
+			if (!__packet->ReadError() && n <= __packet->ReadRemaining() / 8) {
+				__packet->ReadSkip(n * 8);
+				action = __packet->ReadUInt32();
 			}
 		}
 		if (!ok) {
