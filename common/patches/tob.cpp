@@ -111,6 +111,10 @@ namespace TOB
 		TOBGuildBankAcknowledge = 9,
 	};
 
+	// OP_PickZoneWindow: the window lists zones, then one zone id for each of up to 6 group members
+	static constexpr uint32 TOB_PICK_ZONE_GROUP_MEMBER_ZONES = 6;
+	static constexpr uint8  TOB_PICK_ZONE_SHOW_WINDOW        = 1; // first byte of the packet: open the window
+
 	static constexpr uint32 EMU_LFGUILD_HEADER_SIZE = 8;  // emu OP_LFGuild header: u32 command + u32 unknown
 	static constexpr uint32 TOB_BUYER_LINE_TRAILER_SIZE = 13; // unused bytes the client appends to each buy line
 
@@ -1875,7 +1879,7 @@ namespace TOB
 		// serialized: u8 show, u32 session, current zone header (u32 zone, u32 players, u8 locked),
 		// u32 count, count x {u32 instance, u32 zone, u32 players, u8 unknown}, 6 x u32 group member zones
 		SerializeBuffer buf;
-		buf.WriteUInt8(1);
+		buf.WriteUInt8(TOB_PICK_ZONE_SHOW_WINDOW);
 		buf.WriteUInt32(static_cast<uint32>(emu->session_id));
 		buf.WriteUInt32(count > 0 ? static_cast<uint16>(emu->entries[0].zone_id) : 0); // header only
 		buf.WriteUInt32(0);
@@ -1888,7 +1892,7 @@ namespace TOB
 			buf.WriteUInt32(static_cast<uint32>(e.player_count));
 			buf.WriteUInt8(0);
 		}
-		for (int i = 0; i < 6; ++i) {
+		for (uint32 i = 0; i < TOB_PICK_ZONE_GROUP_MEMBER_ZONES; ++i) {
 			buf.WriteUInt32(0);
 		}
 
@@ -2028,29 +2032,32 @@ namespace TOB
 	DECODE(OP_ItemOverflow)
 	{
 		// C2S: {u16 0} list, {u16 1, u64 item index} retrieve, {u16 2} retrieve all
-		DECODE_LENGTH_ATLEAST(structs::ItemOverflowRequest_Struct);
+		// (structs::ItemOverflowRequest_Struct and structs::ItemOverflowRetrieve_Struct)
+		const uint32 size = __packet->size;
+		__packet->SetReadPosition(0);
 
-		const uint32 size   = __packet->size;
-		const auto   header = reinterpret_cast<const structs::ItemOverflowRequest_Struct *>(__packet->pBuffer);
-		const uint16 action = header->action;
-
-		const bool retrieve_ok = action == ItemOverflowRetrieve && size == sizeof(structs::ItemOverflowRetrieve_Struct);
-		const bool no_data_ok  = (action == ItemOverflowList || action == ItemOverflowRetrieveAll) &&
-			size == sizeof(structs::ItemOverflowRequest_Struct);
-		if (!retrieve_ok && !no_data_ok) {
+		const uint16 action     = __packet->ReadUInt16();
+		uint64       item_index = 0;
+		if (action == ItemOverflowRetrieve) {
+			item_index = __packet->ReadUInt64();
+		}
+		const bool action_ok = action == ItemOverflowList || action == ItemOverflowRetrieve ||
+			action == ItemOverflowRetrieveAll;
+		if (__packet->ReadError() || !action_ok || __packet->ReadRemaining() != 0) {
 			LogNetcode("TOB OP_ItemOverflow C2S action [{}] size [{}] not handled", action, size);
 			__packet->SetOpcode(OP_Unknown);
 			return;
 		}
 
-		SETUP_DIRECT_DECODE(ItemOverflow_Struct, structs::ItemOverflowRetrieve_Struct);
+		unsigned char *__eq_buffer = __packet->pBuffer;
+		__packet->size    = sizeof(ItemOverflow_Struct);
+		__packet->pBuffer = new unsigned char[__packet->size] {};
+		auto emu = reinterpret_cast<ItemOverflow_Struct *>(__packet->pBuffer);
 
-		emu->action = action;
-		if (retrieve_ok) {
-			emu->item_index = eq->item_index;
-		}
+		emu->action     = action;
+		emu->item_index = item_index;
 
-		FINISH_DIRECT_DECODE();
+		delete[] __eq_buffer;
 	}
 
 	DECODE(OP_ItemPreviewRequest)
@@ -2928,7 +2935,6 @@ namespace TOB
 
 			*/
 			constexpr float  BardModifierScale = 10.0f;       // Buffs_Struct::bard_modifier is in tenths (10 = 1.0)
-			constexpr uint32 NoSpellId         = 0xFFFFFFFF;  // spell id of an empty affect
 			const bool has_buff = i < EQ::spells::LONG_BUFFS && i < static_cast<int>(BUFF_COUNT) &&
 				emu->buffs[i].spellid != 0 && emu->buffs[i].spellid != SPELL_UNKNOWN; // no IsValidSpell: world links this file without spells[]
 			if (has_buff) {
@@ -2952,7 +2958,7 @@ namespace TOB
 				out.WriteUInt32(0);
 				out.WriteUInt32(0);
 				out.WriteUInt8(0);
-				out.WriteUInt32(NoSpellId);
+				out.WriteUInt32(TOB_INVALID_ID); // spell id of an empty affect
 				out.WriteUInt32(0);
 				out.WriteUInt32(0);
 				out.WriteUInt32(0);
