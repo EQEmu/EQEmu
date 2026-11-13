@@ -1182,18 +1182,16 @@ namespace TOB
 		EQApplicationPacket *in = *p;
 		*p = nullptr;
 
-		if (in->size < sizeof(uint32)) {
+		if (in->size < sizeof(EvolveItemMessaging)) {
 			LogNetcode("TOB::ENCODE(OP_EvolveItem) packet too small [{}]", in->size);
 			delete in;
 			return;
 		}
 
-		auto action = *reinterpret_cast<uint32 *>(in->pBuffer);
+		auto emu = reinterpret_cast<EvolveItemMessaging *>(in->pBuffer);
 
-		switch (action) {
+		switch (emu->action) {
 			case EvolvingItems::Actions::TRANSFER_WINDOW_DETAILS: {
-				auto emu = reinterpret_cast<EvolveItemMessaging *>(in->pBuffer);
-
 				EvolveXPWindowSend           e{};
 				EQ::Util::MemoryStreamReader ss(emu->serialized_data, in->size - sizeof(emu->action));
 				cereal::BinaryInputArchive   ar(ss);
@@ -1233,13 +1231,24 @@ namespace TOB
 				break;
 			}
 			default: {
-				// 0 (progress update) and 1 (open the transfer window): EvolveItemToggle is the TOB layout
+				// 0 (progress update) and 1 (open the transfer window)
 				if (in->size != sizeof(EvolveItemToggle)) {
-					LogNetcode("TOB::ENCODE(OP_EvolveItem) action [{}] wrong size [{}]", action, in->size);
+					LogNetcode("TOB::ENCODE(OP_EvolveItem) action [{}] wrong size [{}]", emu->action, in->size);
 					delete in;
 					return;
 				}
-				dest->FastQueuePacket(&in, ack_req);
+
+				auto toggle = reinterpret_cast<EvolveItemToggle *>(in->pBuffer);
+				auto outapp = new EQApplicationPacket(OP_EvolveItem, sizeof(structs::EvolveItemToggle_Struct));
+				auto eq     = reinterpret_cast<structs::EvolveItemToggle_Struct *>(outapp->pBuffer);
+				eq->action      = toggle->action;
+				eq->unknown_004 = toggle->unknown_004;
+				eq->unique_id   = toggle->unique_id;
+				eq->percentage  = toggle->percentage;
+				eq->activated   = toggle->activated;
+
+				dest->FastQueuePacket(&outapp, ack_req);
+				delete in;
 				break;
 			}
 		}
@@ -1264,6 +1273,95 @@ namespace TOB
 		eq->exp = emu->exp * 100000 / 330;
 
 		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_FactionList)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		if (in->size < sizeof(FactionList_Struct)) {
+			LogNetcode("TOB::ENCODE(OP_FactionList) packet too small [{}]", in->size);
+			delete in;
+			return;
+		}
+
+		auto emu = reinterpret_cast<FactionList_Struct *>(in->pBuffer);
+		if (emu->count > (in->size - sizeof(FactionList_Struct)) / sizeof(FactionListEntry_Struct)) {
+			LogNetcode("TOB::ENCODE(OP_FactionList) count [{}] does not fit size [{}]", emu->count, in->size);
+			delete in;
+			return;
+		}
+
+		auto outapp = new EQApplicationPacket(
+			OP_FactionList,
+			sizeof(uint32) + emu->count * sizeof(structs::FactionListEntry_Struct)
+		);
+		auto count = reinterpret_cast<uint32 *>(outapp->pBuffer);
+		auto eq    = reinterpret_cast<structs::FactionListEntry_Struct *>(outapp->pBuffer + sizeof(uint32));
+		*count = emu->count;
+		for (uint32 i = 0; i < emu->count; ++i) {
+			eq[i].faction_id = emu->entries[i].faction_id;
+			eq[i].value      = emu->entries[i].value;
+		}
+
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
+	}
+
+	ENCODE(OP_FactionUpdate)
+	{
+		ENCODE_LENGTH_EXACT(FactionUpdate_Struct);
+		SETUP_DIRECT_ENCODE(FactionUpdate_Struct, structs::FactionUpdate_Struct);
+
+		OUT(show_message);
+		OUT(message_type);
+		OUT(faction_id);
+		OUT(direction);
+		OUT(old_value);
+		OUT(new_value);
+
+		FINISH_ENCODE();
+	}
+
+	ENCODE(OP_FindZoneConnections)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		if (in->size < sizeof(FindZoneConnections_Struct)) {
+			LogNetcode("TOB::ENCODE(OP_FindZoneConnections) packet too small [{}]", in->size);
+			delete in;
+			return;
+		}
+
+		auto emu = reinterpret_cast<FindZoneConnections_Struct *>(in->pBuffer);
+		if (emu->count > (in->size - sizeof(FindZoneConnections_Struct)) / sizeof(FindZoneConnection_Struct)) {
+			LogNetcode("TOB::ENCODE(OP_FindZoneConnections) count [{}] does not fit size [{}]", emu->count, in->size);
+			delete in;
+			return;
+		}
+
+		auto outapp = new EQApplicationPacket(
+			OP_FindZoneConnections,
+			sizeof(uint32) + emu->count * sizeof(structs::FindZoneConnection_Struct)
+		);
+		auto count = reinterpret_cast<uint32 *>(outapp->pBuffer);
+		auto eq    = reinterpret_cast<structs::FindZoneConnection_Struct *>(outapp->pBuffer + sizeof(uint32));
+		*count = emu->count;
+		for (uint32 i = 0; i < emu->count; ++i) {
+			eq[i].row_type  = emu->entries[i].row_type;
+			eq[i].id        = emu->entries[i].id;
+			eq[i].unknown08 = emu->entries[i].unknown08;
+			eq[i].zone_id   = emu->entries[i].zone_id;
+			eq[i].number    = emu->entries[i].number;
+			eq[i].loc.x     = emu->entries[i].loc.x;
+			eq[i].loc.y     = emu->entries[i].loc.y;
+			eq[i].loc.z     = emu->entries[i].loc.z;
+		}
+
+		dest->FastQueuePacket(&outapp, ack_req);
+		delete in;
 	}
 
 	ENCODE(OP_Fling)
@@ -1936,33 +2034,29 @@ namespace TOB
 	DECODE(OP_ItemOverflow)
 	{
 		// C2S: {u16 0} list, {u16 1, u64 item index} retrieve, {u16 2} retrieve all
-		const unsigned char *buf  = __packet->pBuffer;
-		const uint32         size = __packet->size;
+		DECODE_LENGTH_ATLEAST(structs::ItemOverflowRequest_Struct);
 
-		if (buf == nullptr || size < sizeof(uint16)) {
-			__packet->SetOpcode(OP_Unknown);
-			return;
-		}
+		const uint32 size   = __packet->size;
+		const auto   header = reinterpret_cast<const structs::ItemOverflowRequest_Struct *>(__packet->pBuffer);
+		const uint16 action = header->action;
 
-		uint16 action = 0;
-		uint64 index  = 0;
-		memcpy(&action, buf, sizeof(action));
-
-		if (action == ItemOverflowRetrieve && size == sizeof(uint16) + sizeof(uint64)) {
-			memcpy(&index, buf + sizeof(uint16), sizeof(index));
-		} else if ((action != ItemOverflowList && action != ItemOverflowRetrieveAll) || size != sizeof(uint16)) {
+		const bool retrieve_ok = action == ItemOverflowRetrieve && size == sizeof(structs::ItemOverflowRetrieve_Struct);
+		const bool no_data_ok  = (action == ItemOverflowList || action == ItemOverflowRetrieveAll) &&
+			size == sizeof(structs::ItemOverflowRequest_Struct);
+		if (!retrieve_ok && !no_data_ok) {
 			LogNetcode("TOB OP_ItemOverflow C2S action [{}] size [{}] not handled", action, size);
 			__packet->SetOpcode(OP_Unknown);
 			return;
 		}
 
-		unsigned char *__eq_buffer = __packet->pBuffer;
-		__packet->size    = sizeof(ItemOverflow_Struct);
-		__packet->pBuffer = new unsigned char[__packet->size] {};
-		auto emu = reinterpret_cast<ItemOverflow_Struct *>(__packet->pBuffer);
-		emu->action     = action;
-		emu->item_index = index;
-		delete[] __eq_buffer;
+		SETUP_DIRECT_DECODE(ItemOverflow_Struct, structs::ItemOverflowRetrieve_Struct);
+
+		emu->action = action;
+		if (retrieve_ok) {
+			emu->item_index = eq->item_index;
+		}
+
+		FINISH_DIRECT_DECODE();
 	}
 
 	DECODE(OP_ItemPreviewRequest)
@@ -5119,13 +5213,13 @@ namespace TOB
 		EQApplicationPacket* in = *p;
 		*p = nullptr;
 
-		if (in->size != sizeof(InspectBuffs_Struct) && in->size != sizeof(InspectBuffsTOB_Struct)) {
+		if (in->size != sizeof(InspectBuffs_Struct) && in->size != sizeof(InspectBuffsDetailed_Struct)) {
 			LogNetcode("TOB::ENCODE(OP_InspectBuffs) wrong size [{}]", in->size);
 			delete in;
 			return;
 		}
 		auto emu = reinterpret_cast<InspectBuffs_Struct*>(in->pBuffer);
-		auto ext = in->size == sizeof(InspectBuffsTOB_Struct) ? reinterpret_cast<InspectBuffsTOB_Struct*>(in->pBuffer) : nullptr;
+		auto ext = in->size == sizeof(InspectBuffsDetailed_Struct) ? reinterpret_cast<InspectBuffsDetailed_Struct*>(in->pBuffer) : nullptr;
 		constexpr size_t slots = sizeof(emu->spell_id) / sizeof(emu->spell_id[0]);
 
 		uint32 count = 0;
@@ -5138,7 +5232,7 @@ namespace TOB
 		SerializeBuffer buf;
 		buf.WriteUInt32(count);
 		buf.WriteUInt32(ext ? ext->target_id : 0);  // target spawn id: 0 -> client uses its current target's name
-		buf.WriteUInt8(ext ? ext->cast_by_you : 0);  // "cast by you" header flag (/inspectbuffs mine)
+		buf.WriteUInt8(ext ? ext->only_mine : 0);  // "cast by you" header flag (/inspectbuffs mine)
 		for (size_t i = 0; i < slots; ++i) {
 			if (emu->spell_id[i] <= 0) {
 				continue;
@@ -6227,10 +6321,14 @@ namespace TOB
 	ENCODE(OP_MobRename)
 	{
 		ENCODE_LENGTH_EXACT(MobRename_Struct);
-		SETUP_DIRECT_ENCODE(MobRename_Struct, MobRename_Struct);
+		SETUP_DIRECT_ENCODE(MobRename_Struct, structs::MobRename_Struct);
 
-		memcpy(eq, emu, sizeof(MobRename_Struct));
-		eq->unknown192 = 0x00000100;
+		strn0cpy(eq->old_name, emu->old_name, sizeof(eq->old_name));
+		strn0cpy(eq->old_name_again, emu->old_name_again, sizeof(eq->old_name_again));
+		strn0cpy(eq->new_name, emu->new_name, sizeof(eq->new_name));
+		eq->unknown192 = 0;
+		eq->rename     = 1;
+		OUT(unknown196);
 
 		FINISH_ENCODE();
 	}
@@ -9306,6 +9404,8 @@ namespace TOB
 	{
 		// ToB: lenstr name, u32 unknown, u8 claim, u32 n, n x {u32 claim_id, u32 count}, u32 action  (same object as
 		// VetClaimReply). unknown is not the claim id (Live sends 0): the claim is pairs[0]; n == 0 is a list refresh.
+		constexpr size_t VeteranClaimPairSize = 2 * sizeof(uint32); // {u32 claim_id, u32 count}
+
 		const uint32 size = __packet->size;
 		__packet->SetReadPosition(0);
 
@@ -9320,10 +9420,11 @@ namespace TOB
 		if (ok && __packet->ReadRemaining() > 0) {
 			__packet->ReadSkip(1); // u8
 			const uint32 n = __packet->ReadUInt32();
-			if (!__packet->ReadError() && n <= __packet->ReadRemaining() / 8) {
+			if (!__packet->ReadError() && n <= __packet->ReadRemaining() / VeteranClaimPairSize) {
 				if (n >= 1) {
-					claim_id = __packet->ReadUInt32();
-					__packet->ReadSkip((n * 8) - sizeof(uint32));
+					claim_id = __packet->ReadUInt32(); // pairs[0].claim_id
+					__packet->ReadSkip(sizeof(uint32)); // pairs[0].count
+					__packet->ReadSkip((n - 1) * VeteranClaimPairSize);
 				}
 				action = __packet->ReadUInt32();
 			}
@@ -9381,38 +9482,31 @@ namespace TOB
 	DECODE(OP_MarkRaidNPC) { TOBMarkToLeadershipAbility(__packet, RaidLeadershipAbility_MarkNPC); }
 	DECODE(OP_MarkNPC) { TOBMarkToLeadershipAbility(__packet, GroupLeadershipAbility_MarkNPC); }
 
-	// /inspectbuffs [mine] sends one byte (1 = only buffs I cast) on 0x3d34. The server handles inspect buffs
-	// through OP_DoGroupLeadershipAbility, so convert; the parameter carries the "mine" flag.
+	// /inspectbuffs [mine] sends one byte (1 = only buffs I cast) on its own opcode
 	DECODE(OP_InspectBuffs)
 	{
-		if (__packet->size < sizeof(uint8)) {
-			__packet->SetOpcode(OP_Unknown);
-			return;
-		}
-		uint8 mine = __packet->pBuffer[0];
-		unsigned char *__eq_buffer = __packet->pBuffer;
-		__packet->size    = sizeof(DoGroupLeadershipAbility_Struct);
-		__packet->pBuffer = new unsigned char[__packet->size] {};
-		auto emu = reinterpret_cast<DoGroupLeadershipAbility_Struct *>(__packet->pBuffer);
-		emu->Ability   = groupAAInspectBuffs;
-		emu->Parameter = mine ? 1 : 0;
-		__packet->SetOpcode(OP_DoGroupLeadershipAbility);
-		delete[] __eq_buffer;
+		DECODE_LENGTH_EXACT(structs::InspectBuffsRequest_Struct);
+		SETUP_DIRECT_DECODE(InspectBuffsRequest_Struct, structs::InspectBuffsRequest_Struct);
+
+		emu->only_mine = eq->only_mine == 1 ? 1 : 0;
+
+		FINISH_DIRECT_DECODE();
 	}
 
 	DECODE(OP_FindPersonRequest)
 	{
 		DECODE_LENGTH_EXACT(structs::FindPersonRequest_Struct);
-		SETUP_DIRECT_DECODE(FindPersonRequestTOB_Struct, structs::FindPersonRequest_Struct);
+		SETUP_DIRECT_DECODE(FindPersonRequestEx_Struct, structs::FindPersonRequest_Struct);
 
-		// Only request_type 1 refers to a spawn from OP_SendFindableNPCs (client sends id & 0xffff).
-		// 6 and 7 are zone connection rows (zone point number / destination); other types give an empty reply.
-		emu->request.npc_id = (eq->request_type == 1) ? static_cast<uint32>(eq->id) : 0;
+		// Only FindPersonRequestSpawn refers to a spawn from OP_SendFindableNPCs (client sends id & 0xffff).
+		// ZonePoint and Location are zone connection rows (zone point number / destination); other types give
+		// an empty reply.
+		emu->request.npc_id = (eq->request_type == FindPersonRequestSpawn) ? static_cast<uint32>(eq->id) : 0;
 		emu->request.client_pos.x = eq->client_pos.x;
 		emu->request.client_pos.y = eq->client_pos.y;
 		emu->request.client_pos.z = eq->client_pos.z;
 		IN(request_type);
-		IN(id);
+		emu->zone_point_number = (eq->request_type == FindPersonRequestZonePoint) ? static_cast<uint32>(eq->id) : 0;
 		IN(dest.x);
 		IN(dest.y);
 		IN(dest.z);

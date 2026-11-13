@@ -1875,6 +1875,81 @@ namespace TOB {
 		};
 		static_assert(sizeof(FindPersonRequest_Struct) == 40, "TOB FindPersonRequest_Struct must be 40 bytes");
 
+		// S2C OP_EvolveItem actions 0 (progress update) and 1 (open the transfer window)
+		struct EvolveItemToggle_Struct {
+			/*00*/ uint32 action;
+			/*04*/ uint32 unknown_004;
+			/*08*/ uint64 unique_id;
+			/*16*/ uint32 percentage;
+			/*20*/ uint32 activated;
+			/*24*/
+		};
+		static_assert(sizeof(EvolveItemToggle_Struct) == 24, "TOB EvolveItemToggle_Struct must be 24 bytes");
+
+		// S2C OP_FindZoneConnections: u32 count, then count x FindZoneConnection_Struct
+		struct FindZoneConnection_Struct {
+			/*00*/ uint32           row_type;
+			/*04*/ uint32           id;
+			/*08*/ uint32           unknown08;
+			/*12*/ uint32           zone_id;
+			/*16*/ uint32           number;
+			/*20*/ FindPerson_Point loc;
+			/*32*/
+		};
+		static_assert(sizeof(FindZoneConnection_Struct) == 32, "TOB FindZoneConnection_Struct must be 32 bytes");
+
+		// S2C OP_FactionList: u32 count, then count x FactionListEntry_Struct
+		struct FactionListEntry_Struct {
+			/*00*/ uint32 faction_id;
+			/*04*/ int32  value;
+			/*08*/
+		};
+
+		// S2C OP_FactionUpdate
+		struct FactionUpdate_Struct {
+			/*00*/ uint8  show_message;
+			/*01*/ int32  message_type;
+			/*05*/ uint32 faction_id;
+			/*09*/ int32  direction;
+			/*13*/ int32  old_value;
+			/*17*/ int32  new_value;
+			/*21*/
+		};
+		static_assert(sizeof(FactionUpdate_Struct) == 21, "TOB FactionUpdate_Struct must be 21 bytes");
+
+		// C2S OP_ItemOverflow: every request starts with the action (0 = list, 2 = retrieve all)
+		struct ItemOverflowRequest_Struct {
+			/*00*/ uint16 action;
+			/*02*/
+		};
+
+		// C2S OP_ItemOverflow action 1 (retrieve one item)
+		struct ItemOverflowRetrieve_Struct {
+			/*00*/ uint16 action;
+			/*02*/ uint64 item_index; // the serial number in the serialized item
+			/*10*/
+		};
+		static_assert(sizeof(ItemOverflowRetrieve_Struct) == 10, "TOB ItemOverflowRetrieve_Struct must be 10 bytes");
+
+		// C2S OP_InspectBuffs (/inspectbuffs [mine])
+		struct InspectBuffsRequest_Struct {
+			/*00*/ uint8 only_mine; // 1 = only buffs I cast
+			/*01*/
+		};
+
+		// S2C OP_MobRename: the client renames its own spawn called old_name, only when rename is set
+		struct MobRename_Struct {
+			/*000*/ char   old_name[64];
+			/*064*/ char   old_name_again[64];
+			/*128*/ char   new_name[64];
+			/*192*/ uint8  unknown192;
+			/*193*/ uint8  rename;          // the client ignores the packet unless this is 1
+			/*194*/ uint16 unknown194;
+			/*196*/ uint32 unknown196;
+			/*200*/
+		};
+		static_assert(sizeof(MobRename_Struct) == 200, "TOB MobRename_Struct must be 200 bytes");
+
 		struct GroupJoin_Struct {
 			/*000*/ char owner_name[64]; // merc
 			/*064*/ char membername[64];

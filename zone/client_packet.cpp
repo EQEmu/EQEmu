@@ -204,6 +204,7 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_FactionList] = &Client::Handle_OP_FactionList;
 	ConnectedOpcodes[OP_FeignDeath] = &Client::Handle_OP_FeignDeath;
 	ConnectedOpcodes[OP_FindPersonRequest] = &Client::Handle_OP_FindPersonRequest;
+	ConnectedOpcodes[OP_InspectBuffs] = &Client::Handle_OP_InspectBuffs;
 	ConnectedOpcodes[OP_FindZoneConnectionsRequest] = &Client::Handle_OP_FindZoneConnectionsRequest;
 	ConnectedOpcodes[OP_FindLocationListRequest] = &Client::Handle_OP_FindZoneConnectionsRequest;
 	ConnectedOpcodes[OP_Fishing] = &Client::Handle_OP_Fishing;
@@ -6180,39 +6181,7 @@ void Client::Handle_OP_DoGroupLeadershipAbility(const EQApplicationPacket *app)
 
 	case groupAAInspectBuffs:
 	{
-		Mob *Target = GetTarget();
-
-		if (!Target || !Target->IsClient())
-			return;
-
-		// TOB+: Parameter 1 = /inspectbuffs mine (older clients always send 1 with no filter meaning)
-		bool only_mine = ClientVersion() >= EQ::versions::ClientVersion::TOB && dglas->Parameter == 1;
-
-		if (IsRaidGrouped()) {
-			Raid *raid = GetRaid();
-			if (!raid)
-				return;
-			uint32 group_id = raid->GetGroup(this);
-			if (group_id > 11 || raid->GroupCount(group_id) < RuleI(Character, LeadershipMinGroupSize))
-				return;
-			Target->CastToClient()->InspectBuffs(this, raid->GetLeadershipAA(groupAAInspectBuffs, group_id), only_mine);
-			return;
-		}
-
-		Group *g = GetGroup();
-
-		if (!g) {
-			if (const int rank = GetSoloLeadershipAA(groupAAInspectBuffs)) {
-				Target->CastToClient()->InspectBuffs(this, rank, only_mine);
-			}
-			return;
-		}
-
-		if (g->GroupCount() < RuleI(Character, LeadershipMinGroupSize))
-			return;
-
-		Target->CastToClient()->InspectBuffs(this, g->GetLeadershipAA(groupAAInspectBuffs), only_mine);
-
+		InspectTargetBuffs(false);
 		break;
 	}
 
@@ -6720,28 +6689,39 @@ void Client::Handle_OP_FeignDeath(const EQApplicationPacket *app)
 	return;
 }
 
+// How close a Find window destination has to be to a zone point (the client echoes back the exact location
+// we sent in the zone connection row, so this only absorbs float formatting)
+constexpr float FindZonePointMatchTolerance = 1.0f;
+
 void Client::Handle_OP_FindPersonRequest(const EQApplicationPacket *app)
 {
-	// TOB+: zone connection rows ask for a path to a spot (7) or to a zone point by number (6)
-	if (app->size == sizeof(FindPersonRequestTOB_Struct) && ClientVersion() >= EQ::versions::ClientVersion::TOB) {
-		auto *t = (FindPersonRequestTOB_Struct *) app->pBuffer;
+	// Find windows with zone connection rows ask for a path to a zone point, by number or by location
+	if (app->size == sizeof(FindPersonRequestEx_Struct)) {
+		auto *t = (FindPersonRequestEx_Struct *) app->pBuffer;
 
-		if (t->request_type == 7) {
-			if (!std::isfinite(t->dest.x) || !std::isfinite(t->dest.y) || !std::isfinite(t->dest.z)) {
+		if (t->request_type == FindPersonRequestLocation || t->request_type == FindPersonRequestZonePoint) {
+			if (!zone) {
 				SendPath(nullptr);
 				return;
 			}
-			SendPathToLocation(glm::vec3(t->dest.x, t->dest.y, t->dest.z), 0.0f, true);
-			return;
-		}
 
-		if (t->request_type == 6) {
+			// only ever path to a zone point the server knows, never to a client supplied location
+			const bool by_number = t->request_type == FindPersonRequestZonePoint;
 			LinkedListIterator<ZonePoint *> iterator(zone->zone_point_list);
 			iterator.Reset();
 			while (iterator.MoreElements()) {
 				ZonePoint *zp = iterator.GetData();
 				iterator.Advance();
-				if (zp && zp->number == t->id && (zp->client_version_mask & ClientVersionBit())) {
+				if (!zp || !(zp->client_version_mask & ClientVersionBit())) {
+					continue;
+				}
+
+				const bool matches = by_number ?
+					zp->number == t->zone_point_number :
+					std::fabs(zp->x - t->dest.x) <= FindZonePointMatchTolerance &&
+					std::fabs(zp->y - t->dest.y) <= FindZonePointMatchTolerance &&
+					std::fabs(zp->z - t->dest.z) <= FindZonePointMatchTolerance;
+				if (matches) {
 					SendPathToLocation(glm::vec3(zp->x, zp->y, zp->z), 0.0f, true);
 					return;
 				}
@@ -6763,6 +6743,21 @@ void Client::Handle_OP_FindPersonRequest(const EQApplicationPacket *app)
 
 		SendPath(m);
 	}
+}
+
+void Client::Handle_OP_InspectBuffs(const EQApplicationPacket *app)
+{
+	if (app->size != sizeof(InspectBuffsRequest_Struct)) {
+		LogError(
+			"Wrong size: OP_InspectBuffs, size=[{}], expected [{}]",
+			app->size,
+			sizeof(InspectBuffsRequest_Struct)
+		);
+		return;
+	}
+
+	auto *request = (InspectBuffsRequest_Struct *) app->pBuffer;
+	InspectTargetBuffs(request->only_mine == 1);
 }
 
 void Client::Handle_OP_FindZoneConnectionsRequest(const EQApplicationPacket *app)

@@ -138,6 +138,7 @@
 	void Handle_OP_FeignDeath(const EQApplicationPacket *app);
 	void Handle_OP_FindPersonRequest(const EQApplicationPacket *app);
 	void Handle_OP_FindZoneConnectionsRequest(const EQApplicationPacket *app);
+	void Handle_OP_InspectBuffs(const EQApplicationPacket *app);
 	void Handle_OP_Fishing(const EQApplicationPacket *app);
 	void Handle_OP_Forage(const EQApplicationPacket *app);
 	void Handle_OP_FriendsWho(const EQApplicationPacket *app);

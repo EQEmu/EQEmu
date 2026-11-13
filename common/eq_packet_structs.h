@@ -4585,17 +4585,25 @@ struct FindPersonRequest_Struct {
 	FindPerson_Point client_pos;
 };
 
-// TOB+ request: also carries the row type and the destination of Find window zone connection rows
-struct FindPersonRequestTOB_Struct {
-	FindPersonRequest_Struct request;
-	uint32 request_type; // 1 = findable NPC, 6 = zone point by id, 7 = path to dest
-	uint32 id;
-	FindPerson_Point dest;
+// What a Find window request asks for
+enum FindPersonRequestType : uint32 {
+	FindPersonRequestSpawn     = 1, // a findable spawn (request.npc_id)
+	FindPersonRequestZonePoint = 6, // a zone point by number (zone_point_number)
+	FindPersonRequestLocation  = 7  // a path to dest, which must be one of the zone's zone points
 };
 
-// TOB+ Find window "Zone Connection" rows (same layout on the wire)
+// Find window request from clients whose window also lists zone connections. The patch fills request.npc_id
+// only for FindPersonRequestSpawn and zone_point_number only for FindPersonRequestZonePoint.
+struct FindPersonRequestEx_Struct {
+	FindPersonRequest_Struct request;
+	uint32                   request_type; // FindPersonRequestType; other values get an empty reply
+	uint32                   zone_point_number;
+	FindPerson_Point         dest;
+};
+
+// Find window "Zone Connection" rows, one per zone point the client can use (the patch converts to the wire layout)
 struct FindZoneConnection_Struct {
-/*00*/ uint32 row_type;     // 7 = client asks for a path to loc, 6 = client asks by id
+/*00*/ uint32 row_type;     // FindPersonRequestType the client sends back: Location = path to loc, ZonePoint = by id
 /*04*/ uint32 id;
 /*08*/ uint32 unknown08;
 /*12*/ uint32 zone_id;      // row text is this zone's name
@@ -4603,15 +4611,14 @@ struct FindZoneConnection_Struct {
 /*20*/ FindPerson_Point loc;
 /*32*/
 };
-static_assert(sizeof(FindZoneConnection_Struct) == 32, "FindZoneConnection_Struct is sent as is to TOB clients");
 
 struct FindZoneConnections_Struct {
 	uint32 count;
 	FindZoneConnection_Struct entries[0];
 };
 
-// TOB+ Faction window list (same layout on the wire). Raw personal values: the client adds
-// the race/class/deity modifiers itself from Resources/Faction/FactionAssociations.txt
+// Faction window list (the patch converts to the wire layout). Raw personal values: the client adds
+// the race/class/deity modifiers itself
 struct FactionListEntry_Struct {
 /*00*/ uint32 faction_id;
 /*04*/ int32  value;
@@ -4623,20 +4630,25 @@ struct FactionList_Struct {
 	FactionListEntry_Struct entries[0];
 };
 
-// TOB+ standing change (same layout on the wire). The client applies new_value - old_value
+// Standing change (the patch converts to the wire layout). The client applies new_value - old_value
 // to its copy and, if show_message is set, prints the standing line itself
+enum FactionUpdateMessageType : int32 {
+	FactionUpdateUnchanged = 0, // did not change (string 14526)
+	FactionUpdateAtCap     = 1, // at the cap (strings 469/471 by direction)
+	FactionUpdateAdjusted  = 2  // adjusted by (string 14261)
+};
+
 struct FactionUpdate_Struct {
 /*00*/ uint8  show_message;
-/*01*/ int32  message_type; // 0 = did not change (14526), 1 = at the cap (469/471 by direction), 2 = adjusted by (14261)
+/*01*/ int32  message_type; // FactionUpdateMessageType
 /*05*/ uint32 faction_id;
 /*09*/ int32  direction;    // sign only, used by message_type 1
 /*13*/ int32  old_value;
 /*17*/ int32  new_value;
 /*21*/
 };
-static_assert(sizeof(FactionUpdate_Struct) == 21, "FactionUpdate_Struct is sent as is to TOB clients");
 
-// TOB+ Item Overflow window (0x1bd5); the TOB patch converts to and from the wire layout
+// Item Overflow window (items queued behind the cursor); the patch converts to and from the wire layout
 enum ItemOverflowAction : uint32 {
 	ItemOverflowList        = 0, // C2S
 	ItemOverflowRetrieve    = 1, // C2S, item_index
@@ -5110,12 +5122,18 @@ struct InspectBuffs_Struct {
 /*100*/ int32 tics_remaining[BUFF_COUNT];
 };
 
-// TOB+ inspectors: the same lists plus the target, the caster of each buff and the "mine" filter flag
-struct InspectBuffsTOB_Struct {
+// Inspect buffs for clients that show more: the same lists plus the target, the caster of each buff and
+// whether only the inspector's own buffs were requested
+struct InspectBuffsDetailed_Struct {
 	InspectBuffs_Struct buffs;
 	uint32 target_id;
 	uint32 caster_id[BUFF_COUNT];
-	uint8  cast_by_you;
+	uint8  only_mine;
+};
+
+// Client request to inspect the target's buffs (clients that send it as its own opcode)
+struct InspectBuffsRequest_Struct {
+	uint8 only_mine; // 1 = only buffs the inspector cast
 };
 
 struct RaidGeneral_Struct {

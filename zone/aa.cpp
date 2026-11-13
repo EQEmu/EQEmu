@@ -843,6 +843,40 @@ int Client::GroupLeadershipAAOffenseEnhancement()
 	return 0;
 }
 
+// Leadership gated /inspectbuffs on the current target; only_mine is honoured by clients that can show it
+void Client::InspectTargetBuffs(bool only_mine)
+{
+	Mob *Target = GetTarget();
+
+	if (!Target || !Target->IsClient())
+		return;
+
+	if (IsRaidGrouped()) {
+		Raid *raid = GetRaid();
+		if (!raid)
+			return;
+		uint32 group_id = raid->GetGroup(this);
+		if (group_id >= MAX_RAID_GROUPS || raid->GroupCount(group_id) < RuleI(Character, LeadershipMinGroupSize))
+			return;
+		Target->CastToClient()->InspectBuffs(this, raid->GetLeadershipAA(groupAAInspectBuffs, group_id), only_mine);
+		return;
+	}
+
+	Group *g = GetGroup();
+
+	if (!g) {
+		if (const int rank = GetSoloLeadershipAA(groupAAInspectBuffs)) {
+			Target->CastToClient()->InspectBuffs(this, rank, only_mine);
+		}
+		return;
+	}
+
+	if (g->GroupCount() < RuleI(Character, LeadershipMinGroupSize))
+		return;
+
+	Target->CastToClient()->InspectBuffs(this, g->GetLeadershipAA(groupAAInspectBuffs), only_mine);
+}
+
 void Client::InspectBuffs(Client* Inspector, int Rank, bool only_mine)
 {
 	// At some point the removed the restriction of being a group member for this to work
@@ -855,12 +889,12 @@ void Client::InspectBuffs(Client* Inspector, int Rank, bool only_mine)
 	if (!tob)
 		only_mine = false;
 
-	auto outapp = new EQApplicationPacket(OP_InspectBuffs, tob ? sizeof(InspectBuffsTOB_Struct) : sizeof(InspectBuffs_Struct));
+	auto outapp = new EQApplicationPacket(OP_InspectBuffs, tob ? sizeof(InspectBuffsDetailed_Struct) : sizeof(InspectBuffs_Struct));
 	InspectBuffs_Struct *ib = (InspectBuffs_Struct *)outapp->pBuffer;
-	InspectBuffsTOB_Struct *ext = tob ? (InspectBuffsTOB_Struct *)outapp->pBuffer : nullptr;
+	InspectBuffsDetailed_Struct *ext = tob ? (InspectBuffsDetailed_Struct *)outapp->pBuffer : nullptr;
 	if (ext) {
 		ext->target_id = GetID();
-		ext->cast_by_you = only_mine ? 1 : 0;
+		ext->only_mine = only_mine ? 1 : 0;
 	}
 
 	uint32 buff_count = GetMaxTotalSlots();

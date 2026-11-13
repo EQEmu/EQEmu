@@ -778,6 +778,7 @@ public:
 	int GroupLeadershipAAHealthRegeneration();
 	int GroupLeadershipAAOffenseEnhancement();
 	void InspectBuffs(Client* Inspector, int Rank, bool only_mine = false);
+	void InspectTargetBuffs(bool only_mine);
 	uint32 GetRaidPoints() { return(m_pp.raid_leadership_points); }
 	uint32 GetGroupPoints() { return(m_pp.group_leadership_points); }
 	uint32 GetRaidEXP() { return(m_pp.raid_leadership_exp); }

@@ -8557,16 +8557,16 @@ void Client::SendFactionMessage(int32 tmpvalue, int32 faction_id, int32 faction_
 			return;
 		}
 
-		int32 message_type = 2;
+		int32 message_type = FactionUpdateAdjusted;
 		int32 direction    = tmpvalue;
 		if (faction_value >= this_faction_max) {
-			message_type = 1;
+			message_type = FactionUpdateAtCap;
 			direction    = 1;
 		} else if (faction_value <= this_faction_min) {
-			message_type = 1;
+			message_type = FactionUpdateAtCap;
 			direction    = -1;
 		} else if (totalvalue == faction_before_hit) {
-			message_type = 0;
+			message_type = FactionUpdateUnchanged;
 		}
 
 		// temp factions stay silent, same as the text below
@@ -12431,7 +12431,7 @@ void Client::SendFindZoneConnections()
 		}
 
 		FindZoneConnection_Struct r{};
-		r.row_type = 7; // the client sends the loc back as the path destination
+		r.row_type = FindPersonRequestLocation; // the client sends the loc back as the path destination
 		r.id       = zp->number;
 		r.zone_id  = zp->target_zone_id;
 		r.number   = zp->number;
