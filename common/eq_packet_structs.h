@@ -1920,7 +1920,7 @@ struct AdvLootMisc_Struct {
 
 // OP_AdvLootCorpseItems, zone to client: AdvLootCorpseItems_Struct followed by item_count AdvLootCorpseItem_Struct.
 // The player sees an item in the Shared list (shared_quantity) or the Personal list (personal_quantity).
-constexpr uint32 ADVLOOT_ITEM_LINK_SIZE = 256; // server-format item link, converted by the client's encoder
+constexpr uint32 ADVLOOT_ITEM_LINK_SIZE = 256; // server-format item link, converted by the client patch
 
 struct AdvLootCorpseItems_Struct {
 	uint8	present;		// 1 when the player was near the corpse; 0 draws the rows locked
@@ -1941,7 +1941,7 @@ struct AdvLootCorpseItem_Struct {
 	char	item_link[ADVLOOT_ITEM_LINK_SIZE];
 };
 
-// OP_AdvLoot, zone to client. Every body starts with its AdvLootSubtype; the client's encoder lays each one out for the
+// OP_AdvLoot, zone to client. Every body starts with its AdvLootSubtype; the client patch writes each one in the
 // wire, so these hold only what the server decides. Names are NUL-terminated.
 struct AdvLootClearPending_Struct {
 	uint16	subtype;		// AdvLootClearPending

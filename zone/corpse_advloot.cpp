@@ -76,7 +76,7 @@ constexpr size_t ADVLOOT_MAX_CORPSE_ITEMS   = 200; // the client holds at most t
 constexpr uint32 ADVLOOT_DECAY_AFTER_UNLOCK = 120000; // ms the corpse is kept after it unlocks
 
 
-// packet holding one body struct; the client's encoder lays it out for the wire
+// packet holding one body struct; the client patch writes the wire layout
 template <typename T>
 EQApplicationPacket *MakeAdvLootPacket(EmuOpcode opcode, const T &body)
 {
@@ -526,7 +526,7 @@ void Corpse::SendAdvancedLootItems(Client *c)
 
 	const uint32 unlock_seconds = m_corpse_delay_timer.Enabled() ? m_corpse_delay_timer.GetRemainingTime() / 1000 : 0;
 
-	// the client's encoder lays this out for the wire; item links stay in server format
+	// the client patch writes the wire layout; item links stay in server format
 	const size_t packet_size = sizeof(AdvLootCorpseItems_Struct) + entries.size() * sizeof(AdvLootCorpseItem_Struct);
 	auto outapp = new EQApplicationPacket(OP_AdvLootCorpseItems, packet_size);
 
