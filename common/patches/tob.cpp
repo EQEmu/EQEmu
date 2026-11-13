@@ -5012,6 +5012,167 @@ namespace TOB
 		dest->FastQueuePacket(&outapp, ack_req);
 	}
 
+	// OP_AdvLoot and OP_AdvLootMasterLooter, zone to client. The zone sends one AdvLoot*_Struct per subtype
+	// (eq_packet_structs.h); the wire layouts are written here.
+	static constexpr uint32 TOB_ADVLOOT_RESULT_ENTRY_COUNT = 1; // entries in a loot result; the client expects one
+	static constexpr uint32 TOB_ADVLOOT_ASK_CORPSE_COUNT   = 1; // corpses listed in an ask; the server asks per corpse
+	static constexpr uint8  TOB_ADVLOOT_COIN_RECEIVED      = 1; // the coin message is shown to the player
+
+	// the body when the packet is exactly one T, otherwise nullptr
+	template <typename T>
+	static const T *TOBAdvLootBody(const EQApplicationPacket *in)
+	{
+		return in->size == sizeof(T) ? reinterpret_cast<const T *>(in->pBuffer) : nullptr;
+	}
+
+	static std::string TOBAdvLootName(const char *name, size_t field_size)
+	{
+		return std::string(name, strnlen(name, field_size));
+	}
+
+	ENCODE(OP_AdvLoot)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		SerializeBuffer buf;
+		bool valid = in->size >= sizeof(uint16);
+		const uint16 subtype = valid ? in->ReadUInt16(0) : 0;
+
+		switch (subtype) {
+		case AdvLootClearPending: {
+			auto b = TOBAdvLootBody<AdvLootClearPending_Struct>(in);
+			if (!b) { valid = false; break; }
+			buf.WriteUInt16(b->subtype);
+			buf.WriteUInt32(b->corpse_id);
+			buf.WriteUInt64(b->item_id);
+			buf.WriteUInt32(0);
+			break;
+		}
+		case AdvLootCoin: {
+			auto b = TOBAdvLootBody<AdvLootCoin_Struct>(in);
+			if (!b) { valid = false; break; }
+			buf.WriteUInt16(b->subtype);
+			buf.WriteUInt8(b->split);
+			buf.WriteUInt64(b->copper);
+			buf.WriteUInt8(TOB_ADVLOOT_COIN_RECEIVED);
+			buf.WriteUInt32(0); // no bonus suffix
+			break;
+		}
+		case AdvLootLootResult: {
+			auto b = TOBAdvLootBody<AdvLootResult_Struct>(in);
+			if (!b) { valid = false; break; }
+			buf.WriteUInt16(b->subtype);
+			buf.WriteUInt16(b->result);
+			buf.WriteUInt32(TOB_ADVLOOT_RESULT_ENTRY_COUNT);
+			buf.WriteUInt32(b->sequence);
+			buf.WriteUInt8(0);
+			break;
+		}
+		case AdvLootGive: {
+			auto b = TOBAdvLootBody<AdvLootGiveNotice_Struct>(in);
+			if (!b) { valid = false; break; }
+			buf.WriteUInt16(b->subtype);
+			buf.WriteUInt32(b->transaction_id);
+			buf.WriteUInt32(b->corpse_id);
+			buf.WriteUInt64(b->item_id);
+			buf.WriteUInt16(b->quantity);
+			buf.WriteUInt8(b->leave);
+			buf.WriteString(TOBAdvLootName(b->player_name, sizeof(b->player_name)));
+			break;
+		}
+		case AdvLootAsk: {
+			auto b = TOBAdvLootBody<AdvLootAskNotice_Struct>(in);
+			if (!b) { valid = false; break; }
+			buf.WriteUInt16(b->subtype);
+			buf.WriteUInt32(b->transaction_id);
+			buf.WriteUInt64(b->item_id);
+			buf.WriteUInt32(b->state);
+			buf.WriteUInt8(0);
+			buf.WriteUInt32(b->time_left);
+			buf.WriteUInt32(TOB_ADVLOOT_ASK_CORPSE_COUNT);
+			buf.WriteUInt32(b->corpse_id);
+			buf.WriteUInt32(b->quantity);
+			break;
+		}
+		case AdvLootState: {
+			auto b = TOBAdvLootBody<AdvLootStateNotice_Struct>(in);
+			if (!b) { valid = false; break; }
+			buf.WriteUInt16(b->subtype);
+			buf.WriteUInt32(b->transaction_id);
+			buf.WriteUInt32(b->time_left);
+			buf.WriteUInt32(b->state);
+			buf.WriteUInt8(0);
+			break;
+		}
+		case AdvLootRollResult: {
+			if (in->size < sizeof(AdvLootRollResult_Struct)) { valid = false; break; }
+			auto b = reinterpret_cast<const AdvLootRollResult_Struct *>(in->pBuffer);
+			if (in->size != sizeof(AdvLootRollResult_Struct) + uint64(b->roller_count) * sizeof(AdvLootRoller_Struct)) {
+				valid = false;
+				break;
+			}
+			auto rollers = reinterpret_cast<const AdvLootRoller_Struct *>(in->pBuffer + sizeof(AdvLootRollResult_Struct));
+			buf.WriteUInt16(b->subtype);
+			buf.WriteUInt32(b->transaction_id);
+			buf.WriteUInt32(b->best_choice);
+			buf.WriteUInt8(0);
+			buf.WriteUInt16(b->roller_count);
+			for (uint16 i = 0; i < b->roller_count; ++i) {
+				buf.WriteUInt16(rollers[i].roll);
+				buf.WriteString(TOBAdvLootName(rollers[i].name, sizeof(rollers[i].name)));
+			}
+			break;
+		}
+		case AdvLootSync: {
+			auto b = TOBAdvLootBody<AdvLootSyncReply_Struct>(in);
+			if (!b) { valid = false; break; }
+			// no corpses, no transactions, no choices; the corpses follow one by one
+			buf.WriteUInt16(b->subtype);
+			buf.WriteUInt32(0);
+			buf.WriteString(TOBAdvLootName(b->master_looter_name, sizeof(b->master_looter_name)));
+			buf.WriteUInt32(0);
+			buf.WriteUInt8(0);
+			buf.WriteUInt8(0);
+			break;
+		}
+		default:
+			valid = false;
+			break;
+		}
+
+		if (!valid) {
+			LogNetcode("[{}] Malformed OP_AdvLoot subtype [{}] ({} bytes), dropped", __FUNCTION__, subtype, in->size);
+			delete in;
+			return;
+		}
+
+		auto outapp = new EQApplicationPacket(OP_AdvLoot, std::move(buf));
+		delete in;
+		dest->FastQueuePacket(&outapp, ack_req);
+	}
+
+	ENCODE(OP_AdvLootMasterLooter)
+	{
+		EQApplicationPacket *in = *p;
+		*p = nullptr;
+
+		auto b = TOBAdvLootBody<AdvLootMasterLooter_Struct>(in);
+		if (!b) {
+			LogNetcode("[{}] Malformed OP_AdvLootMasterLooter ({} bytes), dropped", __FUNCTION__, in->size);
+			delete in;
+			return;
+		}
+
+		SerializeBuffer buf;
+		buf.WriteUInt32(0);
+		buf.WriteString(TOBAdvLootName(b->name, sizeof(b->name)));
+
+		auto outapp = new EQApplicationPacket(OP_AdvLootMasterLooter, std::move(buf));
+		delete in;
+		dest->FastQueuePacket(&outapp, ack_req);
+	}
+
 	// Client to server: the layout depends on the subtype. A request too short for its subtype is invalidated;
 	// subtypes the server has no handler for are passed on with the fields zero.
 	DECODE(OP_AdvLoot)

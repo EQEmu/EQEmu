@@ -1941,6 +1941,79 @@ struct AdvLootCorpseItem_Struct {
 	char	item_link[ADVLOOT_ITEM_LINK_SIZE];
 };
 
+// OP_AdvLoot, zone to client. Every body starts with its AdvLootSubtype; the client's encoder lays each one out for the
+// wire, so these hold only what the server decides. Names are NUL-terminated.
+struct AdvLootClearPending_Struct {
+	uint16	subtype;		// AdvLootClearPending
+	uint32	corpse_id;
+	uint64	item_id;
+};
+
+struct AdvLootCoin_Struct {
+	uint16	subtype;		// AdvLootCoin
+	uint8	split;			// 1 when the coin is a split between players
+	uint64	copper;
+};
+
+struct AdvLootResult_Struct {
+	uint16	subtype;		// AdvLootLootResult
+	uint16	result;			// AdvLootResult
+	uint32	sequence;		// the request's sequence, so the window can drop the request
+};
+
+// an item given to a player, or left on the corpse
+struct AdvLootGiveNotice_Struct {
+	uint16	subtype;		// AdvLootGive
+	uint32	transaction_id;	// the row's ask id, 0 when it was never asked
+	uint32	corpse_id;
+	uint64	item_id;
+	uint16	quantity;
+	uint8	leave;			// 1 = left on the corpse, 0 = given to player_name
+	char	player_name[64];	// who gave (leave) or who got the item
+};
+
+// an ask (need/greed) for one item on one corpse
+struct AdvLootAskNotice_Struct {
+	uint16	subtype;		// AdvLootAsk
+	uint32	transaction_id;
+	uint64	item_id;
+	uint32	state;			// AdvLootTransactionState
+	uint32	time_left;		// milliseconds
+	uint32	corpse_id;
+	uint32	quantity;
+};
+
+struct AdvLootStateNotice_Struct {
+	uint16	subtype;		// AdvLootState
+	uint32	transaction_id;
+	uint32	time_left;		// milliseconds
+	uint32	state;			// AdvLootTransactionState
+};
+
+// AdvLootRollResult_Struct is followed by roller_count AdvLootRoller_Struct
+struct AdvLootRollResult_Struct {
+	uint16	subtype;		// AdvLootRollResult
+	uint32	transaction_id;
+	uint32	best_choice;	// the choice that rolled: greed or need
+	uint16	roller_count;
+};
+
+struct AdvLootRoller_Struct {
+	uint16	roll;
+	char	name[64];
+};
+
+// reply to AdvLootSync
+struct AdvLootSyncReply_Struct {
+	uint16	subtype;		// AdvLootSync
+	char	master_looter_name[64];
+};
+
+// OP_AdvLootMasterLooter: the master looter for the window's Give list; an empty name clears it
+struct AdvLootMasterLooter_Struct {
+	char	name[64];
+};
+
 struct GuildManageStatus_Struct{
 	uint32	guild_id;
 	uint32	oldrank;
