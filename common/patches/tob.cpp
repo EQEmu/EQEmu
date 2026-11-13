@@ -334,7 +334,7 @@ namespace TOB
 		delete __packet;
 	}
 
-	// ---- Bazaar / Trader / Barter (same flow as rof2.cpp) ----
+	// ---- Bazaar / Trader / Barter ----
 
 	ENCODE(OP_Barter)
 	{
@@ -1390,7 +1390,7 @@ namespace TOB
 
 	ENCODE(OP_GroupUpdate)
 	{
-		// Ported from RoF2. Member list (OP_GroupUpdateB) layout per ToB:
+		// Member list (OP_GroupUpdateB) layout per ToB:
 		// header: u32, u32 member_count, str leader; per member: u32 index, str name, u16 merc, str owner,
 		// u32 level, u8 x5 role flags, u32 offline, u64 timestamp, u32 unknown, u64 unknown.
 		EQApplicationPacket *in = *p;
@@ -3619,7 +3619,7 @@ namespace TOB
 		}
 
 		SerializeBuffer buffer;
-		// the client reads (and discards) a length-prefixed name first (RoF2's leading player name)
+		// the client reads (and discards) a length-prefixed name first (the leading player name)
 		buffer.WriteLengthString(std::string(emu->player_name, strnlen(emu->player_name, sizeof(emu->player_name))));
 
 		buffer.WriteUInt64(ServerToTOBGuildID(emu->guild_id));
@@ -3636,14 +3636,14 @@ namespace TOB
 			buffer.WriteUInt32(e->rank);
 			buffer.WriteUInt32(e->time_last_on);
 			buffer.WriteUInt8(e->tribute_enable ? 1 : 0);
-			buffer.WriteUInt8(0);                       // RoF2 unknown01
+			buffer.WriteUInt8(0);                       // unknown
 			buffer.WriteUInt32(e->total_tribute);
 			buffer.WriteUInt32(e->last_tribute);
-			buffer.WriteUInt8(1);                       // RoF2 unknown_one
+			buffer.WriteUInt8(1);                       // unknown, always 1
 			buffer.WriteLengthString(notes[i]);
 			buffer.WriteUInt32(e->zone_id);             // non-zero = shown online
-			buffer.WriteUInt8(1);                       // RoF2 unknown_one2 / guild_show
-			buffer.WriteUInt8(0);                       // RoF2 unknown04 / offline mode
+			buffer.WriteUInt8(1);                       // guild_show, always 1
+			buffer.WriteUInt8(0);                       // offline mode
 		}
 
 		auto outapp = new EQApplicationPacket(OP_GuildMemberList, buffer.size());
@@ -3701,7 +3701,7 @@ namespace TOB
 		eq->rank       = emu->rank_;
 		TOBCopyStr(eq->player_name, emu->player_name);
 		eq->alt_banker = emu->alt_banker;
-		eq->guild_show = static_cast<uint8>(emu->offline);   // RoF2 passes this same field through at 0x4c
+		eq->guild_show = static_cast<uint8>(emu->offline);   // emu offline flag, passed through
 		eq->self_perm_flag = 0;
 
 		FINISH_ENCODE();
@@ -3712,11 +3712,11 @@ namespace TOB
 		ENCODE_LENGTH_EXACT(GuildSetRank_Struct);
 		SETUP_DIRECT_ENCODE(GuildSetRank_Struct, structs::GuildMemberRank_Struct);
 
-		eq->guild_id   = ServerToTOBGuildID(emu->Unknown00);  // RoF2 encoder: guild_id = Unknown00
+		eq->guild_id   = ServerToTOBGuildID(emu->Unknown00);  // the emu struct carries the guild id in Unknown00
 		eq->rank       = emu->rank;
 		TOBCopyStr(eq->player_name, emu->member_name);
 		eq->alt_banker = emu->banker;
-		eq->guild_show = 1;                                  // RoF2 encoder: unknown76 = 1
+		eq->guild_show = 1;                                  // always 1
 
 		FINISH_ENCODE();
 	}
@@ -3779,7 +3779,7 @@ namespace TOB
 		TOBCopyStr(eq->player_name, emu->MemberName);
 		eq->zone_id      = emu->ZoneID;
 		eq->last_on      = emu->LastSeen;
-		eq->offline_mode = 0;                                // RoF2 encoder: Unknown76 = 0
+		eq->offline_mode = 0;                                // always 0
 
 		FINISH_ENCODE();
 	}
@@ -4044,7 +4044,7 @@ namespace TOB
 		buf.WriteUInt32(unknown1);
 		buf.WriteString(leader_name);   // the name the sub-action acts on
 		buf.WriteUInt32(0);             // new in ToB, not read by the handled actions
-		buf.WriteUInt32(parameter);     // RoF2 "parameter" (group, eqstr id, loot type, flag)
+		buf.WriteUInt32(parameter);     // parameter (group, eqstr id, loot type, flag)
 	}
 
 	static inline uint32 ServerToTOBDelegateType(uint32 t)
@@ -4052,7 +4052,7 @@ namespace TOB
 		switch (t) {
 			case 3: return 1; // RaidDelegateMainAssist -> eqstr 0x2242/0x2248
 			case 4: return 2; // RaidDelegateMainMarker -> eqstr 0x2243/0x2249
-			default: return 0xFFFFFFFF; // RoF2 type 5 has no ToB case; ToB type 0 has no emu value
+			default: return 0xFFFFFFFF; // emu type 5 has no ToB case; ToB type 0 has no emu value
 		}
 	}
 
@@ -4129,7 +4129,7 @@ namespace TOB
 					emu->raidGen.unknown1,
 					TOBFixedStr(emu->raidGen.leader_name, sizeof(emu->raidGen.leader_name), 63),
 					emu->raidGen.parameter);                 // group number, 0xFFFFFFFF = ungrouped
-				buf.WriteUInt32(static_cast<uint32>(emu->_class)); // u32 in ToB, u8 in RoF2
+				buf.WriteUInt32(static_cast<uint32>(emu->_class)); // u32 in ToB
 				buf.WriteUInt8(emu->level);
 				buf.WriteUInt8(emu->isGroupLeader);
 				break;
@@ -4305,7 +4305,7 @@ namespace TOB
 	// ---- OP_TaskHistoryReply 0x50a3 (S2C) ----
 	// Per activity: u32 type; cstr target; lenstr item_list; u32 goal; lenstr skill;
 	// lenstr spell; cstr zones; cstr (new); u32 dz_switch_id; cstr description; cstr zones2.
-	// Input is the emu format that rof2.cpp also reads: u32 index; u32 count; count x { u32 type;
+	// Input is the emu format: u32 index; u32 count; count x { u32 type;
 	// cstr target; cstr item_list; u32 goal; u32; u32; u32 zone_id; u32; cstr desc }.
 	ENCODE(OP_TaskHistoryReply)
 	{
@@ -4356,7 +4356,7 @@ namespace TOB
 			buf.WriteString(a.target);
 			buf.WriteLengthString(a.items);
 			buf.WriteUInt32(a.goal);
-			buf.WriteLengthString(std::string("-1")); // skill list (RoF2 encoder sends "-1")
+			buf.WriteLengthString(std::string("-1")); // skill list ("-1" = none)
 			buf.WriteLengthString(std::string("-1")); // spell list
 			buf.WriteString(a.zone);                  // zones: cstr here (lenstr in OP_TaskActivity)
 			buf.WriteString("");                      // new ToB field, same as in OP_TaskActivity
@@ -4441,7 +4441,7 @@ namespace TOB
 		OUT(MercEntityID);
 		OUT(UpdateInterval);
 		OUT(MercUnk01);
-		// ToB inserted a state 5; RoF2/server 5 ("normal"/no active merc) is 6 in ToB.
+		// ToB inserted a state 5; the server's 5 ("normal"/no active merc) is 6 in ToB.
 		eq->MercState = (emu->MercState >= 5) ? emu->MercState + 1 : emu->MercState;
 		eq->SuspendedTime = emu->SuspendedTime;	// zero-extend unix time
 
@@ -4470,7 +4470,7 @@ namespace TOB
 		buffer.WriteUInt32(merc_sub_type);
 		buffer.WriteUInt32(purchase_cost);
 		buffer.WriteUInt32(upkeep_cost);
-		buffer.WriteUInt8(static_cast<uint8>(status));	// was u32 in RoF2, u8 in ToB
+		buffer.WriteUInt8(static_cast<uint8>(status));	// u8 in ToB
 		buffer.WriteUInt32(alt_cost);
 		buffer.WriteUInt32(alt_upkeep);
 		buffer.WriteUInt32(alt_type);
@@ -4521,7 +4521,7 @@ namespace TOB
 					m.MerchantSlot, m.MercUnk02, stances, m.MercUnk03, m.MercUnk04, m.MercName, sizeof(m.MercName),
 					m.Stances);
 			}
-			buffer.WriteUInt32(count ? emu->MercData[0].MercUnk05 : 1);	// RoF2 trailing field (unlocked slots)
+			buffer.WriteUInt32(count ? emu->MercData[0].MercUnk05 : 1);	// trailing field (unlocked slots)
 			buffer.WriteUInt32(0xb); // new ToB trailing field; 0xb is the client's own default
 		}
 		else if (in->size >= sizeof(NoMercenaryHired_Struct)) {
@@ -4605,7 +4605,7 @@ namespace TOB
 			buf.WriteUInt16(c.dz_zone_id);       // u32 dz_id = zone | instance << 16
 			buf.WriteUInt16(c.dz_instance_id);
 			buf.WriteUInt32(c.unknown_id1);
-			buf.WriteUInt8(static_cast<uint8>(c.dz_type)); // ToB: u8 (RoF2 u32)
+			buf.WriteUInt8(static_cast<uint8>(c.dz_type)); // ToB: u8
 			buf.WriteUInt32(c.unknown_id2);
 			buf.WriteString(std::string(c.description, strnlen(c.description, sizeof(c.description) - 1)));
 			buf.WriteString(std::string(c.leader_name, strnlen(c.leader_name, sizeof(c.leader_name) - 1)));
@@ -4705,7 +4705,7 @@ namespace TOB
 		}
 		for (uint32 i = 0; i < count; ++i) {
 			const auto& t = emu->timers[i];
-			// ToB: u32-length-prefixed strings (RoF2: NUL-terminated); client keeps <=127 / <=255 chars
+			// ToB: u32-length-prefixed strings; client keeps <=127 / <=255 chars
 			buf.WriteLengthString(std::string(t.expedition_name, strnlen(t.expedition_name, 127)));
 			buf.WriteUInt32(t.seconds_remaining);
 			buf.WriteInt32(t.event_type);
@@ -4758,7 +4758,7 @@ namespace TOB
 
 		OUT(client_id);
 		eq->add_name = emu->add_name ? 1 : 0;
-		strn0cpy(eq->name, emu->name, sizeof(eq->name)); // the name moved 4 bytes later than RoF2
+		strn0cpy(eq->name, emu->name, sizeof(eq->name)); // the name field starts 4 bytes into the struct
 
 		FINISH_ENCODE();
 	}
@@ -4926,7 +4926,7 @@ namespace TOB
 			eq->currency_number = emu->currency_number;
 			eq->unknown072      = emu->unknown072;
 			eq->delta           = 0;            // server does not know the delta; message is suppressed below
-			eq->amount          = emu->amount;  // RoF2 offset 0x4c -> ToB 0x50
+			eq->amount          = emu->amount;  // ToB offset 0x50
 			eq->show_message    = 0;            // 1 = client prints "You gained %delta %name" (eqstr 0x3426)
 			dest->FastQueuePacket(&outapp, ack_req);
 		}
@@ -4955,7 +4955,7 @@ namespace TOB
 		ENCODE_LENGTH_EXACT(Adventure_Sell_Struct);
 		SETUP_DIRECT_ENCODE(Adventure_Sell_Struct, structs::Adventure_Sell_Struct);
 
-		eq->merchant_type  = 1;   // RoF2 encoder writes 1 here as well
+		eq->merchant_type  = 1;   // 1 = LDoN
 		OUT(npcid);
 		eq->inventory_slot = ServerToTOBTypelessSlot(emu->slot, EQ::invtype::typePossessions);
 		OUT(charges);
@@ -4977,8 +4977,7 @@ namespace TOB
 		FINISH_DIRECT_DECODE();
 	}
 
-	// OP_GuildBank: ToB wire == RoF2 wire. Bodies copied from rof2.cpp with two bounds fixes:
-	// the encoder only reads what the emu packet holds, and the decoder checks the size before reading the action.
+	// OP_GuildBank: the encoder only reads what the emu packet holds, and the decoder checks the size before reading the action.
 	ENCODE(OP_GuildBank)
 	{
 		auto in = *p;
@@ -5042,7 +5041,7 @@ namespace TOB
 			__packet->SetOpcode(OP_Unknown);
 			return;
 		}
-		// all actions are 1 off due to the removal of one of the enums (same as RoF2)
+		// all actions are 1 off due to the removal of one of the enums
 		switch (__packet->ReadUInt32()) {
 		case 2: {
 			DECODE_LENGTH_EXACT(structs::GuildBankPromote_Struct);
@@ -5170,7 +5169,7 @@ namespace TOB
 			delete in;
 			return;
 		}
-		case 3: {   // player search results. Server (= RoF2 wire): u32 3, u32 ?, u32 count, entries.
+		case 3: {   // player search results. Emu wire: u32 3, u32 ?, u32 count, entries.
 			struct Entry { std::string name, comment; uint32 level, cls, aa, tz; };
 			std::vector<Entry> entries;
 			in->SetReadPosition(0);
@@ -5359,7 +5358,7 @@ namespace TOB
 		}
 
 		SerializeBuffer buf;
-		buf.WriteFloat(emu->src_y);             // S[0]   (RoF2 Arrow p0)
+		buf.WriteFloat(emu->src_y);             // S[0]
 		buf.WriteFloat(emu->src_x);             // S[1]
 		buf.WriteFloat(emu->src_z);             // S[2]
 		buf.WriteUInt32(0);                     // S[3..5] vector, zeroed by the ctor when tiny
@@ -5460,7 +5459,7 @@ namespace TOB
 				SerializeItem(buf, &tmp, 0, 0, ItemPacketInvalid);
 			}
 		}
-		buf.WriteUInt8(0);                                          // flag (RoF2 unknown128 = 0)
+		buf.WriteUInt8(0);                                          // flag
 
 		auto outapp = new EQApplicationPacket(OP_TributeInfo, buf.size());
 		outapp->WriteData(buf.buffer(), buf.size());
@@ -5632,7 +5631,7 @@ namespace TOB
 		delete in;
 	}
 
-	// same layout as RoF2; byte 36 is the generic '---' theme the points-merchant buy check reads
+	// byte 36 is the generic '---' theme the points-merchant buy check reads
 	ENCODE(OP_AdventurePointsUpdate)
 	{
 		ENCODE_LENGTH_EXACT(AdventurePoints_Update_Struct);
@@ -5644,7 +5643,7 @@ namespace TOB
 		FINISH_ENCODE();
 	}
 
-	// LFG/LFP search results: rows carry a 16-bit guild id in the emu (RoF2-shaped) buffer; ToB reads a u64.
+	// LFG/LFP search results: rows carry a 16-bit guild id in the emu buffer; ToB reads a u64.
 	static uint64 TOBLfgGuildId(uint16 emu_guild)
 	{
 		// zone/worldserver.cpp writes CLE->GuildID() truncated to u16, so GUILD_NONE arrives as 0xFFFF.
@@ -7799,7 +7798,7 @@ namespace TOB
 		VARSTRUCT_DECODE_STRING(Sender, InBuffer);
 		VARSTRUCT_DECODE_STRING(Target, InBuffer);
 
-		//packet seems the same as rof2 with 4 more empty bytes before language
+		//4 empty bytes before language
 		InBuffer += 8;
 
 		uint32 Language = VARSTRUCT_DECODE_TYPE(uint32, InBuffer);
@@ -8094,7 +8093,7 @@ namespace TOB
 		TOBCopyStr(emu->target, eq->target);
 		TOBCopyStr(emu->name, eq->name);
 		// ToB sends the new rank once (@136). Handle_OP_GuildPromote takes the new rank from myrank
-		// (RoF2 layout), so fill both; the client's own myrank field is uninitialised.
+		// (the emu layout), so fill both; the client's own myrank field is uninitialised.
 		emu->rank   = eq->rank;
 		emu->myrank = eq->rank;
 
@@ -8186,7 +8185,7 @@ namespace TOB
 		delete[] __eq_buffer;
 	}
 
-	// OP_GuildLeader (0x1710) is byte-identical to RoF2 GuildMakeLeader {name[64], target[64]}: opcode only.
+	// OP_GuildLeader (0x1710) is {name[64], target[64]}, which matches the emu GuildMakeLeader: opcode only.
 
 
 	// OP_Emote, C2S: u32 type + char[1024]
@@ -8231,7 +8230,7 @@ namespace TOB
 		strn0cpy(emu->name, eq->name, std::min(sizeof(emu->name), sizeof(eq->name)));
 		strn0cpy(emu->gmname, eq->gmname, std::min(sizeof(emu->gmname), sizeof(eq->gmname)));
 		strn0cpy(emu->lastname, eq->lastname, std::min(sizeof(emu->lastname), sizeof(eq->lastname)));
-		// emu->unknown[] stays zero (the RoF2 decoder also leaves the "update clients" flag to the server)
+		// emu->unknown[] stays zero (the "update clients" flag is left to the server)
 		FINISH_DIRECT_DECODE();
 	}
 
@@ -8344,7 +8343,7 @@ namespace TOB
 		SETUP_DIRECT_DECODE(GuildTributeDonateItemRequest_Struct, structs::GuildTributeDonateItemRequest_Struct);
 
 		// server struct splits the slot into type/slot/sub_index/aug_index; convert through the server slot id
-		// the same way rof2.cpp does after its IN()s.
+		// after the IN()s.
 		uint32 server_slot = TOBToServerSlot(eq->slot);
 		emu->type = eq->slot.Type;
 		emu->slot = static_cast<uint16>(server_slot);
@@ -9796,7 +9795,7 @@ namespace TOB
 		//u32 ScriptIndex;
 		buffer.WriteUInt32(inst->IsScaling() ? (inst->GetExp() / 100) : 0);
 
-		//u64 MerchantSlot; = RoF2's u32 instance_id + u32 parcel_item_id. The client echoes the high dword as
+		//u64 MerchantSlot; = u32 instance_id + u32 parcel_item_id. The client echoes the high dword as
 		// ParcelRetrieve_Struct::parcel_item_id, so parcels need the item id there (was 0: retrieve failed)
 		uint64 merchant_slot = static_cast<uint32>(inst->GetMerchantSlot() ? inst->GetMerchantSlot() : inst->GetSerialNumber());
 		if (packet_type == ItemPacketParcel) {
@@ -10857,7 +10856,7 @@ void MessageComponent::ResolveArguments(uint32_t id, std::array<const char*, 9>&
 	}
 
 	// ToB added a seconds argument to the d:h:m lockout strings (e.g. 3519 "%1d:%2h:%3m:%4s ... %5");
-	// callers still pass the RoF2 arguments, so insert seconds at that index and shift the rest right.
+	// callers still pass the arguments without seconds, so insert seconds at that index and shift the rest right.
 	static const std::unordered_map<uint32_t, size_t> seconds_slot = {
 		{3501, 3}, {3504, 4}, {3519, 3}, {3540, 3}, {3561, 5}, {3591, 4}, {3592, 5},
 		{8017, 3}, {8946, 3}, {8947, 4}, {8979, 4}, {8987, 4},

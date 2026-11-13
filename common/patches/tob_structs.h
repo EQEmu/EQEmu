@@ -1082,8 +1082,8 @@ namespace TOB {
 			/*020*/
 		};
 
-		// OP_RezzRequest / OP_RezzComplete: RoF2 layout with an 8-byte field at 88 (shifts everything
-		// after by 4) and 24 extra bytes at the end; the client copies 0x100 bytes.
+		// OP_RezzRequest / OP_RezzComplete: an 8-byte field at 88 (shifts everything after it by 4)
+		// and 24 extra bytes at the end; the client copies 0x100 bytes.
 		struct Resurrect_Struct {
 			/*000*/ uint32 unknown000;
 			/*004*/ uint16 zone_id;
@@ -1183,7 +1183,7 @@ namespace TOB {
 		/*008*/ uint32 rank;
 		/*012*/ char   player_name[64];
 		/*076*/ uint32 alt_banker;        // bit1 = alt
-		/*080*/ uint8  guild_show;        // RoF2 'unknown76', seen 1
+		/*080*/ uint8  guild_show;        // seen 1
 		/*081*/ uint8  self_perm_flag; // only used when player_name == me
 		/*082*/ uint8  pad082[6];
 		/*088*/
@@ -1291,7 +1291,7 @@ namespace TOB {
 		/*144*/
 		};
 
-		// C2S 0x118c (same size as RoF2; ToB leaves 'name' empty)
+		// C2S 0x118c (ToB leaves 'name' empty)
 		struct GuildDemote_Struct {
 		/*000*/ char   name[64];
 		/*064*/ char   target[64];
@@ -1394,7 +1394,7 @@ namespace TOB {
 		/*064*/
 		};
 
-		// OP_TributeItem (both ways), same as RoF2
+		// OP_TributeItem (both ways)
 		struct TributeItem_Struct {
 		/*00*/	InventorySlot_Struct	inventory_slot;
 		/*12*/	uint32	quantity;
@@ -1449,7 +1449,7 @@ namespace TOB {
 		/*08*/
 		};
 
-		// OP_ShopSendParcel C2S: RoF2 layout with ToB's 6-byte slot + 2 pad (same pattern as AltCurrencySell)
+		// OP_ShopSendParcel C2S: ToB's 6-byte slot + 2 pad (same pattern as AltCurrencySell)
 		struct Parcel_Struct
 		{
 		/*000*/ uint32 npc_id;
@@ -1574,7 +1574,7 @@ namespace TOB {
 		/*88*/
 		};
 
-		// OP_GuildSaveActiveTributes (C2S 0x7161). RoF2 layout shifted by +4.
+		// OP_GuildSaveActiveTributes (C2S 0x7161).
 		struct GuildTributeSaveActive_Struct {
 		/*00*/	uint32	command;
 		/*04*/	uint8	unknown04[20];
@@ -1630,7 +1630,7 @@ namespace TOB {
 
 
 
-		// OP_AltCurrency action 8 entry: 29 bytes (RoF2 25)
+		// OP_AltCurrency action 8 entry: 29 bytes
 		struct AltCurrencyPopulateEntry_Struct
 		{
 		/*000*/ uint32 currency_number;
@@ -1679,7 +1679,7 @@ namespace TOB {
 		// OP_AdventureMerchantSell, 24 bytes
 		struct Adventure_Sell_Struct
 		{
-		/*000*/ uint32 merchant_type;      // 1 LDoN, 2 Discord, 4 NK, 5 DR (RoF2 code writes 1)
+		/*000*/ uint32 merchant_type;      // 1 LDoN, 2 Discord, 4 NK, 5 DR (the server sends 1)
 		/*004*/ uint32 npcid;
 		/*008*/ TypelessInventorySlot_Struct inventory_slot;
 		/*014*/ uint16 unknown014;            // pad: the 6-byte ToB slot left the struct at 22 bytes
@@ -1688,7 +1688,7 @@ namespace TOB {
 		/*024*/
 		};
 
-		// OP_GuildBank: same wire as RoF2. Copied verbatim from rof2_structs.h.
+		// OP_GuildBank.
 		struct GuildBankItemUpdate_Struct
 		{
 		/*000*/ uint32 action;
@@ -1712,12 +1712,11 @@ namespace TOB {
 		struct GuildBankPermissions_Struct  { uint32 Action; uint32 Unknown04; uint32 Unknown08; uint16 SlotID; uint16 Unknown10; uint32 ItemID; uint32 Permissions; char MemberName[64]; };
 		struct GuildBankViewItem_Struct     { uint32 Action; uint32 Unknown04; uint32 Unknown08; uint16 SlotID; uint16 Area; uint32 Unknown12; uint32 Unknown16; };
 		struct GuildBankWithdrawItem_Struct { uint32 Action; uint32 Unknown04; uint32 Unknown08; uint16 SlotID; uint16 Area; uint32 Unknown12; uint32 Quantity; };
-		// NOTE: these sizes are exactly what RoF2 uses today. The ToB client sends action 3 with a 24-byte body and action 5
-		// with an 88-byte body (same as the RoF2 client). If RoF2 guild bank works on your server, ToB behaves the same.
+		// NOTE: the ToB client sends action 3 with a 24-byte body and action 5 with an 88-byte body.
 
 
 
-		// OP_LFGuild. Every ToB body starts at 0x18 (RoF2/server: 8). C2S bytes 4..0x18 are uninitialised stack.
+		// OP_LFGuild. Every ToB body starts at 0x18. C2S bytes 4..0x18 are uninitialised stack.
 		struct LFGuild_PlayerToggle_Struct // command 0, both directions
 		{
 		/*000*/ uint32 Command;                     // 0
@@ -2048,7 +2047,7 @@ namespace TOB {
 		};
 
 
-	//Bazaar / Trader / Barter (same wire layouts as the RoF-2 patch;
+	//Bazaar / Trader / Barter actions
 	enum TOBBazaarTraderBuyerActions {
 		Zero             = 0,
 		BeginTraderMode  = 1,
