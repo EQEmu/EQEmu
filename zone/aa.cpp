@@ -2236,6 +2236,22 @@ void Client::AutoGrantAAPoints() {
 	SendAlternateAdvancementStats();
 }
 
+namespace {
+	// Title string ids (dbstr type 1) of the first rank of each veteran reward AA. They are used instead of
+	// aa_ability ids because those can differ between databases.
+	constexpr int VeteranTitleLessonOfTheDevoted      = 1371;
+	constexpr int VeteranTitleInfusionOfTheFaithful   = 1372;
+	constexpr int VeteranTitleChaoticJester           = 1373;
+	constexpr int VeteranTitleExpedientRecovery       = 1374;
+	constexpr int VeteranTitleSteadfastServant        = 1375;
+	constexpr int VeteranTitleStaunchRecovery         = 1376;
+	constexpr int VeteranTitleIntensityOfTheResolute  = 1377;
+	constexpr int VeteranTitleThroneOfHeroes          = 4665;
+	constexpr int VeteranTitleArmorOfExperience       = 1037;
+
+	constexpr int SecondsPerYear = 365 * 24 * 60 * 60;
+}
+
 // Veteran reward AAs by account age, keyed by the title string of their first rank so the
 // aa_ability ids can differ between databases. Years are Live's reward schedule.
 void Client::GrantVeteranAAs()
@@ -2245,20 +2261,20 @@ void Client::GrantVeteranAAs()
 	}
 
 	static const std::map<int, int> veteran_aa_years = {
-		{ 1371, 1 }, // Lesson of the Devoted
-		{ 1372, 2 }, // Infusion of the Faithful
-		{ 1373, 3 }, // Chaotic Jester
-		{ 1374, 4 }, // Expedient Recovery
-		{ 1375, 5 }, // Steadfast Servant
-		{ 1376, 6 }, // Staunch Recovery
-		{ 1377, 7 }, // Intensity of the Resolute
-		{ 4665, 8 }, // Throne of Heroes
-		{ 1037, 9 }, // Armor of Experience
+		{ VeteranTitleLessonOfTheDevoted, 1 },
+		{ VeteranTitleInfusionOfTheFaithful, 2 },
+		{ VeteranTitleChaoticJester, 3 },
+		{ VeteranTitleExpedientRecovery, 4 },
+		{ VeteranTitleSteadfastServant, 5 },
+		{ VeteranTitleStaunchRecovery, 6 },
+		{ VeteranTitleIntensityOfTheResolute, 7 },
+		{ VeteranTitleThroneOfHeroes, 8 },
+		{ VeteranTitleArmorOfExperience, 9 },
 	};
 
 	int years = RuleI(AA, VeteranAAYearsOverride);
 	if (years < 0) {
-		years = GetAccountAge() / (365 * 24 * 60 * 60);
+		years = GetAccountAge() / SecondsPerYear;
 	}
 
 	bool granted = false;
