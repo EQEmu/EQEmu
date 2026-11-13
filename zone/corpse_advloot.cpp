@@ -72,6 +72,7 @@ uint32 AdvancedLootAskMilliseconds()
 }
 
 constexpr uint32 ADVLOOT_ROLL_MAX           = 1000;
+constexpr size_t ADVLOOT_MAX_CORPSE_ITEMS   = 200; // the client holds at most this many items per corpse
 constexpr uint32 ADVLOOT_DECAY_AFTER_UNLOCK = 120000; // ms the corpse is kept after it unlocks
 
 
@@ -513,7 +514,7 @@ void Corpse::SendAdvancedLootItems(Client *c)
 		}
 
 		const auto *data = database.GetItem(loot->item_id);
-		if (data && entries.size() < 200) { // the client holds at most 200 items per corpse
+		if (data && entries.size() < ADVLOOT_MAX_CORPSE_ITEMS) {
 			entries.push_back({loot, data, reserved != 0});
 		}
 	}
@@ -693,6 +694,13 @@ void Corpse::AdvancedGiveItem(Client *c, uint32 transaction_id, uint32 item_id, 
 {
 	Client *master_looter = GetAdvancedLootMasterLooter();
 	if (!master_looter || master_looter != c) {
+		return;
+	}
+
+	// like looting, giving or leaving needs the master looter to have been near the corpse or to have right-clicked it
+	if (!IsAdvancedLootPresent(c)) {
+		c->Message(Chat::Red, "You were not near this corpse when it was looted. Go to the corpse and right-click it first.");
+		SendAdvLootClearPending(c, GetID(), item_id);
 		return;
 	}
 

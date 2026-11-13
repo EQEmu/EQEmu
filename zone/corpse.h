@@ -49,6 +49,9 @@ enum AdvLootResult : uint16 {
 	AdvLootResultGone    = 7, // client prints 11318
 };
 
+// Second value of OP_AdvLootSettings; its purpose is not identified, the client is sent this fixed value.
+constexpr uint32 ADVLOOT_SETTINGS_UNKNOWN_SECONDS = 120;
+
 void SendAdvLootResult(Client *c, uint16 result, uint32 sequence);
 
 class Corpse : public Mob {

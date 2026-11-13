@@ -537,7 +537,7 @@ void Client::CompleteConnect()
 
 			auto settings = new EQApplicationPacket(OP_AdvLootSettings, 12);
 			settings->WriteUInt32(std::max(1, RuleI(Character, AdvancedLootAskSeconds)));
-			settings->WriteUInt32(120); // meaning unknown
+			settings->WriteUInt32(ADVLOOT_SETTINGS_UNKNOWN_SECONDS);
 			settings->WriteUInt32(std::max(0, unlock_seconds));
 			QueuePacket(settings);
 			safe_delete(settings);
@@ -1728,7 +1728,11 @@ void Client::Handle_Connect_OP_ZoneEntry(const EQApplicationPacket *app)
 
 	/* TOB characters start with Use Advanced Looting and Auto Split Coin on; after that the player's own Loot Settings
 	   choice wins. The client takes the Auto Split checkbox from the profile, so this has to happen before it is sent. */
-	if (ClientVersion() >= EQ::versions::ClientVersion::TOB && GetBucket("advanced_looting").empty()) {
+	if (
+		RuleB(Character, EnableAdvancedLoot) &&
+		ClientVersion() >= EQ::versions::ClientVersion::TOB &&
+		GetBucket("advanced_looting").empty()
+	) {
 		SetBucket("advanced_looting", "1");
 		m_pp.autosplit = 1;
 	}

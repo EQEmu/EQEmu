@@ -82,6 +82,7 @@ namespace EQ
 
 #define CLIENT_LD_TIMEOUT 30000 // length of time client stays in zone after LDing
 #define TARGETING_RANGE 200 // range for /assist and /target
+constexpr uint32 ADVLOOT_MASTER_LOOTER_REFRESH_MS = 1500; // wait for the roster packets before re-announcing the master looter
 #define XTARGET_HARDCAP 20
 #define MAX_SPECIALIZED_SKILL 50
 
@@ -492,7 +493,7 @@ public:
 	inline bool IsAdvancedLooting() const { return m_advanced_looting; }
 	inline void SetAdvancedLooting(bool enabled) { m_advanced_looting = enabled; }
 	// re-announce the master looter shortly, after group/raid roster packets have reached the client
-	inline void QueueAdvancedLootMasterLooterRefresh() { m_advloot_master_looter_refresh.Start(1500); }
+	inline void QueueAdvancedLootMasterLooterRefresh() { m_advloot_master_looter_refresh.Start(ADVLOOT_MASTER_LOOTER_REFRESH_MS); }
 	void SetAnon(uint8 anon_flag);
 	inline Client* ResetAFKTimer() {
 		if (!RuleB(Character, EnableAutoAFK)) {
