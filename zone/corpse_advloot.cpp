@@ -524,14 +524,19 @@ void Corpse::SendAdvancedLootItems(Client *c)
 
 	const uint32 unlock_seconds = m_corpse_delay_timer.Enabled() ? m_corpse_delay_timer.GetRemainingTime() / 1000 : 0;
 
-	// TOB wire order; item links stay in server format and are converted by the TOB encoder
-	SerializeBuffer buf;
-	buf.WriteUInt8(IsAdvancedLootPresent(c) ? 1 : 0); // 1 when present; 0 draws the row locked
-	buf.WriteUInt8(IsAdvancedLootShared() ? 1 : 0); // 1 for group corpses, 0 solo
-	buf.WriteUInt32(unlock_seconds);
-	buf.WriteUInt32(GetID());
-	buf.WriteUInt32(entries.size());
-	buf.WriteString(GetCleanName());
+	// the client's encoder lays this out for the wire; item links stay in server format
+	const size_t packet_size = sizeof(AdvLootCorpseItems_Struct) + entries.size() * sizeof(AdvLootCorpseItem_Struct);
+	auto outapp = new EQApplicationPacket(OP_AdvLootCorpseItems, packet_size);
+
+	auto header = reinterpret_cast<AdvLootCorpseItems_Struct *>(outapp->pBuffer);
+	header->present        = IsAdvancedLootPresent(c) ? 1 : 0; // 0 draws the rows locked
+	header->shared         = IsAdvancedLootShared() ? 1 : 0;
+	header->unlock_seconds = unlock_seconds;
+	header->corpse_id      = GetID();
+	header->item_count     = static_cast<uint32>(entries.size());
+	strn0cpy(header->corpse_name, GetCleanName(), sizeof(header->corpse_name));
+
+	auto packet_items = reinterpret_cast<AdvLootCorpseItem_Struct *>(outapp->pBuffer + sizeof(AdvLootCorpseItems_Struct));
 
 	for (const auto &e : entries) {
 		std::unique_ptr<EQ::ItemInstance> inst(
@@ -563,23 +568,16 @@ void Corpse::SendAdvancedLootItems(Client *c)
 		const bool   stackable = e.data->Stackable && e.data->StackSize > 1;
 		const uint32 quantity  = stackable ? std::max<uint32>(1, e.loot->charges) : 1;
 
-		buf.WriteUInt64(e.loot->item_id);
-		buf.WriteUInt32(e.data->Icon);
-		buf.WriteUInt32(e.mine ? 0 : quantity);             // Shared list quantity
-		buf.WriteUInt32(stackable ? e.data->StackSize : 1); // max stack size; 1 = one row per item
-		buf.WriteUInt8(0);
-		buf.WriteUInt32(0);
-		buf.WriteUInt32(e.mine ? quantity : 0);             // Personal list quantity
-		buf.WriteString(e.data->Name);
-		buf.WriteUInt32(0);                                 // the next five: common values
-		buf.WriteUInt32(0xFFFF);
-		buf.WriteUInt32(0xFFFF);
-		buf.WriteUInt32(0);
-		buf.WriteUInt32(0);
-		buf.WriteLengthString(link);
+		AdvLootCorpseItem_Struct &packet_item = *packet_items++;
+		packet_item.item_id           = e.loot->item_id;
+		packet_item.icon              = e.data->Icon;
+		packet_item.shared_quantity   = e.mine ? 0 : quantity;
+		packet_item.personal_quantity = e.mine ? quantity : 0;
+		packet_item.stack_size        = stackable ? e.data->StackSize : 1; // 1 = one row per item
+		strn0cpy(packet_item.item_name, e.data->Name, sizeof(packet_item.item_name));
+		strn0cpy(packet_item.item_link, link.c_str(), sizeof(packet_item.item_link));
 	}
 
-	auto outapp = new EQApplicationPacket(OP_AdvLootCorpseItems, std::move(buf));
 	c->QueuePacket(outapp);
 	safe_delete(outapp);
 

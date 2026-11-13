@@ -41,33 +41,12 @@ namespace EQ {
 
 #define MAX_LOOTERS 72
 
-// OP_AdvLoot subtypes (u16, first in both directions)
-enum AdvLootSubtype : uint16 {
-	AdvLootSync         = 3,
-	AdvLootCoin         = 6,
-	AdvLootLeave        = 7,
-	AdvLootLoot         = 8,
-	AdvLootLootResult   = 9,
-	AdvLootAsk          = 0xa,
-	AdvLootChoice       = 0xb,
-	AdvLootGive         = 0xe,
-	AdvLootClearPending = 0x10,
-	AdvLootState        = 0x11,
-	AdvLootRoll         = 0x12,
-	AdvLootRollResult   = 0x13,
-};
-
 enum AdvLootResult : uint16 {
 	AdvLootResultLooted  = 1,
 	AdvLootResultLore    = 3, // client prints 371
 	AdvLootResultNoRoom  = 5, // client prints 372
 	AdvLootResultRefused = 6, // no client handling: frees the request and the row, prints nothing
 	AdvLootResultGone    = 7, // client prints 11318
-};
-
-// OP_AdvLootMisc subtypes (client to server)
-enum AdvLootMiscSubtype : uint16 {
-	AdvLootMiscFreeGrab = 0xf,
 };
 
 void SendAdvLootResult(Client *c, uint16 result, uint32 sequence);

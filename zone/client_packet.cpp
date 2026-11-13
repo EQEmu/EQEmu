@@ -1994,125 +1994,105 @@ void Client::Handle_OP_AcceptNewTask(const EQApplicationPacket *app)
 
 void Client::Handle_OP_AdvLoot(const EQApplicationPacket *app)
 {
-	if (app->size < sizeof(uint16)) {
+	if (app->size != sizeof(AdvLootRequest_Struct)) {
+		LogError("Wrong size: OP_AdvLoot, size=[{}], expected [{}]", app->size, sizeof(AdvLootRequest_Struct));
 		return;
 	}
 
-	const uint16 subtype = *(const uint16 *)app->pBuffer;
-	LogLootDetail("[{}] OP_AdvLoot subtype [{}] size [{}]", GetCleanName(), subtype, app->size);
+	const auto *request = reinterpret_cast<const AdvLootRequest_Struct *>(app->pBuffer);
+	LogLootDetail("[{}] OP_AdvLoot subtype [{}]", GetCleanName(), request->subtype);
 
-	// Loot: u16, u64 item, u32 corpse, u32 quantity, u32 sequence, u8 flag
-	// Leave: u16, u64 item, u32 corpse, u32 quantity
-	const uint32 item_id   = app->size >= 10 ? (uint32) *(const uint64 *)(app->pBuffer + 2) : 0;
-	uint32 corpse_id = app->size >= 14 ? *(const uint32 *)(app->pBuffer + 10) : 0;
-
-	if (subtype == AdvLootSync) {
-		Corpse::SendAdvancedLootSync(this);
-		return;
-	}
-
-	if (subtype == AdvLootLeave && app->size >= 18) {
-		Corpse *corpse = entity_list.GetCorpseByID(corpse_id);
-		if (corpse) {
-			corpse->AdvancedLeaveItem(this, item_id);
+	switch (request->subtype) {
+		case AdvLootSync: {
+			Corpse::SendAdvancedLootSync(this);
+			break;
 		}
-		return;
-	}
-
-	if (subtype == AdvLootLoot && app->size >= 23) {
-		const uint32 sequence = *(const uint32 *)(app->pBuffer + 18);
-		Corpse *corpse = entity_list.GetCorpseByID(corpse_id);
-		if (corpse) {
-			corpse->AdvancedLootItem(this, item_id, sequence);
+		case AdvLootLeave: {
+			Corpse *corpse = entity_list.GetCorpseByID(request->corpse_id);
+			if (corpse) {
+				corpse->AdvancedLeaveItem(this, request->item_id);
+			}
+			break;
 		}
-		else {
-			SendAdvLootResult(this, AdvLootResultGone, sequence); // lets the window drop the request
+		case AdvLootLoot: {
+			Corpse *corpse = entity_list.GetCorpseByID(request->corpse_id);
+			if (corpse) {
+				corpse->AdvancedLootItem(this, request->item_id, request->sequence);
+			}
+			else {
+				SendAdvLootResult(this, AdvLootResultGone, request->sequence); // lets the window drop the request
+			}
+			break;
 		}
-		return;
-	}
-
-	// Choice (0xb): u16, u32 transaction, u32 corpse, u64 item, u16 count, {u32 choice, cstr}
-	if (subtype == AdvLootChoice && app->size >= 24) {
-		const uint32 transaction_id = *(const uint32 *)(app->pBuffer + 2);
-		const uint32 choice_corpse  = *(const uint32 *)(app->pBuffer + 6);
-		const uint32 choice_item    = (uint32) *(const uint64 *)(app->pBuffer + 10);
-		const uint32 choice         = *(const uint32 *)(app->pBuffer + 20);
-		Corpse *corpse = entity_list.GetCorpseByID(choice_corpse);
-		if (corpse) {
-			corpse->AdvancedChoice(this, transaction_id, choice_item, choice);
+		case AdvLootChoice: {
+			Corpse *corpse = entity_list.GetCorpseByID(request->corpse_id);
+			if (corpse) {
+				corpse->AdvancedChoice(this, request->transaction_id, request->item_id, request->choice);
+			}
+			break;
 		}
-		return;
-	}
-
-	// Ask (0xa, master looter): u16, u32 transaction, u64 item, u32 state, u8, u32 time, u32 count, {u32 corpse, u32 qty}
-	if (subtype == AdvLootAsk && app->size >= 35) {
-		const uint32 transaction_id = *(const uint32 *)(app->pBuffer + 2);
-		const uint32 ask_item       = (uint32) *(const uint64 *)(app->pBuffer + 6);
-		const uint32 state          = *(const uint32 *)(app->pBuffer + 14);
-		const uint32 ask_corpse     = *(const uint32 *)(app->pBuffer + 27);
-		Corpse *corpse = entity_list.GetCorpseByID(ask_corpse);
-		if (corpse) {
-			corpse->AdvancedAsk(this, transaction_id, ask_item, state);
+		case AdvLootAsk: {
+			// master looter
+			Corpse *corpse = entity_list.GetCorpseByID(request->corpse_id);
+			if (corpse) {
+				corpse->AdvancedAsk(this, request->transaction_id, request->item_id, request->state);
+			}
+			break;
 		}
-		return;
-	}
-
-	// Give / grab (0xe, master looter): u16, u32 transaction, u32 corpse, u64 item, u16 qty, u8, cstr player
-	if (subtype == AdvLootGive && app->size >= 22) {
-		const uint32 give_ask    = *(const uint32 *)(app->pBuffer + 2); // the row's ask id, 0 when it was never asked
-		const uint32 give_corpse = *(const uint32 *)(app->pBuffer + 6);
-		const uint32 give_item   = (uint32) *(const uint64 *)(app->pBuffer + 10);
-		const uint16 quantity    = *(const uint16 *)(app->pBuffer + 18);
-		const bool   leave       = app->pBuffer[20] != 0; // 1 = Leave On Corpse / Leave All, 0 = give
-		const std::string name((const char *)app->pBuffer + 21, strnlen((const char *)app->pBuffer + 21, std::min<size_t>(64, app->size - 21)));
-		Corpse *corpse = entity_list.GetCorpseByID(give_corpse);
-		if (corpse) {
-			corpse->AdvancedGiveItem(this, give_ask, give_item, quantity, leave, name);
+		case AdvLootGive: {
+			// master looter; transaction_id is the row's ask id, 0 when it was never asked
+			Corpse *corpse = entity_list.GetCorpseByID(request->corpse_id);
+			if (corpse) {
+				corpse->AdvancedGiveItem(
+					this,
+					request->transaction_id,
+					request->item_id,
+					static_cast<uint16>(request->quantity),
+					request->leave != 0,
+					request->player_name
+				);
+			}
+			break;
 		}
-		return;
-	}
-
-	// State change (0x11, master looter): u16, u32 transaction, u32 time, u32 state, u8
-	if (subtype == AdvLootState && app->size >= 14) {
-		const uint32 transaction_id = *(const uint32 *)(app->pBuffer + 2);
-		const uint32 state          = *(const uint32 *)(app->pBuffer + 10);
-		Corpse *corpse = Corpse::FindAdvancedLootTransaction(transaction_id, this);
-		if (corpse) {
-			corpse->AdvancedSetState(this, transaction_id, state);
+		case AdvLootState: {
+			// master looter
+			Corpse *corpse = Corpse::FindAdvancedLootTransaction(request->transaction_id, this);
+			if (corpse) {
+				corpse->AdvancedSetState(this, request->transaction_id, request->state);
+			}
+			break;
 		}
-		return;
-	}
-
-	// Roll (0x12, master looter, after the ask completed): u16, u32 transaction
-	if (subtype == AdvLootRoll && app->size >= 6) {
-		const uint32 transaction_id = *(const uint32 *)(app->pBuffer + 2);
-		Corpse *corpse = Corpse::FindAdvancedLootTransaction(transaction_id, this);
-		if (corpse) {
-			corpse->AdvancedRoll(this, transaction_id);
+		case AdvLootRoll: {
+			// master looter, after the ask completed
+			Corpse *corpse = Corpse::FindAdvancedLootTransaction(request->transaction_id, this);
+			if (corpse) {
+				corpse->AdvancedRoll(this, request->transaction_id);
+			}
+			break;
 		}
-		return;
+		default:
+			break;
 	}
 }
 
 void Client::Handle_OP_AdvLootMisc(const EQApplicationPacket *app)
 {
-	if (app->size < sizeof(uint16)) {
+	if (app->size != sizeof(AdvLootMisc_Struct)) {
+		LogError("Wrong size: OP_AdvLootMisc, size=[{}], expected [{}]", app->size, sizeof(AdvLootMisc_Struct));
 		return;
 	}
 
-	const uint16 subtype = *(const uint16 *)app->pBuffer;
-	LogLootDetail("[{}] OP_AdvLootMisc subtype [{}] size [{}]", GetCleanName(), subtype, app->size);
+	const auto *request = reinterpret_cast<const AdvLootMisc_Struct *>(app->pBuffer);
+	LogLootDetail("[{}] OP_AdvLootMisc subtype [{}]", GetCleanName(), request->subtype);
 
-	// Free Grab: u16, u32 ask, u32 corpse, cstr
-	if (subtype == AdvLootMiscFreeGrab && app->size >= 10) {
-		const uint32 transaction_id = *(const uint32 *)(app->pBuffer + 2);
-		Corpse *corpse = entity_list.GetCorpseByID(*(const uint32 *)(app->pBuffer + 6));
-		if (!corpse || !corpse->HasAdvancedLootTransaction(transaction_id)) {
-			corpse = Corpse::FindAdvancedLootTransaction(transaction_id, nullptr, this);
+	if (request->subtype == AdvLootMiscFreeGrab) {
+		Corpse *corpse = entity_list.GetCorpseByID(request->corpse_id);
+		if (!corpse || !corpse->HasAdvancedLootTransaction(request->transaction_id)) {
+			corpse = Corpse::FindAdvancedLootTransaction(request->transaction_id, nullptr, this);
 		}
 
 		if (corpse) {
-			corpse->AdvancedFreeGrab(this, transaction_id);
+			corpse->AdvancedFreeGrab(this, request->transaction_id);
 		}
 	}
 }

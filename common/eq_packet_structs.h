@@ -1867,6 +1867,80 @@ struct LootingItem_Struct {
 /*008*/	int32	auto_loot;
 };
 
+// OP_AdvLoot subtypes (u16, first in both directions)
+enum AdvLootSubtype : uint16 {
+	AdvLootSync         = 3,
+	AdvLootCoin         = 6,
+	AdvLootLeave        = 7,
+	AdvLootLoot         = 8,
+	AdvLootLootResult   = 9,
+	AdvLootAsk          = 0xa,
+	AdvLootChoice       = 0xb,
+	AdvLootGive         = 0xe,
+	AdvLootClearPending = 0x10,
+	AdvLootState        = 0x11,
+	AdvLootRoll         = 0x12,
+	AdvLootRollResult   = 0x13,
+};
+
+// Advanced Loot window requests (OP_AdvLootMisc, client to server)
+enum AdvLootMiscSubtype : uint16 {
+	AdvLootMiscFreeGrab = 0xf,
+};
+
+// One decoded OP_AdvLoot request. Only the fields that the subtype carries are set, the rest are zero:
+//   AdvLootSync:  none
+//   AdvLootLeave: item_id, corpse_id, quantity
+//   AdvLootLoot:  item_id, corpse_id, quantity, sequence
+//   AdvLootChoice: transaction_id, corpse_id, item_id, choice
+//   AdvLootAsk:   transaction_id, item_id, state, corpse_id
+//   AdvLootGive:  transaction_id (the ask the row carries, 0 if never asked), corpse_id, item_id, quantity,
+//                 leave (1 = leave on corpse, 0 = give), player_name
+//   AdvLootState: transaction_id, state
+//   AdvLootRoll:  transaction_id
+struct AdvLootRequest_Struct {
+	uint16	subtype;
+	uint32	transaction_id;
+	uint32	corpse_id;
+	uint32	item_id;
+	uint32	quantity;
+	uint32	sequence;
+	uint32	choice;
+	uint32	state;
+	uint8	leave;
+	char	player_name[64];
+};
+
+// One decoded OP_AdvLootMisc request
+struct AdvLootMisc_Struct {
+	uint16	subtype;
+	uint32	transaction_id;	// AdvLootMiscFreeGrab: the ask being grabbed
+	uint32	corpse_id;
+};
+
+// OP_AdvLootCorpseItems, zone to client: AdvLootCorpseItems_Struct followed by item_count AdvLootCorpseItem_Struct.
+// The player sees an item in the Shared list (shared_quantity) or the Personal list (personal_quantity).
+constexpr uint32 ADVLOOT_ITEM_LINK_SIZE = 256; // server-format item link, converted by the client's encoder
+
+struct AdvLootCorpseItems_Struct {
+	uint8	present;		// 1 when the player was near the corpse; 0 draws the rows locked
+	uint8	shared;			// 1 for a group or raid corpse, 0 for a solo corpse
+	uint32	unlock_seconds;	// time left before the corpse unlocks for everyone
+	uint32	corpse_id;
+	uint32	item_count;
+	char	corpse_name[64];
+};
+
+struct AdvLootCorpseItem_Struct {
+	uint64	item_id;
+	uint32	icon;
+	uint32	shared_quantity;
+	uint32	personal_quantity;
+	uint32	stack_size;		// largest stack; 1 draws one row per item
+	char	item_name[64];
+	char	item_link[ADVLOOT_ITEM_LINK_SIZE];
+};
+
 struct GuildManageStatus_Struct{
 	uint32	guild_id;
 	uint32	oldrank;
@@ -2529,7 +2603,7 @@ struct GroupUpdate2_Struct {
 /*0452*/	GroupLeadershipAA_Struct leader_aas;
 /*0580*/	uint8	unknown580[196];
 /*0766*/	uint32	NPCMarkerID;	// EntityID of player delegated MarkNPC ability
-/*0780*/	uint32	group_id;		// TOB+: sent first in the roster; the client needs it non-zero
+/*0780*/	uint32	group_id;		// the group's id; 0 when the sender has none (TOB+ puts it first in the roster)
 /*0784*/	uint8	unknown784[52];
 /*0836*/
 };

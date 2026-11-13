@@ -165,6 +165,8 @@ E(OP_ZoneSpawns)
 
 //list of packets we need to decode on the way in:
 D(OP_AdventureMerchantSell)
+D(OP_AdvLoot)
+D(OP_AdvLootMisc)
 D(OP_AltCurrencySell)
 D(OP_ShopSendParcel)
 D(OP_AltCurrencySellSelection)

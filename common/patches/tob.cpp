@@ -4951,72 +4951,216 @@ namespace TOB
 
 	// ---- alt currency, group make leader/follow2, guild bank, adventure merchant ----
 
-	// The zone builds this packet in TOB wire order (see Corpse::SendAdvancedLootItems), with item links in
-	// server format. Only the links need converting:
-	//   u8, u8, u32 unlock_secs, u32 corpse_id, u32 count, cstr name,
-	//   count x { u64 item_id, u32 icon, u32 shared_qty, u32 stack_size, u8, u32, u32 personal_qty, cstr name,
-	//             5 x u32, u32 link_length, link (no NUL) }
+	// Zone to client: AdvLootCorpseItems_Struct followed by item_count AdvLootCorpseItem_Struct (see
+	// Corpse::SendAdvancedLootItems). The item links arrive in server format and are converted here.
 	ENCODE(OP_AdvLootCorpseItems)
 	{
 		EQApplicationPacket *in = *p;
 		*p = nullptr;
 
-		const uint8 *buf = in->pBuffer;
-		const size_t size = in->size;
-		size_t pos = 0;
-		SerializeBuffer out(size + 64);
-
-		auto copy = [&](size_t n) {
-			if (pos + n > size) {
-				return false;
-			}
-			for (size_t i = 0; i < n; ++i) {
-				out.WriteUInt8(buf[pos + i]);
-			}
-			pos += n;
-			return true;
-		};
-		auto copy_cstr = [&]() {
-			size_t end = pos;
-			while (end < size && buf[end] != 0) {
-				++end;
-			}
-			return end < size && copy(end - pos + 1);
-		};
-
-		bool ok = copy(10);
-		uint32 count = 0;
-		if (ok && pos + 4 <= size) {
-			count = *(const uint32 *)(buf + pos);
-		}
-		ok = ok && copy(4) && copy_cstr();
-		for (uint32 i = 0; ok && i < count; ++i) {
-			ok = copy(8 + 4 * 4 + 1 + 4) && copy_cstr() && copy(5 * 4) && pos + 4 <= size;
-			if (!ok) {
-				break;
-			}
-			uint32 link_length = *(const uint32 *)(buf + pos);
-			pos += 4;
-			if (pos + link_length > size) {
-				ok = false;
-				break;
-			}
-			std::string link_in((const char *)buf + pos, link_length);
-			std::string link_out;
-			ServerToTOBConvertLinks(link_out, link_in, false);
-			pos += link_length;
-			out.WriteLengthString(link_out);
-		}
-
-		if (!ok) {
-			LogNetcode("[{}] Malformed OP_AdvLootCorpseItems ({} bytes), dropped", __FUNCTION__, size);
+		if (in->size < sizeof(AdvLootCorpseItems_Struct)) {
+			LogNetcode("[{}] Malformed OP_AdvLootCorpseItems ({} bytes), dropped", __FUNCTION__, in->size);
 			delete in;
 			return;
 		}
 
-		auto outapp = new EQApplicationPacket(OP_AdvLootCorpseItems, std::move(out));
+		auto header = reinterpret_cast<const AdvLootCorpseItems_Struct *>(in->pBuffer);
+		const uint64 expected_size = sizeof(AdvLootCorpseItems_Struct) + uint64(header->item_count) * sizeof(AdvLootCorpseItem_Struct);
+		if (in->size != expected_size) {
+			LogNetcode("[{}] Malformed OP_AdvLootCorpseItems ({} bytes for {} items), dropped", __FUNCTION__, in->size, header->item_count);
+			delete in;
+			return;
+		}
+
+		auto items = reinterpret_cast<const AdvLootCorpseItem_Struct *>(in->pBuffer + sizeof(AdvLootCorpseItems_Struct));
+
+		SerializeBuffer buf;
+		buf.WriteUInt8(header->present);
+		buf.WriteUInt8(header->shared);
+		buf.WriteUInt32(header->unlock_seconds);
+		buf.WriteUInt32(header->corpse_id);
+		buf.WriteUInt32(header->item_count);
+		buf.WriteString(std::string(header->corpse_name, strnlen(header->corpse_name, sizeof(header->corpse_name))));
+
+		for (uint32 i = 0; i < header->item_count; ++i) {
+			const AdvLootCorpseItem_Struct &item = items[i];
+
+			structs::AdvLootItemTrailer_Struct trailer{};
+			trailer.unknown004 = structs::ADVLOOT_TRAILER_UNKNOWN004;
+			trailer.unknown008 = structs::ADVLOOT_TRAILER_UNKNOWN008;
+
+			std::string link_out;
+			ServerToTOBConvertLinks(link_out, std::string(item.item_link, strnlen(item.item_link, sizeof(item.item_link))), false);
+
+			buf.WriteUInt64(item.item_id);
+			buf.WriteUInt32(item.icon);
+			buf.WriteUInt32(item.shared_quantity);
+			buf.WriteUInt32(item.stack_size);
+			buf.WriteUInt8(0);
+			buf.WriteUInt32(0);
+			buf.WriteUInt32(item.personal_quantity);
+			buf.WriteString(std::string(item.item_name, strnlen(item.item_name, sizeof(item.item_name))));
+			buf.WriteUInt32(trailer.unknown000);
+			buf.WriteUInt32(trailer.unknown004);
+			buf.WriteUInt32(trailer.unknown008);
+			buf.WriteUInt32(trailer.unknown012);
+			buf.WriteUInt32(trailer.unknown016);
+			buf.WriteLengthString(link_out);
+		}
+
+		auto outapp = new EQApplicationPacket(OP_AdvLootCorpseItems, std::move(buf));
 		delete in;
 		dest->FastQueuePacket(&outapp, ack_req);
+	}
+
+	// Client to server: the layout depends on the subtype. A request too short for its subtype is invalidated;
+	// subtypes the server has no handler for are passed on with the fields zero.
+	DECODE(OP_AdvLoot)
+	{
+		DECODE_LENGTH_ATLEAST(structs::AdvLootSubtype_Struct);
+
+		const unsigned char *buf  = __packet->pBuffer;
+		const size_t         size = __packet->size;
+		const uint16 wire_subtype = reinterpret_cast<const structs::AdvLootSubtype_Struct *>(buf)->subtype;
+
+		AdvLootRequest_Struct request{};
+		bool valid = true;
+
+		switch (static_cast<structs::TOBAdvLootSubtype>(wire_subtype)) {
+		case structs::TOBAdvLootSubtype::Sync:
+			request.subtype = AdvLootSync;
+			break;
+		case structs::TOBAdvLootSubtype::Leave: {
+			valid = size >= sizeof(structs::AdvLootLeave_Struct);
+			if (valid) {
+				auto eq = reinterpret_cast<const structs::AdvLootLeave_Struct *>(buf);
+				request.subtype   = AdvLootLeave;
+				request.item_id   = static_cast<uint32>(eq->item_id); // the client sends 64 bits; item ids fit in 32
+				request.corpse_id = eq->corpse_id;
+				request.quantity  = eq->quantity;
+			}
+			break;
+		}
+		case structs::TOBAdvLootSubtype::Loot: {
+			valid = size >= sizeof(structs::AdvLootLoot_Struct);
+			if (valid) {
+				auto eq = reinterpret_cast<const structs::AdvLootLoot_Struct *>(buf);
+				request.subtype   = AdvLootLoot;
+				request.item_id   = static_cast<uint32>(eq->item_id);
+				request.corpse_id = eq->corpse_id;
+				request.quantity  = eq->quantity;
+				request.sequence  = eq->sequence;
+			}
+			break;
+		}
+		case structs::TOBAdvLootSubtype::Choice: {
+			valid = size >= sizeof(structs::AdvLootChoice_Struct);
+			if (valid) {
+				auto eq = reinterpret_cast<const structs::AdvLootChoice_Struct *>(buf);
+				request.subtype        = AdvLootChoice;
+				request.transaction_id = eq->transaction_id;
+				request.corpse_id      = eq->corpse_id;
+				request.item_id        = static_cast<uint32>(eq->item_id);
+				request.choice         = eq->choice;
+			}
+			break;
+		}
+		case structs::TOBAdvLootSubtype::Ask: {
+			valid = size >= sizeof(structs::AdvLootAsk_Struct);
+			if (valid) {
+				auto eq = reinterpret_cast<const structs::AdvLootAsk_Struct *>(buf);
+				request.subtype        = AdvLootAsk;
+				request.transaction_id = eq->transaction_id;
+				request.item_id        = static_cast<uint32>(eq->item_id);
+				request.state          = eq->state;
+				request.corpse_id      = eq->corpse_id;
+			}
+			break;
+		}
+		case structs::TOBAdvLootSubtype::Give: {
+			// the player name follows the fixed part and needs at least its first byte
+			valid = size > sizeof(structs::AdvLootGive_Struct);
+			if (valid) {
+				auto eq = reinterpret_cast<const structs::AdvLootGive_Struct *>(buf);
+				const char  *name       = reinterpret_cast<const char *>(buf + sizeof(structs::AdvLootGive_Struct));
+				const size_t name_bytes = size - sizeof(structs::AdvLootGive_Struct);
+				request.subtype        = AdvLootGive;
+				request.transaction_id = eq->transaction_id;
+				request.corpse_id      = eq->corpse_id;
+				request.item_id        = static_cast<uint32>(eq->item_id);
+				request.quantity       = eq->quantity;
+				request.leave          = eq->leave != 0 ? 1 : 0;
+				// request is zeroed, so the copy stays terminated; a name without a terminator is cut at the packet end
+				memcpy(request.player_name, name, std::min(strnlen(name, name_bytes), sizeof(request.player_name) - 1));
+			}
+			break;
+		}
+		case structs::TOBAdvLootSubtype::State: {
+			valid = size >= sizeof(structs::AdvLootState_Struct);
+			if (valid) {
+				auto eq = reinterpret_cast<const structs::AdvLootState_Struct *>(buf);
+				request.subtype        = AdvLootState;
+				request.transaction_id = eq->transaction_id;
+				request.state          = eq->state;
+			}
+			break;
+		}
+		case structs::TOBAdvLootSubtype::Roll: {
+			valid = size >= sizeof(structs::AdvLootRoll_Struct);
+			if (valid) {
+				auto eq = reinterpret_cast<const structs::AdvLootRoll_Struct *>(buf);
+				request.subtype        = AdvLootRoll;
+				request.transaction_id = eq->transaction_id;
+			}
+			break;
+		}
+		default:
+			request.subtype = wire_subtype;
+			break;
+		}
+
+		if (!valid) {
+			LogNetcode("TOB OP_AdvLoot subtype [{}] too short ([{}] bytes)", wire_subtype, size);
+			__packet->SetOpcode(OP_Unknown);
+			return;
+		}
+
+		delete[] __packet->pBuffer;
+		__packet->size    = sizeof(AdvLootRequest_Struct);
+		__packet->pBuffer = new unsigned char[__packet->size];
+		memcpy(__packet->pBuffer, &request, sizeof(request));
+	}
+
+	DECODE(OP_AdvLootMisc)
+	{
+		DECODE_LENGTH_ATLEAST(structs::AdvLootSubtype_Struct);
+
+		const unsigned char *buf  = __packet->pBuffer;
+		const size_t         size = __packet->size;
+		const uint16 wire_subtype = reinterpret_cast<const structs::AdvLootSubtype_Struct *>(buf)->subtype;
+
+		AdvLootMisc_Struct request{};
+
+		if (wire_subtype == static_cast<uint16>(structs::TOBAdvLootMiscSubtype::FreeGrab)) {
+			if (size < sizeof(structs::AdvLootMiscFreeGrab_Struct)) {
+				LogNetcode("TOB OP_AdvLootMisc free grab too short ([{}] bytes)", size);
+				__packet->SetOpcode(OP_Unknown);
+				return;
+			}
+
+			auto eq = reinterpret_cast<const structs::AdvLootMiscFreeGrab_Struct *>(buf);
+			request.subtype        = AdvLootMiscFreeGrab;
+			request.transaction_id = eq->transaction_id;
+			request.corpse_id      = eq->corpse_id;
+		}
+		else {
+			request.subtype = wire_subtype; // no handler on the server
+		}
+
+		delete[] __packet->pBuffer;
+		__packet->size    = sizeof(AdvLootMisc_Struct);
+		__packet->pBuffer = new unsigned char[__packet->size];
+		memcpy(__packet->pBuffer, &request, sizeof(request));
 	}
 
 	ENCODE(OP_AltCurrency)

@@ -2416,6 +2416,120 @@ namespace TOB {
 		/*012*/
 	};
 
+	// ---- OP_AdvLoot / OP_AdvLootMisc, client to server ----
+	// Every body starts with a u16 subtype; the rest depends on it. Sizes are the minimum the server accepts.
+	enum class TOBAdvLootSubtype : uint16 {
+		Sync   = 3,
+		Leave  = 7,
+		Loot   = 8,
+		Ask    = 0xa,
+		Choice = 0xb,
+		Give   = 0xe,
+		State  = 0x11,
+		Roll   = 0x12,
+	};
+
+	enum class TOBAdvLootMiscSubtype : uint16 {
+		FreeGrab = 0xf,
+	};
+
+	struct AdvLootSubtype_Struct {
+		/*000*/ uint16 subtype;
+		/*002*/
+	};
+
+	struct AdvLootLeave_Struct {
+		/*000*/ uint16 subtype;
+		/*002*/ uint64 item_id;
+		/*010*/ uint32 corpse_id;
+		/*014*/ uint32 quantity;
+		/*018*/
+	};
+
+	struct AdvLootLoot_Struct {
+		/*000*/ uint16 subtype;
+		/*002*/ uint64 item_id;
+		/*010*/ uint32 corpse_id;
+		/*014*/ uint32 quantity;
+		/*018*/ uint32 sequence;	// echoed in the result so the window can drop the request
+		/*022*/ uint8  flag;
+		/*023*/
+	};
+
+	struct AdvLootChoice_Struct {
+		/*000*/ uint16 subtype;
+		/*002*/ uint32 transaction_id;
+		/*006*/ uint32 corpse_id;
+		/*010*/ uint64 item_id;
+		/*018*/ uint16 count;		// entries in the trailing list, not used
+		/*020*/ uint32 choice;		// first list entry; a NUL-terminated string follows it
+		/*024*/
+	};
+
+	// master looter asking for need/greed
+	struct AdvLootAsk_Struct {
+		/*000*/ uint16 subtype;
+		/*002*/ uint32 transaction_id;
+		/*006*/ uint64 item_id;
+		/*014*/ uint32 state;
+		/*018*/ uint8  unknown018;
+		/*019*/ uint32 time;
+		/*023*/ uint32 count;		// entries in the trailing list
+		/*027*/ uint32 corpse_id;	// first list entry
+		/*031*/ uint32 quantity;
+		/*035*/
+	};
+
+	// master looter giving an item or leaving it; a NUL-terminated player name follows
+	struct AdvLootGive_Struct {
+		/*000*/ uint16 subtype;
+		/*002*/ uint32 transaction_id;	// the row's ask id, 0 when it was never asked
+		/*006*/ uint32 corpse_id;
+		/*010*/ uint64 item_id;
+		/*018*/ uint16 quantity;
+		/*020*/ uint8  leave;			// 1 = Leave On Corpse / Leave All, 0 = give
+		/*021*/
+	};
+
+	struct AdvLootState_Struct {
+		/*000*/ uint16 subtype;
+		/*002*/ uint32 transaction_id;
+		/*006*/ uint32 time;
+		/*010*/ uint32 state;
+		/*014*/	// one more byte follows; the server does not read it
+	};
+
+	struct AdvLootRoll_Struct {
+		/*000*/ uint16 subtype;
+		/*002*/ uint32 transaction_id;
+		/*006*/
+	};
+
+	struct AdvLootMiscFreeGrab_Struct {
+		/*000*/ uint16 subtype;
+		/*002*/ uint32 transaction_id;
+		/*006*/ uint32 corpse_id;
+		/*010*/ // a string follows
+	};
+
+	// ---- OP_AdvLootCorpseItems, server to client ----
+	// Variable length, built with SerializeBuffer:
+	//   header:  u8 present, u8 shared, u32 unlock_seconds, u32 corpse_id, u32 item_count, cstr corpse_name
+	//   per item: u64 item_id, u32 icon, u32 shared_quantity, u32 stack_size, u8 unknown, u32 unknown,
+	//             u32 personal_quantity, cstr item_name, AdvLootItemTrailer_Struct, lenstr item_link
+	struct AdvLootItemTrailer_Struct {
+		/*000*/ uint32 unknown000;
+		/*004*/ uint32 unknown004;
+		/*008*/ uint32 unknown008;
+		/*012*/ uint32 unknown012;
+		/*016*/ uint32 unknown016;
+		/*020*/
+	};
+
+	// values the client expects in AdvLootItemTrailer_Struct
+	constexpr uint32 ADVLOOT_TRAILER_UNKNOWN004 = 0xFFFF;
+	constexpr uint32 ADVLOOT_TRAILER_UNKNOWN008 = 0xFFFF;
+
 #pragma pack()
 
 
