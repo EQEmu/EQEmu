@@ -9892,9 +9892,17 @@ void Client::Handle_OP_ItemVerifyRequest(const EQApplicationPacket *app)
 
 	spell_id = item->Click.Effect;
 
-	// TOB+ Fellowship Registration Insignia: teleport to the campsite instead of casting
+	// TOB+ Fellowship Registration Insignia: teleport to the campsite instead of casting. It skips the cast, not the
+	// click rules: the item has to be in a clickable slot and off its recast like any other clicky
 	if (spell_id == SPELL_FELLOWSHIP_CALLING && IsFellowshipEnabled()) {
-		UseFellowshipInsignia();
+		if (!m_inv.SupportsClickCasting(slot_id) || HasItemRecastTimer(spell_id, slot_id)) {
+			SendSpellBarEnable(spell_id);
+			return;
+		}
+
+		if (UseFellowshipInsignia()) {
+			SetItemRecastTimer(spell_id, slot_id);
+		}
 		return;
 	}
 

@@ -410,12 +410,12 @@ void Client::Handle_OP_FellowshipCampfireListRequest(const EQApplicationPacket *
 }
 
 // the Fellowship Registration Insignia: teleport to the campsite
-void Client::UseFellowshipInsignia()
+bool Client::UseFellowshipInsignia()
 {
 	// same gate as a spell click; the bar must come back
 	if (IsStunned() || IsMezzed() || IsFeared() || IsCasting()) {
 		SendSpellBarEnable(SPELL_FELLOWSHIP_CALLING);
-		return;
+		return false;
 	}
 
 	auto *manager = ZoneFellowshipManager::Instance();
@@ -424,12 +424,12 @@ void Client::UseFellowshipInsignia()
 	const FellowshipInfo *fellowship   = fellowship_id ? manager->GetFellowship(fellowship_id) : nullptr;
 	if (!fellowship) {
 		MessageString(Chat::Red, FELLOWSHIP_NOT_MEMBER);
-		return;
+		return false;
 	}
 
 	if (!fellowship->campsite || fellowship->campsite->expires_at <= static_cast<uint32>(std::time(nullptr))) {
 		MessageString(Chat::Red, FELLOWSHIP_NO_CAMPSITE);
-		return;
+		return false;
 	}
 
 	const FellowshipCampsite campsite = *fellowship->campsite;
@@ -439,8 +439,10 @@ void Client::UseFellowshipInsignia()
 		LogFellowshipsDetail("[{}] used the insignia but instance [{}] of fellowship [{}] has expired", GetCleanName(), campsite.instance_id, fellowship_id);
 		MessageString(Chat::Red, FELLOWSHIP_CAMPSITE_UNREACHABLE);
 		manager->SendCampsiteExpired(fellowship_id);
-		return;
+		return false;
 	}
 
 	MovePC(campsite.zone_id, campsite.instance_id, campsite.x, campsite.y, campsite.z, campsite.heading, 0, ZoneSolicited);
+
+	return true;
 }

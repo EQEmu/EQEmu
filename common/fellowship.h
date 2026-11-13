@@ -8,7 +8,7 @@ namespace Fellowship {
 	constexpr uint32 MAX_MEMBERS        = 12;
 	constexpr uint32 INVITE_TIMEOUT_MS  = 60000;
 	constexpr uint32 LIST_RATE_LIMIT_MS = 2000;
-	constexpr float  CAMPSITE_RANGE     = 100.0f; // guess: how close members must be to the member placing the campsite
+	constexpr float  CAMPSITE_RANGE     = 100.0f; // how close members must be to the member placing the campsite; the server's chosen range, not a client-confirmed value
 
 	struct CampfireType {
 		uint32     id;

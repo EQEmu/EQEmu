@@ -1172,7 +1172,7 @@ public:
 	bool IsFellowshipEnabled() const;
 	inline uint32 GetFellowshipID() const { return m_fellowship_id; }
 	inline void SetFellowshipID(uint32 fellowship_id) { m_fellowship_id = fellowship_id; }
-	void UseFellowshipInsignia();
+	bool UseFellowshipInsignia(); // true only when the member was moved to the campsite
 	void DeleteItemInInventory(int16 slot_id, int16 quantity = 0, bool client_update = false, bool update_db = true);
 	uint32 CountItem(uint32 item_id);
 	void ResetItemCooldown(uint32 item_id);
