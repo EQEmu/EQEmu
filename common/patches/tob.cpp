@@ -1489,8 +1489,7 @@ namespace TOB
 			}
 
 			SerializeBuffer buffer;
-			// group id; the Advanced Loot window ignores the group while this is 0
-			buffer.WriteUInt32(gu2->group_id ? gu2->group_id : 1);
+			buffer.WriteUInt32(gu2->group_id ? gu2->group_id : structs::GROUP_ID_PLACEHOLDER);
 			buffer.WriteUInt32(member_count);
 			buffer.WriteString(gu2->leadersname);
 

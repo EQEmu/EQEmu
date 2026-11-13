@@ -38,6 +38,9 @@ namespace TOB {
 		static const uint32 BLOCKED_BUFF_COUNT = 60; // this might not be needed?
 		static const uint32 BUFF_COUNT = 62;
 		static const uint32 MAX_PP_LANGUAGE = 32;
+		// Group id sent in the group roster when the sender has no real one (raid group updates). The client reads
+		// 0 as "no group", and the Advanced Loot window then ignores the roster.
+		static const uint32 GROUP_ID_PLACEHOLDER = 1;
 #pragma pack(1)
 		
 		struct LoginInfo_Struct {
