@@ -76,18 +76,31 @@ constexpr size_t ADVLOOT_MAX_CORPSE_ITEMS   = 200; // the client holds at most t
 constexpr uint32 ADVLOOT_DECAY_AFTER_UNLOCK = 120000; // ms the corpse is kept after it unlocks
 
 
+// packet holding one body struct; the client's encoder lays it out for the wire
+template <typename T>
+EQApplicationPacket *MakeAdvLootPacket(EmuOpcode opcode, const T &body)
+{
+	auto outapp = new EQApplicationPacket(opcode, sizeof(T));
+	memcpy(outapp->pBuffer, &body, sizeof(T));
+	return outapp;
+}
+
+template <typename T>
+void SendAdvLootBody(Client *c, const T &body)
+{
+	auto outapp = MakeAdvLootPacket(OP_AdvLoot, body);
+	c->QueuePacket(outapp);
+	safe_delete(outapp);
+}
+
 void SendAdvLootClearPending(Client *c, uint32 corpse_id, uint32 item_id)
 {
 	// clears the row's "busy" state when a request is refused without a result code
-	SerializeBuffer buf;
-	buf.WriteUInt16(AdvLootClearPending);
-	buf.WriteUInt32(corpse_id);
-	buf.WriteUInt64(item_id);
-	buf.WriteUInt32(0);
-
-	auto outapp = new EQApplicationPacket(OP_AdvLoot, std::move(buf));
-	c->QueuePacket(outapp);
-	safe_delete(outapp);
+	AdvLootClearPending_Struct body{};
+	body.subtype   = AdvLootClearPending;
+	body.corpse_id = corpse_id;
+	body.item_id   = item_id;
+	SendAdvLootBody(c, body);
 }
 
 // a refused loot request: AdvLootClearPending alone leaves the client's request pending (it is keyed by sequence and only a
@@ -100,29 +113,23 @@ void RefuseAdvLootRequest(Client *c, uint32 corpse_id, uint32 item_id, uint32 se
 
 void SendAdvLootMasterLooter(Client *c, const std::string &name)
 {
-	SerializeBuffer buf;
-	buf.WriteUInt32(0);
-	buf.WriteString(name);
+	AdvLootMasterLooter_Struct body{};
+	strn0cpy(body.name, name.c_str(), sizeof(body.name));
 
-	auto outapp = new EQApplicationPacket(OP_AdvLootMasterLooter, std::move(buf));
+	auto outapp = MakeAdvLootPacket(OP_AdvLootMasterLooter, body);
 	c->QueuePacket(outapp);
 	safe_delete(outapp);
 }
 
-// u16 subtype, u8 split, u64 copper, u8 received, u32 bonus. The client plays the coin sound, prints its own "You
-// receive ..." line and adds the coin to what it shows when the coin is a split or it is the master looter.
+// The client plays the coin sound, prints its own "You receive ..." line and adds the coin to what it shows when the
+// coin is a split or it is the master looter.
 void SendAdvLootCoin(Client *c, uint64 copper, bool split)
 {
-	SerializeBuffer buf;
-	buf.WriteUInt16(AdvLootCoin);
-	buf.WriteUInt8(split ? 1 : 0);
-	buf.WriteUInt64(copper);
-	buf.WriteUInt8(1);
-	buf.WriteUInt32(0); // no bonus suffix
-
-	auto outapp = new EQApplicationPacket(OP_AdvLoot, std::move(buf));
-	c->QueuePacket(outapp);
-	safe_delete(outapp);
+	AdvLootCoin_Struct body{};
+	body.subtype = AdvLootCoin;
+	body.split   = split ? 1 : 0;
+	body.copper  = copper;
+	SendAdvLootBody(c, body);
 }
 
 // the money update has to come after the coin message: it sets the real total over the client's own addition
@@ -146,17 +153,11 @@ bool UsesAdvancedLoot(Client *c)
 
 void SendAdvLootResult(Client *c, uint16 result, uint32 sequence)
 {
-	// u16 subtype, u16 result, u32 1, u32 the client's request sequence, u8
-	SerializeBuffer buf;
-	buf.WriteUInt16(AdvLootLootResult);
-	buf.WriteUInt16(result);
-	buf.WriteUInt32(1);
-	buf.WriteUInt32(sequence);
-	buf.WriteUInt8(0);
-
-	auto outapp = new EQApplicationPacket(OP_AdvLoot, std::move(buf));
-	c->QueuePacket(outapp);
-	safe_delete(outapp);
+	AdvLootResult_Struct body{};
+	body.subtype  = AdvLootLootResult;
+	body.result   = result;
+	body.sequence = sequence;
+	SendAdvLootBody(c, body);
 }
 
 void Corpse::StartAdvancedLoot(Client *killer)
@@ -740,15 +741,15 @@ void Corpse::AdvancedGiveItem(Client *c, uint32 transaction_id, uint32 item_id, 
 		m_advloot_choices.erase(item_data);
 
 		// echo the request (flag 1) to everyone; the client takes the row out of the Shared list
-		SerializeBuffer echo;
-		echo.WriteUInt16(AdvLootGive);
-		echo.WriteUInt32(ask_id);
-		echo.WriteUInt32(GetID());
-		echo.WriteUInt64(item_id);
-		echo.WriteUInt16(std::max<uint16>(1, quantity));
-		echo.WriteUInt8(1);
-		echo.WriteString(c->GetCleanName());
-		auto outapp = new EQApplicationPacket(OP_AdvLoot, std::move(echo));
+		AdvLootGiveNotice_Struct echo{};
+		echo.subtype        = AdvLootGive;
+		echo.transaction_id = ask_id;
+		echo.corpse_id      = GetID();
+		echo.item_id        = item_id;
+		echo.quantity       = std::max<uint16>(1, quantity);
+		echo.leave          = 1;
+		strn0cpy(echo.player_name, c->GetCleanName(), sizeof(echo.player_name));
+		auto outapp = MakeAdvLootPacket(OP_AdvLoot, echo);
 
 		for (Client *r : GetAdvancedLootRecipients()) {
 			r->Message(Chat::Loot, message.c_str());
@@ -775,16 +776,16 @@ void Corpse::AdvancedGiveItem(Client *c, uint32 transaction_id, uint32 item_id, 
 	m_advloot_choices.erase(item_data);
 
 	// everyone's Shared list drops the item; the target's Personal list gains it
-	SerializeBuffer buf;
-	buf.WriteUInt16(AdvLootGive);
-	buf.WriteUInt32(ask_id);
-	buf.WriteUInt32(GetID());
-	buf.WriteUInt64(item_id);
-	buf.WriteUInt16(std::max<uint16>(1, quantity));
-	buf.WriteUInt8(0);
-	buf.WriteString(target->GetCleanName());
+	AdvLootGiveNotice_Struct notice{};
+	notice.subtype        = AdvLootGive;
+	notice.transaction_id = ask_id;
+	notice.corpse_id      = GetID();
+	notice.item_id        = item_id;
+	notice.quantity       = std::max<uint16>(1, quantity);
+	notice.leave          = 0;
+	strn0cpy(notice.player_name, target->GetCleanName(), sizeof(notice.player_name));
 
-	auto outapp = new EQApplicationPacket(OP_AdvLoot, std::move(buf));
+	auto outapp = MakeAdvLootPacket(OP_AdvLoot, notice);
 	QueueAdvancedLootRecipients(outapp);
 	safe_delete(outapp);
 
@@ -937,16 +938,16 @@ void Corpse::AdvancedFreeGrab(Client *c, uint32 transaction_id)
 	// same echo as a give: the grabber's Personal list gains the item, everyone's Shared list drops it.
 	// The client matches the Shared row on item and ask id, so an asked row needs its ask id here; with 0 the row
 	// stays up as Transaction Removed (drawn as a roll).
-	SerializeBuffer buf;
-	buf.WriteUInt16(AdvLootGive);
-	buf.WriteUInt32(transaction_id);
-	buf.WriteUInt32(GetID());
-	buf.WriteUInt64(item_id);
-	buf.WriteUInt16(std::max<uint16>(1, item_data->charges));
-	buf.WriteUInt8(0);
-	buf.WriteString(c->GetCleanName());
+	AdvLootGiveNotice_Struct notice{};
+	notice.subtype        = AdvLootGive;
+	notice.transaction_id = transaction_id;
+	notice.corpse_id      = GetID();
+	notice.item_id        = item_id;
+	notice.quantity       = std::max<uint16>(1, item_data->charges);
+	notice.leave          = 0;
+	strn0cpy(notice.player_name, c->GetCleanName(), sizeof(notice.player_name));
 
-	auto outapp = new EQApplicationPacket(OP_AdvLoot, std::move(buf));
+	auto outapp = MakeAdvLootPacket(OP_AdvLoot, notice);
 	QueueAdvancedLootRecipients(outapp);
 	safe_delete(outapp);
 
@@ -969,50 +970,36 @@ void Corpse::AdvancedFreeGrab(Client *c, uint32 transaction_id)
 
 void Corpse::SendAdvancedLootTransaction(Client *c, uint32 transaction_id, AdvLootTransaction &t)
 {
-	// u32 id, u64 item, u32 state, u8, u32 time left (ms), u32 corpse count, {u32 corpse, u32 quantity}
-	const uint32 time_left = t.timer.Enabled() ? t.timer.GetRemainingTime() : 0;
-
-	SerializeBuffer buf;
-	buf.WriteUInt16(AdvLootAsk);
-	buf.WriteUInt32(transaction_id);
-	buf.WriteUInt64(t.item_id);
-	buf.WriteUInt32(t.state);
-	buf.WriteUInt8(0);
-	buf.WriteUInt32(time_left);
-	buf.WriteUInt32(1);
-	buf.WriteUInt32(GetID());
-	buf.WriteUInt32(1);
-
-	auto outapp = new EQApplicationPacket(OP_AdvLoot, std::move(buf));
-	c->QueuePacket(outapp);
-	safe_delete(outapp);
+	AdvLootAskNotice_Struct body{};
+	body.subtype        = AdvLootAsk;
+	body.transaction_id = transaction_id;
+	body.item_id        = t.item_id;
+	body.state          = t.state;
+	body.time_left      = t.timer.Enabled() ? t.timer.GetRemainingTime() : 0;
+	body.corpse_id      = GetID();
+	body.quantity       = 1;
+	SendAdvLootBody(c, body);
 }
 
 void Corpse::SendAdvancedLootStateTo(Client *c, uint32 transaction_id, AdvLootTransaction &t)
 {
-	SerializeBuffer buf;
-	buf.WriteUInt16(AdvLootState);
-	buf.WriteUInt32(transaction_id);
-	buf.WriteUInt32(t.timer.Enabled() ? t.timer.GetRemainingTime() : 0);
-	buf.WriteUInt32(t.state);
-	buf.WriteUInt8(0);
-
-	auto outapp = new EQApplicationPacket(OP_AdvLoot, std::move(buf));
-	c->QueuePacket(outapp);
-	safe_delete(outapp);
+	AdvLootStateNotice_Struct body{};
+	body.subtype        = AdvLootState;
+	body.transaction_id = transaction_id;
+	body.time_left      = t.timer.Enabled() ? t.timer.GetRemainingTime() : 0;
+	body.state          = t.state;
+	SendAdvLootBody(c, body);
 }
 
 void Corpse::SendAdvancedLootState(uint32 transaction_id, AdvLootTransaction &t)
 {
-	// u32 id, u32 time left (ms), u32 state, u8
-	SerializeBuffer buf;
-	buf.WriteUInt16(AdvLootState);
-	buf.WriteUInt32(transaction_id);
-	buf.WriteUInt32(t.timer.Enabled() ? t.timer.GetRemainingTime() : 0);
-	buf.WriteUInt32(t.state);
-	buf.WriteUInt8(0);
+	AdvLootStateNotice_Struct body{};
+	body.subtype        = AdvLootState;
+	body.transaction_id = transaction_id;
+	body.time_left      = t.timer.Enabled() ? t.timer.GetRemainingTime() : 0;
+	body.state          = t.state;
 
-	auto outapp = new EQApplicationPacket(OP_AdvLoot, std::move(buf));
+	auto outapp = MakeAdvLootPacket(OP_AdvLoot, body);
 	QueueAdvancedLootRecipients(outapp);
 	safe_delete(outapp);
 }
@@ -1077,19 +1064,24 @@ void Corpse::ResolveAdvancedLootRoll(uint32 transaction_id)
 		[](const Roller &a, const Roller &b) { return a.roll < b.roll; }
 	);
 
-	// u32 id, u32 best choice, u8, u16 count, {u16 roll, cstr name}; the client prints each roll and marks the winner
-	SerializeBuffer buf;
-	buf.WriteUInt16(AdvLootRollResult);
-	buf.WriteUInt32(transaction_id);
-	buf.WriteUInt32(best_choice);
-	buf.WriteUInt8(0);
-	buf.WriteUInt16(rollers.size());
-	for (const auto &r : rollers) {
-		buf.WriteUInt16(r.roll);
-		buf.WriteString(r.name);
+	// the client prints each roll and marks the winner
+	auto outapp = new EQApplicationPacket(
+		OP_AdvLoot,
+		sizeof(AdvLootRollResult_Struct) + rollers.size() * sizeof(AdvLootRoller_Struct)
+	);
+
+	auto result = reinterpret_cast<AdvLootRollResult_Struct *>(outapp->pBuffer);
+	result->subtype        = AdvLootRollResult;
+	result->transaction_id = transaction_id;
+	result->best_choice    = best_choice;
+	result->roller_count   = static_cast<uint16>(rollers.size());
+
+	auto packet_rollers = reinterpret_cast<AdvLootRoller_Struct *>(outapp->pBuffer + sizeof(AdvLootRollResult_Struct));
+	for (size_t i = 0; i < rollers.size(); ++i) {
+		packet_rollers[i].roll = rollers[i].roll;
+		strn0cpy(packet_rollers[i].name, rollers[i].name.c_str(), sizeof(packet_rollers[i].name));
 	}
 
-	auto outapp = new EQApplicationPacket(OP_AdvLoot, std::move(buf));
 	QueueAdvancedLootRecipients(outapp);
 	safe_delete(outapp);
 
@@ -1268,8 +1260,8 @@ void Corpse::SendAdvancedLootSync(Client *c)
 		return;
 	}
 
-	// reply: u32 0, master looter, no corpses, no transactions, no choices. The corpses (and their asks)
-	// follow one by one so their item links go through the TOB encoder.
+	// the reply names the master looter; the corpses (and their asks) follow one by one so their item links go
+	// through the TOB encoder
 	std::string master_looter_name = c->GetCleanName();
 	Raid  *raid  = c->GetRaid();
 	Group *group = c->GetGroup();
@@ -1280,17 +1272,10 @@ void Corpse::SendAdvancedLootSync(Client *c)
 		master_looter_name = group->GetAdvancedLootMasterLooter()->GetCleanName();
 	}
 
-	SerializeBuffer buf;
-	buf.WriteUInt16(AdvLootSync);
-	buf.WriteUInt32(0);
-	buf.WriteString(master_looter_name);
-	buf.WriteUInt32(0);
-	buf.WriteUInt8(0);
-	buf.WriteUInt8(0);
-
-	auto outapp = new EQApplicationPacket(OP_AdvLoot, std::move(buf));
-	c->QueuePacket(outapp);
-	safe_delete(outapp);
+	AdvLootSyncReply_Struct reply{};
+	reply.subtype = AdvLootSync;
+	strn0cpy(reply.master_looter_name, master_looter_name.c_str(), sizeof(reply.master_looter_name));
+	SendAdvLootBody(c, reply);
 
 	if (raid || group) {
 		AnnounceAdvancedLootMasterLooter(c, master_looter_name);
