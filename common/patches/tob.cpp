@@ -180,13 +180,21 @@ namespace TOB
 
 	// Store-feature claims the client checks before a key ring takes an item. The mount ring is always available;
 	// the others need their claim id with a value above 0 in the player profile claims array.
-	static constexpr uint32 TOB_KEYRING_CLAIMS[] = {
-		2008511, // illusion
-		2010564, // familiar
-		2011970, // Hero's Forge
-		2016968, // teleportation
-		2071519, // activated items
+	struct KeyRingClaim_Struct {
+		int      ring;     // EQ::invslot::KeyRing this claim unlocks
+		uint32   claim_id; // store feature claim id the client checks
 	};
+
+	static constexpr KeyRingClaim_Struct TOB_KEYRING_CLAIMS[] = {
+		{ EQ::invslot::KeyRingIllusion,       2008511 },
+		{ EQ::invslot::KeyRingFamiliar,       2010564 },
+		{ EQ::invslot::KeyRingHeroForge,      2011970 },
+		{ EQ::invslot::KeyRingTeleportation,  2016968 },
+		{ EQ::invslot::KeyRingActivatedItems, 2071519 },
+	};
+
+	// claim value the client wants for a feature the character has (it only tests for above 0)
+	static constexpr int32 TOB_CLAIM_VALUE_OWNED = 1;
 
 	// casting slots
 	static inline spells::CastingSlot ServerToTOBCastingSlot(EQ::spells::CastingSlot slot);
@@ -3137,7 +3145,7 @@ namespace TOB
 		//ItemIndex keyring_item_index[6];
 		// TODO: Stat Mount / Stat Illusion / Stat Familiar. This is the selected stat item per ring, but the
 		// packet the Key Ring window sends to pick one is not known yet (needs a Live capture), so send none.
-		for (int i = 0; i < 6; ++i) {
+		for (int i = 0; i < EQ::invslot::KEYRING_COUNT; ++i) {
 			/*
 			s16 slot1;
 			s16 slot2;
@@ -3256,12 +3264,12 @@ namespace TOB
 		//u32 claim_count;
 		//Claim claims[claim_count]; { u32 claim_id, s32 value }
 		{
-			// TOB_KEYRING_CLAIMS[i] belongs to ring i + 1 (the mount ring needs no claim)
+			// the mount ring needs no claim, so it is not in TOB_KEYRING_CLAIMS
 			std::vector<uint32> claims;
 			if (RuleB(Character, EnableKeyRings)) {
-				for (size_t i = 0; i < std::size(TOB_KEYRING_CLAIMS); ++i) {
-					if (emu->keyring_unlock_mask & (1 << (i + 1))) {
-						claims.push_back(TOB_KEYRING_CLAIMS[i]);
+				for (const auto &claim : TOB_KEYRING_CLAIMS) {
+					if (emu->keyring_unlock_mask & (1 << claim.ring)) {
+						claims.push_back(claim.claim_id);
 					}
 				}
 			}
@@ -3269,7 +3277,7 @@ namespace TOB
 			out.WriteUInt32(static_cast<uint32>(claims.size()));
 			for (const auto claim_id : claims) {
 				out.WriteUInt32(claim_id);
-				out.WriteInt32(1);
+				out.WriteInt32(TOB_CLAIM_VALUE_OWNED);
 			}
 		}
 
@@ -6825,15 +6833,15 @@ namespace TOB
 		eq->entries[21] = 1;  // Ornament
 		eq->entries[22] = 0;  // HeroicCharacter
 		eq->entries[23] = 0;  // AutoGrantAA
-		eq->entries[24] = TOBKeyRingSlots(0); // MountKeyRingSlots
-		eq->entries[25] = TOBKeyRingSlots(1); // IllusionKeyRingSlots
-		eq->entries[26] = TOBKeyRingSlots(2); // FamiliarKeyRingSlots
+		eq->entries[24] = TOBKeyRingSlots(EQ::invslot::KeyRingMount); // MountKeyRingSlots
+		eq->entries[25] = TOBKeyRingSlots(EQ::invslot::KeyRingIllusion); // IllusionKeyRingSlots
+		eq->entries[26] = TOBKeyRingSlots(EQ::invslot::KeyRingFamiliar); // FamiliarKeyRingSlots
 		eq->entries[27] = 0;  // FamiliarAutoLeave
-		eq->entries[28] = TOBKeyRingSlots(3); // HeroForgeKeyRingSlots
+		eq->entries[28] = TOBKeyRingSlots(EQ::invslot::KeyRingHeroForge); // HeroForgeKeyRingSlots
 		eq->entries[29] = 0;  // DragonHoardSlots
-		eq->entries[30] = TOBKeyRingSlots(4); // TeleportKeyRingSlots
+		eq->entries[30] = TOBKeyRingSlots(EQ::invslot::KeyRingTeleportation); // TeleportKeyRingSlots
 		eq->entries[31] = 0;  // PersonalDepotSlots
-		eq->entries[32] = TOBKeyRingSlots(5); // ActivatedKeyRingSlots
+		eq->entries[32] = TOBKeyRingSlots(EQ::invslot::KeyRingActivatedItems); // ActivatedKeyRingSlots
 
 		FINISH_ENCODE();
 	}

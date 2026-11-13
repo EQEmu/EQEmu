@@ -76,19 +76,19 @@ bool Client::CanAddToKeyRing(int ring, const EQ::ItemInstance *inst)
 
 	// same item types the client takes for each ring
 	switch (ring) {
-		case 0:
+		case EQ::invslot::KeyRingMount:
 			return item->ItemType == EQ::item::ItemTypeMount || clicks(SpellEffect::SummonHorse);
-		case 1:
+		case EQ::invslot::KeyRingIllusion:
 			return item->ItemType == EQ::item::ItemTypeIllusion || clicks(SpellEffect::Illusion);
-		case 2:
+		case EQ::invslot::KeyRingFamiliar:
 			return item->ItemType == EQ::item::ItemTypeFamiliar || clicks(SpellEffect::Familiar);
-		case 3:
+		case EQ::invslot::KeyRingHeroForge:
 			// the client also takes ornament augments flagged as Hero's Forge; the model is the closest server field
 			return item->ItemType == EQ::item::ItemTypeHeroForgeOrnament ||
 				(item->ItemType == EQ::item::ItemTypeAugmentation && item->HerosForgeModel > 0);
-		case 4:
+		case EQ::invslot::KeyRingTeleportation:
 			return item->ItemType == EQ::item::ItemTypeTeleportation;
-		case 5:
+		case EQ::invslot::KeyRingActivatedItems:
 			return item->Click.Effect > 0 &&
 				item->Click.Type != EQ::item::ItemEffectExpendable &&
 				item->ItemType != EQ::item::ItemTypePotion;

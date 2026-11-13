@@ -214,6 +214,16 @@ namespace EQ
 		const int16 KEYRING_RING_SIZE = 500; // most the client holds in one ring
 		const int16 KEYRING_APPEND    = 999; // offset meaning "first free index" (client sends index -1)
 		const int16 KEYRING_COUNT     = 6;
+
+		// ring numbers (the r in the slot formula above)
+		enum KeyRing : int {
+			KeyRingMount = 0,
+			KeyRingIllusion,
+			KeyRingFamiliar,
+			KeyRingHeroForge,
+			KeyRingTeleportation,
+			KeyRingActivatedItems
+		};
 		const int16 KEYRING_END       = KEYRING_BEGIN + KEYRING_COUNT * KEYRING_STRIDE - 1;
 
 		// client array caps per ring (illusion 300, familiar 450, teleportation 250)
