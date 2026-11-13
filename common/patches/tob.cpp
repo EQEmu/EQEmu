@@ -1224,8 +1224,7 @@ namespace TOB
 					SerializeItem(buf, item_2, 0, 0, ItemPacketMerchant);
 				}
 
-				auto outapp = new EQApplicationPacket(OP_EvolveItem, buf.size());
-				outapp->WriteData(buf.buffer(), buf.size());
+				auto outapp = new EQApplicationPacket(OP_EvolveItem, std::move(buf));
 				dest->FastQueuePacket(&outapp, ack_req);
 				delete in;
 				break;
@@ -1293,18 +1292,15 @@ namespace TOB
 			return;
 		}
 
-		auto outapp = new EQApplicationPacket(
-			OP_FactionList,
-			sizeof(uint32) + emu->count * sizeof(structs::FactionListEntry_Struct)
-		);
-		auto count = reinterpret_cast<uint32 *>(outapp->pBuffer);
-		auto eq    = reinterpret_cast<structs::FactionListEntry_Struct *>(outapp->pBuffer + sizeof(uint32));
-		*count = emu->count;
+		// u32 count, count x {u32 faction id, s32 value}
+		SerializeBuffer buf;
+		buf.WriteUInt32(emu->count);
 		for (uint32 i = 0; i < emu->count; ++i) {
-			eq[i].faction_id = emu->entries[i].faction_id;
-			eq[i].value      = emu->entries[i].value;
+			buf.WriteUInt32(emu->entries[i].faction_id);
+			buf.WriteInt32(emu->entries[i].value);
 		}
 
+		auto outapp = new EQApplicationPacket(OP_FactionList, std::move(buf));
 		dest->FastQueuePacket(&outapp, ack_req);
 		delete in;
 	}
@@ -1342,24 +1338,22 @@ namespace TOB
 			return;
 		}
 
-		auto outapp = new EQApplicationPacket(
-			OP_FindZoneConnections,
-			sizeof(uint32) + emu->count * sizeof(structs::FindZoneConnection_Struct)
-		);
-		auto count = reinterpret_cast<uint32 *>(outapp->pBuffer);
-		auto eq    = reinterpret_cast<structs::FindZoneConnection_Struct *>(outapp->pBuffer + sizeof(uint32));
-		*count = emu->count;
+		// u32 count, count x structs::FindZoneConnection_Struct (y, x, z order for the location)
+		SerializeBuffer buf;
+		buf.WriteUInt32(emu->count);
 		for (uint32 i = 0; i < emu->count; ++i) {
-			eq[i].row_type  = emu->entries[i].row_type;
-			eq[i].id        = emu->entries[i].id;
-			eq[i].unknown08 = emu->entries[i].unknown08;
-			eq[i].zone_id   = emu->entries[i].zone_id;
-			eq[i].number    = emu->entries[i].number;
-			eq[i].loc.x     = emu->entries[i].loc.x;
-			eq[i].loc.y     = emu->entries[i].loc.y;
-			eq[i].loc.z     = emu->entries[i].loc.z;
+			const auto &row = emu->entries[i];
+			buf.WriteUInt32(row.row_type);
+			buf.WriteUInt32(row.id);
+			buf.WriteUInt32(row.unknown08);
+			buf.WriteUInt32(row.zone_id);
+			buf.WriteUInt32(row.number);
+			buf.WriteFloat(row.loc.y);
+			buf.WriteFloat(row.loc.x);
+			buf.WriteFloat(row.loc.z);
 		}
 
+		auto outapp = new EQApplicationPacket(OP_FindZoneConnections, std::move(buf));
 		dest->FastQueuePacket(&outapp, ack_req);
 		delete in;
 	}
@@ -1797,8 +1791,7 @@ namespace TOB
 				return;
 		}
 
-		auto outapp = new EQApplicationPacket(OP_ItemOverflow, buf.size());
-		outapp->WriteData(buf.buffer(), buf.size());
+		auto outapp = new EQApplicationPacket(OP_ItemOverflow, std::move(buf));
 		dest->FastQueuePacket(&outapp, ack_req);
 		delete in;
 	}
@@ -1898,8 +1891,7 @@ namespace TOB
 			buf.WriteUInt32(0);
 		}
 
-		auto outapp = new EQApplicationPacket(OP_PickZoneWindow, buf.size());
-		outapp->WriteData(buf.buffer(), buf.size());
+		auto outapp = new EQApplicationPacket(OP_PickZoneWindow, std::move(buf));
 		dest->FastQueuePacket(&outapp, ack_req);
 		delete in;
 	}
@@ -6385,13 +6377,12 @@ namespace TOB
 		EQApplicationPacket *in = *p;
 		*p = nullptr;
 
-		size_t len = strnlen(reinterpret_cast<const char *>(in->pBuffer), in->size);
-		auto outapp = new EQApplicationPacket(OP_MultiLineMsg, len + 1);
-		if (len) {
-			memcpy(outapp->pBuffer, in->pBuffer, len);
-		}
-		outapp->pBuffer[len] = '\0';
+		const size_t len = strnlen(reinterpret_cast<const char *>(in->pBuffer), in->size);
+		SerializeBuffer buf;
+		TOBWriteBytes(buf, in->pBuffer, len);
+		buf.WriteUInt8(0);
 
+		auto outapp = new EQApplicationPacket(OP_MultiLineMsg, std::move(buf));
 		dest->FastQueuePacket(&outapp, ack_req);
 		safe_delete(in);
 	}
@@ -12123,9 +12114,7 @@ std::unique_ptr<EQApplicationPacket> BuffComponent::BuffRemovePrelude(Mob* mob, 
 	if (buff.spellid <= 1 || slot >= mob->GetMaxTotalSlots())
 		return nullptr;
 
-	// the bytes of the packet apart from the caster name (and its terminator, counted here)
-	constexpr size_t RefreshBuffsFixedSize = 30;
-	SerializeBuffer buffer(RefreshBuffsFixedSize + strlen(buff.caster_name));
+	SerializeBuffer buffer;
 
 	buffer.WriteUInt32(mob->GetID());
 	buffer.WriteInt32(0);								// tic timer must be 0, the client adds it to the time left
