@@ -1396,10 +1396,7 @@ namespace TOB
 		delete in;
 	}
 
-	namespace {
-		// Live always sends it; the client never reads it
-		constexpr uint32 FellowshipUpdateUnknown2140 = 120;
-	}
+	static_assert(structs::FELLOWSHIP_MAX_MEMBERS == Fellowship::MAX_MEMBERS, "ToB fellowship member slots must match the server limit");
 
 	ENCODE(OP_FellowshipCampfireList)
 	{
@@ -1425,8 +1422,7 @@ namespace TOB
 			buffer.WriteString(std::string(entry.name, strnlen(entry.name, sizeof(entry.name))));
 		}
 
-		auto outapp = new EQApplicationPacket(OP_FellowshipCampfireList, buffer.size());
-		outapp->WriteData(buffer.buffer(), buffer.size());
+		auto outapp = new EQApplicationPacket(OP_FellowshipCampfireList, std::move(buffer));
 		dest->FastQueuePacket(&outapp, ack_req);
 
 		delete in;
@@ -1466,7 +1462,7 @@ namespace TOB
 			out.guid.Id      = member.character_id;
 			out.guid.WorldId = RuleI(World, Id);
 			strn0cpy(out.name, member.name, sizeof(out.name));
-			out.zone    = member.zone_id | (static_cast<uint32>(member.instance_id) << 16);
+			out.zone    = member.zone_id | (static_cast<uint32>(member.instance_id) << structs::FELLOWSHIP_ZONE_INSTANCE_SHIFT);
 			out.level   = member.level;
 			out.class_  = member.class_;
 			out.last_on = member.last_on;
@@ -1477,7 +1473,7 @@ namespace TOB
 		}
 
 		eq->now         = static_cast<uint32>(time(nullptr));
-		eq->unknown2140 = FellowshipUpdateUnknown2140;
+		eq->unknown2140 = structs::FELLOWSHIP_UPDATE_UNKNOWN2140;
 
 		if (emu->campsite.expires_at != 0) {
 			auto &campsite = eq->campsite;
@@ -1485,7 +1481,7 @@ namespace TOB
 			campsite.x                     = emu->campsite.x;
 			campsite.y                     = emu->campsite.y;
 			campsite.z                     = emu->campsite.z;
-			campsite.zone                  = emu->campsite.zone_id | (static_cast<uint32>(emu->campsite.instance_id) << 16);
+			campsite.zone                  = emu->campsite.zone_id | (static_cast<uint32>(emu->campsite.instance_id) << structs::FELLOWSHIP_ZONE_INSTANCE_SHIFT);
 			campsite.expires_at            = emu->campsite.expires_at;
 			campsite.fellowship_id.Id      = emu->fellowship_id;
 			campsite.fellowship_id.WorldId = RuleI(World, Id);

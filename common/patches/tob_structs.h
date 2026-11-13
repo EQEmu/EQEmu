@@ -2750,9 +2750,15 @@ namespace TOB {
 	constexpr uint32 ADVLOOT_TRAILER_UNKNOWN008 = 0xFFFF;
 
 	// Fellowship window (OP_FellowshipUpdate, OP_FellowshipAction, OP_FellowshipInvite, campfire list request)
+	constexpr uint32 FELLOWSHIP_MAX_MEMBERS = 12;    // member slots in OP_FellowshipUpdate
+	constexpr uint32 FELLOWSHIP_NAME_SIZE   = 64;    // character name buffer
+	constexpr uint32 FELLOWSHIP_TEXT_SIZE   = 1024;  // MOTD buffer
+	constexpr uint32 FELLOWSHIP_ZONE_INSTANCE_SHIFT = 16; // zone fields hold zone_id | instance_id << 16
+	constexpr uint32 FELLOWSHIP_UPDATE_UNKNOWN2140  = 120; // Live always sends it; the client never reads it
+
 	struct FellowshipMember_Struct {
 		/*000*/ EqGuid guid;            // {character_id, world_id, 0}
-		/*008*/ char   name[64];
+		/*008*/ char   name[FELLOWSHIP_NAME_SIZE];
 		/*072*/ uint32 zone;            // zone_id | instance_id << 16, 0 while zoning or offline
 		/*076*/ uint32 level;
 		/*080*/ uint32 class_;
@@ -2774,16 +2780,16 @@ namespace TOB {
 	};
 
 	struct FellowshipUpdate_Struct {
-		/*0000*/ uint8  offline_mode[12];
+		/*0000*/ uint8  offline_mode[FELLOWSHIP_MAX_MEMBERS];
 		/*0012*/ uint32 unknown012;
 		/*0016*/ EqGuid fellowship_id;  // {id, world_id, 0}
-		/*0024*/ char   motd[1024];
+		/*0024*/ char   motd[FELLOWSHIP_TEXT_SIZE];
 		/*1048*/ uint32 member_count;
 		/*1052*/ uint32 unknown1052;
-		/*1056*/ FellowshipMember_Struct members[12];
+		/*1056*/ FellowshipMember_Struct members[FELLOWSHIP_MAX_MEMBERS];
 		/*2112*/ uint32 now;
-		/*2116*/ uint8  exp_sharing[12];
-		/*2128*/ uint8  exp_capped[12];
+		/*2116*/ uint8  exp_sharing[FELLOWSHIP_MAX_MEMBERS];
+		/*2128*/ uint8  exp_capped[FELLOWSHIP_MAX_MEMBERS];
 		/*2140*/ uint32 unknown2140;    // Live sends 120; never read
 		/*2144*/ FellowshipCampsite_Struct campsite;
 		/*2184*/
@@ -2796,7 +2802,7 @@ namespace TOB {
 		/*0016*/ uint8  unknown016[8];
 		/*0024*/ EqGuid inviter_guid;    // S2C invite only
 		/*0032*/ EqGuid fellowship_guid; // action 12 (C2S) and the invite (S2C)
-		/*0040*/ char   text[1024];      // action 2
+		/*0040*/ char   text[FELLOWSHIP_TEXT_SIZE]; // action 2
 		/*1064*/ uint8  unknown1064[20];
 		/*1084*/ uint32 campfire_type;   // action 8
 		/*1088*/ uint8  unknown1088[8];
