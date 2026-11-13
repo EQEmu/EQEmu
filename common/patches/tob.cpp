@@ -3648,7 +3648,6 @@ namespace TOB
 		}
 
 		const uint8 *begin = in->pBuffer;
-		const uint8 *end   = in->pBuffer + in->size;
 		auto emu = reinterpret_cast<const Internal_GuildMembers_Struct *>(begin);
 
 		uint32 count = emu->count;
@@ -3660,27 +3659,14 @@ namespace TOB
 		}
 
 		// strings follow the fixed entries: count names, then count notes (each NUL-terminated)
-		const char *cursor = reinterpret_cast<const char *>(begin + fixed);
-		auto next_string = [&](size_t max_len) -> std::string {
-			if (reinterpret_cast<const uint8 *>(cursor) >= end) {
-				return std::string();
-			}
-			size_t remain = static_cast<size_t>(end - reinterpret_cast<const uint8 *>(cursor));
-			size_t len    = strnlen(cursor, remain);
-			std::string s(cursor, std::min(len, max_len));
-			cursor += std::min(len + 1, remain);
-			return s;
-		};
-
-		std::vector<std::string> names;
-		names.reserve(count);
-		for (uint32 i = 0; i < count; ++i) {
-			names.push_back(next_string(TOB_NAME_MAX_CHARS));
+		in->SetReadPosition(static_cast<uint32>(fixed));
+		std::vector<std::string> names(count);
+		for (auto &name : names) {
+			in->ReadString(name, TOB_NAME_MAX_CHARS);
 		}
-		std::vector<std::string> notes;
-		notes.reserve(count);
-		for (uint32 i = 0; i < count; ++i) {
-			notes.push_back(next_string(TOB_NOTE_MAX_CHARS));
+		std::vector<std::string> notes(count);
+		for (auto &note : notes) {
+			in->ReadString(note, TOB_NOTE_MAX_CHARS);
 		}
 
 		SerializeBuffer buffer;
