@@ -15292,6 +15292,16 @@ void Client::Handle_OP_Surname(const EQApplicationPacket *app)
 	ChangeLastName(surname->lastname);
 	p_timers.Start(pTimerSurnameChange, 604800);
 
+	if (ClientVersion() >= EQ::versions::ClientVersion::TOB) {
+		auto reply_app = new EQApplicationPacket(OP_Surname, sizeof(SurnameReply_Struct));
+		auto reply     = reinterpret_cast<SurnameReply_Struct *>(reply_app->pBuffer);
+		reply->character_id = CharacterID();
+		reply->status       = 1;
+		strn0cpy(reply->lastname, surname->lastname, sizeof(reply->lastname));
+		FastQueuePacket(&reply_app);
+		return;
+	}
+
 	EQApplicationPacket* outapp = app->Copy();
 	outapp = app->Copy();
 	surname = (Surname_Struct*)outapp->pBuffer;

@@ -87,11 +87,6 @@ namespace TOB
 	// The legacy group update carries no levels, so members are shown with placeholder levels.
 	static constexpr uint32 TOB_GROUP_UPDATE_SELF_LEVEL  = 0x46;
 	static constexpr uint32 TOB_GROUP_UPDATE_OTHER_LEVEL = 0x41;
-	// OP_Surname C2S/S2C: u8 id[8]; int32 status; u32 length; char surname[length]
-	static constexpr uint32 TOB_SURNAME_ID_SIZE      = 8;
-	static constexpr uint32 TOB_SURNAME_STATUS_OFFSET = 8;
-	static constexpr uint32 TOB_SURNAME_LENGTH_OFFSET = 12;
-	static constexpr uint32 TOB_SURNAME_HEADER_SIZE   = 16;
 
 	// OP_GuildBank actions as the server numbers them (GuildBank* in zone/guild_mgr.h) and as ToB numbers them.
 	// From Promote on ToB's numbers are one lower than the server's; the item update is 0 on the wire.
@@ -1346,18 +1341,21 @@ namespace TOB
 
 	ENCODE(OP_Surname)
 	{
-		// ToB (captured 0x0c53): u32 char id, u32 world id, int32 status (1 = accepted), u32 length, surname.
-		// The decoder below stashes the client's 8-byte id in the unused emu name field so we can echo it.
-		ENCODE_LENGTH_EXACT(Surname_Struct);
+		ENCODE_LENGTH_EXACT(SurnameReply_Struct);
 		EQApplicationPacket *in = *p;
 		*p = nullptr;
-		auto emu = (Surname_Struct*)in->pBuffer;
-		const size_t len = strnlen(emu->lastname, sizeof(emu->lastname));
+		auto emu = reinterpret_cast<const SurnameReply_Struct *>(in->pBuffer);
+
+		structs::Surname_Struct header{};
+		header.character.Id      = emu->character_id;
+		header.character.WorldId = static_cast<uint16>(RuleI(World, Id));
+		header.status            = emu->status;
+		header.length            = static_cast<uint32>(strnlen(emu->lastname, sizeof(emu->lastname)));
+
 		SerializeBuffer buffer;
-		TOBWriteBytes(buffer, emu->name, TOB_SURNAME_ID_SIZE);
-		buffer.WriteInt32(static_cast<int32>(emu->unknown0064));
-		buffer.WriteUInt32(static_cast<uint32>(len));
-		TOBWriteBytes(buffer, emu->lastname, len);
+		TOBWriteBytes(buffer, &header, sizeof(header));
+		TOBWriteBytes(buffer, emu->lastname, header.length);
+
 		auto outapp = new EQApplicationPacket(OP_Surname, std::move(buffer));
 		dest->FastQueuePacket(&outapp, ack_req);
 		delete in;
@@ -8704,23 +8702,26 @@ namespace TOB
 
 	DECODE(OP_Surname)
 	{
-		// ToB (captured 0x0c53): u32 char id, u32 world id, int32 status, u32 length, surname (no terminator)
-		if (__packet->size < TOB_SURNAME_HEADER_SIZE) {
+		DECODE_LENGTH_ATLEAST(structs::Surname_Struct);
+		auto eq = reinterpret_cast<const structs::Surname_Struct *>(__packet->pBuffer);
+		__packet->SetReadPosition(sizeof(structs::Surname_Struct));
+		if (eq->length > __packet->ReadRemaining()) {
 			__packet->SetOpcode(OP_Unknown);
 			return;
 		}
+
 		unsigned char *__eq_buffer = __packet->pBuffer;
-		const uint32 len = *(uint32*)(__eq_buffer + TOB_SURNAME_LENGTH_OFFSET);
-		if (__packet->size < TOB_SURNAME_HEADER_SIZE + len) {
-			__packet->SetOpcode(OP_Unknown);
-			return;
-		}
-		__packet->size = sizeof(Surname_Struct);
+		const int32    status      = eq->status;
+		const std::string surname(
+			reinterpret_cast<const char *>(__eq_buffer + sizeof(structs::Surname_Struct)),
+			eq->length
+		);
+
+		__packet->size    = sizeof(Surname_Struct);
 		__packet->pBuffer = new unsigned char[__packet->size]{};
-		auto emu = (Surname_Struct*)__packet->pBuffer;
-		memcpy(emu->name, __eq_buffer, TOB_SURNAME_ID_SIZE); // keep the id for the reply; the server handler doesn't read name
-		emu->unknown0064 = *(uint32*)(__eq_buffer + TOB_SURNAME_STATUS_OFFSET);
-		memcpy(emu->lastname, __eq_buffer + TOB_SURNAME_HEADER_SIZE, std::min<uint32>(len, sizeof(emu->lastname) - 1));
+		auto emu = reinterpret_cast<Surname_Struct *>(__packet->pBuffer);
+		emu->unknown0064 = static_cast<uint32>(status);
+		strn0cpy(emu->lastname, surname.c_str(), sizeof(emu->lastname));
 		delete[] __eq_buffer;
 	}
 

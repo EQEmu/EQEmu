@@ -1714,10 +1714,19 @@ struct TradeMoneyUpdate_Struct{
 */
 struct Surname_Struct
 {
-/*0000*/	char name[64];	// ToB: bytes 0-7 carry the client's char/world id, echoed back by the encoder
+/*0000*/	char name[64];
 /*0064*/	uint32 unknown0064;
 /*0068*/	char lastname[32];
 /*0100*/
+};
+
+// Surname change reply for clients that identify the character by id instead of by name
+struct SurnameReply_Struct
+{
+/*000*/	uint32 character_id;
+/*004*/	int32  status;		// 1 = accepted
+/*008*/	char   lastname[32];
+/*040*/
 };
 
 struct GuildsListEntry_Struct {

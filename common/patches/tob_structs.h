@@ -2498,5 +2498,13 @@ namespace TOB {
 		std::vector<TaskSelectWindowSelector_Struct> selectors;
 	};
 
+		// OP_Surname, both directions. The surname follows the header without a terminator.
+		struct Surname_Struct {
+			/*000*/ EqGuid character; // the character the surname belongs to
+			/*008*/ int32  status;    // 0 from the client; 1 from the server when the surname was accepted
+			/*012*/ uint32 length;    // surname length in bytes
+			/*016*/
+		};
+
 	};	//end namespace structs
 };	//end namespace tob
