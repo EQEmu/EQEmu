@@ -236,7 +236,7 @@ public:
 	)
 	{
 		BuyerLineSearch_Struct all_entries{};
-		std::string where_clause(fmt::format("`item_name` LIKE \"%{}%\" ", search_string));
+		std::string where_clause(fmt::format("`item_name` LIKE \"%{}%\" ", Strings::Escape(search_string)));
 
 		if (char_id) {
 			where_clause += fmt::format("AND `char_id` = '{}' ", char_id);

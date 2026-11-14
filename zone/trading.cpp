@@ -1761,7 +1761,7 @@ static void UpdateTraderCustomerPriceChanged(
 void Client::SendBuyerResults(BarterSearchRequest_Struct& bsr)
 {
 	if (ClientVersion() >= EQ::versions::ClientVersion::RoF) {
-		std::string search_string(bsr.search_string);
+		std::string search_string(bsr.search_string, strnlen(bsr.search_string, sizeof(bsr.search_string)));
 		BuyerLineSearch_Struct results{};
 
 		SetBarterTime();
