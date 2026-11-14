@@ -4087,9 +4087,9 @@ Mob* Merc::GetOwnerOrSelf() {
 	return Result;
 }
 
-bool Merc::Death(Mob* killer_mob, int64 damage, int32 spell, EQ::skills::SkillType attack_skill, uint8 killed_by, bool is_buff_tic)
+bool Merc::Death(Mob* killer_mob, int64 damage, int32 spell, EQ::skills::SkillType attack_skill, KilledByTypes killed_by, bool is_buff_tic)
 {
-	if (!NPC::Death(killer_mob, damage, spell, attack_skill)) {
+	if (!NPC::Death(killer_mob, damage, spell, attack_skill, killed_by, is_buff_tic)) {
 		return false;
 	}
 
@@ -5366,7 +5366,11 @@ void Merc::Zone() {
 	Depop();
 }
 
-void Merc::Depop() {
+void Merc::Depop(bool start_spawn_timer) {
+
+	if (p_depop) {
+		return;
+	}
 
 	WipeHateList();
 

@@ -68,7 +68,7 @@ public:
 	virtual ~Merc();
 
 	//abstract virtual function implementations requird by base abstract class
-	virtual bool Death(Mob* killer_mob, int64 damage, int32 spell_id, EQ::skills::SkillType attack_skill, uint8 killed_by = 0, bool is_buff_tic = false);
+	bool Death(Mob* killer_mob, int64 damage, int32 spell_id, EQ::skills::SkillType attack_skill, KilledByTypes killed_by = KilledByTypes::Killed_NPC, bool is_buff_tic = false) override;
 	virtual void Damage(Mob* from, int64 damage, int32 spell_id, EQ::skills::SkillType attack_skill, bool avoidable = true, int8 buffslot = -1, bool iBuffTic = false, eSpecialAttacks special = eSpecialAttacks::None);
 	virtual bool Attack(Mob* other, int Hand = EQ::invslot::slotPrimary, bool FromRiposte = false, bool IsStrikethrough = false,
 	bool IsFromSpell = false, ExtraAttackOptions *opts = nullptr);
@@ -154,7 +154,7 @@ public:
 	bool Unsuspend(bool setMaxStats);
 	bool MercJoinClientGroup();
 	void Zone();
-	virtual void Depop();
+	void Depop(bool start_spawn_timer = false) override;
 	virtual bool Save();
 	bool GetDepop() { return p_depop; }
 
