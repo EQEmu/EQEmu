@@ -751,6 +751,17 @@ RULE_BOOL(TaskSystem, UpdateOneElementPerTask, true, "If true (live-like) task u
 RULE_INT(TaskSystem, MaxUpdateMessages, 50, "Maximum update messages for non-GiveCash activity types in IncrementDoneCount")
 RULE_CATEGORY_END()
 
+RULE_CATEGORY(Achievements)
+RULE_BOOL(Achievements, EnableAchievements, true, "Enable the server-side achievement system")
+RULE_BOOL(Achievements, GrantRewards, true, "Grant configured achievement rewards when an achievement is completed")
+RULE_BOOL(Achievements, GuildMemberNotifications, true, "Notify guild members when a player completes an achievement")
+RULE_BOOL(Achievements, NearbyPlayerNotifications, true, "Notify nearby players in the same zone when a player completes an achievement")
+RULE_INT(Achievements, NearbyPlayerNotificationDistance, 200, "Maximum distance for nearby achievement completion notifications; set to 0 to disable")
+RULE_INT(Achievements, CompletionNotificationIntervalMS, 750, "Minimum milliseconds between achievement completion notifications; notifications earned during login reconciliation are queued and delivered in order")
+RULE_INT(Achievements, RewardGrantsPerTick, 8, "Maximum completed achievements whose automatic rewards are processed for one client per process tick")
+RULE_INT(Achievements, OwnershipReconcileIntervalMS, 30000, "Interval in milliseconds for authoritative owned-item reconciliation; set to 0 to disable periodic reconciliation")
+RULE_CATEGORY_END()
+
 RULE_CATEGORY(Range)
 RULE_INT(Range, Say, 15, "The range that is required before /say or hail messages will work to an NPC")
 RULE_INT(Range, Emote, 135, "The packet range in which emote messages are sent'")

@@ -22,6 +22,8 @@
 #include "common/tasks.h"
 #include "cppunit/cpptest.h"
 
+#include <cstring>
+
 class TaskStateTest: public Test::Suite
 {
 public:
@@ -43,6 +45,7 @@ public:
 		TEST_ADD(TaskStateTest::TestReqActivityIDSequenceMode);
 		TEST_ADD(TaskStateTest::TestReqActivityIDOptional);
 		TEST_ADD(TaskStateTest::TestReqActivityIDOptionalLastSteps);
+		TEST_ADD(TaskStateTest::TestSelectableRewardSelectorFlag);
 	}
 
 private:
@@ -62,6 +65,7 @@ private:
 	void TestReqActivityIDSequenceMode();
 	void TestReqActivityIDOptional();
 	void TestReqActivityIDOptionalLastSteps();
+	void TestSelectableRewardSelectorFlag();
 
 	TaskInformation GetMockZoneData(int count)
 	{
@@ -116,6 +120,80 @@ private:
 		return states;
 	}
 };
+
+void TaskStateTest::TestSelectableRewardSelectorFlag()
+{
+	auto serialize = [](TaskMethodType reward_method,
+	                    bool has_reward_selection,
+	                    EQ::versions::ClientVersion client_version) {
+		TaskInformation task{};
+		task.reward_method = reward_method;
+		task.has_reward_selection = has_reward_selection;
+
+		SerializeBuffer buffer;
+		task.SerializeSelector(buffer, client_version);
+		return buffer;
+	};
+
+	// With empty title/description and no activities, the post-description
+	// selector flag is byte 14 for non-Titanium clients.
+	constexpr size_t reward_selection_flag_offset = 14;
+
+	auto rof2_select = serialize(
+		METHODSELECT,
+		true,
+		EQ::versions::ClientVersion::RoF2
+	);
+	TEST_ASSERT(rof2_select.size() == 19);
+	TEST_ASSERT(rof2_select.buffer()[reward_selection_flag_offset] == 1);
+
+	auto rof2_missing_set = serialize(
+		METHODSELECT,
+		false,
+		EQ::versions::ClientVersion::RoF2
+	);
+	TEST_ASSERT(rof2_missing_set.size() == rof2_select.size());
+	TEST_ASSERT(rof2_missing_set.buffer()[reward_selection_flag_offset] == 0);
+
+	auto rof2_legacy_method = serialize(
+		METHODQUEST,
+		true,
+		EQ::versions::ClientVersion::RoF2
+	);
+	TEST_ASSERT(rof2_legacy_method.size() == rof2_select.size());
+	TEST_ASSERT(rof2_legacy_method.buffer()[reward_selection_flag_offset] == 0);
+
+	// Select Reward is a RoF2-only integration. Older clients retain their
+	// existing zero byte even if the task has a valid selectable reward set.
+	auto rof_select = serialize(
+		METHODSELECT,
+		true,
+		EQ::versions::ClientVersion::RoF
+	);
+	TEST_ASSERT(rof_select.size() == rof2_select.size());
+	TEST_ASSERT(rof_select.buffer()[reward_selection_flag_offset] == 0);
+
+	// Titanium does not have this selector byte at all.
+	auto titanium_select = serialize(
+		METHODSELECT,
+		true,
+		EQ::versions::ClientVersion::Titanium
+	);
+	auto titanium_legacy = serialize(
+		METHODSINGLEID,
+		false,
+		EQ::versions::ClientVersion::Titanium
+	);
+	TEST_ASSERT(titanium_select.size() == 14);
+	TEST_ASSERT(titanium_select.size() == titanium_legacy.size());
+	TEST_ASSERT(
+		std::memcmp(
+			titanium_select.buffer(),
+			titanium_legacy.buffer(),
+			titanium_select.size()
+		) == 0
+	);
+}
 
 void TaskStateTest::TestSequenceMode()
 {

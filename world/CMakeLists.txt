@@ -1,4 +1,5 @@
 set(world_sources
+	achievement_state_update_manager.cpp
 	adventure.cpp
 	adventure_manager.cpp
 	cli/cli_bots_disable.cpp
@@ -52,6 +53,7 @@ set(world_sources
 )
 
 set(world_headers
+	achievement_state_update_manager.h
 	adventure.h
 	adventure_manager.h
 	adventure_template.h

@@ -129,6 +129,7 @@
 #define ServerOP_GuildURL                         0x007D
 #define ServerOP_GuildSendGuildList				  0x007E
 #define ServerOP_GuildMembersList                 0x007F
+#define ServerOP_GuildAchievement                 0x0080
 
 #define ServerOP_ParcelDelivery                   0x0090
 #define ServerOP_ParcelPrune                      0x0091
@@ -278,6 +279,8 @@
 #define ServerOP_CZSpell 0x4507
 #define ServerOP_CZTaskUpdate 0x4508
 #define ServerOP_CZClientMessageString 0x4509
+#define ServerOP_CZAchievementStateUpdateRequest 0x450A
+#define ServerOP_CZAchievementStateUpdateWake 0x450B
 
 #define ServerOP_WWDialogueWindow 0x4750
 #define ServerOP_WWLDoNUpdate 0x4751
@@ -1037,6 +1040,15 @@ struct ServerGuildMemberUpdate_Struct {
 	uint32 zone_id;
 	uint32 last_seen;
 };
+
+struct ServerGuildAchievement_Struct {
+	uint32 guild_id;
+	uint32 achievement_id;
+	char   player_name[64];
+	char   achievement_link_data[0];
+};
+
+inline constexpr uint32 ServerGuildAchievementMaxLinkDataLength = 4096;
 
 struct ServerGuildPermissionUpdate_Struct {
 	uint32 guild_id;

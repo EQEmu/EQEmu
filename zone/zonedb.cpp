@@ -2885,7 +2885,7 @@ void ZoneDatabase::LoadAltCurrencyValues(uint32 char_id, std::map<uint32, uint32
 	}
 }
 
-void ZoneDatabase::UpdateAltCurrencyValue(uint32 char_id, uint32 currency_id, uint32 value)
+bool ZoneDatabase::UpdateAltCurrencyValue(uint32 char_id, uint32 currency_id, uint32 value)
 {
 	auto e = CharacterAltCurrencyRepository::NewEntity();
 
@@ -2893,7 +2893,7 @@ void ZoneDatabase::UpdateAltCurrencyValue(uint32 char_id, uint32 currency_id, ui
 	e.currency_id = currency_id;
 	e.amount      = value;
 
-	CharacterAltCurrencyRepository::ReplaceOne(*this, e);
+	return CharacterAltCurrencyRepository::ReplaceOne(*this, e) != 0;
 }
 
 void ZoneDatabase::SaveBuffs(Client *client)

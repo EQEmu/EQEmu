@@ -61,6 +61,7 @@ void SendEvolvingItemsSubCommands(Client *c);
 // Commands
 void command_acceptrules(Client *c, const Seperator *sep);
 void command_advnpcspawn(Client *c, const Seperator *sep);
+void command_achievement(Client *c, const Seperator *sep);
 void command_aggrozone(Client *c, const Seperator *sep);
 void command_ai(Client *c, const Seperator *sep);
 void command_appearance(Client *c, const Seperator *sep);

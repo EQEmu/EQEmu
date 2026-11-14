@@ -19,6 +19,7 @@
 
 #include "common/repositories/character_tasks_repository.h"
 #include "common/types.h"
+#include "zone/reward_selection.h"
 #include "zone/task_client_state.h"
 #include "zone/tasks.h"
 
@@ -37,6 +38,7 @@ public:
 	int GetActivityCount(int task_id);
 	bool LoadTasks(int single_task = 0);
 	bool LoadTaskSets();
+	bool LoadTaskRewardSets();
 	bool LoadClientState(Client *client, ClientTaskState *cts);
 	bool SaveClientState(Client *client, ClientTaskState *cts);
 	void SendTaskSelector(Client* client, Mob* mob, const std::vector<int>& tasks);
@@ -86,6 +88,11 @@ public:
 		auto it = m_task_data.find(task_id);
 		return it != m_task_data.end() ? &it->second : nullptr;
 	}
+	const RewardSelectionSet* GetTaskRewardSet(uint32_t task_id) const
+	{
+		auto it = m_task_reward_sets.find(task_id);
+		return it != m_task_reward_sets.end() ? &it->second : nullptr;
+	}
 
 	static TaskManager* Instance()
 	{
@@ -96,6 +103,7 @@ public:
 private:
 	std::vector<int>                              m_task_sets[MAXTASKSETS];
 	std::unordered_map<uint32_t, TaskInformation> m_task_data;
+	std::unordered_map<uint32_t, RewardSelectionSet> m_task_reward_sets;
 	void SendActiveTaskDescription(
 		Client *client,
 		int task_id,
