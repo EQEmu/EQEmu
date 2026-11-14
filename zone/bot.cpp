@@ -12096,7 +12096,9 @@ bool Bot::DoCombatPositioning(const CombatPositioningInput& input)
 
 	bool is_melee = (!input.stop_melee_level && !IsBotRanged());
 
-	if (input.tar->IsRooted() && !IsTaunting()) { // Move non-taunting melee out of range
+	// Only a bot holding aggro on a rooted mob backs out of its reach. Every other bot falls
+	// through to the normal branches, so behind-mob still applies to permarooted (runspeed 0) mobs.
+	if (input.tar->IsRooted() && !IsTaunting() && HasTargetReflection()) { // Move non-taunting melee out of range
 		adjustment_needed =
 			(input.tar_distance <= input.melee_distance_max) &&
 			HasTargetReflection();
