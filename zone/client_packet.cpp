@@ -17202,11 +17202,14 @@ void Client::Handle_OP_GuildTributeDonatePlat(const EQApplicationPacket *app)
 	auto favor = quantity * RuleI(Guild, TributePlatConversionRate);
 	auto guild = guild_mgr.GetGuildByGuildID(guild_id);
 	if (guild) {
+		if (quantity == 0 || !TakePlatinum(quantity, false)) {
+			return;
+		}
+
 		guild->tribute.favor += favor;
 		guild_mgr.UpdateDbGuildFavor(GuildID(), guild->tribute.favor);
 		auto member_favor = guild_mgr.UpdateDbMemberFavor(GuildID(), CharacterID(), favor);
 
-		TakePlatinum(quantity, false);
 		SendGuildTributeDonatePlatReply(in, favor);
 
 		if(PlayerEventLogs::Instance()->IsEventEnabled(PlayerEvent::GUILD_TRIBUTE_DONATE_PLAT)) {
