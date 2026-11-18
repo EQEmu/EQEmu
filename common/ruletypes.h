@@ -892,6 +892,8 @@ RULE_INT(Bots, DefaultFollowDistance, 20, "Default 20. Distance a bot will follo
 RULE_INT(Bots, MaxFollowDistance, 300, "Default 300. Max distance a bot can be set to follow behind.")
 RULE_INT(Bots, MaxDistanceRanged, 300, "Default 300. Max distance a bot can be set to ranged.")
 RULE_BOOL(Bots, AllowAIMez, true, "If enabled bots will automatically mez/AE mez eligible targets.")
+RULE_BOOL(Bots, AISlowAdds, false, "If enabled an engaged slower slows its focused target first, then every other mob engaged with its owner's forces, and lands a matching resist debuff (tash, malo) on each before the slow.")
+RULE_BOOL(Bots, AIMemoryBlurAddsOnSelf, false, "If enabled a bot with a memory blur spell uses it on any add that has turned on the bot. Never on the bot's focused target, which is the tank's job.")
 RULE_BOOL(Bots, AllowCommandedCharm, true, "If enabled bots can be commanded to charm NPCs.")
 RULE_BOOL(Bots, AllowCommandedMez, true, "If enabled bots can be commanded to mez NPCs.")
 RULE_BOOL(Bots, AllowCommandedResurrect, true, "If enabled bots can be commanded to resurrect players.")

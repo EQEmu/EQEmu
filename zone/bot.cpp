@@ -11333,6 +11333,12 @@ bool Bot::AttemptAICastSpell(uint16 spell_type, Mob* tar) {
 		return result;
 	}
 
+	// Without this a slower only ever slows its own target, so adds go unslowed.
+	// The sweep tries the focused target first and then the adds, each with its own checks.
+	if (spell_type == BotSpellTypes::Slow && !IsCommandedSpell() && RuleB(Bots, AISlowAdds)) {
+		return BotCastSlowSweep(tar);
+	}
+
 	if (IsBotSpellTypeBeneficial(spell_type)) {
 		if (GetClass() == Class::Bard) {
 			tar = this;

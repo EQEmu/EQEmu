@@ -1049,6 +1049,11 @@ public:
 	static uint8 spell_casting_chances[SPELL_TYPE_COUNT][Class::PLAYER_CLASS_COUNT][Stance::AEBurn][cntHSND];
 
 	bool BotCastMez(Mob* tar, uint8 bot_class, BotSpell& bot_spell, uint16 spell_type);
+	// Slow sweep and add memory blur. See botspellsai.cpp.
+	bool BotCastSlowSweep(Mob* focus);
+	bool BotCastMemoryBlurOnSelfAggro(Mob* focus);
+	bool IsEngagedWithOwnerForces(Mob* npc);
+	bool CastSweepSpell(const BotSpell_wPriority& s, Mob* tar, uint16 spell_type);
 	bool BotCastHeal(Mob* tar, uint8 bot_class, BotSpell& bot_spell, uint16 spell_type);
 	bool BotCastNuke(Mob* tar, uint8 bot_class, BotSpell& bot_spell, uint16 spell_type);
 	bool BotCastPet(Mob* tar, uint8 bot_class, BotSpell& bot_spell, uint16 spell_type);

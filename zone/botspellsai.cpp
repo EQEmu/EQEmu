@@ -17,6 +17,9 @@
 */
 #include "bot.h"
 
+#include <algorithm>
+#include <functional>
+
 #include "common/data_verification.h"
 #include "common/repositories/bot_spells_entries_repository.h"
 #include "common/repositories/npc_spells_repository.h"
@@ -312,6 +315,273 @@ bool Bot::BotCastMez(Mob* tar, uint8 bot_class, BotSpell& bot_spell, uint16 spel
 					GetSpellName(s.SpellId),
 					GetSpellTypeNameByID(spell_type),
 					(tar == this ? "myself" : tar->GetCleanName())
+				).c_str()
+			);
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
+// ---------------------------------------------------------------------------------------
+// Slow sweep and add memory blur
+// ---------------------------------------------------------------------------------------
+
+// True when npc has the owner, one of the owner's bots, or a pet of either on its hate
+// list. That is what "an add in our camp" means, as opposed to a mob someone else is on.
+bool Bot::IsEngagedWithOwnerForces(Mob* npc) {
+	Mob* owner = GetBotOwner();
+
+	if (!npc || !owner) {
+		return false;
+	}
+
+	for (auto* e : npc->GetHateList()) {
+		Mob* h = e ? e->entity_on_hatelist : nullptr;
+
+		if (!h) {
+			continue;
+		}
+
+		if (h->IsPet() && h->GetOwner()) {
+			h = h->GetOwner();
+		}
+
+		if (h == owner || (h->IsBot() && h->CastToBot()->GetBotOwner() == owner)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool Bot::CastSweepSpell(const BotSpell_wPriority& s, Mob* tar, uint16 spell_type) {
+	if (!AIDoSpellCast(s.SpellIndex, tar, s.ManaCost)) {
+		return false;
+	}
+
+	if (BotSpellTypeUsesTargetSettings(spell_type)) {
+		SetCastedSpellType(UINT16_MAX);
+		SetBotSpellRecastTimer(spell_type, tar, true);
+	}
+	else {
+		SetCastedSpellType(spell_type);
+	}
+
+	RaidGroupSay(
+		fmt::format(
+			"Casting {} [{}] on {}.",
+			GetSpellName(s.SpellId),
+			GetSpellTypeNameByID(spell_type),
+			tar->GetCleanName()
+		).c_str()
+	);
+
+	return true;
+}
+
+namespace {
+	// The resist effect that lowers the resist a slow is checked against. 0 means there is
+	// nothing to debuff first (unresistable, or a resist type no debuff line touches).
+	int ResistEffectForResistType(int resist_type) {
+		switch (resist_type) {
+			case RESIST_MAGIC:      return SpellEffect::ResistMagic;
+			case RESIST_FIRE:       return SpellEffect::ResistFire;
+			case RESIST_COLD:       return SpellEffect::ResistCold;
+			case RESIST_POISON:     return SpellEffect::ResistPoison;
+			case RESIST_DISEASE:    return SpellEffect::ResistDisease;
+			case RESIST_CORRUPTION: return SpellEffect::ResistCorruption;
+			default:                return 0;
+		}
+	}
+
+	bool HasDetrimentalBuffMatching(Mob* m, const std::function<bool(uint16)>& pred) {
+		int buff_count = m->GetMaxTotalSlots();
+		auto buffs     = m->GetBuffs();
+
+		for (int i = 0; i < buff_count; i++) {
+			uint16 id = buffs[i].spellid;
+
+			if (IsValidSpell(id) && IsDetrimentalSpell(id) && pred(id)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+}
+
+// Focused target first, then the rest of the adds nearest first. For each: skip it if it is
+// already slowed by anyone, mezzed, or slow immune; if the bot has a resist debuff for the
+// slow's resist type and the mob does not carry one, cast that first; otherwise slow it.
+// One cast per call, so the engaged cast loop keeps its own pacing and priorities.
+bool Bot::BotCastSlowSweep(Mob* focus) {
+	if (!focus || !GetBotOwner()) {
+		return false;
+	}
+
+	if (zone->random.Int(0, 100) > GetChanceToCastBySpellType(BotSpellTypes::Slow)) {
+		return false;
+	}
+
+	std::vector<Mob*> candidates;
+	candidates.push_back(focus);
+
+	std::vector<std::pair<float, Mob*>> adds;
+
+	for (auto& e : m_close_mobs) {
+		Mob* m = e.second;
+
+		if (!m || m == focus || !m->IsNPC() || m->GetAppearance() == eaDead || m->GetHP() <= 0) {
+			continue;
+		}
+
+		if (m->HasOwner() && m->GetOwner() && m->GetOwner()->IsOfClientBotMerc()) {
+			continue;
+		}
+
+		if (!IsEngagedWithOwnerForces(m)) {
+			continue;
+		}
+
+		adds.emplace_back(DistanceSquared(GetPosition(), m->GetPosition()), m);
+	}
+
+	std::sort(adds.begin(), adds.end(), [](const auto& l, const auto& r) { return l.first < r.first; });
+
+	for (auto& a : adds) {
+		candidates.push_back(a.second);
+	}
+
+	const bool focus_los = HasLoS();
+	bool result          = false;
+
+	for (Mob* cand : candidates) {
+		if (cand->GetSpecialAbility(SpecialAbility::SlowImmunity) || cand->IsMezzed()) {
+			continue;
+		}
+
+		if (HasDetrimentalBuffMatching(cand, [](uint16 id) { return IsSlowSpell(id); })) {
+			continue;
+		}
+
+		if (!IsAttackAllowed(cand, true)) {
+			continue;
+		}
+
+		SetHasLoS(cand == focus ? focus_los : DoLosChecks(cand));
+
+		if (!HasLoS()) {
+			continue;
+		}
+
+		// Holds, mana and hp limits, the per target recast timer and the target hp thresholds.
+		if (!PrecastChecks(cand, BotSpellTypes::Slow)) {
+			continue;
+		}
+
+		SetCastedSpellType(UINT16_MAX);
+		SetTempSpellType(BotSpellTypes::Slow);
+
+		// Stacking, range, mana, recast and the resist limit, all per spell.
+		auto slows = GetPrioritizedBotSpellsBySpellType(this, BotSpellTypes::Slow, cand, false);
+
+		if (slows.empty()) {
+			continue;
+		}
+
+		const auto& slow        = slows.front();
+		const int resist_effect = ResistEffectForResistType(spells[slow.SpellId].resist_type);
+
+		if (
+			resist_effect &&
+			!HasDetrimentalBuffMatching(
+				cand,
+				[resist_effect](uint16 id) {
+					return IsEffectInSpell(id, resist_effect) || IsEffectInSpell(id, SpellEffect::ResistAll);
+				}
+			)
+		) {
+			SetTempSpellType(BotSpellTypes::Debuff);
+
+			auto debuffs = GetPrioritizedBotSpellsBySpellType(this, BotSpellTypes::Debuff, cand, false);
+
+			for (const auto& d : debuffs) {
+				if (!IsEffectInSpell(d.SpellId, resist_effect) && !IsEffectInSpell(d.SpellId, SpellEffect::ResistAll)) {
+					continue;
+				}
+
+				if (CastSweepSpell(d, cand, BotSpellTypes::Debuff)) {
+					result = true;
+				}
+
+				break;
+			}
+
+			if (result) {
+				break;
+			}
+
+			SetTempSpellType(BotSpellTypes::Slow);
+		}
+
+		if (CastSweepSpell(slow, cand, BotSpellTypes::Slow)) {
+			result = true;
+			break;
+		}
+	}
+
+	SetHasLoS(focus_los);
+
+	return result;
+}
+
+// A memory blur spell sits on the bot's list under HateRedux, a type the stock AI never picks
+// it for (IsHateReduxSpell is false for WipeHateList). Cast it on an add whose target is this
+// bot. The focused target is excluded: a wipe there throws away the tank's hate.
+bool Bot::BotCastMemoryBlurOnSelfAggro(Mob* focus) {
+	const BotSpells_wIndex* blur = nullptr;
+
+	for (const auto& s : BotGetSpellsByType(BotSpellTypes::HateRedux)) {
+		if (
+			IsValidSpell(s.spellid) &&
+			IsEffectInSpell(s.spellid, SpellEffect::WipeHateList) &&
+			!IsAnyAESpell(s.spellid) &&
+			(!blur || s.minlevel > blur->minlevel)
+		) {
+			blur = &s;
+		}
+	}
+
+	if (!blur || IsCasting() || !CheckSpellRecastTimer(blur->spellid) || !BotHasEnoughMana(blur->spellid)) {
+		return false;
+	}
+
+	for (auto& e : m_close_mobs) {
+		Mob* m = e.second;
+
+		if (!m || m == focus || !m->IsNPC() || m->GetAppearance() == eaDead || m->IsMezzed()) {
+			continue;
+		}
+
+		if (m->GetTarget() != this) {
+			continue;
+		}
+
+		if (!IsAttackAllowed(m, true) || !IsValidSpellRange(blur->spellid, m) || !DoLosChecks(m)) {
+			continue;
+		}
+
+		SetCastedSpellType(UINT16_MAX);
+
+		if (AIDoSpellCast(blur->index, m, blur->manacost)) {
+			RaidGroupSay(
+				fmt::format(
+					"Casting {} on {}, which has turned on me.",
+					GetSpellName(blur->spellid),
+					m->GetCleanName()
 				).c_str()
 			);
 
@@ -782,6 +1052,15 @@ bool Bot::AI_EngagedCastCheck() {
 
 		auto cast_order = GetSpellTypesPrioritized(BotPriorityCategories::Engaged);
 		Mob* tar = nullptr;
+
+		// An add beating on this bot comes before anything else it might cast.
+		if (RuleB(Bots, AIMemoryBlurAddsOnSelf) && BotCastMemoryBlurOnSelfAggro(GetTarget())) {
+			if (!AIautocastspell_timer->Enabled()) {
+				AIautocastspell_timer->Start(RandomTimer(RuleI(Bots, MinDelayBetweenInCombatCastAttempts), RuleI(Bots, MaxDelayBetweenInCombatCastAttempts)), false);
+			}
+
+			return true;
+		}
 
 		for (auto& current_cast : cast_order) {
 			if (current_cast.priority == 0) {
