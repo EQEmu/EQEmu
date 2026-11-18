@@ -3713,6 +3713,53 @@ int64 Client::ValidateBuyLineCost(std::map<uint32, BuylineItemDetails_Struct> &i
 	return proposed_total_cost;
 }
 
+// The seller's packet is untrusted; check it against the line the buyer actually posted and take the
+// descriptive fields from the stored line.
+static bool MatchesPostedBuyLine(uint32 buyer_char_id, BuyerLineSellItem_Struct &sell_line)
+{
+	auto posted_lines = BuyerBuyLinesRepository::GetWhere(
+		database,
+		fmt::format("`char_id` = {} AND `buy_slot_id` = {}", buyer_char_id, sell_line.slot)
+	);
+	if (posted_lines.size() != 1) {
+		return false;
+	}
+
+	const auto &posted = posted_lines.front();
+	if (
+		posted.item_id != static_cast<int32>(sell_line.item_id) ||
+		posted.item_price != static_cast<int32>(sell_line.item_cost) ||
+		posted.item_qty < 1 ||
+		sell_line.seller_quantity < 1 ||
+		sell_line.seller_quantity > static_cast<uint32>(posted.item_qty)
+	) {
+		return false;
+	}
+
+	std::map<uint32, uint32> posted_trade_items{};
+	for (auto const &t: BuyerTradeItemsRepository::GetWhere(database, fmt::format("`buyer_buy_lines_id` = {}", posted.id))) {
+		posted_trade_items[t.item_id] += t.item_qty;
+	}
+
+	std::map<uint32, uint32> sent_trade_items{};
+	for (auto const &t: sell_line.trade_items) {
+		// stored lines never hold item 0, but the client's decode can send blank entries
+		if (t.item_id) {
+			sent_trade_items[t.item_id] += t.item_quantity;
+		}
+	}
+
+	if (posted_trade_items != sent_trade_items) {
+		return false;
+	}
+
+	sell_line.item_quantity = posted.item_qty;
+	sell_line.item_icon     = posted.item_icon;
+	strn0cpy(sell_line.item_name, posted.item_name.c_str(), sizeof(sell_line.item_name));
+
+	return true;
+}
+
 bool Client::DoBarterBuyerChecks(BuyerLineSellItem_Struct &sell_line)
 {
 	bool buyer_error = false;
@@ -3734,6 +3781,16 @@ bool Client::DoBarterBuyerChecks(BuyerLineSellItem_Struct &sell_line)
 			return false;
 		}
 		SendBarterBuyerClientMessage(sell_line, Barter_SellerTransactionComplete, Barter_Failure, Barter_DataOutOfDate);
+		return false;
+	}
+
+	if (!MatchesPostedBuyLine(buyer->CharacterID(), sell_line)) {
+		LogTradingDetail(
+			"Seller <red>[{}] sent a sale for buyer <green>[{}] that does not match the posted buy line",
+			sell_line.seller_name,
+			buyer->GetCleanName()
+		);
+		SendBarterBuyerClientMessage(sell_line, Barter_SellerTransactionComplete, Barter_Failure, Barter_Failure);
 		return false;
 	}
 
