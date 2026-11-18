@@ -40,7 +40,8 @@
 
 enum TaskMethodType {
 	METHODSINGLEID = 0,
-	METHODQUEST    = 2
+	METHODQUEST    = 2,
+	METHODSELECT   = 3
 };
 
 enum class TaskActivityType : int32_t // task element/objective
@@ -222,6 +223,7 @@ struct TaskInformation {
 	int                 faction_reward{};   // npc_faction_id if amount == 0, otherwise primary faction ID
 	int                 faction_amount{};   // faction hit value
 	TaskMethodType      reward_method;
+	bool                has_reward_selection{};
 	int                 reward_points;
 	int32_t             reward_point_type;
 	int                 activity_count{};
@@ -251,7 +253,15 @@ struct TaskInformation {
 		out.WriteString(description); // max 4000 with null
 
 		if (client_version != EQ::versions::ClientVersion::Titanium) {
-			out.WriteUInt8(0); // 0: no rewards 1: enables "Reward Preview" button
+			// Existing task methods retain their zero byte. The task manager
+			// enables this only for RoF2 after validating a METHODSELECT set.
+			out.WriteUInt8(
+				client_version == EQ::versions::ClientVersion::RoF2 &&
+				reward_method == METHODSELECT &&
+				has_reward_selection
+					? 1
+					: 0
+			);
 		}
 
 		// live only sends the initial active elements to the select window

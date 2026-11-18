@@ -31,6 +31,10 @@ extern QueryServ *QServ;
 
 void Client::LoadClientTaskState()
 {
+	if (m_reward_selection) {
+		m_reward_selection->ClearSource(RewardSelectionSource::Task);
+	}
+
 	if (RuleB(TaskSystem, EnableTaskSystem)) {
 		LoadClientSharedCompletedTasks();
 
@@ -40,14 +44,20 @@ void Client::LoadClientTaskState()
 			safe_delete(task_state);
 		}
 		else {
+			task_state->RetryCompletedSelectableRewards(this, true);
 			TaskManager::Instance()->SendActiveTasksToClient(this);
 			TaskManager::Instance()->SendCompletedTasksToClient(this, task_state);
+			task_state->RestorePendingRewardSelection(this);
 		}
 	}
 }
 
 void Client::RemoveClientTaskState()
 {
+	if (m_reward_selection) {
+		m_reward_selection->ClearSource(RewardSelectionSource::Task);
+	}
+
 	if (task_state) {
 		task_state->CancelAllTasks(this);
 		safe_delete(task_state);

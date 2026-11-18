@@ -397,10 +397,14 @@ void command_invsnapshot(Client *c, const Seperator *sep)
 			return;
 		}
 
-		if (database.RestoreCharacterInvSnapshot(tc->CharacterID(), timestamp)) {
-			// cannot delete all valid item slots from client..so, we worldkick
-			tc->WorldKick(); // self restores update before the 'kick' is processed
-
+		const auto restored =
+			database.RestoreCharacterInvSnapshot(tc->CharacterID(), timestamp);
+		// The restore is atomic, but a lost COMMIT response is necessarily
+		// ambiguous. Reconcile achievements from durable rows and force an
+		// inventory reload for both success and failure outcomes.
+		tc->UpdateAchievementForOwnItem(0);
+		tc->WorldKick(); // self restores update before the 'kick' is processed
+		if (restored) {
 			c->Message(
 				Chat::White, "Successfully applied snapshot %u to %s's (id: %u) inventory.",
 				timestamp, tc->GetName(), tc->CharacterID());

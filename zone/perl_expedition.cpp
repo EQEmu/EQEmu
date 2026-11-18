@@ -20,6 +20,8 @@
 #ifdef EMBPERL_XS_CLASSES
 
 #include "common/zone_store.h"
+
+#include "zone/achievement_state_updates.h"
 #include "zone/dynamic_zone.h"
 #include "zone/embperl.h"
 
@@ -51,6 +53,38 @@ void Perl_Expedition_AddReplayLockoutDuration(DynamicZone* self, int seconds)
 void Perl_Expedition_AddReplayLockoutDuration(DynamicZone* self, int seconds, bool members_only)
 {
 	self->AddLockoutDuration(DzLockout::ReplayTimer, seconds, members_only);
+}
+
+bool Perl_Expedition_AdvanceAchievementProgress(
+	DynamicZone* self,
+	uint32_t achievement_id,
+	uint32_t component_type,
+	uint32_t component_id,
+	uint32_t value
+) // @categories Achievements, Adventures and Expeditions
+{
+	if (component_type > 2) {
+		return false;
+	}
+
+	return AchievementStateUpdates::QueueDynamicZoneAdvance(
+		self->GetID(),
+		achievement_id,
+		static_cast<AchievementStateUpdates::ComponentType>(component_type),
+		component_id,
+		value
+	);
+}
+
+bool Perl_Expedition_CompleteAchievement(
+	DynamicZone* self,
+	uint32_t achievement_id
+) // @categories Achievements, Adventures and Expeditions
+{
+	return AchievementStateUpdates::QueueDynamicZoneCompletion(
+		self->GetID(),
+		achievement_id
+	);
 }
 
 uint32_t Perl_Expedition_GetID(DynamicZone* self)
@@ -237,6 +271,8 @@ void perl_register_expedition()
 	package.add("AddReplayLockout", &Perl_Expedition_AddReplayLockout);
 	package.add("AddReplayLockoutDuration", (void(*)(DynamicZone*, int))&Perl_Expedition_AddReplayLockoutDuration);
 	package.add("AddReplayLockoutDuration", (void(*)(DynamicZone*, int, bool))&Perl_Expedition_AddReplayLockoutDuration);
+	package.add("AdvanceAchievementProgress", &Perl_Expedition_AdvanceAchievementProgress);
+	package.add("CompleteAchievement", &Perl_Expedition_CompleteAchievement);
 	package.add("GetDynamicZoneID", &Perl_Expedition_GetID);
 	package.add("GetID", &Perl_Expedition_GetID);
 	package.add("GetInstanceID", &Perl_Expedition_GetInstanceID);

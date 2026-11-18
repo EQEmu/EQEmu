@@ -15,7 +15,7 @@
 	You should have received a copy of the GNU General Public License
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#include "wguild_mgr.h"
+#include "world/wguild_mgr.h"
 
 #include "common/eqemu_logsys.h"
 #include "common/repositories/guild_bank_repository.h"
@@ -32,6 +32,7 @@
 #include "world/clientlist.h"
 #include "world/zonelist.h"
 #include "world/zoneserver.h"
+#include <cstring>
 
 std::map<uint32, TributeData> tribute_list;
 
@@ -228,6 +229,45 @@ void WorldGuildManager::ProcessZonePacket(ServerPacket *pack) {
 	case ServerOP_GuildMembersList:
 	{
 		auto in = (ServerOP_GuildMessage_Struct *) pack->pBuffer;
+		ZSList::Instance()->SendPacketToZonesWithGuild(in->guild_id, pack);
+		break;
+	}
+	case ServerOP_GuildAchievement:
+	{
+		if (
+			pack->size <= sizeof(ServerGuildAchievement_Struct) ||
+			pack->size >
+				sizeof(ServerGuildAchievement_Struct) + ServerGuildAchievementMaxLinkDataLength + 1
+		) {
+			LogGuilds(
+				"Received ServerOP_GuildAchievement of invalid size [{}]",
+				pack->size
+			);
+			return;
+		}
+
+		const auto in = reinterpret_cast<const ServerGuildAchievement_Struct *>(pack->pBuffer);
+		const auto link_data_size = pack->size - sizeof(ServerGuildAchievement_Struct);
+		if (
+			in->guild_id == 0 ||
+			in->guild_id == GUILD_NONE ||
+			in->achievement_id == 0 ||
+			in->player_name[0] == '\0' ||
+			in->player_name[sizeof(in->player_name) - 1] != '\0' ||
+			link_data_size < 2 ||
+			in->achievement_link_data[0] == '\0' ||
+			in->achievement_link_data[link_data_size - 1] != '\0' ||
+			in->achievement_link_data[link_data_size - 2] != '^' ||
+			std::memchr(in->achievement_link_data, '\0', link_data_size - 1) != nullptr
+		) {
+			LogGuilds(
+				"Received invalid ServerOP_GuildAchievement for guild [{}], achievement [{}]",
+				in->guild_id,
+				in->achievement_id
+			);
+			return;
+		}
+
 		ZSList::Instance()->SendPacketToZonesWithGuild(in->guild_id, pack);
 		break;
 	}

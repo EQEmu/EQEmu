@@ -15,7 +15,7 @@
 	You should have received a copy of the GNU General Public License
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#include "guild_mgr.h"
+#include "zone/guild_mgr.h"
 
 #include "common/emu_versions.h"
 #include "common/repositories/guild_bank_repository.h"
@@ -27,6 +27,7 @@
 #include "zone/worldserver.h"
 #include "zone/zonedb.h"
 
+#include <cstring>
 
 ZoneGuildManager guild_mgr;
 GuildBankManager *GuildBanks;
@@ -34,6 +35,11 @@ GuildBankManager *GuildBanks;
 extern WorldServer worldserver;
 extern volatile bool is_zone_loaded;
 extern EntityList entity_list;
+
+static constexpr uint32 kGuildAchievementUpdatePlayerNameOffset = 0x0C;
+static constexpr uint32 kGuildAchievementUpdatePlayerNameLength = 64;
+static constexpr uint32 kGuildAchievementUpdateAchievementIdOffset = 0x50;
+static constexpr uint32 kGuildAchievementUpdateHeaderSize = 84;
 
 void ZoneGuildManager::SendGuildRefresh(uint32 guild_id, bool name, bool motd, bool rank, bool relation) {
 	LogGuilds("Sending guild refresh for [{}] to world, changes: name=[{}], motd=[{}], rank=d, relation=[{}]", guild_id, name, motd, rank, relation);
@@ -649,7 +655,122 @@ void ZoneGuildManager::ProcessWorldPacket(ServerPacket *pack)
 			}
 			break;
 		}
+		case ServerOP_GuildAchievement: {
+			if (
+				pack->size <= sizeof(ServerGuildAchievement_Struct) ||
+				pack->size >
+					sizeof(ServerGuildAchievement_Struct) + ServerGuildAchievementMaxLinkDataLength + 1
+			) {
+				LogGuilds(
+					"Received ServerOP_GuildAchievement of invalid size [{}]",
+					pack->size
+				);
+				return;
+			}
+
+			const auto in = reinterpret_cast<const ServerGuildAchievement_Struct *>(pack->pBuffer);
+			const auto link_data_size = pack->size - sizeof(ServerGuildAchievement_Struct);
+			if (
+				in->guild_id == 0 ||
+				in->guild_id == GUILD_NONE ||
+				in->achievement_id == 0 ||
+				in->player_name[0] == '\0' ||
+				in->player_name[sizeof(in->player_name) - 1] != '\0' ||
+				link_data_size < 2 ||
+				in->achievement_link_data[0] == '\0' ||
+				in->achievement_link_data[link_data_size - 1] != '\0' ||
+				in->achievement_link_data[link_data_size - 2] != '^' ||
+				std::memchr(in->achievement_link_data, '\0', link_data_size - 1) != nullptr ||
+				!is_zone_loaded
+			) {
+				return;
+			}
+
+			const auto update_size =
+				static_cast<uint32>(kGuildAchievementUpdateHeaderSize + link_data_size);
+			EQApplicationPacket outapp(OP_GuildUpdate, update_size);
+			std::memset(outapp.pBuffer, 0, kGuildAchievementUpdateHeaderSize);
+			const uint32 action = GuildUpdateAchievement;
+			std::memcpy(
+				outapp.pBuffer,
+				&action,
+				sizeof(action)
+			);
+			strn0cpy(
+				reinterpret_cast<char *>(outapp.pBuffer) +
+					kGuildAchievementUpdatePlayerNameOffset,
+				in->player_name,
+				kGuildAchievementUpdatePlayerNameLength
+			);
+			std::memcpy(
+				outapp.pBuffer + kGuildAchievementUpdateAchievementIdOffset,
+				&in->achievement_id,
+				sizeof(in->achievement_id)
+			);
+			std::memcpy(
+				outapp.pBuffer + kGuildAchievementUpdateHeaderSize,
+				in->achievement_link_data,
+				link_data_size
+			);
+
+			for (const auto &entry : entity_list.GetClientList()) {
+				auto client = entry.second;
+				if (
+					client &&
+					client->Connected() &&
+					client->IsInGuild(in->guild_id) &&
+					client->ClientVersion() == EQ::versions::ClientVersion::RoF2 &&
+					!Strings::EqualFold(client->GetName(), in->player_name)
+				) {
+					client->QueuePacket(&outapp);
+				}
+			}
+			break;
+		}
 	}
+}
+
+void ZoneGuildManager::SendAchievementAnnouncement(
+	uint32 guild_id,
+	uint32 achievement_id,
+	const char *player_name,
+	const std::string &achievement_link_data
+)
+{
+	if (
+		guild_id == 0 ||
+		guild_id == GUILD_NONE ||
+		achievement_id == 0 ||
+		!player_name ||
+		player_name[0] == '\0' ||
+		achievement_link_data.empty() ||
+		achievement_link_data.back() != '^' ||
+		achievement_link_data.find('\0') != std::string::npos ||
+		achievement_link_data.size() > ServerGuildAchievementMaxLinkDataLength
+	) {
+		return;
+	}
+
+	const auto packet_size = static_cast<uint32>(
+		sizeof(ServerGuildAchievement_Struct) + achievement_link_data.size() + 1
+	);
+	auto pack = new ServerPacket(ServerOP_GuildAchievement, packet_size);
+	auto out = reinterpret_cast<ServerGuildAchievement_Struct *>(pack->pBuffer);
+	out->guild_id = guild_id;
+	out->achievement_id = achievement_id;
+	strn0cpy(
+		out->player_name,
+		player_name,
+		sizeof(out->player_name)
+	);
+	std::memcpy(
+		out->achievement_link_data,
+		achievement_link_data.c_str(),
+		achievement_link_data.size() + 1
+	);
+
+	worldserver.SendPacket(pack);
+	safe_delete(pack);
 }
 
 void ZoneGuildManager::SendGuildMemberUpdateToWorld(const char *MemberName, uint32 GuildID, uint16 ZoneID, uint32 LastSeen)

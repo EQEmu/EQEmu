@@ -43,6 +43,8 @@ public:
 		return reinterpret_cast<Raid*>(GetLuaPtrData());
 	}
 
+	bool AdvanceAchievementProgress(uint32 achievement_id, uint32 component_type, uint32 component_id, uint32 value);
+	bool CompleteAchievement(uint32 achievement_id);
 	bool IsRaidMember(const char *name);
 	bool IsRaidMember(Lua_Client c);
 	void CastGroupSpell(Lua_Mob caster, int spell_id, uint32 group_id);

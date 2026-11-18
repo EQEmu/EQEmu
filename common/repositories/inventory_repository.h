@@ -61,5 +61,17 @@ public:
      */
 
 	// Custom extended repository methods here
+	static bool TryDeleteWhere(Database &db, const std::string &where_filter)
+	{
+		const auto result = db.QueryDatabase(fmt::format(
+			"DELETE FROM {} WHERE {}",
+			TableName(),
+			where_filter
+		));
+
+		// Generated DeleteWhere returns zero for both a successful no-op and an
+		// SQL failure. Persistence callers need to distinguish those outcomes.
+		return result.Success();
+	}
 
 };

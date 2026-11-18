@@ -99,6 +99,12 @@ public:
 	void  SendToWorldSendGuildList();
 	void  SendToWorldMemberRankUpdate(uint32 guild_id, uint32 rank, uint32 banker, uint32 alt, bool no_update, const char *player_name);
 	void  SendToWorldSendGuildMembersList(uint32 guild_id);
+	void  SendAchievementAnnouncement(
+		uint32 guild_id,
+		uint32 achievement_id,
+		const char *player_name,
+		const std::string &achievement_link_data
+	);
 	bool  RemoveMember(uint32 guild_id, uint32 char_id, std::string player_name);
 	void  MemberAdd(uint32 guild_id, uint32 char_id, uint32 level, uint32 _class, uint32 rank, uint32 zone_id, std::string player_name);
 	bool  MemberRankUpdate(uint32 guild_id, uint32 rank, uint32 banker, uint32 alt, bool no_update, const char *player_name);

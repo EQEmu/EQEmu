@@ -19,6 +19,7 @@
 
 #ifdef EMBPERL_XS_CLASSES
 
+#include "zone/achievement_state_updates.h"
 #include "zone/client.h"
 #include "zone/dialogue_window.h"
 #include "zone/dynamic_zone.h"
@@ -1400,6 +1401,120 @@ bool Perl_Client_IsTaskActive(Client* self, int task_id) // @categories Tasks an
 bool Perl_Client_IsTaskActivityActive(Client* self, int task_id, int activity_id) // @categories Tasks and Activities
 {
 	return self->IsTaskActivityActive(task_id, activity_id);
+}
+
+bool Perl_Client_HasCompletedAchievement(Client* self, uint32 achievement_id) // @categories Achievements
+{
+	return self->HasCompletedAchievement(achievement_id);
+}
+
+int Perl_Client_GetAchievementStatus(Client* self, uint32 achievement_id) // @categories Achievements
+{
+	return self->GetAchievementStatus(achievement_id);
+}
+
+int64_t Perl_Client_GetAchievementProgress(
+	Client* self,
+	uint32 achievement_id,
+	uint32 component_type,
+	uint32 component_id
+) // @categories Achievements
+{
+	if (component_type > 2) {
+		return -1;
+	}
+	return self->GetAchievementProgress(
+		achievement_id,
+		static_cast<uint8>(component_type),
+		component_id
+	);
+}
+
+bool Perl_Client_SetAchievementProgress(
+	Client* self,
+	uint32 achievement_id,
+	uint32 component_type,
+	uint32 component_id,
+	uint32 value
+) // @categories Achievements
+{
+	if (component_type > 2) {
+		return false;
+	}
+	return self->SetAchievementProgress(
+		achievement_id,
+		static_cast<uint8>(component_type),
+		component_id,
+		value
+	);
+}
+
+bool Perl_Client_SetAchievementProgress(
+	Client* self,
+	uint32 achievement_id,
+	uint32 component_type,
+	uint32 component_id,
+	uint32 value,
+	bool additive
+) // @categories Achievements
+{
+	if (component_type > 2) {
+		return false;
+	}
+	return self->SetAchievementProgress(
+		achievement_id,
+		static_cast<uint8>(component_type),
+		component_id,
+		value,
+		additive
+	);
+}
+
+bool Perl_Client_CompleteAchievement(Client* self, uint32 achievement_id) // @categories Achievements
+{
+	return self->CompleteAchievement(achievement_id);
+}
+
+bool Perl_Client_AdvanceSharedTaskAchievementProgress(
+	Client* self,
+	uint32 achievement_id,
+	uint32 component_type,
+	uint32 component_id,
+	uint32 value
+) // @categories Achievements, Tasks and Activities
+{
+	if (component_type > 2) {
+		return false;
+	}
+
+	const auto shared_task_id = self->GetSharedTaskId();
+	if (shared_task_id <= 0) {
+		return false;
+	}
+
+	return AchievementStateUpdates::QueueSharedTaskAdvance(
+		shared_task_id,
+		achievement_id,
+		static_cast<AchievementStateUpdates::ComponentType>(component_type),
+		component_id,
+		value
+	);
+}
+
+bool Perl_Client_CompleteSharedTaskAchievement(
+	Client* self,
+	uint32 achievement_id
+) // @categories Achievements, Tasks and Activities
+{
+	const auto shared_task_id = self->GetSharedTaskId();
+	if (shared_task_id <= 0) {
+		return false;
+	}
+
+	return AchievementStateUpdates::QueueSharedTaskCompletion(
+		shared_task_id,
+		achievement_id
+	);
 }
 
 void Perl_Client_LockSharedTask(Client* self, bool lock)
@@ -3412,6 +3527,7 @@ void perl_register_client()
 	package.add("AddRadiantCrystals", &Perl_Client_AddRadiantCrystals);
 	package.add("AddSkill", &Perl_Client_AddSkill);
 	package.add("Admin", &Perl_Client_Admin);
+	package.add("AdvanceSharedTaskAchievementProgress", &Perl_Client_AdvanceSharedTaskAchievementProgress);
 	package.add("ApplySpell", (void(*)(Client*, int))&Perl_Client_ApplySpell);
 	package.add("ApplySpell", (void(*)(Client*, int, int))&Perl_Client_ApplySpell);
 	package.add("ApplySpell", (void(*)(Client*, int, int, int))&Perl_Client_ApplySpell);
@@ -3461,6 +3577,8 @@ void perl_register_client()
 	package.add("ClearPEQZoneFlag", &Perl_Client_ClearPEQZoneFlag);
 	package.add("ClearXTargets", &Perl_Client_ClearXTargets);
 	package.add("ClearZoneFlag", &Perl_Client_ClearZoneFlag);
+	package.add("CompleteAchievement", &Perl_Client_CompleteAchievement);
+	package.add("CompleteSharedTaskAchievement", &Perl_Client_CompleteSharedTaskAchievement);
 	package.add("CompleteTask", &Perl_Client_CompleteTask);
 	package.add("Connected", &Perl_Client_Connected);
 	package.add("CountAugmentEquippedByID", &Perl_Client_CountAugmentEquippedByID);
@@ -3516,6 +3634,8 @@ void perl_register_client()
 	package.add("GetGetAccountBucketRemaining", &Perl_Client_GetAccountBucketRemaining);
 	package.add("GetAccountFlag", &Perl_Client_GetAccountFlag);
 	package.add("GetAccountFlags", &Perl_Client_GetAccountFlags);
+	package.add("GetAchievementProgress", &Perl_Client_GetAchievementProgress);
+	package.add("GetAchievementStatus", &Perl_Client_GetAchievementStatus);
 	package.add("GetAggroCount", &Perl_Client_GetAggroCount);
 	package.add("GetAllMoney", &Perl_Client_GetAllMoney);
 	package.add("GetAlternateCurrencyValue", &Perl_Client_GetAlternateCurrencyValue);
@@ -3672,6 +3792,7 @@ void perl_register_client()
 	package.add("GuildID", &Perl_Client_GuildID);
 	package.add("GuildRank", &Perl_Client_GuildRank);
 	package.add("HasAugmentEquippedByID", &Perl_Client_HasAugmentEquippedByID);
+	package.add("HasCompletedAchievement", &Perl_Client_HasCompletedAchievement);
 	package.add("HasDisciplineLearned", &Perl_Client_HasDisciplineLearned);
 	package.add("HasExpeditionLockout", &Perl_Client_HasExpeditionLockout);
 	package.add("HasItemEquippedByID", &Perl_Client_HasItemEquippedByID);
@@ -3837,6 +3958,8 @@ void perl_register_client()
 	package.add("SetAccountBucket", (void(*)(Client*, std::string, std::string))&Perl_Client_SetAccountBucket);
 	package.add("SetAccountBucket", (void(*)(Client*, std::string, std::string, std::string))&Perl_Client_SetAccountBucket);
 	package.add("SetAlternateCurrencyValue", &Perl_Client_SetAlternateCurrencyValue);
+	package.add("SetAchievementProgress", (bool(*)(Client*, uint32, uint32, uint32, uint32))&Perl_Client_SetAchievementProgress);
+	package.add("SetAchievementProgress", (bool(*)(Client*, uint32, uint32, uint32, uint32, bool))&Perl_Client_SetAchievementProgress);
 	package.add("SetAnon", &Perl_Client_SetAnon);
 	package.add("SetAutoLoginCharacterName", (bool(*)(Client*))&Perl_Client_SetAutoLoginCharacterName);
 	package.add("SetAutoLoginCharacterName", (bool(*)(Client*, std::string))&Perl_Client_SetAutoLoginCharacterName);

@@ -20,6 +20,8 @@
 #include "lua_group.h"
 
 #include "common/data_verification.h"
+
+#include "zone/achievement_state_updates.h"
 #include "zone/groups.h"
 #include "zone/lua_client.h"
 #include "zone/lua_mob.h"
@@ -28,6 +30,35 @@
 
 #include "luabind/luabind.hpp"
 #include "luabind/object.hpp"
+
+bool Lua_Group::AdvanceAchievementProgress(
+	uint32 achievement_id,
+	uint32 component_type,
+	uint32 component_id,
+	uint32 value
+) {
+	Lua_Safe_Call_Bool();
+	if (component_type > 2) {
+		return false;
+	}
+
+	return AchievementStateUpdates::QueueGroupAdvance(
+		self->GetID(),
+		achievement_id,
+		static_cast<AchievementStateUpdates::ComponentType>(component_type),
+		component_id,
+		value
+	);
+}
+
+bool Lua_Group::CompleteAchievement(uint32 achievement_id)
+{
+	Lua_Safe_Call_Bool();
+	return AchievementStateUpdates::QueueGroupCompletion(
+		self->GetID(),
+		achievement_id
+	);
+}
 
 void Lua_Group::DisbandGroup() {
 	Lua_Safe_Call_Void();
@@ -171,7 +202,9 @@ luabind::scope lua_register_group() {
 	.def(luabind::constructor<>())
 	.property("null", &Lua_Group::Null)
 	.property("valid", &Lua_Group::Valid)
+	.def("AdvanceAchievementProgress", &Lua_Group::AdvanceAchievementProgress)
 	.def("CastGroupSpell", (void(Lua_Group::*)(Lua_Mob,int))&Lua_Group::CastGroupSpell)
+	.def("CompleteAchievement", &Lua_Group::CompleteAchievement)
 	.def("DisbandGroup", (void(Lua_Group::*)(void))&Lua_Group::DisbandGroup)
 	.def("DoesAnyMemberHaveExpeditionLockout", (bool(Lua_Group::*)(std::string, std::string))&Lua_Group::DoesAnyMemberHaveExpeditionLockout)
 	.def("DoesAnyMemberHaveExpeditionLockout", (bool(Lua_Group::*)(std::string, std::string, int))&Lua_Group::DoesAnyMemberHaveExpeditionLockout)
