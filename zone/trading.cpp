@@ -3130,7 +3130,7 @@ void Client::SendBuyerGreeting(uint32 buyer_id)
 		Message(Chat::White, "Welcome!");
 		return;
 	}
-	Message(Chat::White, buyer.front().welcome_message.c_str());
+	Message(Chat::White, "%s", buyer.front().welcome_message.c_str());
 }
 
 void Client::SendSellerBrowsing(const std::string &browser)
