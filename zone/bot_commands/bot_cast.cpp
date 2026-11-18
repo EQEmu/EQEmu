@@ -357,7 +357,7 @@ void bot_command_cast(Client* c, const Seperator* sep)
 		}
 	}
 
-	if (!aa_type && !by_spell_id) {
+	if (!aa_type && !by_spell_id && tar) {
 		if (IsPetBotSpellType(spell_type) && !tar->IsPet()) {
 			c->Message(
 				Chat::Yellow,
