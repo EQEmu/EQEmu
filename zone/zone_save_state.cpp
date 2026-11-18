@@ -537,7 +537,10 @@ bool Zone::LoadZoneState(
 
 		new_spawn->SetStoredLocation(glm::vec4(s.x, s.y, s.z, s.heading));
 
-		if (spawn_time_left == 0 && s.npc_id > 0) {
+		// only a point that held a live NPC at save time is resumed; an empty point whose timer
+		// has expired spawns fresh and must run its spawn-time quest calls normally
+		bool resumed = spawn_time_left == 0 && s.npc_id > 0;
+		if (resumed) {
 			new_spawn->SetResumedNPCID(s.npc_id);
 			new_spawn->SetResumedFromZoneSuspend(true);
 			new_spawn->SetEntityVariables(GetVariablesDeserialized(s.entity_variables));
@@ -546,7 +549,7 @@ bool Zone::LoadZoneState(
 		spawn2_list.Insert(new_spawn);
 		new_spawn->Process();
 		auto n = new_spawn->GetNPC();
-		if (n) {
+		if (n && resumed) {
 			LoadNPCState(zone, n, s);
 		}
 	}
