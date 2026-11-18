@@ -3981,7 +3981,7 @@ bool ZoneDatabase::UnburyCharacterCorpse(uint32 corpse_id, uint32 zone_id, uint1
 	return CharacterCorpsesRepository::UnburyCorpse(*this, corpse_id, zone_id, instance_id, position);
 }
 
-Corpse* ZoneDatabase::LoadCharacterCorpse(uint32 corpse_id)
+Corpse* ZoneDatabase::LoadCharacterCorpse(uint32 corpse_id, bool require_local_location)
 {
 	if (!corpse_id) {
 		return nullptr;
@@ -3989,6 +3989,9 @@ Corpse* ZoneDatabase::LoadCharacterCorpse(uint32 corpse_id)
 
 	const auto &e = CharacterCorpsesRepository::FindOne(*this, corpse_id);
 	if (!e.id) {
+		return nullptr;
+	}
+	if (require_local_location && (!zone || e.zone_id != zone->GetZoneID() || e.instance_id != zone->GetInstanceID() || e.is_buried)) {
 		return nullptr;
 	}
 

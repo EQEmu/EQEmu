@@ -28,6 +28,7 @@ public:
 	WorldServer();
 	~WorldServer();
 	void ProcessMessage(uint16 opcode, EQ::Net::Packet &);
+	void SendPacket(ServerPacket *pack);
 
 private:
 

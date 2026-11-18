@@ -24,8 +24,10 @@
 #include "common/repositories/chatchannel_reserved_names_repository.h"
 #include "common/repositories/chatchannels_repository.h"
 #include "common/repositories/name_filter_repository.h"
+#include "common/servertalk.h"
 #include "common/strings.h"
 #include "ucs/chatchannel.h"
+#include "ucs/worldserver.h"
 
 #include "mysqld_error.h"
 #include <cassert>
@@ -33,6 +35,7 @@
 #include <climits>
 #include <cstdio>
 #include <cstdlib>
+#include <algorithm>
 #include <cstring>
 #include <map>
 
@@ -40,6 +43,46 @@ extern Clientlist      *g_Clientlist;
 extern std::string GetMailPrefix();
 extern ChatChannelList *ChannelList;
 extern uint32          MailMessagesSent;
+extern WorldServer     *worldserver;
+
+// Tells a recipient in game about new mail with a yellow chat line and the
+// same text as a marquee. World relays both to the zones, which print the line
+// with printf, so the sender is limited to printable characters without %.
+static void SendNewMailNotice(int character_id, const std::string &from)
+{
+	if (!worldserver) {
+		return;
+	}
+	std::string sender;
+	for (const auto c : from) {
+		if (c >= 32 && c <= 126 && c != '%' && sender.size() < 64) {
+			sender.push_back(c);
+		}
+	}
+	const auto text = sender.empty()
+		? std::string("You have received a new mail message.")
+		: fmt::format("You have received a new mail message from {}.", sender);
+
+	ServerPacket message(ServerOP_CZMessage, sizeof(CZMessage_Struct));
+	auto *m = reinterpret_cast<CZMessage_Struct *>(message.pBuffer);
+	m->update_type       = CZUpdateType_Character;
+	m->update_identifier = character_id;
+	m->type              = Chat::Yellow;
+	strn0cpy(m->message, text.c_str(), sizeof(m->message));
+	worldserver->SendPacket(&message);
+
+	ServerPacket marquee(ServerOP_CZMarquee, sizeof(CZMarquee_Struct));
+	auto *q = reinterpret_cast<CZMarquee_Struct *>(marquee.pBuffer);
+	q->update_type       = CZUpdateType_Character;
+	q->update_identifier = character_id;
+	q->type              = Chat::Yellow;
+	q->priority          = 510;
+	q->fade_in           = 0;
+	q->fade_out          = 3000;
+	q->duration          = static_cast<uint32>(std::clamp<size_t>(text.size() * 70, 6000, 15000));
+	strn0cpy(q->message, text.c_str(), sizeof(q->message));
+	worldserver->SendPacket(&marquee);
+}
 
 void UCSDatabase::GetAccountStatus(Client *client)
 {
@@ -543,6 +586,40 @@ bool UCSDatabase::SendMail(
 	for (unsigned int i = 1; i < characterName.length(); i++)
 		characterName[i] = tolower(characterName[i]);
 
+	// Mail to GameMaster (Player Support in Spire, the console name World uses)
+	// is stored with charid 0 for Spire to collect and delete. A character
+	// already named GameMaster (any case; new ones are refused) still gets its
+	// mail. Only characters may send it, and only a few may wait at a time.
+	if (characterName == "Gamemaster" && FindCharacter(characterName.c_str()) <= 0) {
+		const auto sender  = Escape(from);
+		auto       pending = QueryDatabase(fmt::format(
+			"SELECT COUNT(*) FROM `mail` WHERE `charid` = 0 AND `from` = '{}'",
+			sender
+		));
+		if (FindCharacter(from.c_str()) <= 0 || !pending.Success() || pending.RowCount() != 1) {
+			return false;
+		}
+		auto row = pending.begin();
+		if (!row[0] || Strings::ToInt(row[0]) >= 5) {
+			return false;
+		}
+		auto results = QueryDatabase(fmt::format(
+			"INSERT INTO `mail` (`charid`, `timestamp`, `from`, `subject`, `body`, `to`, `status`) "
+			"VALUES (0, {}, '{}', '{}', '{}', '{}', 1)",
+			static_cast<int64>(time(nullptr)),
+			sender,
+			Escape(subject),
+			Escape(body),
+			Escape(recipientsString)
+		));
+		if (!results.Success()) {
+			return false;
+		}
+		LogInfo("MessageID [{}] generated for Player Support, from [{}]", results.LastInsertedID(), from);
+		MailMessagesSent++;
+		return true;
+	}
+
 	characterID = FindCharacter(characterName.c_str());
 
 	LogInfo("SendMail: CharacterID for recipient [{}] is [{}]", characterName.c_str(), characterID);
@@ -584,6 +661,8 @@ bool UCSDatabase::SendMail(
 		std::string FQN = GetMailPrefix() + from;
 		client->SendNotification(client->GetMailBoxNumber(characterName), subject, FQN, results.LastInsertedID());
 	}
+
+	SendNewMailNotice(characterID, from);
 
 	MailMessagesSent++;
 

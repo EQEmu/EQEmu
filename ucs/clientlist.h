@@ -183,6 +183,7 @@ public:
 	void	Process();
 	void	CloseAllConnections();
 	Client *FindCharacter(const std::string& CharacterName);
+	Client *FindMailConnection(const std::string &character_name);
 	void	CheckForStaleConnectionsAll();
 	void	CheckForStaleConnections(Client *c);
 	Client *IsCharacterOnline(const std::string& CharacterName);

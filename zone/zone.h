@@ -331,7 +331,7 @@ public:
 	void SetInstanceTimer(uint32 new_duration);
 	void SetStaticZone(bool sz) { staticzone = sz; }
 	void SetTime(uint8 hour, uint8 minute, bool update_world = true);
-	void SetUCSServerAvailable(bool ucss_available, uint32 update_timestamp);
+	bool SetUCSServerAvailable(bool ucss_available, uint32 update_timestamp);
 	void SpawnConditionChanged(const SpawnCondition &c, int16 old_value);
 	void StartShutdownTimer(uint32 set_time = (RuleI(Zone, AutoShutdownDelay)));
 	void ResetShutdownTimer();

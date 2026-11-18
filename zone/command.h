@@ -82,6 +82,7 @@ void command_databuckets(Client *c, const Seperator *sep);
 void command_dbspawn2(Client *c, const Seperator *sep);
 void command_delacct(Client *c, const Seperator *sep);
 void command_delpetition(Client *c, const Seperator *sep);
+void command_petition(Client *c, const Seperator *sep);
 void command_depop(Client *c, const Seperator *sep);
 void command_depopzone(Client *c, const Seperator *sep);
 void command_devtools(Client *c, const Seperator *sep);

@@ -211,7 +211,7 @@ void ZoneDatabase::UpdatePetitionToDB(Petition* wpet) {
     auto results = QueryDatabase(query);
 }
 
-void ZoneDatabase::InsertPetitionToDB(Petition* wpet)
+bool ZoneDatabase::InsertPetitionToDB(Petition* wpet)
 {
 
 	uint32 len = strlen(wpet->GetPetitionText());
@@ -234,13 +234,14 @@ void ZoneDatabase::InsertPetitionToDB(Petition* wpet)
     safe_delete_array(petitiontext);
     auto results = QueryDatabase(query);
 	if (!results.Success()) {
-		return;
+		return false;
 	}
 
 #if EQDEBUG >= 5
 		LogDebug("New petition created");
 #endif
 
+	return true;
 }
 
 void ZoneDatabase::RefreshPetitionsFromDB()

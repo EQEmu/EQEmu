@@ -860,6 +860,24 @@ bool Database::CheckNameFilter(const std::string& name, bool surname)
 		}
 	}
 
+	// GameMaster is the name Player Support uses for tells and mail, so players
+	// may not take it or a name made to pass for it.
+	const auto lower_name = Strings::ToLower(name);
+	for (const auto *reserved : {"gamemaster", "gamemastr", "gamemstr"}) {
+		if (lower_name.find(reserved) != std::string::npos) {
+			return false;
+		}
+	}
+	// Its tells show as from "Game Master", and a reply to that goes to "Game".
+	if (lower_name == "game") {
+		return false;
+	}
+	for (const auto *reserved : {"gmaster", "gmastr", "gmstaff", "gmsupport", "gmhelp", "gmteam"}) {
+		if (Strings::BeginsWith(lower_name, reserved)) {
+			return false;
+		}
+	}
+
 	const auto& l = NameFilterRepository::All(*this);
 
 	if (l.empty()) {

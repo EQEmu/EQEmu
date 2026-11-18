@@ -2701,14 +2701,22 @@ void Zone::RequestUCSServerStatus() {
 	safe_delete(outapp);
 }
 
-void Zone::SetUCSServerAvailable(bool ucss_available, uint32 update_timestamp) {
-	if (m_last_ucss_update == update_timestamp && m_ucss_available != ucss_available) {
+// Returns true when UCS became available after this zone knew it was not. The
+// first reply after zone boot only sets the state. m_last_ucss_update was never
+// stored before, so it stayed 0 and every reply was applied; it now records the
+// last reply (0 means none yet). Replies arrive in order over the one World
+// connection, so the newest always applies.
+bool Zone::SetUCSServerAvailable(bool ucss_available, uint32 update_timestamp) {
+	const bool known = m_last_ucss_update != 0;
+	if (known && m_last_ucss_update == update_timestamp && m_ucss_available != ucss_available) {
 		m_ucss_available = false;
 		RequestUCSServerStatus();
-		return;
+		return false;
 	}
-	if (m_last_ucss_update < update_timestamp)
-		m_ucss_available = ucss_available;
+	const bool became_available = known && !m_ucss_available && ucss_available;
+	m_ucss_available = ucss_available;
+	m_last_ucss_update = update_timestamp ? update_timestamp : 1;
+	return became_available;
 }
 
 bool Zone::IsQuestHotReloadQueued() const
