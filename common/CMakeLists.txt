@@ -61,6 +61,8 @@ set(common_sources
     md5.cpp
     memory_buffer.cpp
     memory_mapped_file.cpp
+    multi_world_selector.cpp
+    multi_world_selector_notifier.cpp
     memory/ksm.cpp
     misc_functions.cpp
     misc.cpp
@@ -623,6 +625,8 @@ set(common_headers
     memory_mapped_file.h
     memory/ksm.h
     misc_functions.h
+    multi_world_selector.h
+    multi_world_selector_notifier.h
     misc.h
     mysql_request_result.h
     mysql_request_row.h

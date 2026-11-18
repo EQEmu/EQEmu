@@ -18,6 +18,7 @@
 #pragma once
 
 #include "common/json_config.h"
+#include "common/multi_world_selector.h"
 #include "loginserver/client_manager.h"
 #include "loginserver/loginserver_webserver.h"
 #include "loginserver/options.h"
@@ -31,7 +32,8 @@ public:
 
 	}
 
-	EQ::JsonConfigFile                 config;
+	EQ::JsonConfigFile                  config;
+	EQ::Net::MultiWorldSelector::Config selector_config;
 	LoginserverWebserver::TokenManager *token_manager{};
 	Options                            options;
 	WorldServerManager                 *server_manager;

@@ -131,6 +131,7 @@ option(EQEMU_BUILD_SERVER "Build the game server." ON)
 option(EQEMU_BUILD_LOGIN "Build the login server." ON)
 option(EQEMU_BUILD_TESTS "Build utility tests." OFF)
 option(EQEMU_BUILD_CLIENT_FILES "Build Client Import/Export Data Programs." ON)
+option(EQEMU_BUILD_WORLD_SELECTOR "Build the EQEmu Multi-World UDP selector." OFF)
 
 if(PerlLibs_FOUND)
 	option(EQEMU_BUILD_PERL "Build Perl parser." ON)
@@ -158,7 +159,7 @@ message(STATUS "**************************************************")
 
 option(EQEMU_BUILD_LUA "Build Lua parser." ON)
 
-if(EQEMU_BUILD_SERVER OR EQEMU_BUILD_LOGIN OR EQEMU_BUILD_TESTS OR EQEMU_BUILD_CLIENT_FILES)
+if(EQEMU_BUILD_SERVER OR EQEMU_BUILD_LOGIN OR EQEMU_BUILD_TESTS OR EQEMU_BUILD_CLIENT_FILES OR EQEMU_BUILD_WORLD_SELECTOR)
 	add_subdirectory(common)
 	add_subdirectory(libs)
 else()
@@ -176,6 +177,10 @@ endif()
 
 if(EQEMU_BUILD_LOGIN)
 	add_subdirectory(loginserver)
+endif()
+
+if(EQEMU_BUILD_WORLD_SELECTOR)
+	add_subdirectory(world_selector)
 endif()
 
 if(EQEMU_BUILD_TESTS)

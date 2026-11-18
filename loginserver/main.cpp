@@ -135,6 +135,42 @@ void LoadServerConfig()
 	server.options.AllowTokenLogin(server.config.GetVariableBool("security", "allow_token_login", false));
 }
 
+void LoadMultiWorldSelectorConfig()
+{
+	const auto config_path = fmt::format(
+		"{}/{}",
+		PathManager::Instance()->GetServerPath(),
+		EQ::Net::MultiWorldSelector::ConfigFileName
+	);
+	std::string error;
+	const auto status = EQ::Net::MultiWorldSelector::LoadConfigFile(
+		config_path,
+		server.selector_config,
+		error
+	);
+
+	if (status == EQ::Net::MultiWorldSelector::ConfigFileLoadStatus::Unavailable) {
+		LogInfo("Multi-World Selector is not configured; normal login behavior is unchanged");
+		return;
+	}
+	if (status == EQ::Net::MultiWorldSelector::ConfigFileLoadStatus::Malformed) {
+		LogWarning("Multi-World Selector notifications disabled: {}", error);
+		return;
+	}
+	if (!server.selector_config.enabled) {
+		LogInfo("Multi-World Selector is disabled; normal login behavior is unchanged");
+		return;
+	}
+	if (!EQ::Net::MultiWorldSelector::IsLoopbackIPv4(server.selector_config.control_bind) ||
+		server.selector_config.control_port == 0) {
+		LogWarning("Multi-World Selector notifications disabled: control endpoint must be loopback IPv4 with a non-zero port");
+		server.selector_config.enabled = false;
+		return;
+	}
+
+	LogInfo("Multi-World Selector notifications enabled from [{}]", config_path);
+}
+
 void start_web_server()
 {
 	Sleep(1);
@@ -184,6 +220,7 @@ int main(int argc, char **argv)
 	}
 
 	LoadServerConfig();
+	LoadMultiWorldSelectorConfig();
 	LoadDatabaseConnection();
 
 	if (argc == 1) {

@@ -1,0 +1,22 @@
+{
+  "multi_world_selector": {
+    "enabled": false,
+    "control_bind": "127.0.0.1",
+    "control_port": 9900,
+    "world_bind": "192.0.2.10",
+    "world_port": 9000,
+    "upstream_bind": "0.0.0.0",
+    "selection_timeout_seconds": 60,
+    "session_timeout_seconds": 300,
+    "worlds": {
+      "standard_eqemu": {
+        "backend_host": "192.0.2.20",
+        "backend_port": 9000
+      },
+      "second_world": {
+        "backend_host": "192.0.2.30",
+        "backend_port": 9000
+      }
+    }
+  }
+}
