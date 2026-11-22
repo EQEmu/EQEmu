@@ -38,7 +38,8 @@ fn vector(p: &ffi::Point) -> core::V {
     [p.x, p.y, p.z]
 }
 fn create(vertices: &[ffi::Point], indices: &[u32]) -> Result<Box<Engine>, core::Error> {
-    if vertices.len() > 8_000_000 || indices.len() > 12_000_000 || !indices.len().is_multiple_of(3) {
+    if vertices.len() > 8_000_000 || indices.len() > 12_000_000 || !indices.len().is_multiple_of(3)
+    {
         return Err(core::Error("invalid geometry counts"));
     }
     let mut v = Vec::new();
