@@ -6,4 +6,4 @@
 
 // Construction copies all geometry. Failure returns null with a diagnostic.
 RaycastMesh *createRustRaycastMesh(const std::vector<std::array<float, 3>>& vertices,
-    const std::vector<unsigned int>& indices, std::string& error);
+	const std::vector<unsigned int>& indices, std::string& error);

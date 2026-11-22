@@ -321,9 +321,9 @@ bool Map::Load(std::string filename, bool force_mmf_overwrite)
 #else
 
 /**
- * @param filename
- * @return
- */
+	* @param filename
+	* @return
+	*/
 bool Map::Load(const std::string &filename)
 {
 #endif /*USE_MAP_MMFS*/
@@ -391,45 +391,45 @@ bool Map::LoadV1(FILE *f) {
 }
 
 bool Map::LoadV2(FILE *f) {
-    std::vector<glm::vec3> verts;
-    std::vector<uint32> indices;
-    if (!MapGeometry::LoadV2(f, verts, indices)) return false;
-    return InstallGeometry(verts, indices);
+	std::vector<glm::vec3> verts;
+	std::vector<uint32> indices;
+	if (!MapGeometry::LoadV2(f, verts, indices)) return false;
+	return InstallGeometry(verts, indices);
 }
 
 bool Map::InstallGeometry(const std::vector<glm::vec3>& verts, const std::vector<uint32>& indices) {
-    RaycastMesh* replacement = nullptr;
+	RaycastMesh* replacement = nullptr;
 #ifdef EQEMU_RUST_MAP_RAYCASTER
-    if (verts.size() > 8000000 || indices.size() > 12000000 || indices.size() % 3) {
-        LogError("Rust map load failed: invalid geometry counts");
-        return false;
-    }
-    try {
-        std::vector<std::array<float,3>> points;
-        points.reserve(verts.size());
-        for (const auto& v : verts) points.push_back({v.x,v.y,v.z});
-        std::string error;
-        replacement = createRustRaycastMesh(points, indices, error);
-        if (!replacement) LogError("Rust map load failed: [{}]", error);
-    } catch (const std::exception& e) {
-        LogError("Rust map load failed: [{}]", e.what());
-        return false;
-    }
+	if (verts.size() > 8000000 || indices.size() > 12000000 || indices.size() % 3) {
+		LogError("Rust map load failed: invalid geometry counts");
+		return false;
+	}
+	try {
+		std::vector<std::array<float,3>> points;
+		points.reserve(verts.size());
+		for (const auto& v : verts) points.push_back({v.x,v.y,v.z});
+		std::string error;
+		replacement = createRustRaycastMesh(points, indices, error);
+		if (!replacement) LogError("Rust map load failed: [{}]", error);
+	} catch (const std::exception& e) {
+		LogError("Rust map load failed: [{}]", e.what());
+		return false;
+	}
 #else
-    replacement = createRaycastMesh((RmUint32)verts.size(),
-        reinterpret_cast<const RmReal*>(verts.data()), indices.size()/3, indices.data());
+	replacement = createRaycastMesh((RmUint32)verts.size(),
+		reinterpret_cast<const RmReal*>(verts.data()), indices.size()/3, indices.data());
 #endif
-    if (!replacement) return false;
-    // Allocate the holder before transferring ownership. Failed reload keeps the old engine.
-    if (!imp) {
-        try { imp = new impl{replacement}; }
-        catch (...) { replacement->release(); throw; }
-    } else {
-        auto* previous = imp->rm;
-        imp->rm = replacement;
-        previous->release();
-    }
-    return true;
+	if (!replacement) return false;
+	// Allocate the holder before transferring ownership. Failed reload keeps the old engine.
+	if (!imp) {
+		try { imp = new impl{replacement}; }
+		catch (...) { replacement->release(); throw; }
+	} else {
+		auto* previous = imp->rm;
+		imp->rm = replacement;
+		previous->release();
+	}
+	return true;
 }
 
 #if defined(USE_MAP_MMFS) && !defined(EQEMU_RUST_MAP_RAYCASTER)

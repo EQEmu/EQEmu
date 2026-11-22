@@ -99,37 +99,37 @@ constexpr size_t MaxVertices = 8000000;
 constexpr size_t MaxIndices = 12000000;
 constexpr uint32 MaxPackedBytes = 512 * 1024 * 1024;
 class MapReader {
-    const char *current;
-    size_t remaining;
+	const char *current;
+	size_t remaining;
 public:
-    explicit MapReader(const std::vector<char>& bytes) : current(bytes.data()), remaining(bytes.size()) {}
-    void Skip(size_t count) {
-        if (count > remaining) throw std::runtime_error("truncated map geometry");
-        current += count;
-        remaining -= count;
-    }
-    template<class T> T Read() {
-        if (sizeof(T) > remaining) throw std::runtime_error("truncated map scalar");
-        T value;
-        std::memcpy(&value, current, sizeof(T));
-        Skip(sizeof(T));
-        if constexpr (std::is_floating_point_v<T>) {
-            if (!std::isfinite(value)) throw std::runtime_error("nonfinite map scalar");
-        }
-        return value;
-    }
-    std::string Name() {
-        auto end = static_cast<const char*>(std::memchr(current, 0, remaining));
-        if (!end) throw std::runtime_error("unterminated map model name");
-        std::string name(current, end);
-        Skip(name.size() + 1);
-        return name;
-    }
+	explicit MapReader(const std::vector<char>& bytes) : current(bytes.data()), remaining(bytes.size()) {}
+	void Skip(size_t count) {
+		if (count > remaining) throw std::runtime_error("truncated map geometry");
+		current += count;
+		remaining -= count;
+	}
+	template<class T> T Read() {
+		if (sizeof(T) > remaining) throw std::runtime_error("truncated map scalar");
+		T value;
+		std::memcpy(&value, current, sizeof(T));
+		Skip(sizeof(T));
+		if constexpr (std::is_floating_point_v<T>) {
+			if (!std::isfinite(value)) throw std::runtime_error("nonfinite map scalar");
+		}
+		return value;
+	}
+	std::string Name() {
+		auto end = static_cast<const char*>(std::memchr(current, 0, remaining));
+		if (!end) throw std::runtime_error("unterminated map model name");
+		std::string name(current, end);
+		Skip(name.size() + 1);
+		return name;
+	}
 };
 void CheckGrowth(size_t vertices, size_t indices, size_t add_vertices, size_t add_indices) {
-    if (vertices > MaxVertices || add_vertices > MaxVertices - vertices ||
-        indices > MaxIndices || add_indices > MaxIndices - indices)
-        throw std::runtime_error("map geometry count limit");
+	if (vertices > MaxVertices || add_vertices > MaxVertices - vertices ||
+		indices > MaxIndices || add_indices > MaxIndices - indices)
+		throw std::runtime_error("map geometry count limit");
 }
 }
 
@@ -580,14 +580,14 @@ bool MapGeometry::LoadV2(FILE *f, std::vector<glm::vec3> &verts, std::vector<uin
 		}
 	}
 
-    for (auto index : indices) if (index >= verts.size()) return false;
-    for (const auto& vertex : verts) {
-        if (!std::isfinite(vertex.x) || !std::isfinite(vertex.y) || !std::isfinite(vertex.z)) return false;
-    }
+	for (auto index : indices) if (index >= verts.size()) return false;
+	for (const auto& vertex : verts) {
+		if (!std::isfinite(vertex.x) || !std::isfinite(vertex.y) || !std::isfinite(vertex.z)) return false;
+	}
 
 	return true;
 } catch (const std::exception&) {
-    return false;
+	return false;
 }
 
 
