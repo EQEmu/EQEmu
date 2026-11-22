@@ -47,21 +47,21 @@ impl Bounds {
         Self { min: p, max: p }
     }
     fn include(&mut self, p: V) {
-        for k in 0..3 {
-            if p[k] < self.min[k] {
-                self.min[k] = p[k];
+        for (k, &coordinate) in p.iter().enumerate() {
+            if coordinate < self.min[k] {
+                self.min[k] = coordinate;
             }
-            if p[k] > self.max[k] {
-                self.max[k] = p[k];
+            if coordinate > self.max[k] {
+                self.max[k] = coordinate;
             }
         }
     }
     fn clip(&self, p: V) -> u32 {
         let mut r = 0;
-        for k in 0..3 {
-            if p[k] < self.min[k] {
+        for (k, &coordinate) in p.iter().enumerate() {
+            if coordinate < self.min[k] {
                 r |= 1 << (2 * k);
-            } else if p[k] > self.max[k] {
+            } else if coordinate > self.max[k] {
                 r |= 2 << (2 * k);
             }
         }
@@ -182,7 +182,7 @@ impl Raycaster {
     }
     // Count limits bound owned geometry to 144 MB before tree/workspace overhead.
     fn build_admitted(vertices: Vec<V>, indices: Vec<u32>, nv: usize, ni: usize) -> Result<Self> {
-        if vertices.len() > nv || indices.len() > ni || indices.len() % 3 != 0 {
+        if vertices.len() > nv || indices.len() > ni || !indices.len().is_multiple_of(3) {
             return Err(Error("invalid geometry counts"));
         }
         if vertices.iter().any(|&v| !finite(v)) {
@@ -326,20 +326,20 @@ impl Raycaster {
         let dir = scale(delta, 1. / nearest);
         let mut best = None;
         for t in 0..self.indices.len() / 3 {
-            if let Some(dist) = triangle(from, dir, self.tri(t)) {
-                if dist < nearest {
-                    nearest = dist;
-                    best = Some(Hit {
-                        position: [
-                            from[0] + dir[0] * dist,
-                            from[1] + dir[1] * dist,
-                            from[2] + dir[2] * dist,
-                        ],
-                        normal: normal(self.tri(t)),
-                        distance: dist,
-                        triangle: t,
-                    });
-                }
+            if let Some(dist) = triangle(from, dir, self.tri(t))
+                && dist < nearest
+            {
+                nearest = dist;
+                best = Some(Hit {
+                    position: [
+                        from[0] + dir[0] * dist,
+                        from[1] + dir[1] * dist,
+                        from[2] + dir[2] * dist,
+                    ],
+                    normal: normal(self.tri(t)),
+                    distance: dist,
+                    triangle: t,
+                });
             }
         }
         Ok(best)
@@ -357,18 +357,17 @@ impl Raycaster {
                     continue;
                 }
                 self.visited[t] = self.frame;
-                if let Some(dist) = triangle(p, d, self.tri(t)) {
-                    if dist < *nearest
-                        || (dist == *nearest && best.as_ref().map_or(true, |h| t < h.triangle))
-                    {
-                        *nearest = dist;
-                        *best = Some(Hit {
-                            position: [p[0] + d[0] * dist, p[1] + d[1] * dist, p[2] + d[2] * dist],
-                            normal: normal(self.tri(t)),
-                            distance: dist,
-                            triangle: t,
-                        });
-                    }
+                if let Some(dist) = triangle(p, d, self.tri(t))
+                    && (dist < *nearest
+                        || (dist == *nearest && best.as_ref().is_none_or(|h| t < h.triangle)))
+                {
+                    *nearest = dist;
+                    *best = Some(Hit {
+                        position: [p[0] + d[0] * dist, p[1] + d[1] * dist, p[2] + d[2] * dist],
+                        normal: normal(self.tri(t)),
+                        distance: dist,
+                        triangle: t,
+                    });
                 }
             }
         } else {
