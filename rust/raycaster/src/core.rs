@@ -1,4 +1,4 @@
-//! Maintained raycaster. Numerical operations follow zone/raycast_mesh.cpp.
+//! Maintained raycaster. Numerical operations retain the legacy raycaster semantics.
 #![forbid(unsafe_code)]
 pub type V = [f32; 3];
 #[derive(Debug, Clone, PartialEq)]

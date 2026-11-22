@@ -42,22 +42,13 @@ public:
 	bool CheckLoS(glm::vec3 myloc, glm::vec3 oloc) const;
 	bool DoCollisionCheck(glm::vec3 myloc, glm::vec3 oloc, glm::vec3 &outnorm, float &distance) const;
 
-#ifdef USE_MAP_MMFS
-	bool Load(std::string filename, bool force_mmf_overwrite = false);
-#else
 	bool Load(const std::string& filename);
-#endif
 
 	static Map *LoadMapFile(std::string file);
 private:
 	bool InstallGeometry(const std::vector<glm::vec3>& verts, const std::vector<uint32>& indices);
 	bool LoadV1(FILE *f);
 	bool LoadV2(FILE *f);
-
-#ifdef USE_MAP_MMFS
-	bool LoadMMF(const std::string& map_file_name, bool force_mmf_overwrite);
-	bool SaveMMF(const std::string& map_file_name, bool force_mmf_overwrite);
-#endif /*USE_MAP_MMFS*/
 
 	struct impl;
 	impl *imp;

@@ -1,5 +1,4 @@
 #include "rust_raycast_mesh.h"
-#ifdef EQEMU_RUST_MAP_RAYCASTER
 #include "map-raycaster/src/lib.rs.h"
 #include <algorithm>
 #include <exception>
@@ -51,4 +50,3 @@ RaycastMesh* createRustRaycastMesh(const std::vector<std::array<float,3>>& verti
 		return new RustRaycastMesh(std::move(engine));
 	} catch (const std::exception& e) { error=e.what(); return nullptr; }
 }
-#endif

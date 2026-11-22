@@ -81,7 +81,6 @@ set(zone_sources
     questmgr.cpp
     raids.cpp
     rust_raycast_mesh.cpp
-    raycast_mesh.cpp
     shared_task_zone_messaging.cpp
     sidecar_api/loot_simulator_controller.cpp
     sidecar_api/sidecar_api.cpp

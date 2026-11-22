@@ -1,13 +1,10 @@
 # Rust map engine
 
-Ordinary zone builds select Rust. `-DEQEMU_RUST_MAP_RAYCASTER=OFF` temporarily
-selects the legacy C++ query engine for A/B acceptance and rollback. Reconfigure
-and rebuild before restarting an isolated server. There is no runtime backend
-switch or fallback after Rust errors. Default builds require native Linux x86-64;
-other platforms and cross builds fail configuration with an explicit diagnostic.
-Use OFF there while platform support is assessed. This changes the Windows and
-macOS build prerequisite, so it must be called out before landing. The OFF helper
-never discovers Cargo. The actor bridge retains its independent Linux requirement.
+Zone builds require the Rust map engine on native Linux x86-64. Other platforms
+and cross builds fail configuration with an explicit diagnostic. The legacy C++
+query engine and build selection are retired. There is no runtime switch or
+automatic fallback after Rust errors. The actor bridge retains its independent
+platform checks.
 
 C++ retains V1/V2 model/group/terrain decoding and expansion. The maintained
 crate owns geometry copied during a CXX call, an opaque boxed engine, and query
@@ -27,9 +24,10 @@ machinery. Memory safety does not establish gameplay safety.
 Empty valid geometry creates a loaded engine with absent bounds and no hits.
 Invalid/nonfinite vertices fail, including unused vertices. Coordinates and
 query endpoints must be finite and within +/-1e8. No triangles are dropped.
-A complete replacement is built before Map swaps ownership. Rust mode bypasses
-native MMF load/save/reload and always rebuilds from decoded maps. It neither
-consumes nor serializes native engine state; existing C++ cache behavior remains.
+A complete replacement is built before Map swaps ownership. Map always rebuilds
+from decoded stock `.map` files. It neither consumes nor
+serializes engine caches; stale `.mmf` files are ignored. `zone convert_map`
+refuses before startup and the batch conversion script is retired.
 Map sentinels, optional outputs, start-position adjustments and rule/zone limits
 remain in C++. Zone-dependent height checks require a hit and a present zone.
 
@@ -59,5 +57,5 @@ historical tests do not validate this revision. Decoder failures return false an
 the Map loader logs failure. No malformed geometry becomes a valid empty engine.
 
 See `tests/map_bridge/README.md` for disposable-only commands, caller observation
-controls and the legacy deletion assessment. Full exact-head acceptance remains a
+controls and the retired-code audit. Full exact-head acceptance remains a
 parent/Stack gate; the historical corpus and soak are bounded prior evidence.

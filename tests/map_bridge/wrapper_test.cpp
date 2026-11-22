@@ -23,6 +23,8 @@ int main() {
 	fixture("empty.map",0,true);fixture("bad.map",std::numeric_limits<float>::quiet_NaN());
 	// A stale native cache must neither override decoded geometry nor be rewritten.
 	{ std::ofstream cache("triangle.mmf"); cache<<"stale native cache"; }
+	{ std::ofstream cache("missing.mmf"); cache<<"stale cache without a map"; }
+	Map cache_only; assert(!cache_only.Load("missing.map"));
 	Map m; glm::vec3 start(1,1,2), result(99), norm(99);float distance=99;
 	assert(m.FindBestZ(start,nullptr)==BEST_Z_INVALID);
 	assert(!m.CheckLoS(start,{1,1,-2}));
