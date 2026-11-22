@@ -322,3 +322,22 @@ From the build directory you can simply call make to build.
 For example.
 
 	make -j4
+
+### Map raycaster
+
+Ordinary zone builds use the maintained Rust backend. Native Linux x86-64 is the
+supported target; unsupported platforms and cross compilation fail configuration.
+The temporary `-DEQEMU_RUST_MAP_RAYCASTER=OFF` selection builds the C++ query backend
+for A/B comparison and rollback. It retains native MMF behavior.
+
+Use the repository `rust-toolchain.toml` pin, Rust 1.99.0, and CXX 1.0.194 from
+`rust/raycaster/Cargo.lock`. CMake invokes Cargo frozen/offline at build time,
+using the existing actor bridge pattern. Provision the lockfile dependencies and
+GNU Linux target in the approved disposable worker first. `CARGO`, `RUSTC`,
+`RUSTDOC`, and `CARGO_HOME` may select that worker's pinned installation.
+`CARGO_TARGET_DIR` must be outside the source tree. CMake otherwise chooses a
+per-build directory beside the source tree. Do not use candidate Cargo or native
+builds on the host for this landing's validation.
+
+See `rust/raycaster/README.md` and `tests/map_bridge/README.md` for limits,
+ownership, focused controls and exact-head acceptance gates.

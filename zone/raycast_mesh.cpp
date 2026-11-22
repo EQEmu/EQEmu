@@ -803,19 +803,13 @@ public:
 		}
 		std::memset(mRaycastTriangles, 0, sizeof(RmUint32) * tcount);
 
-		mFaceNormals = static_cast<RmReal*>(KSM::AllocatePageAligned(sizeof(RmReal) * 3 * tcount));
-		if (!mFaceNormals) {
-			throw std::bad_alloc();
-		}
-		std::memset(mFaceNormals, 0, sizeof(RmReal) * 3 * tcount);
-
 		// Mark memory as mergeable for KSM
 		KSM::MarkMemoryForKSM(mVertices, sizeof(RmReal) * 3 * vcount);
 		KSM::MarkMemoryForKSM(mIndices, sizeof(RmUint32) * 3 * tcount);
 		KSM::MarkMemoryForKSM(mRaycastTriangles, sizeof(RmUint32) * tcount);
-		KSM::MarkMemoryForKSM(mFaceNormals, sizeof(RmReal) * 3 * tcount);
 
 		mRoot = getNode();
+		// getFaceNormal computes winding normals lazily and owns them until release.
 		mFaceNormals = NULL;
 		new ( mRoot ) NodeAABB(mVcount,mVertices,mTcount,mIndices,maxDepth,minLeafSize,minAxisSize,this,mLeafTriangles);
 

@@ -15,6 +15,7 @@
 	You should have received a copy of the GNU General Public License
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
+#include "collision_observation.h"
 #include "mob.h"
 
 #include "common/data_bucket.h"
@@ -5543,6 +5544,7 @@ void Mob::SetTarget(Mob *mob)
 // Like MoveTo.
 float Mob::FindDestGroundZ(glm::vec3 dest, float z_offset)
 {
+	CollisionObservation::Scope observation("FindDestGroundZ", GetNPCTypeID(), GetID());
 	float best_z = BEST_Z_INVALID;
 	if (zone->zonemap != nullptr)
 	{
@@ -5554,6 +5556,7 @@ float Mob::FindDestGroundZ(glm::vec3 dest, float z_offset)
 
 float Mob::FindGroundZ(float new_x, float new_y, float z_offset)
 {
+	CollisionObservation::Scope observation("FindGroundZ", GetNPCTypeID(), GetID());
 	float ret = BEST_Z_INVALID;
 	if (zone->zonemap != nullptr)
 	{
@@ -5574,6 +5577,7 @@ float Mob::FindGroundZ(float new_x, float new_y, float z_offset)
 // Copy of above function that isn't protected to be exported to Perl::Mob
 float Mob::GetGroundZ(float new_x, float new_y, float z_offset)
 {
+	CollisionObservation::Scope observation("GetGroundZ", GetNPCTypeID(), GetID());
 	float ret = BEST_Z_INVALID;
 	if (zone->zonemap != 0)
 	{

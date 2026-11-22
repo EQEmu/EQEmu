@@ -15,6 +15,7 @@
 	You should have received a copy of the GNU General Public License
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
+#include "collision_observation.h"
 #include "npc.h"
 
 #include "common/eqemu_logsys.h"
@@ -847,6 +848,10 @@ void Mob::FixZ(int32 z_find_offset /*= 5*/, bool fix_client_z /*= false*/) {
 
 	glm::vec3 current_loc(m_Position);
 	float new_z = GetFixedZ(current_loc, z_find_offset);
+	{
+		CollisionObservation::Scope observation("FixZ", GetNPCTypeID(), GetID());
+		CollisionObservation::Query("pose", current_loc, glm::vec3(current_loc.x, current_loc.y, new_z), GetZOffset());
+	}
 
 	// reject z if it is too far from the current z
 	if (std::abs(new_z - m_Position.z) > 100) {
