@@ -104,7 +104,7 @@ not part of the query backend, and stays.
 After the default landing qualifies, remove `zone/raycast_mesh.cpp` and its
 `zone/CMakeLists.txt` source entry, the OFF selection in
 `cmake/MapRaycaster.cmake` and `Map::InstallGeometry`, the legacy factory/MMF
- declarations in `zone/raycast_mesh.h`, and `Map::LoadMMF`, `Map::SaveMMF` plus
+declarations in `zone/raycast_mesh.h`, and `Map::LoadMMF`, `Map::SaveMMF` plus
 strip/add extension helpers and `USE_MAP_MMFS` signature/cache branches in
 `zone/map.cpp`/`zone/map.h`. Existing `.mmf` files need no migration because Rust
 ignores them. Retain or rename the virtual interface while the Rust adapter uses
