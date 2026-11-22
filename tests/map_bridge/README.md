@@ -35,7 +35,7 @@ cargo test --manifest-path /source/rust/raycaster/Cargo.toml --frozen --offline 
 cargo fmt --manifest-path /source/rust/raycaster/Cargo.toml --check
 cargo clippy --manifest-path /source/rust/raycaster/Cargo.toml --frozen --offline --target x86_64-unknown-linux-gnu -- -D warnings
 cargo test --manifest-path /source/rust/actors/Cargo.toml --workspace --frozen --offline --target x86_64-unknown-linux-gnu
-cargo fmt --manifest-path /source/rust/actors/Cargo.toml --check
+cargo fmt --manifest-path /source/rust/actors/Cargo.toml --all --check
 cargo clippy --manifest-path /source/rust/actors/Cargo.toml --workspace --all-targets --frozen --offline --target x86_64-unknown-linux-gnu -- -D warnings
 python3 /source/tests/convert_map/native_controls.py --zone /output/server/bin/zone
 ```
