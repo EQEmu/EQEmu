@@ -55,6 +55,7 @@ set(zone_sources
     loot.cpp
     main.cpp
     map.cpp
+    map_geometry.cpp
     merc.cpp
     mob.cpp
     mob_ai.cpp
@@ -79,6 +80,7 @@ set(zone_sources
     quest_parser_collection.cpp
     questmgr.cpp
     raids.cpp
+    rust_raycast_mesh.cpp
     raycast_mesh.cpp
     shared_task_zone_messaging.cpp
     sidecar_api/loot_simulator_controller.cpp
@@ -721,3 +723,6 @@ endif()
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 set_property(TARGET zone PROPERTY FOLDER executables/servers)
+
+include("${CMAKE_SOURCE_DIR}/cmake/MapRaycaster.cmake")
+eqemu_link_map_raycaster(zone)

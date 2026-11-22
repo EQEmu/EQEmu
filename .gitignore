@@ -45,6 +45,7 @@ cmake-build-debug/
 *.vcxproj.filters
 *.vcxproj.user
 *.cmake
+!cmake/MapRaycaster.cmake
 !cmake/ActorBridge.cmake
 !cmake/FormatWarnings.cmake
 !cmake/Sanitizers.cmake

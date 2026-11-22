@@ -114,6 +114,23 @@ extern void MapOpcodes();
 bool CheckForCompatibleQuestPlugins();
 int main(int argc, char **argv)
 {
+	// Reserve this command before any normal zone startup, including unsupported builds.
+	const bool convert_map = argc > 1 && strcasecmp(argv[1], "convert_map") == 0;
+	if (convert_map) {
+		if (argc != 3 || argv[2][0] == '\0') {
+			std::fputs("Usage: zone convert_map <filename.map>\n", stderr);
+			return 1;
+		}
+#if defined(EQEMU_RUST_MAP_RAYCASTER)
+		std::fputs("convert_map is unavailable with Rust raycasting: stock .map files load directly; "
+			"native MMF conversion is not needed.\n", stderr);
+		return 1;
+#elif !defined(USE_MAP_MMFS)
+		std::fputs("convert_map is unavailable: this build has no native MMF support.\n", stderr);
+		return 1;
+#endif
+	}
+
 #ifdef EQEMU_BUILD_TESTS
 	if (!InserverTests::Configure()) {
 		return 1;
@@ -169,8 +186,8 @@ int main(int argc, char **argv)
 
 	PathManager::Instance()->Init();
 
-#ifdef USE_MAP_MMFS
-	if (argc == 3 && strcasecmp(argv[1], "convert_map") == 0) {
+#if defined(USE_MAP_MMFS) && !defined(EQEMU_RUST_MAP_RAYCASTER)
+	if (convert_map) {
 		if (!ZoneConfig::LoadConfig())
 			return 1;
 		Config = ZoneConfig::get();
@@ -185,7 +202,7 @@ int main(int argc, char **argv)
 		delete m;
 		std::cout << mapfile.c_str() << " conversion " << (success ? "succeeded" : "failed") << std::endl;
 
-		return 0;
+		return success ? 0 : 1;
 	}
 #endif /*USE_MAP_MMFS*/
 

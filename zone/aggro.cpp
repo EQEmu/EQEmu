@@ -15,6 +15,7 @@
 	You should have received a copy of the GNU General Public License
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
+#include "collision_observation.h"
 #include "common/eqemu_logsys.h"
 #include "common/faction.h"
 #include "common/rulesys.h"
@@ -1267,6 +1268,7 @@ bool Mob::CheckLosFN(Mob *other)
 }
 
 bool Mob::CheckLosFN(float posX, float posY, float posZ, float mobSize) {
+	CollisionObservation::Scope observation("CheckLosFN", GetNPCTypeID(), GetID());
 	if(zone->zonemap == nullptr) {
 		//not sure what the best return is on error
 		//should make this a database variable, but im lazy today

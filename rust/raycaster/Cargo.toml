@@ -1,0 +1,19 @@
+[package]
+name = "map-raycaster"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[lib]
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+cxx = "=1.0.194"
+
+[build-dependencies]
+cxx-build = "=1.0.194"
+
+[profile.release]
+debug = true

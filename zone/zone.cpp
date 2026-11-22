@@ -60,6 +60,7 @@
 #include "zone/worldserver.h"
 #include "zone/zone_config.h"
 #include "zone/zone_reload.h"
+#include "zone/replace_collision_map.h"
 
 #include <cfloat>
 #include <cstdlib>
@@ -3343,7 +3344,11 @@ bool Zone::VariableExists(const std::string& variable_name)
 
 void Zone::ReloadMaps()
 {
-	zonemap  = Map::LoadMapFile(map_name);
+	// Map queries borrow zonemap only on the zone thread. Publish the complete
+	// candidate before releasing the previous map; a failed load keeps it alive.
+	if (!ReplaceCollisionMap(zonemap, std::unique_ptr<Map>(Map::LoadMapFile(map_name)))) {
+		LogError("Collision map reload failed for [{}]; retaining previous map [{}]", map_name, zonemap != nullptr);
+	}
 	watermap = WaterMap::LoadWaterMapfile(map_name);
 	pathing  = IPathfinder::Load(map_name);
 }

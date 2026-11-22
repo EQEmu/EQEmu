@@ -15,6 +15,7 @@
 	You should have received a copy of the GNU General Public License
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
+#include "collision_observation.h"
 #include "mob_movement_manager.h"
 
 #include "common/data_verification.h"
@@ -176,6 +177,9 @@ public:
 		}
 
 		if (!m_started) {
+			CollisionObservation::Scope observation("MoveToCommand", mob->GetNPCTypeID(), mob->GetID());
+			CollisionObservation::Query("dispatch", mob->GetPosition(), glm::vec3(m_move_to_x,m_move_to_y,m_move_to_z), current_speed);
+
 			m_started = true;
 			//rotate to the point
 			mob->SetMoving(true);
@@ -535,6 +539,9 @@ public:
 
 	virtual bool Process(MobMovementManager *mob_movement_manager, Mob *mob)
 	{
+		CollisionObservation::Scope observation("TeleportToCommand", mob->GetNPCTypeID(), mob->GetID());
+		CollisionObservation::Query("teleport", mob->GetPosition(), glm::vec3(m_teleport_to_x,m_teleport_to_y,m_teleport_to_z), 1);
+
 		if (!mob->IsAIControlled()) {
 			return true;
 		}
@@ -683,6 +690,7 @@ void AdjustRoute(std::list<IPathfinder::IPathNode> &nodes, Mob *who)
 		return;
 	}
 
+	CollisionObservation::Scope observation("AdjustRoute", who->GetNPCTypeID(), who->GetID());
 	auto offset = who->GetZOffset();
 
 	for (auto &node : nodes) {
@@ -690,6 +698,7 @@ void AdjustRoute(std::list<IPathfinder::IPathNode> &nodes, Mob *who)
 			auto best_z = zone->zonemap->FindBestZ(node.pos, nullptr);
 			if (best_z != BEST_Z_INVALID) {
 				node.pos.z = best_z + offset;
+				CollisionObservation::Query("node", node.pos, node.pos, offset);
 			}
 		} // todo: floating logic?
 	}
@@ -1277,6 +1286,10 @@ void MobMovementManager::UpdatePathGround(Mob *who, float x, float y, float z, M
 		return;
 	}
 
+	{
+		CollisionObservation::Scope observation("UpdatePathGround", who->GetNPCTypeID(), who->GetID());
+		CollisionObservation::Query("admission", who->GetPosition(), glm::vec3(x,y,z), (partial || stuck) ? -1.0f : float(route.size()));
+	}
 	AdjustRoute(route, who);
 
 	//avoid doing any processing if the mob is stuck to allow normal stuck code to work.
