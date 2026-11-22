@@ -45,6 +45,17 @@ int main() {
         // Empty packed input is rejected before decompression.
         if (end) assert(!run(Bytes(triangle.begin(), triangle.begin() + end)));
     }
+    // A valid flat tile must never repair an invalid base-mesh index.
+    auto expanded = triangle;
+    uint32 tile_count = 1, quads = 1;
+    std::memcpy(expanded.data() + 28, &tile_count, 4);
+    std::memcpy(expanded.data() + 32, &quads, 4);
+    append(expanded, uint8(1));
+    for (float coordinate : {10.f, 10.f, 0.f}) append(expanded, coordinate);
+    assert(run(expanded) && vertices.size() == 7 && indices.size() == 9);
+    uint32 formerly_repaired = 3;
+    std::memcpy(expanded.data() + triangle.size() - 4, &formerly_repaired, 4);
+    assert(!run(expanded));
     auto invalid = triangle;
     uint32 bad_index = 3;
     std::memcpy(invalid.data() + invalid.size() - 4, &bad_index, 4);

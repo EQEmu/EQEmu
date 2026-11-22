@@ -208,7 +208,9 @@ bool MapGeometry::LoadV2(FILE *f, std::vector<glm::vec3> &verts, std::vector<uin
 	}
 
 	for (uint32 i = 0; i < ind_count; ++i) {
-		indices.emplace_back(buf.Read<uint32>());
+		const auto index = buf.Read<uint32>();
+		if (index >= vert_count) return false;
+		indices.emplace_back(index);
 	}
 
 	for (uint32 i = 0; i < nc_vert_count; ++i) {
