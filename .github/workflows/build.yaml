@@ -7,7 +7,7 @@ on:
   pull_request:
 jobs:
   linux:
-    name: Linux
+    name: Linux x86-64
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
@@ -36,6 +36,14 @@ jobs:
             ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}-
             ${{ runner.os }}-vcpkg-
 
+      # Provision the pinned toolchain and lockfiles while network is available.
+      # CMake builds both bridges frozen/offline after this step.
+      - name: Provision Rust dependencies
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal --component rustfmt --component clippy --target x86_64-unknown-linux-gnu
+          cargo fetch --manifest-path rust/raycaster/Cargo.toml --locked --target x86_64-unknown-linux-gnu
+          cargo fetch --manifest-path rust/actors/Cargo.toml --locked --target x86_64-unknown-linux-gnu
+
       - name: Configure
         run: |
           cmake -S . -B build -G Ninja \
@@ -53,53 +61,9 @@ jobs:
 
       - name: Test
         working-directory: build
-        run: ./bin/tests
-
-  windows:
-    name: Windows
-    runs-on: windows-latest
-    env:
-      VCPKG_DOWNLOADS: ${{ github.workspace }}\submodules\vcpkg\downloads
-      VCPKG_BINARY_SOURCES: 'clear;files,${{ github.workspace }}\vcpkg_archives,readwrite'
-    steps:
-      - name: Checkout source
-        uses: actions/checkout@v5
-        with:
-          submodules: recursive
-
-      - name: Enable long paths
-        run: git config --global core.longpaths true
-        
-      - name: Setup MSVC environment
-        uses: TheMrMilchmann/setup-msvc-dev@v4
-        with:
-          arch: x64
-
-      - name: Restore vcpkg Cache
-        uses: actions/cache@v5
-        with:
-          path: |
-            ${{ env.VCPKG_DOWNLOADS }}
-            ${{ github.workspace }}/vcpkg_archives
-          key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}
-          restore-keys: |
-            ${{ runner.os }}-vcpkg-
-
-      - name: Configure
-        shell: pwsh
         run: |
-          cmake -S . -B build -G "Visual Studio 18 2026" -A x64 `
-            -DCMAKE_BUILD_TYPE=RelWithDebInfo `
-            -DEQEMU_BUILD_TESTS=ON `
-            -DEQEMU_BUILD_LOGIN=ON `
-            -DEQEMU_BUILD_LUA=ON `
-            -DEQEMU_BUILD_ZLIB=ON `
-            -DEQEMU_BUILD_CLIENT_FILES=ON
-
-      - name: Build
-        shell: pwsh
-        run: cmake --build build --config RelWithDebInfo --target ALL_BUILD -- /m
-
-      - name: Test
-        working-directory: build
-        run: ./bin/RelWithDebInfo/tests.exe
+          # IPC mutex tests need a writable shared-memory path, not root-level locks.
+          mkdir -p test-runtime/shared
+          printf '%s\n' '{"server":{"directories":{"shared_memory":"shared/"}}}' > test-runtime/eqemu_config.json
+          cd test-runtime
+          ../bin/tests

@@ -1,132 +1,111 @@
 # Map backend acceptance
 
-This standalone suite has no assets, database or running server dependency.
-Build and run it only in the Stack owner's approved disposable worker. No
-candidate executable, compiler, Cargo, rustfmt or Clippy was run on the host.
-The implementation handoff's executed checks are static `git diff --check` and
-source inspection only. All commands below remain unexecuted on this head.
+Build and execute candidate code only in the existing Stack owner's disposable
+workers. These standalone tests do not expand the default utility suite or need
+production assets, a database or a running server. Native Linux x86-64, repository
+Rust 1.99.0, CXX 1.0.194 and frozen/offline Cargo are required. The legacy C++
+backend, OFF matrix and duplicate MMF wrapper variant are retired.
 
-With source mounted at `/source`, external output at `/output`, offline Cargo
-provisioned from the repository toolchain and lockfile, and GLM/FMT include roots
-provided by the worker's matched dependencies:
+## Worker commands
+
+Parent pins the pushed head as `EXPECTED_SHA`; Stack checks a clean exact source
+checkout and records source/tree/toolchain/dependency hashes, full command output
+and exit status. The following is an executable worker handoff, not a claim that
+it ran. Supply the matched toolchain, GLM/FMT roots and existing feature arguments.
+Cargo output must be external to `/source`. Provision committed lockfiles and the
+GNU target before entering offline validation. Reuse accepted frozen inputs and
+Rust outputs where valid; never substitute an old executable for this head.
 
 ```sh
-cmake -S /source/tests/map_bridge -B /output/focused-default -DCMAKE_BUILD_TYPE=Release
-cmake --build /output/focused-default -j1
-ctest --test-dir /output/focused-default --output-on-failure
-cmake -S /source/tests/map_bridge -B /output/focused-off -DCMAKE_BUILD_TYPE=Release -DEQEMU_RUST_MAP_RAYCASTER=OFF
-cmake --build /output/focused-off -j1
-ctest --test-dir /output/focused-off --output-on-failure
+set -eu
+cd /source
+: "${EXPECTED_SHA:?pin the pushed Server commit}"
+: "${MATCHED_TOOLCHAIN:?supply the matched worker toolchain}"
+: "${CARGO_TARGET_DIR:?supply external worker Cargo output}"
+test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+test -z "$(git status --porcelain)"
+git show -s --format='%H %T %P'
+cmake -S /source -B /output/server -DCMAKE_TOOLCHAIN_FILE="$MATCHED_TOOLCHAIN" -DEQEMU_BUILD_TESTS=ON -DEQEMU_BUILD_LOGIN=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cmake --build /output/server -j1
+/output/server/bin/tests
+cmake -S /source/tests/map_bridge -B /output/focused -DCMAKE_BUILD_TYPE=Release
+cmake --build /output/focused -j1
+ctest --test-dir /output/focused --output-on-failure
 cargo test --manifest-path /source/rust/raycaster/Cargo.toml --frozen --offline --target x86_64-unknown-linux-gnu
 cargo fmt --manifest-path /source/rust/raycaster/Cargo.toml --check
 cargo clippy --manifest-path /source/rust/raycaster/Cargo.toml --frozen --offline --target x86_64-unknown-linux-gnu -- -D warnings
+cargo test --manifest-path /source/rust/actors/Cargo.toml --workspace --frozen --offline --target x86_64-unknown-linux-gnu
+cargo fmt --manifest-path /source/rust/actors/Cargo.toml --all --check
+cargo clippy --manifest-path /source/rust/actors/Cargo.toml --workspace --all-targets --frozen --offline --target x86_64-unknown-linux-gnu -- -D warnings
+python3 /source/tests/convert_map/native_controls.py --zone /output/server/bin/zone
 ```
 
-The bridge tests exercise the real opaque engine, copies, normals, errors, misses,
-optional outputs and repeated destruction. Geometry tests call the production C++
-decoder with compressed synthetic V2 files. Wrapper tests compile the real Map and
-decoder with explicit Zone/Config/log/rule/path stubs. They cover empty/invalid
-loads, transactional Map replacement, query outputs, normals and MMF bypass.
-They do not instantiate a production Zone. The reload ownership test calls the
-same production `ReplaceCollisionMap` helper with a destruction-counting fake Map.
-It establishes ownership ordering, not production Zone reload acceptance.
-Observation controls test disabled/wrong opt-in output, rejected NPCs, nested
-context restoration, entity identity, and exhaustion of the 4096-line budget.
+Use the existing normal full-build features and resource limits in addition to
+the minimal command above. Record cache, compile commands and link/archive closure:
+`rust_raycast_mesh.cpp` must compile and link; `raycast_mesh.cpp` must not. No
+backend/MMF compile definition or selection is needed. Reject old CMake cache
+entries rather than treating an ignored retired switch as a supported variant.
+Require all ordinary targets, 95 utility tests, 10 Rust tests and 43 actor tests
+plus doc tests, formatting and Clippy. Hosted CI status is separate and must be
+reported explicitly; equivalent local checks cannot establish hosted success.
 
-## Exact-head integration handoff
+Bridge tests call the real Rust opaque engine and cover copies, normals, errors,
+misses, optional outputs and destruction. Geometry tests call the production C++
+V1/V2 decoder with synthetic data, including model/group/terrain bounds. Wrapper
+checks compile the real Map/decoder/adapter with explicit Zone/Config/log/rule/path
+stubs. They cover valid empty versus invalid load, transactional replacement,
+query outputs, normals and stale `.mmf` caches being ignored without rewriting.
+They do not instantiate a production Zone. `reload_ownership` tests production
+`ReplaceCollisionMap` ownership ordering with a fake Map. Observation controls
+check opt-in, NPC filtering, nested context, identity and budget, not gameplay.
 
-Parent must record `git rev-parse HEAD` matching the pushed candidate before
-building. Use the existing Stack owner, matched vcpkg/dependencies and rootless
-worker workflow. No new runtime or staging deployment is authorized here.
-Historical worker scripts are external inputs, not default tests:
+## Production acceptance still required
 
-- `239480beac57c78770a209b8fb4f3a2b79fd68b3:tests/map_bridge/guest.py` documents
-  the focused historical environment. Do not run its old checkout as the candidate.
-- `3c2f12b8fc8e12cdc9cca7e0ab753fd22a8ad597:tests/map_server_validation/`
-  and `tests/map_reload/` contain the matched dependency/full-target/reload workflow.
-- `6a037f008f9398df5967fa70ded0de32a9e83335:tests/server_collision_ab/`
-  contains the Qeynos2 and PoK routes, scenario, evidence comparator and controls.
-  Stack may adapt pinned transport outside Git; never substitute historical binaries.
-- Retained roots are `~/.local/state/eqemu-map-translation/` under
-  `rust-map-server-validation-20261111`, `zone-map-reload-20261111`, and
-  `server-collision-npc-completion-20261115`.
+Use the sole existing Stack owner, not a new worker launcher in Server. Compare
+new-head Qeynos2 AND PoK production ground, clear/blocked LoS and ordinary NPC
+callers against accepted PR118 receipts. Require matching endpoints/results,
+ground/model offsets, route admission, adjusted nodes, dispatch, FixZ and final
+pose. Exercise real Zone failed reload after missing file and invalid header,
+preserved last-valid query, changed-height replacement and recovery with
+post-attempt timestamps. Stub passes cannot replace production reload acceptance.
 
-The owner supplies the matched toolchain file and existing feature arguments:
+Reuse the three frozen large inputs and require admission without triangle loss,
+including 6,161,009 vertices and 6,684,999 indices. Recheck the retained 16,512
+bit-exact comparisons against accepted Rust outputs where feasible, without
+building C++. The prior 513-map corpus and soak remain historical evidence only.
+No live staging, new soak, full client shutdown or sanitizer acceptance is claimed.
 
-```sh
-cmake -S /source -B /output/server-default -DCMAKE_TOOLCHAIN_FILE="$MATCHED_TOOLCHAIN" -DEQEMU_BUILD_TESTS=ON -DEQEMU_BUILD_LOGIN=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-cmake --build /output/server-default -j1
-/output/server-default/bin/tests
-cmake -S /source -B /output/server-off -DCMAKE_TOOLCHAIN_FILE="$MATCHED_TOOLCHAIN" -DEQEMU_BUILD_TESTS=ON -DEQEMU_BUILD_LOGIN=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DEQEMU_RUST_MAP_RAYCASTER=OFF
-cmake --build /output/server-off -j1
-/output/server-off/bin/tests
-```
+PR118 head `4534b5b372a611a3324805cee8b326912a89f675` merged as
+`86c25b8d37fe9c73940b10c9c9a2098c73b776a9`, tree
+`49e7459d4d545ead382b917bce0cab074555635d`. Accepted qualification is external:
+`~/.local/state/eqemu-map-translation/pr118-beb1068-20261121-v1/final-4534b5b3-attempt2/FINAL-QUALIFICATION-HANDOFF.json`,
+SHA256 `a3d1ba4a3c29b6da1541059e8ee40c390bcb7788e10ea3bf7cfdc96ae82df91c`.
+Final index SHA256 is
+`8cf0be022c1566cefdb444f7fdd600f4f6b3a0376566ce359ded2db6eef02ed0`.
+Old failures and parent branches remain evidence; their passes do not qualify a
+new head. Historical transport/scenario sources remain available in Git at
+`3c2f12b8fc8e12cdc9cca7e0ab753fd22a8ad597:tests/map_server_validation/`,
+`tests/map_reload/` at that revision, and
+`6a037f008f9398df5967fa70ded0de32a9e83335:tests/server_collision_ab/`.
 
-Record actual CMake caches showing ordinary default ON and explicit OFF, zone
-compile commands showing the selected definition, link command/archive closure,
-source and binary hashes, toolchain, flags and resource limits. Full ordinary
-targets, utility tests, focused tests and the actor bridge must all pass. Configuration
-text alone does not establish the default. Prior workers used 4 GiB/no swap and
-one build job, then 2 GiB/no swap runtime. Do not weaken host policy for rootless
-setup. New parser limits must admit all three historical large meshes, including
-6,161,009 vertices and 6,684,999 indices, without dropping triangles.
+`EQEMU_COLLISION_OBSERVE=server-collision-npc-2011` retains bounded thread-local
+NPC 2011 observations. The accepted Rust label `backend=ON` is preserved for
+receipt compatibility. Exclusive zone-thread engine ownership is still required.
+The observation controls do not make concurrent Map queries safe.
 
-Run matched default/OFF/OFF-repeat fixtures in Qeynos2 AND PoK with fixed ground,
-clear and blocked LoS, and ordinary NPC caller controls. Require exact native
-endpoints/results, ground/model offset, route admission, adjusted nodes, dispatch,
-FixZ and final pose comparison. Include failed Zone reload after missing file and
-invalid header, preserved last valid query, valid changed-height replacement and
-recovery with post-attempt timestamps. A stub helper pass cannot replace this.
+## Retired-code audit
 
-`EQEMU_COLLISION_OBSERVE=server-collision-npc-2011` enables the same binary's
-bounded observation of NPC type 2011 only. Unset it to disable. RAII scopes borrow
-string literal caller names and restore the previous entity/context, including
-nested rejected NPCs. Context and the 4096-line budget are thread-local. The actual
-engine still requires exclusive zone-thread access; this does not make Map safe
-for concurrent queries. Logs identify backend ON/OFF. Hooks print to stdout and
-never change geometry, queries, route decisions, API or persistent state. Keep the
-opt-in limited to disposable fixtures. Historical scenario output is compatible.
+The real production query consumer was `Map::impl::rm` in `zone/map.cpp`. No
+other production consumer of the legacy factories was found. Removed:
+`zone/raycast_mesh.cpp`, its build source, C++ factory declarations, conditional
+backend selection, MMF serialization/read/write/cache helpers and signature,
+`utils/scripts/convert_maps_to_mmfs.pl` and its batch controls. `convert_map`
+retains only an early explicit refusal and useful dispatch regression checks.
+Git history preserves the removed implementation and prior ON/OFF evidence.
 
-The 513-map corpus, four data contracts, and 24-hour soak are prior bounded
-evidence only. No exact-head run or new soak is claimed. Full client/world shutdown
-central-866g and sanitizers remain separate/deferred; neither is fixed here.
-
-## Legacy deletion assessment
-
-The real production query consumer is `zone/map.cpp`, through `Map::impl::rm`.
-`zone/raycast_mesh.h` declares the shared virtual interface, scalar typedefs and
-legacy factories. `zone/raycast_mesh.cpp` implements the C++ BVH, normals, query
-stamps, brute-force queries, native MMF construction and serialization. There is
-no `common/raycast_mesh.*` in this base. No non-Map production caller of the
-factory/interface was found. `common/memory/ksm.*` is shared allocation support,
-not part of the query backend, and stays.
-
-After the default landing qualifies, remove `zone/raycast_mesh.cpp` and its
-`zone/CMakeLists.txt` source entry, the OFF selection in
-`cmake/MapRaycaster.cmake` and `Map::InstallGeometry`, the legacy factory/MMF
-declarations in `zone/raycast_mesh.h`, and `Map::LoadMMF`, `Map::SaveMMF` plus
-strip/add extension helpers and `USE_MAP_MMFS` signature/cache branches in
-`zone/map.cpp`/`zone/map.h`. Existing `.mmf` files need no migration because Rust
-ignores them. Retain or rename the virtual interface while the Rust adapter uses
-it, or simplify it separately. Retain the C++ decoder, checked scalar loads,
-geometry regression tests, reload helper, ownership tests, Rust core tests and
-bridge/wrapper tests. Replace the MMF bypass test with a stale-cache-is-ignored
-control if the `USE_MAP_MMFS` switch disappears. Remove explicit-OFF acceptance
-jobs only after archiving matched parity evidence. No backend deletion is in this PR.
-
-Remaining blockers are exact-head ordinary build/link/default/OFF coverage,
-two-zone endpoint/normal/tie/arithmetic/short-ray/endpoint parity and ordinary NPC
-caller acceptance, failed reload preservation, large-asset admission with the new
-bounds, and a deliberate platform decision. Removing OFF also removes the build
-escape for Windows/macOS/non-x86 Linux and cross builds until Rust support is
-implemented there or the fork explicitly narrows its supported targets. Linux
-actors already need Cargo, but the map requirement is unconditional for normal
-zone builds and fails instead of silently skipping.
-
-Once those gates and platform disposition are accepted, delete the legacy query
-engine. Upstream and Git history preserve recovery; retaining old code alone is
-not a reason to keep a second backend. Keep permanent fast regressions for valid
-empty versus rejected load, V1/V2 parsing/model/group/terrain, normal winding and
-first-triangle ties, endpoints and tiny/zero rays, optional miss outputs, invalid
-coordinates/indices, lifetime/copy ownership and failed reload. Heavy corpus and
-runtime suites remain explicit standalone acceptance inputs.
+Retained: the virtual query interface used by the Rust adapter, C++ V1/V2
+model/group/terrain decoder and checked scalar loads, shared `common/memory/ksm.*`,
+Map public queries, Rust engine arithmetic/ties/normals/endpoints, owned CXX
+lifetimes and transactional replacement. No engine math or decoder bounds change.
+Native Linux x86-64 is Brian's selected maintained Server platform. Windows CI
+and preset are retired; other platforms and cross builds fail configuration.

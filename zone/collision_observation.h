@@ -33,11 +33,8 @@ struct Scope {
 inline void Query(const char *kind, const glm::vec3 &from, const glm::vec3 &to, float result) {
 	if (!caller || !remaining) { return; }
 	--remaining;
-#ifdef EQEMU_RUST_MAP_RAYCASTER
+	// Preserve the accepted Rust receipt label for endpoint comparisons.
 	const char *backend = "ON";
-#else
-	const char *backend = "OFF";
-#endif
 	std::printf("SERVER_COLLISION_NATIVE caller=%s entity=%u backend=%s kind=%s from=%.9g,%.9g,%.9g to=%.9g,%.9g,%.9g result=%.9g remaining=%u\n",
 		caller, entity, backend, kind, from.x, from.y, from.z, to.x, to.y, to.z, result, remaining);
 }

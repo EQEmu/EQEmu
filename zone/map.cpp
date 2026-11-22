@@ -16,17 +16,13 @@
 	along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "collision_observation.h"
-#include "common/compression.h"
 #include "common/file.h"
-#include "common/memory/ksm.h"
 #include "common/misc_functions.h"
 #include "zone/client.h"
 #include "zone/map.h"
 #include "zone/map_geometry.h"
 #include "zone/raycast_mesh.h"
-#ifdef EQEMU_RUST_MAP_RAYCASTER
 #include "zone/rust_raycast_mesh.h"
-#endif
 #include "zone/zone.h"
 
 #include <algorithm>
@@ -309,24 +305,8 @@ Map *Map::LoadMapFile(std::string file) {
 	return nullptr;
 }
 
-#ifdef USE_MAP_MMFS
-bool Map::Load(std::string filename, bool force_mmf_overwrite)
-{
-#ifndef EQEMU_RUST_MAP_RAYCASTER
-	if (LoadMMF(filename, force_mmf_overwrite)) {
-		LogInfo("Loaded .MMF Map File in place of [{}]", filename.c_str());
-		return true;
-	}
-#endif
-#else
-
-/**
-	* @param filename
-	* @return
-	*/
 bool Map::Load(const std::string &filename)
 {
-#endif /*USE_MAP_MMFS*/
 
 	FILE *map_file = fopen(filename.c_str(), "rb");
 	if (map_file) {
@@ -347,11 +327,6 @@ bool Map::Load(const std::string &filename)
 				LogError("Failed to load V1 Map File [{}]", filename.c_str());
 			}
 
-#if defined(USE_MAP_MMFS) && !defined(EQEMU_RUST_MAP_RAYCASTER)
-			if (loaded_map_file)
-				return SaveMMF(filename, force_mmf_overwrite);
-#endif /*USE_MAP_MMFS*/
-
 			return loaded_map_file;
 		}
 		else if (version == 0x02000000) {
@@ -364,11 +339,6 @@ bool Map::Load(const std::string &filename)
 			} else {
 				LogError("Failed to load V2 Map File [{}]", filename.c_str());
 			}
-
-#if defined(USE_MAP_MMFS) && !defined(EQEMU_RUST_MAP_RAYCASTER)
-			if (loaded_map_file)
-				return SaveMMF(filename, force_mmf_overwrite);
-#endif /*USE_MAP_MMFS*/
 
 			return loaded_map_file;
 		}
@@ -399,7 +369,6 @@ bool Map::LoadV2(FILE *f) {
 
 bool Map::InstallGeometry(const std::vector<glm::vec3>& verts, const std::vector<uint32>& indices) {
 	RaycastMesh* replacement = nullptr;
-#ifdef EQEMU_RUST_MAP_RAYCASTER
 	if (verts.size() > 8000000 || indices.size() > 12000000 || indices.size() % 3) {
 		LogError("Rust map load failed: invalid geometry counts");
 		return false;
@@ -415,10 +384,6 @@ bool Map::InstallGeometry(const std::vector<glm::vec3>& verts, const std::vector
 		LogError("Rust map load failed: [{}]", e.what());
 		return false;
 	}
-#else
-	replacement = createRaycastMesh((RmUint32)verts.size(),
-		reinterpret_cast<const RmReal*>(verts.data()), indices.size()/3, indices.data());
-#endif
 	if (!replacement) return false;
 	// Allocate the holder before transferring ownership. Failed reload keeps the old engine.
 	if (!imp) {
@@ -431,199 +396,3 @@ bool Map::InstallGeometry(const std::vector<glm::vec3>& verts, const std::vector
 	}
 	return true;
 }
-
-#if defined(USE_MAP_MMFS) && !defined(EQEMU_RUST_MAP_RAYCASTER)
-inline void strip_map_extension(std::string& map_file_name)
-{
-	auto ext_off = map_file_name.find(".map");
-	if (ext_off != std::string::npos)
-		map_file_name.erase(ext_off, strlen(".map"));
-}
-
-inline bool add_mmf_extension(std::string& mmf_file_name)
-{
-	if (mmf_file_name.empty())
-		return false;
-
-	mmf_file_name.append(".mmf");
-	size_t dot_check = std::count(mmf_file_name.begin(), mmf_file_name.end(), '.');
-
-	return (dot_check == 1);
-}
-
-bool Map::LoadMMF(const std::string& map_file_name, bool force_mmf_overwrite)
-{
-	if (force_mmf_overwrite)
-		return false;
-
-	std::string mmf_file_name = map_file_name;
-	strip_map_extension(mmf_file_name);
-	if (!add_mmf_extension(mmf_file_name)) {
-		LogInfo("Failed to load Map MMF file: [{}]", mmf_file_name.c_str());
-		return false;
-	}
-
-	FILE *f = fopen(mmf_file_name.c_str(), "rb");
-	if (!f) {
-		LogInfo("Failed to load Map MMF file: [{}] - could not open file", mmf_file_name.c_str());
-		return false;
-	}
-
-	uint32 file_version;
-	if (fread(&file_version, sizeof(uint32), 1, f) != 1) {
-		fclose(f);
-		LogInfo("Failed to load Map MMF file: [{}] - f@file_version", mmf_file_name.c_str());
-		return false;
-	}
-
-	uint32 rm_buffer_size;
-	if (fread(&rm_buffer_size, sizeof(uint32), 1, f) != 1) {
-		fclose(f);
-		LogInfo("Failed to load Map MMF file: [{}] - f@rm_buffer_size", mmf_file_name.c_str());
-		return false;
-	}
-
-	uint32 rm_buffer_crc32;
-	if (fread(&rm_buffer_crc32, sizeof(uint32), 1, f) != 1) {
-		fclose(f);
-		LogInfo("Failed to load Map MMF file: [{}] - f@rm_buffer_crc32", mmf_file_name.c_str());
-		return false;
-	}
-	if (rm_buffer_crc32 != /*crc32_check*/ 0) {
-		fclose(f);
-		LogInfo("Failed to load Map MMF file: [{}] - bad rm_buffer checksum", mmf_file_name.c_str());
-		return false;
-	}
-
-	uint32 mmf_buffer_size;
-	if (fread(&mmf_buffer_size, sizeof(uint32), 1, f) != 1) {
-		fclose(f);
-		LogInfo("Failed to load Map MMF file: [{}] - f@mmf_buffer_size", mmf_file_name.c_str());
-		return false;
-	}
-
-	std::vector<char> mmf_buffer(mmf_buffer_size);
-	if (fread(mmf_buffer.data(), mmf_buffer_size, 1, f) != 1) {
-		fclose(f);
-		LogInfo("Failed to load Map MMF file: [{}] - f@mmf_buffer", mmf_file_name.c_str());
-		return false;
-	}
-
-	fclose(f);
-
-	std::vector<char> rm_buffer(rm_buffer_size);
-	uint32 v = EQ::InflateData(mmf_buffer.data(), mmf_buffer_size, rm_buffer.data(), rm_buffer_size);
-
-	if (imp) {
-		imp->rm->release();
-		imp->rm = nullptr;
-	}
-	else {
-		imp = new impl;
-	}
-
-	bool load_success = false;
-	imp->rm = loadRaycastMesh(rm_buffer, load_success);
-	if (imp->rm && !load_success) {
-		imp->rm->release();
-		imp->rm = nullptr;
-	}
-
-	if (!imp->rm) {
-		delete imp;
-		imp = nullptr;
-		LogInfo("Failed to load Map MMF file: [{}] - null RaycastMesh", mmf_file_name.c_str());
-		return false;
-	}
-
-	return true;
-}
-
-bool Map::SaveMMF(const std::string& map_file_name, bool force_mmf_overwrite)
-{
-	if (!imp || !imp->rm) {
-		LogInfo("Failed to save Map MMF file - No implementation (map_file_name: [{}])", map_file_name.c_str());
-		return false;
-	}
-
-	std::string mmf_file_name = map_file_name;
-	strip_map_extension(mmf_file_name);
-	if (!add_mmf_extension(mmf_file_name)) {
-		LogInfo("Failed to save Map MMF file: [{}]", mmf_file_name.c_str());
-		return false;
-	}
-
-	FILE* f = fopen(mmf_file_name.c_str(), "rb");
-	if (f) {
-		fclose(f);
-		if (!force_mmf_overwrite)
-			return true;
-	}
-
-	std::vector<char> rm_buffer; // size set in MyRaycastMesh::serialize()
-	serializeRaycastMesh(imp->rm, rm_buffer);
-	if (rm_buffer.empty()) {
-		LogInfo("Failed to save Map MMF file: [{}] - empty RaycastMesh buffer", mmf_file_name.c_str());
-		return false;
-	}
-
-	uint32 rm_buffer_size = rm_buffer.size();
-	uint32 mmf_buffer_size = EQ::EstimateDeflateBuffer(rm_buffer.size());
-
-	std::vector<char> mmf_buffer(mmf_buffer_size);
-
-	mmf_buffer_size = EQ::DeflateData(rm_buffer.data(), rm_buffer.size(), mmf_buffer.data(), mmf_buffer.size());
-	if (!mmf_buffer_size) {
-		LogInfo("Failed to save Map MMF file: [{}] - null MMF buffer size", mmf_file_name.c_str());
-		return false;
-	}
-
-	f = fopen(mmf_file_name.c_str(), "wb");
-	if (!f) {
-		LogInfo("Failed to save Map MMF file: [{}] - could not open file", mmf_file_name.c_str());
-		return false;
-	}
-
-	uint32 file_version = 0;
-	if (fwrite(&file_version, sizeof(uint32), 1, f) != 1) {
-		fclose(f);
-		std::remove(mmf_file_name.c_str());
-		LogInfo("Failed to save Map MMF file: [{}] - f@file_version", mmf_file_name.c_str());
-		return false;
-	}
-
-	if (fwrite(&rm_buffer_size, sizeof(uint32), 1, f) != 1) {
-		fclose(f);
-		std::remove(mmf_file_name.c_str());
-		LogInfo("Failed to save Map MMF file: [{}] - f@rm_buffer_size", mmf_file_name.c_str());
-		return false;
-	}
-
-	uint32 rm_buffer_crc32 = 0;
-	if (fwrite(&rm_buffer_crc32, sizeof(uint32), 1, f) != 1) {
-		fclose(f);
-		std::remove(mmf_file_name.c_str());
-		LogInfo("Failed to save Map MMF file: [{}] - f@rm_buffer_crc32", mmf_file_name.c_str());
-		return false;
-	}
-
-	if (fwrite(&mmf_buffer_size, sizeof(uint32), 1, f) != 1) {
-		fclose(f);
-		std::remove(mmf_file_name.c_str());
-		LogInfo("Failed to save Map MMF file: [{}] - f@mmf_buffer_size", mmf_file_name.c_str());
-		return false;
-	}
-
-	if (fwrite(mmf_buffer.data(), mmf_buffer_size, 1, f) != 1) {
-		fclose(f);
-		std::remove(mmf_file_name.c_str());
-		LogInfo("Failed to save Map MMF file: [{}] - f@mmf_buffer", mmf_file_name.c_str());
-		return false;
-	}
-
-	fclose(f);
-
-	return true;
-}
-
-#endif /*USE_MAP_MMFS*/

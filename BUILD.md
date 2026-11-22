@@ -4,7 +4,8 @@ This guide is far from exhaustive, you should expect to have some experience wit
 
 ### CMake
 
-EQEmu uses CMake as the build system on all platforms.  You will need CMake 3.20 or higher to build from source.
+This fork maintains Server builds on native Linux x86-64 only. Other platforms
+and cross compilation fail zone configuration. EQEmu uses CMake as the build system.  You will need CMake 3.20 or higher to build from source.
 
 ### Dependencies
 
@@ -14,9 +15,6 @@ The following libraries are required to build from source:
 The following libraries are not strictly required but in many cased recommended.
 - [Perl](https://www.perl.org/ "Perl") (Required for Perl Quest Scripting)
 
-##### Windows
-If you wish to use Perl then you should use whichever version of Perl you have installed on the target system.
-
 ##### Linux
 For Linux you simply can install the dependencies from your package manager, below is an example of doing it on Ubuntu using apt-get.
 
@@ -24,15 +22,8 @@ For Linux you simply can install the dependencies from your package manager, bel
 
 ### Running CMake
 
-##### Windows
-The following is a modified command our automated build server uses to run CMake via the release vcpkg export and its toolchain file. 
-
-	mkdir build
-	cd build
-	cmake -G "Visual Studio 15 2022 Win64" -DEQEMU_BUILD_TESTS=ON -DEQEMU_BUILD_LOGIN=ON ..
-
 ##### Linux
-Similarly to Windows running CMake on Linux is simple it just uses a different generator.
+Configure a native Linux build:
 
 	mkdir build
 	cd build
@@ -207,7 +198,8 @@ flag placement, not runtime qualification. This source combines master
 `bf50825db4d61a7b45026f5335975316615454f2`, actor staging history through
 `788c86269d9b53ca2b11ca8fa7183826f6c330d6`, and the selected sanitizer build
 support. Actor staging scenarios remain default-off and require explicit opt-in;
-the native-only platform path and conditional Linux x86-64 CXX bridge remain.
+the conditional Linux x86-64 actor CXX bridge remains. The map bridge is
+unconditional and restricts maintained zone builds to native Linux x86-64.
 Historical results qualify only their recorded revisions. This composition has
 no new ordinary full-suite or sanitizer qualification result. Dedicated population
 controls do not replace live population qualification; see `rust/actors/README.md`.
@@ -217,7 +209,8 @@ controls do not replace live population qualification; see `rust/actors/README.m
 On native x86-64 Linux builds, the zone target links the bootstrap
 `actor-bridge` static library from `rust/actors`. This integration targets `x86_64-unknown-linux-gnu` with the
 repository's pinned Rust toolchain and locked dependencies. Other platforms
-(including Windows/MSVC) and cross builds retain the native-only zone path.
+and cross builds skip the actor bridge, but the unconditional map backend
+rejects those zone configurations.
 Cargo uses `--release --frozen --offline`; it cannot fetch dependencies or update the lockfile.
 
 Rust execution (including build scripts and proc macros) belongs only in the
@@ -311,11 +304,6 @@ formatting or final exact-head, check-only validation.
 
 ### Building
 
-##### Windows
-Inside the build directory a file EQEmu.sln should be produced by a successful run of the CMake command.  You can either open this with Visual Studio or build it directly with MSBuild via the command line.
-
-	msbuild EQEmu.sln /p:Configuration=Release
-
 ##### Linux
 From the build directory you can simply call make to build.  
 
@@ -327,8 +315,9 @@ For example.
 
 Ordinary zone builds use the maintained Rust backend. Native Linux x86-64 is the
 supported target; unsupported platforms and cross compilation fail configuration.
-The temporary `-DEQEMU_RUST_MAP_RAYCASTER=OFF` selection builds the C++ query backend
-for A/B comparison and rollback. It retains native MMF behavior.
+The Rust backend is unconditional. There is no C++ query backend or automatic
+fallback. Stock `.map` files load directly; stale `.mmf` caches are ignored.
+`zone convert_map` is retired and exits nonzero before startup.
 
 Use the repository `rust-toolchain.toml` pin, Rust 1.99.0, and CXX 1.0.194 from
 `rust/raycaster/Cargo.lock`. CMake invokes Cargo frozen/offline at build time,
@@ -341,3 +330,9 @@ builds on the host for this landing's validation.
 
 See `rust/raycaster/README.md` and `tests/map_bridge/README.md` for limits,
 ownership, focused controls and exact-head acceptance gates.
+
+The maintained GitHub Actions build runs on Ubuntu x86-64. It provisions
+Rust 1.99.0 and fetches both committed Cargo lockfiles before CMake invokes the
+frozen/offline builds. The former Windows job and preset are retired. Hosted CI
+results must be checked on the PR; disposable worker results do not establish a
+hosted pass.
