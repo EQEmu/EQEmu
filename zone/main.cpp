@@ -171,6 +171,10 @@ int main(int argc, char **argv)
 
 #ifdef USE_MAP_MMFS
 	if (argc == 3 && strcasecmp(argv[1], "convert_map") == 0) {
+#ifdef EQEMU_RUST_MAP_RAYCASTER
+		std::cerr << "convert_map is unavailable with Rust raycasting; native MMF caches are bypassed." << std::endl;
+		return 1;
+#else
 		if (!ZoneConfig::LoadConfig())
 			return 1;
 		Config = ZoneConfig::get();
@@ -186,6 +190,7 @@ int main(int argc, char **argv)
 		std::cout << mapfile.c_str() << " conversion " << (success ? "succeeded" : "failed") << std::endl;
 
 		return 0;
+#endif /*EQEMU_RUST_MAP_RAYCASTER*/
 	}
 #endif /*USE_MAP_MMFS*/
 
