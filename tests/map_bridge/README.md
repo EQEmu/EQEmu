@@ -2,8 +2,9 @@
 
 Build and execute candidate code only in the existing Stack owner's disposable
 workers. These standalone tests do not expand the default utility suite or need
-production assets, a database or a running server. Native Linux x86-64, repository
-Rust 1.99.0, CXX 1.0.194 and frozen/offline Cargo are required. The legacy C++
+production assets, a database or a running server. Both builds require native
+Linux x86-64. The full bridge suite also requires repository Rust 1.99.0,
+CXX 1.0.194 and frozen/offline Cargo. The legacy C++
 backend, OFF matrix and duplicate MMF wrapper variant are retired.
 
 ## Worker commands
@@ -58,6 +59,84 @@ query outputs, normals and stale `.mmf` caches being ignored without rewriting.
 They do not instantiate a production Zone. `reload_ownership` tests production
 `ReplaceCollisionMap` ownership ordering with a fake Map. Observation controls
 check opt-in, NPC filtering, nested context, identity and budget, not gameplay.
+
+## Native decoder oracle
+
+In the disposable Stack worker, configure the decoder-only Release build with
+the matched C++ compiler, GLM headers, zlib and Python 3. This path runs the
+existing geometry test and oracle controls. It needs no Rust toolchain or FMT.
+
+```sh
+cmake -S /source/tests/map_bridge -B /output/decoder \
+  -DCMAKE_BUILD_TYPE=Release -DEQEMU_MAP_DECODER_ONLY=ON \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cmake --build /output/decoder -j1
+ctest --test-dir /output/decoder --output-on-failure --verbose
+```
+
+Supply `-DGLM_INCLUDE_DIR=/path/to/include` if GLM is outside the compiler's
+search paths. The geometry test checks at compile time that Release assertions
+are active. The Python controls check process exits and bytes explicitly, even
+under Python optimization. To retain both native captures, generated inputs,
+comparison controls and the input/output SHA-256 manifest, run the same control
+script with a fresh output directory.
+
+```sh
+python3 -B /source/tests/map_bridge/map_decoder_controls.py \
+  /output/decoder/map_decoder_oracle --output /output/decoder-evidence
+```
+
+The controls run the oracle twice as separate processes per map and compare the
+results against hand-specified ordered bytes. The V1 cases include two faces
+with repeated points. The compressed V2 cases cover base indices, hidden and
+noncollidable geometry, asymmetric model and group placement, and flat and
+sloped terrain. Both formats cover valid empty and rejected data. The comparator
+must exit 1 and identify vertex 0 axis y for a signed-zero bit change, or
+triangle 0 corner 0 for a change to one index. Separate controls change a
+verdict, compare two input identities and truncate a capture.
+
+For an individual immutable input, compute its SHA-256 before invoking the
+oracle. The program records the supplied hash and creates a new output file
+exclusively. Keep the input immutable from hashing through both runs. Record the
+output SHA-256 and exact build and source identities with the worker receipt.
+Use the comparator with the native capture first and the candidate second.
+
+```sh
+input=/inputs/example.map
+input_hash=$(sha256sum "$input" | cut -d ' ' -f1)
+/output/decoder/map_decoder_oracle "$input" /output/example.native.oracle "$input_hash"
+sha256sum /output/example.native.oracle
+python3 /source/tests/map_bridge/compare_map_decoder.py \
+  /output/example.native.oracle /output/example.candidate.oracle
+```
+
+### Capture format
+
+The binary format follows the ordered word layout of the historical map capture,
+with its own magic and a verdict. All numeric fields are little-endian uint32s.
+
+| Offset | Contents |
+| --- | --- |
+| 0 | Eight ASCII bytes `EQMAP001` |
+| 8 | Verdict, 0 invalid, 1 accepted with no triangles, 2 accepted with triangles |
+| 12 | Vertex count |
+| 16 | Index count |
+| 20 | 64 lowercase ASCII characters of the input SHA-256 |
+| 84 | Three IEEE 754 binary32 words per vertex in x, y, z order, then one word per index in triangle order |
+
+The length is exactly `84 + 12 * vertex_count + 4 * index_count`. Invalid
+captures have zero counts, including when the decoder appended partial geometry.
+Accepted captures retain every decoded vertex, including vertices in a V2
+fixture with zero indices. A successful capture exits 0 for any of the three
+verdicts. Tool errors such as an unreadable input or an unwritable output exit 1.
+Use only captures from successful runs. The comparator checks input identity,
+verdict, counts, length and each ordered word. Mismatches report the first
+differing coordinate or triangle corner in hexadecimal when the headers agree.
+
+This captures the production C++ decoder's boolean result and arrays before
+raycaster construction. The generated fixtures cover zero-angle placements.
+Frozen stock-map comparisons and measurements belong to the separate Stack
+baseline in `central-y03b.2`.
 
 ## Production acceptance still required
 

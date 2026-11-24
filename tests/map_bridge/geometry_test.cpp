@@ -4,6 +4,10 @@
 #include <limits>
 #include <zlib.h>
 
+#ifdef NDEBUG
+#error "geometry_test requires active assertions"
+#endif
+
 using Bytes = std::vector<char>;
 template<class T> void append(Bytes& bytes, T value) {
 	const auto* data = reinterpret_cast<const char*>(&value);
