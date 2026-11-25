@@ -12792,6 +12792,14 @@ void Client::Handle_OP_SoulmarkUpdate(
         ) < update_interval_ms) {
         Message(Chat::Red,
             "Please wait before changing another soulmark.");
+
+        const uint32 account_id =
+            m_soulmark_snapshot_account_id;
+
+        if (account_id != 0) {
+            SendSoulmarkList(account_id);
+        }
+
         return;
     }
 
@@ -12813,7 +12821,7 @@ void Client::Handle_OP_SoulmarkUpdate(
             app->pBuffer
         );
 
-    const auto reject = [this](
+    const auto reject = [this, account_id](
         const char *reason,
         int slot = -1
     ) {
@@ -12828,8 +12836,11 @@ void Client::Handle_OP_SoulmarkUpdate(
         ResetSoulmarkSnapshot();
 
         Message(Chat::Red,
-            "Soulmark list changed or is invalid. "
-            "Please reopen the inquiry.");
+            "Soulmark update rejected. Refreshing list.");
+
+        // Restore the authoritative list after a
+        // rejected local client modification.
+        SendSoulmarkList(account_id);
     };
 
     const auto terminated = [](const auto &field) {
