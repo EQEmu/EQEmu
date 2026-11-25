@@ -333,6 +333,7 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_PetitionRefresh] = &Client::Handle_OP_PetitionRefresh;
 	ConnectedOpcodes[OP_SoulmarkInquiry] = &Client::Handle_OP_SoulmarkInquiry;
 	ConnectedOpcodes[OP_SoulmarkAdd] = &Client::Handle_OP_SoulmarkAdd;
+    ConnectedOpcodes[OP_SoulmarkUpdate] = &Client::Handle_OP_SoulmarkUpdate;
 	ConnectedOpcodes[OP_PetitionResolve] = &Client::Handle_OP_PetitionResolve;
 	ConnectedOpcodes[OP_PetitionUnCheckout] = &Client::Handle_OP_PetitionUnCheckout;
 	ConnectedOpcodes[OP_PlayerStateAdd] = &Client::Handle_OP_PlayerStateAdd;
@@ -12264,6 +12265,49 @@ void Client::Handle_OP_PetitionQue(const EQApplicationPacket *app)
 	return;
 }
 
+bool Client::ValidateSoulmarkText(
+    const std::string &text)
+{
+    if (text.empty() ||
+        text.size() > 250 ||
+        text.find_first_not_of(" \t\r\n") ==
+            std::string::npos) {
+        Message(Chat::Red,
+            "Soulmark text must contain 1 to 250 bytes.");
+        return false;
+    }
+
+    // The native client appends the text directly to
+    // an STML document. Reject markup until the
+    // client's escaping behavior has been verified.
+    if (text.find_first_of("<>&") !=
+            std::string::npos) {
+        Message(Chat::Red,
+            "Soulmark text must not contain STML markup characters.");
+        return false;
+    }
+
+    for (const unsigned char c : text) {
+        if (c < 32 || c == 127) {
+            Message(Chat::Red,
+                "Soulmark text contains control characters.");
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void Client::ResetSoulmarkSnapshot()
+{
+    for (auto &entry : m_soulmark_snapshot) {
+        entry = SoulmarkSnapshotEntry{};
+    }
+
+    m_soulmark_snapshot_count = 0;
+    m_soulmark_snapshot_account_id = 0;
+}
+
 bool Client::ResolveSoulmarkTarget(
     const std::string &target_name,
     const std::string &target_pid,
@@ -12322,6 +12366,8 @@ bool Client::ResolveSoulmarkTarget(
 
 void Client::SendSoulmarkList(uint32 account_id)
 {
+    ResetSoulmarkSnapshot();
+
     if (ClientVersion() !=
             EQ::versions::ClientVersion::RoF2 ||
         Admin() < AccountStatus::QuestTroupe ||
@@ -12425,7 +12471,21 @@ void Client::SendSoulmarkList(uint32 account_id)
             static_cast<uint32>(record.created_at);
 
         entry.type = record.type;
+
+        auto &snapshot =
+            m_soulmark_snapshot[index - 1];
+
+        snapshot.id = record.id;
+        snapshot.revision = record.revision;
+
+        snapshot.gm_account_id =
+            static_cast<uint32>(record.gm_account_id);
+
+        snapshot.wire = entry;
     }
+
+    m_soulmark_snapshot_account_id = account_id;
+    m_soulmark_snapshot_count = index;
 
     QueuePacket(&outapp);
 }
@@ -12439,6 +12499,8 @@ void Client::Handle_OP_SoulmarkInquiry(
         app->size != sizeof(SoulmarkInquiry_Struct)) {
         return;
     }
+
+    ResetSoulmarkSnapshot();
 
     constexpr uint32 inquiry_interval_ms = 2000;
     const uint32 now = Timer::GetCurrentTime();
@@ -12539,31 +12601,8 @@ void Client::Handle_OP_SoulmarkAdd(
 
     const std::string text = request->text;
 
-    if (text.empty() ||
-        text.size() > 250 ||
-        text.find_first_not_of(" \t\r\n") ==
-            std::string::npos) {
-        Message(Chat::Red,
-            "Soulmark text must contain 1 to 250 bytes.");
+    if (!ValidateSoulmarkText(text)) {
         return;
-    }
-
-    // The native client appends the text directly to
-    // an STML document. Reject markup until the
-    // client's escaping behavior has been verified.
-    if (text.find_first_of("<>&") !=
-            std::string::npos) {
-        Message(Chat::Red,
-            "Soulmark text must not contain STML markup characters.");
-        return;
-    }
-
-    for (const unsigned char c : text) {
-        if (c < 32 || c == 127) {
-            Message(Chat::Red,
-                "Soulmark text contains control characters.");
-            return;
-        }
     }
 
     uint32 account_id = 0;
@@ -12633,6 +12672,225 @@ void Client::Handle_OP_SoulmarkAdd(
         request->type == 1
             ? "Praise saved successfully."
             : "Warning saved successfully."
+    );
+
+    SendSoulmarkList(account_id);
+}
+
+void Client::Handle_OP_SoulmarkUpdate(
+    const EQApplicationPacket *app)
+{
+    if (ClientVersion() !=
+            EQ::versions::ClientVersion::RoF2 ||
+        Admin() < AccountStatus::QuestTroupe ||
+        app->size != sizeof(SoulmarkUpdate_Struct)) {
+        return;
+    }
+
+    constexpr uint32 update_interval_ms = 1000;
+    const uint32 now = Timer::GetCurrentTime();
+
+    if (m_soulmark_update_seen &&
+        static_cast<uint32>(
+            now - m_last_soulmark_update
+        ) < update_interval_ms) {
+        Message(Chat::Red,
+            "Please wait before changing another soulmark.");
+        return;
+    }
+
+    m_soulmark_update_seen = true;
+    m_last_soulmark_update = now;
+
+    if (m_soulmark_snapshot_account_id == 0 ||
+        m_soulmark_snapshot_count == 0) {
+        Message(Chat::Red,
+            "Please reopen the soulmark inquiry.");
+        return;
+    }
+
+    const uint32 account_id =
+        m_soulmark_snapshot_account_id;
+
+    const auto *request =
+        reinterpret_cast<const SoulmarkUpdate_Struct *>(
+            app->pBuffer
+        );
+
+    const auto reject = [this]() {
+        ResetSoulmarkSnapshot();
+
+        Message(Chat::Red,
+            "Soulmark list changed or is invalid. "
+            "Please reopen the inquiry.");
+    };
+
+    const auto terminated = [](const auto &field) {
+        return std::memchr(
+            field, 0, sizeof(field)
+        ) != nullptr;
+    };
+
+    const auto same_identity = [](
+        const SoulmarkRecord_Struct &a,
+        const SoulmarkRecord_Struct &b
+    ) {
+        return
+            std::strcmp(a.target_name, b.target_name) == 0 &&
+            std::strcmp(a.target_pid, b.target_pid) == 0 &&
+            std::strcmp(a.gm_name, b.gm_name) == 0 &&
+            std::strcmp(a.gm_pid, b.gm_pid) == 0 &&
+            a.timestamp == b.timestamp;
+    };
+
+    int changed_index = -1;
+
+    for (size_t i = 0; i < 12; ++i) {
+        const auto &incoming = request->records[i];
+
+        if (i >= m_soulmark_snapshot_count) {
+            if (incoming.target_name[0] != 0 ||
+                incoming.type != 0) {
+                reject();
+                return;
+            }
+
+            continue;
+        }
+
+        const auto &previous =
+            m_soulmark_snapshot[i].wire;
+
+        if (!terminated(incoming.target_name) ||
+            !terminated(incoming.target_pid) ||
+            !terminated(incoming.gm_name) ||
+            !terminated(incoming.gm_pid) ||
+            !terminated(incoming.text)) {
+            reject();
+            return;
+        }
+
+        if (!same_identity(incoming, previous)) {
+            reject();
+            return;
+        }
+
+        const bool text_changed =
+            std::strcmp(
+                incoming.text,
+                previous.text
+            ) != 0;
+
+        const bool type_changed =
+            incoming.type != previous.type;
+
+        if (!text_changed && !type_changed) {
+            continue;
+        }
+
+        // The native UI changes one record per action.
+        if (changed_index != -1) {
+            reject();
+            return;
+        }
+
+        // A category change is allowed only for removal.
+        if (type_changed && incoming.type != 0) {
+            reject();
+            return;
+        }
+
+        // Remove must not simultaneously change text.
+        if (incoming.type == 0 && text_changed) {
+            reject();
+            return;
+        }
+
+        changed_index = static_cast<int>(i);
+    }
+
+    if (changed_index == -1) {
+        return;
+    }
+
+    const auto snapshot =
+        m_soulmark_snapshot[changed_index];
+
+    const auto &incoming =
+        request->records[changed_index];
+
+    const bool remove = incoming.type == 0;
+
+    // Do not accept ambiguous record identities.
+    for (size_t i = 0;
+         i < m_soulmark_snapshot_count;
+         ++i) {
+        if (i != static_cast<size_t>(changed_index) &&
+            same_identity(
+                snapshot.wire,
+                m_soulmark_snapshot[i].wire
+            )) {
+            reject();
+            return;
+        }
+    }
+
+    // Only the original issuing account may modify
+    // a soulmark until supervisory privileges are defined.
+    if (snapshot.gm_account_id != AccountID()) {
+        Message(Chat::Red,
+            "You cannot modify another guide's soulmark.");
+
+        SendSoulmarkList(account_id);
+        return;
+    }
+
+    const std::string new_text = incoming.text;
+
+    if (!remove &&
+        !ValidateSoulmarkText(new_text)) {
+        SendSoulmarkList(account_id);
+        return;
+    }
+
+    const std::string assignment = remove
+        ? "`deleted_at` = NOW()"
+        : fmt::format(
+            "`text` = '{}'",
+            Strings::Escape(new_text)
+        );
+
+    // Update only the exact record and revision that
+    // were delivered to this authenticated client.
+    const auto result = database.QueryDatabase(
+        fmt::format(
+            "UPDATE `account_soulmarks` "
+            "SET {}, `updated_at` = NOW(), "
+            "`revision` = `revision` + 1 "
+            "WHERE `id` = {} "
+            "AND `account_id` = {} "
+            "AND `revision` = {} "
+            "AND `gm_account_id` = {} "
+            "AND `deleted_at` IS NULL",
+            assignment,
+            snapshot.id,
+            account_id,
+            snapshot.revision,
+            snapshot.gm_account_id
+        )
+    );
+
+    if (!result.Success() ||
+        result.RowsAffected() != 1) {
+        reject();
+        return;
+    }
+
+    Message(
+        Chat::White,
+        remove
+            ? "Soulmark removed successfully."
+            : "Soulmark updated successfully."
     );
 
     SendSoulmarkList(account_id);
