@@ -1,3 +1,4 @@
+#include <cstdlib>
 /*	EQEmu: EQEmulator
 
 	Copyright (C) 2001-2026 EQEmu Development Team
@@ -12323,22 +12324,30 @@ bool Client::ResolveSoulmarkTarget(
         return false;
     }
 
-    account_id = database.GetAccountIDByChar(
-        target_name,
-        &character_id
-    );
+    const auto characters =
+        CharacterDataRepository::GetWhere(
+            database,
+            fmt::format(
+                "`name` = '{}' "
+                "AND `deleted_at` IS NULL LIMIT 2",
+                Strings::Escape(target_name)
+            )
+        );
 
-    if (account_id == 0 || character_id == 0) {
+    if (characters.size() != 1 ||
+        characters.front().id == 0 ||
+        characters.front().account_id <= 0) {
         Message(Chat::Red,
-            "Soulmark: character not found.");
+            "Soulmark: unable to identify character.");
         return false;
     }
 
-    const auto character =
-        CharacterDataRepository::FindOne(
-            database,
-            character_id
-        );
+    const auto &character = characters.front();
+
+    character_id = character.id;
+    account_id = static_cast<uint32>(
+        character.account_id
+    );
 
     if (character.id != character_id ||
         character.deleted_at > 0 ||
@@ -12382,18 +12391,31 @@ void Client::SendSoulmarkList(uint32 account_id)
         return;
     }
 
-    const auto records =
-        AccountSoulmarksRepository::GetWhere(
-            database,
-            fmt::format(
-                "account_id = {} "
-                "AND deleted_at IS NULL "
-                "AND type IN (1, 2) "
-                "ORDER BY created_at DESC, id DESC "
-                "LIMIT 12",
-                account_id
-            )
+    const auto records = database.QueryDatabase(
+        fmt::format(
+            "SELECT `id`, `revision`, "
+            "`character_name`, `gm_account_id`, "
+            "`gm_character_name`, `type`, `text`, "
+            "UNIX_TIMESTAMP(`created_at`) "
+            "FROM `account_soulmarks` "
+            "WHERE `account_id` = {} "
+            "AND `deleted_at` IS NULL "
+            "AND `type` IN (1, 2) "
+            "ORDER BY `created_at` DESC, `id` DESC "
+            "LIMIT 12",
+            account_id
+        )
+    );
+
+    if (!records.Success()) {
+        Message(Chat::Red,
+            "Unable to retrieve soulmark records.");
+        LogError(
+            "Soulmark list query failed for account [{}]",
+            account_id
         );
+        return;
+    }
 
     EQApplicationPacket outapp(
         OP_SoulmarkInquiry,
@@ -12429,7 +12451,38 @@ void Client::SendSoulmarkList(uint32 account_id)
 
     size_t index = 0;
 
-    for (const auto &record : records) {
+    for (auto row = records.begin();
+         row != records.end();
+         ++row) {
+        auto record =
+            AccountSoulmarksRepository::NewEntity();
+
+        record.id = row[0]
+            ? std::strtoull(row[0], nullptr, 10) : 0;
+
+        record.revision = row[1]
+            ? std::strtoul(row[1], nullptr, 10) : 0;
+
+        record.character_name = row[2] ? row[2] : "";
+
+        record.gm_account_id = row[3]
+            ? std::strtol(row[3], nullptr, 10) : 0;
+
+        record.gm_character_name = row[4] ? row[4] : "";
+
+        record.type = row[5]
+            ? std::strtoul(row[5], nullptr, 10) : 0;
+
+        record.text = row[6] ? row[6] : "";
+
+        record.created_at = row[7]
+            ? std::strtoll(row[7], nullptr, 10) : 0;
+
+        if (record.id == 0 ||
+            record.revision == 0) {
+            continue;
+        }
+
         if (index >= 12) {
             break;
         }
@@ -12500,8 +12553,6 @@ void Client::Handle_OP_SoulmarkInquiry(
         return;
     }
 
-    ResetSoulmarkSnapshot();
-
     constexpr uint32 inquiry_interval_ms = 2000;
     const uint32 now = Timer::GetCurrentTime();
 
@@ -12514,6 +12565,8 @@ void Client::Handle_OP_SoulmarkInquiry(
 
     m_soulmark_inquiry_seen = true;
     m_last_soulmark_inquiry = now;
+
+    ResetSoulmarkSnapshot();
 
     const auto *request =
         reinterpret_cast<const SoulmarkInquiry_Struct *>(
@@ -12665,6 +12718,39 @@ void Client::Handle_OP_SoulmarkAdd(
         Message(Chat::Red,
             "Failed to save soulmark.");
         return;
+    }
+
+    if (PlayerEventLogs::Instance()->IsEventEnabled(
+            PlayerEvent::SOULMARK_CHANGE)) {
+        auto event = PlayerEvent::SoulmarkChangeEvent{
+            .soulmark_id = inserted.id,
+            .action = "add",
+
+            .target_account_id = account_id,
+            .target_account =
+                database.GetAccountName(account_id),
+            .target_character = character_name,
+
+            .original_gm_account_id = AccountID(),
+            .original_gm_name = GetName(),
+
+            .actor_account_id = AccountID(),
+            .actor_character_id = CharacterID(),
+            .actor_name = GetName(),
+
+            .soulmark_type = inserted.type,
+
+            .old_revision = 0,
+            .new_revision = inserted.revision,
+
+            .old_text = "",
+            .new_text = inserted.text
+        };
+
+        RecordPlayerEventLog(
+            PlayerEvent::SOULMARK_CHANGE,
+            event
+        );
     }
 
     Message(
@@ -12835,9 +12921,11 @@ void Client::Handle_OP_SoulmarkUpdate(
         }
     }
 
-    // Only the original issuing account may modify
-    // a soulmark until supervisory privileges are defined.
-    if (snapshot.gm_account_id != AccountID()) {
+    // Guides may modify their own records.
+    // GM administrators may correct other guides' records.
+    // The original author is never overwritten.
+    if (snapshot.gm_account_id != AccountID() &&
+        Admin() < AccountStatus::GMAdmin) {
         Message(Chat::Red,
             "You cannot modify another guide's soulmark.");
 
@@ -12884,6 +12972,39 @@ void Client::Handle_OP_SoulmarkUpdate(
         result.RowsAffected() != 1) {
         reject();
         return;
+    }
+
+    if (PlayerEventLogs::Instance()->IsEventEnabled(
+            PlayerEvent::SOULMARK_CHANGE)) {
+        auto event = PlayerEvent::SoulmarkChangeEvent{
+            .soulmark_id = snapshot.id,
+            .action = remove ? "remove" : "edit",
+
+            .target_account_id = account_id,
+            .target_account = snapshot.wire.target_pid,
+            .target_character = snapshot.wire.target_name,
+
+            .original_gm_account_id =
+                snapshot.gm_account_id,
+            .original_gm_name = snapshot.wire.gm_name,
+
+            .actor_account_id = AccountID(),
+            .actor_character_id = CharacterID(),
+            .actor_name = GetName(),
+
+            .soulmark_type = snapshot.wire.type,
+
+            .old_revision = snapshot.revision,
+            .new_revision = snapshot.revision + 1,
+
+            .old_text = snapshot.wire.text,
+            .new_text = remove ? "" : new_text
+        };
+
+        RecordPlayerEventLog(
+            PlayerEvent::SOULMARK_CHANGE,
+            event
+        );
     }
 
     Message(

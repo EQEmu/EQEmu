@@ -1157,6 +1157,8 @@ void PlayerEventLogs::SetSettingsDefaults()
     m_settings[PlayerEvent::PETITION_GUIDE].event_enabled = 1;
     m_settings[PlayerEvent::PETITION_FEEDBACK].retention_days = 365;
     m_settings[PlayerEvent::PETITION_GUIDE].retention_days = 365;
+    m_settings[PlayerEvent::SOULMARK_CHANGE].event_enabled = 1;
+    m_settings[PlayerEvent::SOULMARK_CHANGE].retention_days = 365;
 }
 
 void PlayerEventLogs::LoadEtlIds()
