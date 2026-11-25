@@ -12269,6 +12269,16 @@ void Client::Handle_OP_PetitionQue(const EQApplicationPacket *app)
 bool Client::ValidateSoulmarkText(
     const std::string &text)
 {
+    // The native client can replace unsupported
+    // input characters with UTF-8 encoded U+FFFD.
+    // Reject the already corrupted text before SQL.
+    if (text.find("\xEF\xBF\xBD") !=
+            std::string::npos) {
+        Message(Chat::Red,
+            "Soulmark text contains unsupported characters.");
+        return false;
+    }
+
     if (text.empty() ||
         text.size() > 250 ||
         text.find_first_not_of(" \t\r\n") ==
@@ -12846,7 +12856,13 @@ void Client::Handle_OP_SoulmarkUpdate(
     bool matched[12]{};
     size_t matched_count = 0;
 
-    for (size_t i = 0; i < 12; ++i) {
+    // RoF2 retains stale records beyond the active
+    // list length after compacting its internal array.
+    // Only records represented by the current server
+    // snapshot are eligible for modification.
+    for (size_t i = 0;
+         i < m_soulmark_snapshot_count;
+         ++i) {
         const auto &incoming = request->records[i];
 
         // Unused slots are normalized by the decoder.
