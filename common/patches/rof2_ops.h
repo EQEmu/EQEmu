@@ -19,6 +19,7 @@
 // Begin RoF2 Encodes
 
 E(OP_PetitionUpdate)
+E(OP_PetitionCheckout)
 E(OP_SendMembershipDetails)
 E(OP_TraderShop)
 E(OP_TraderDelItem)

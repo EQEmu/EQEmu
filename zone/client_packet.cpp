@@ -11895,6 +11895,10 @@ void Client::Handle_OP_PetitionCheckIn(const EQApplicationPacket *app)
 
 void Client::Handle_OP_PetitionCheckout(const EQApplicationPacket *app)
 {
+	if (Admin() < AccountStatus::QuestTroupe) {
+		return;
+	}
+
 	if (app->size != sizeof(uint32)) {
 		std::cout << "Wrong size: OP_PetitionCheckout, size=" << app->size << ", expected " << sizeof(uint32) << std::endl;
 		return;
@@ -11904,9 +11908,10 @@ void Client::Handle_OP_PetitionCheckout(const EQApplicationPacket *app)
 	else {
 		uint32 getpetnum = *((uint32*)app->pBuffer);
 		Petition* getpet = PetitionList::Instance()->GetPetitionByID(getpetnum);
-		if (getpet != 0) {
+		if (getpet != 0 && !getpet->CheckedOut()) {
 			getpet->AddCheckout();
 			getpet->SetCheckedOut(true);
+			getpet->SetLastGM(GetName());
 			getpet->SendPetitionToPlayer(CastToClient());
 			PetitionList::Instance()->UpdatePetition(getpet);
 			PetitionList::Instance()->UpdateGMQueue();
@@ -11966,6 +11971,10 @@ void Client::Handle_OP_PetitionResolve(const EQApplicationPacket *app)
 
 void Client::Handle_OP_PetitionUnCheckout(const EQApplicationPacket *app)
 {
+	if (Admin() < AccountStatus::QuestTroupe) {
+		return;
+	}
+
 	if (app->size != sizeof(uint32)) {
 		std::cout << "Wrong size: OP_PetitionUnCheckout, size=" << app->size << ", expected " << sizeof(uint32) << std::endl;
 		return;
@@ -11975,7 +11984,8 @@ void Client::Handle_OP_PetitionUnCheckout(const EQApplicationPacket *app)
 	else {
 		uint32 getpetnum = *((uint32*)app->pBuffer);
 		Petition* getpet = PetitionList::Instance()->GetPetitionByID(getpetnum);
-		if (getpet != 0) {
+		if (getpet != 0 && getpet->CheckedOut() &&
+			std::string(getpet->GetLastGM()) == GetName()) {
 			getpet->SetCheckedOut(false);
 			PetitionList::Instance()->UpdatePetition(getpet);
 			PetitionList::Instance()->UpdateGMQueue();

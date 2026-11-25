@@ -157,6 +157,53 @@ namespace RoF2
 
 	// RoF2 Specific Encodes Begin
 
+
+        ENCODE(OP_PetitionCheckout)
+        {
+                ENCODE_LENGTH_EXACT(Petition_Struct);
+                SETUP_DIRECT_ENCODE(
+                        Petition_Struct,
+                        structs::Petition_Struct
+                );
+
+                static_assert(offsetof(
+                        structs::Petition_Struct,
+                        senttime) == 0xa4);
+
+                static_assert(offsetof(
+                        structs::Petition_Struct,
+                        petitiontext) == 0xac);
+
+                static_assert(offsetof(
+                        structs::Petition_Struct,
+                        gmtext) == 0x4ac);
+
+                OUT(petnumber);
+                OUT(urgency);
+                OUT(zone);
+                OUT(charlevel);
+                OUT(charclass);
+                OUT(charrace);
+                OUT(checkouts);
+                OUT(unavail);
+
+                eq->senttime =
+                        static_cast<uint32>(emu->senttime);
+
+                std::memcpy(eq->accountid, emu->accountid,
+                        sizeof(eq->accountid) - 1);
+                std::memcpy(eq->lastgm, emu->lastgm,
+                        sizeof(eq->lastgm) - 1);
+                std::memcpy(eq->charname, emu->charname,
+                        sizeof(eq->charname) - 1);
+                std::memcpy(eq->petitiontext, emu->petitiontext,
+                        sizeof(eq->petitiontext) - 1);
+                std::memcpy(eq->gmtext, emu->gmtext,
+                        sizeof(eq->gmtext) - 1);
+
+                FINISH_ENCODE();
+        }
+
         ENCODE(OP_PetitionUpdate)
         {
                 ENCODE_LENGTH_EXACT(PetitionUpdate_Struct);

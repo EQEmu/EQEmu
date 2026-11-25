@@ -2735,26 +2735,25 @@ struct PetitionUpdate_Struct {
 static_assert(sizeof(PetitionUpdate_Struct) == 184);
 
 struct Petition_Struct {
-	uint32 petnumber;
-	uint32 urgency;
-	char accountid[32];
-	char lastgm[32];
-	uint32	zone;
-	//char zone[32];
-	char charname[64];
-	uint32 charlevel;
-	uint32 charclass;
-	uint32 charrace;
-	uint32 unknown;
-	//time_t senttime; // Time?
-	uint32 checkouts;
-	uint32 unavail;
-	//uint8 unknown5[4];
-	time_t senttime;
-	uint32 unknown2;
-	char petitiontext[1024];
-	char gmtext[1024];
+    uint32 petnumber;
+    uint32 urgency;
+    char accountid[32];
+    char lastgm[32];
+    uint32 zone;
+    char charname[64];
+    uint32 charlevel;
+    uint32 charclass;
+    uint32 charrace;
+    uint32 unknown;
+    uint32 checkouts;
+    uint32 unavail;
+    uint32 senttime;
+    uint32 unknown2;
+    char petitiontext[1024];
+    char gmtext[1024];
 };
+
+static_assert(sizeof(Petition_Struct) == 2220);
 
 
 struct Who_All_Struct { // 156 length total
