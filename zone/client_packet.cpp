@@ -12391,7 +12391,7 @@ void Client::SendSoulmarkList(uint32 account_id)
         return;
     }
 
-    const auto records = database.QueryDatabase(
+    auto records = database.QueryDatabase(
         fmt::format(
             "SELECT `id`, `revision`, "
             "`character_name`, `gm_account_id`, "
