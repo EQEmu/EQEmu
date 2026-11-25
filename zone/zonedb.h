@@ -605,8 +605,10 @@ public:
 	bool DeleteMercenary(uint32 mercenary_id);
 
 	/* Petitions   */
-	bool DeletePetitionFromDB(Petition* wpet);
-	void	UpdatePetitionToDB(Petition* wpet);
+	bool DeletePetitionFromDB(Petition* wpet, const char* owner = nullptr);
+	bool UpdatePetitionToDB(Petition* previous, Petition* proposed);
+    bool OwnsPetition(Petition* pet, const char* owner);
+    uint32 GetUniquePetitionRow(uint32 petition_id);
 	void	InsertPetitionToDB(Petition* wpet);
 	bool RefreshPetitionsFromDB();
 

@@ -11936,6 +11936,15 @@ void Client::HandlePetitionLog(
         return;
     }
 
+    if (!database.OwnsPetition(pet, GetName())) {
+        Message(Chat::Red,
+            "Petition logging failed. "
+            "The checkout is no longer valid.");
+
+        PetitionList::Instance()->ReadDatabase();
+        return;
+    }
+
     auto event = PlayerEvent::PetitionLogEvent{
         .petition_id = pet->GetID(),
         .petitioner_account = pet->GetAccountName(),
@@ -12111,43 +12120,76 @@ void Client::Handle_OP_PetitionCheckIn(
                 return;
         }
 
-        pet->SetUrgency(inpet->urgency);
-        pet->SetUnavails(inpet->unavail);
-        pet->SetLastGM(GetName());
-        pet->SetGMText(inpet->gmtext);
-        pet->SetCheckedOut(false);
+    Petition proposed = *pet;
 
-        PetitionList::Instance()->UpdatePetition(pet);
+    proposed.SetUrgency(inpet->urgency);
+    proposed.SetUnavails(inpet->unavail);
+    proposed.SetLastGM(GetName());
+    proposed.SetGMText(inpet->gmtext);
+    proposed.SetCheckedOut(false);
+
+    if (!PetitionList::Instance()->UpdatePetition(
+            pet, proposed)) {
+        Message(Chat::Red,
+            "Petition check-in failed. "
+            "The petition may have changed.");
+
+        PetitionList::Instance()->ReadDatabase();
+        return;
+    }
         PetitionList::Instance()->UpdateGMQueue();
         PetitionList::Instance()->UpdateZoneListQueue();
 }
 
-void Client::Handle_OP_PetitionCheckout(const EQApplicationPacket *app)
+void Client::Handle_OP_PetitionCheckout(
+    const EQApplicationPacket *app)
 {
-	if (Admin() < AccountStatus::QuestTroupe) {
-		return;
-	}
+    if (Admin() < AccountStatus::QuestTroupe ||
+        app->size != sizeof(uint32)) {
+        return;
+    }
 
-	if (app->size != sizeof(uint32)) {
-		std::cout << "Wrong size: OP_PetitionCheckout, size=" << app->size << ", expected " << sizeof(uint32) << std::endl;
-		return;
-	}
-	if (!worldserver.Connected())
-		Message(Chat::Red, "Error: World server disconnected");
-	else {
-		uint32 getpetnum = *((uint32*)app->pBuffer);
-		Petition* getpet = PetitionList::Instance()->GetPetitionByID(getpetnum);
-		if (getpet != 0 && !getpet->CheckedOut()) {
-			getpet->AddCheckout();
-			getpet->SetCheckedOut(true);
-			getpet->SetLastGM(GetName());
-			getpet->SendPetitionToPlayer(CastToClient());
-			PetitionList::Instance()->UpdatePetition(getpet);
-			PetitionList::Instance()->UpdateGMQueue();
-			PetitionList::Instance()->UpdateZoneListQueue();
-		}
-	}
-	return;
+    if (!worldserver.Connected()) {
+        Message(Chat::Red,
+            "Error: World server disconnected");
+        return;
+    }
+
+    uint32 id = 0;
+    memcpy(&id, app->pBuffer, sizeof(id));
+
+    auto* petitions = PetitionList::Instance();
+
+    // Refresh before attempting the atomic checkout.
+    petitions->ReadDatabase();
+
+    auto* pet = petitions->GetPetitionByID(id);
+
+    if (!pet || pet->CheckedOut()) {
+        Message(Chat::Red,
+            "Petition is no longer available.");
+        return;
+    }
+
+    Petition proposed = *pet;
+
+    proposed.AddCheckout();
+    proposed.SetCheckedOut(true);
+    proposed.SetLastGM(GetName());
+
+    if (!petitions->UpdatePetition(pet, proposed)) {
+        Message(Chat::Red,
+            "Petition checkout failed. "
+            "The petition may have changed.");
+
+        petitions->ReadDatabase();
+        return;
+    }
+
+    pet->SendPetitionToPlayer(this);
+
+    petitions->UpdateGMQueue();
+    petitions->UpdateZoneListQueue();
 }
 
 void Client::Handle_OP_PetitionDelete(
@@ -12194,7 +12236,7 @@ void Client::Handle_OP_PetitionDelete(
                 return;
         }
 
-        if (petitions->DeletePetition(petition_id) == -1) {
+        if (petitions->DeletePetition(petition_id, GetName()) == -1) {
                 LogError(
                         "Failed to delete petition [{}]",
                         petition_id
@@ -12226,30 +12268,45 @@ void Client::Handle_OP_PetitionResolve(const EQApplicationPacket *app)
 	Handle_OP_PetitionDelete(app);
 }
 
-void Client::Handle_OP_PetitionUnCheckout(const EQApplicationPacket *app)
+void Client::Handle_OP_PetitionUnCheckout(
+    const EQApplicationPacket *app)
 {
-	if (Admin() < AccountStatus::QuestTroupe) {
-		return;
-	}
+    if (Admin() < AccountStatus::QuestTroupe ||
+        app->size != sizeof(uint32)) {
+        return;
+    }
 
-	if (app->size != sizeof(uint32)) {
-		std::cout << "Wrong size: OP_PetitionUnCheckout, size=" << app->size << ", expected " << sizeof(uint32) << std::endl;
-		return;
-	}
-	if (!worldserver.Connected())
-		Message(Chat::Red, "Error: World server disconnected");
-	else {
-		uint32 getpetnum = *((uint32*)app->pBuffer);
-		Petition* getpet = PetitionList::Instance()->GetPetitionByID(getpetnum);
-		if (getpet != 0 && getpet->CheckedOut() &&
-			std::string(getpet->GetLastGM()) == GetName()) {
-			getpet->SetCheckedOut(false);
-			PetitionList::Instance()->UpdatePetition(getpet);
-			PetitionList::Instance()->UpdateGMQueue();
-			PetitionList::Instance()->UpdateZoneListQueue();
-		}
-	}
-	return;
+    if (!worldserver.Connected()) {
+        Message(Chat::Red,
+            "Error: World server disconnected");
+        return;
+    }
+
+    uint32 id = 0;
+    memcpy(&id, app->pBuffer, sizeof(id));
+
+    auto* petitions = PetitionList::Instance();
+    auto* pet = petitions->GetPetitionByID(id);
+
+    if (!pet || !pet->CheckedOut() ||
+        std::string(pet->GetLastGM()) != GetName()) {
+        return;
+    }
+
+    Petition proposed = *pet;
+    proposed.SetCheckedOut(false);
+
+    if (!petitions->UpdatePetition(pet, proposed)) {
+        Message(Chat::Red,
+            "Petition uncheckout failed. "
+            "The petition may have changed.");
+
+        petitions->ReadDatabase();
+        return;
+    }
+
+    petitions->UpdateGMQueue();
+    petitions->UpdateZoneListQueue();
 }
 
 void Client::Handle_OP_PlayerStateAdd(const EQApplicationPacket *app)

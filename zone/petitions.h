@@ -94,7 +94,7 @@ protected:
 class PetitionList
 {
 public:
-	int DeletePetition(uint32 petnumber);
+	int DeletePetition(uint32 petnumber, const char* owner = nullptr);
 	void UpdateGMQueue();
 	PetitionList() {}
 	~PetitionList() {}
@@ -104,7 +104,7 @@ public:
 	std::vector<uint32> GetPetitionIDs();
 	void ClearPetitions();
 	void ReadDatabase();
-	void UpdatePetition(Petition* pet);
+	bool UpdatePetition(Petition* pet, const Petition& proposed);
 	void UpdateZoneListQueue();
 	bool FindPetitionByAccountName(const char* acctname);
 	bool DeletePetitionByCharName(const char* charname);
