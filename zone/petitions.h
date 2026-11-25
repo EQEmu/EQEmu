@@ -105,6 +105,7 @@ public:
 	void ClearPetitions();
 	void ReadDatabase();
 	bool UpdatePetition(Petition* pet, const Petition& proposed);
+	void ReleaseCheckouts(const char* owner);
 	void UpdateZoneListQueue();
 	bool FindPetitionByAccountName(const char* acctname);
 	bool DeletePetitionByCharName(const char* charname);

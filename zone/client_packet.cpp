@@ -10269,6 +10269,12 @@ void Client::Handle_OP_LoadSpellSet(const EQApplicationPacket *app)
 
 void Client::Handle_OP_Logout(const EQApplicationPacket *app)
 {
+    if (Admin() >= AccountStatus::QuestTroupe) {
+        PetitionList::Instance()->ReleaseCheckouts(
+            GetName()
+        );
+    }
+
 	LogDebug("[{}] sent a logout packet", GetName());
 
 	SendLogoutPackets();

@@ -297,6 +297,81 @@ bool ZoneDatabase::DeletePetitionFromDB(
            results.RowsAffected() == 1;
 }
 
+void PetitionList::ReleaseCheckouts(const char* owner)
+{
+    if (!owner || !*owner) {
+        return;
+    }
+
+    bool changed = false;
+
+    {
+        std::scoped_lock lock(PList_Mutex);
+
+        LinkedListIterator<Petition*> iterator(list);
+        iterator.Reset();
+
+        while (iterator.MoreElements()) {
+            auto* pet = iterator.GetData();
+
+            if (pet->CheckedOut() &&
+                std::strcmp(pet->GetLastGM(), owner) == 0) {
+
+                const auto dib =
+                    database.GetUniquePetitionRow(
+                        pet->GetID()
+                    );
+
+                if (dib) {
+                    char escaped_owner[129] = {};
+
+                    database.DoEscapeString(
+                        escaped_owner,
+                        owner,
+                        strlen(owner)
+                    );
+
+                    auto result = database.QueryDatabase(
+                        fmt::format(
+                            "UPDATE petitions "
+                            "SET ischeckedout = 0 "
+                            "WHERE dib = {} "
+                            "AND petid = {} "
+                            "AND ischeckedout = 1 "
+                            "AND BINARY lastgm = BINARY '{}' "
+                            "AND checkouts = {}",
+                            dib,
+                            pet->GetID(),
+                            escaped_owner,
+                            pet->GetCheckouts()
+                        )
+                    );
+
+                    if (result.Success() &&
+                        result.RowsAffected() == 1) {
+                        pet->SetCheckedOut(false);
+                        changed = true;
+
+                        LogInfo(
+                            "Released petition [{}] "
+                            "on guide disconnect [{}]",
+                            pet->GetID(),
+                            owner
+                        );
+                    }
+                }
+            }
+
+            iterator.Advance();
+        }
+    }
+
+    if (changed) {
+        UpdateGMQueue();
+        UpdateZoneListQueue();
+    }
+}
+
 uint32 ZoneDatabase::GetUniquePetitionRow(
     uint32 petition_id)
 {
