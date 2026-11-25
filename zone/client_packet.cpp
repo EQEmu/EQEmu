@@ -332,6 +332,7 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_PetitionQue] = &Client::Handle_OP_PetitionQue;
 	ConnectedOpcodes[OP_PetitionRefresh] = &Client::Handle_OP_PetitionRefresh;
 	ConnectedOpcodes[OP_SoulmarkInquiry] = &Client::Handle_OP_SoulmarkInquiry;
+	ConnectedOpcodes[OP_SoulmarkAdd] = &Client::Handle_OP_SoulmarkAdd;
 	ConnectedOpcodes[OP_PetitionResolve] = &Client::Handle_OP_PetitionResolve;
 	ConnectedOpcodes[OP_PetitionUnCheckout] = &Client::Handle_OP_PetitionUnCheckout;
 	ConnectedOpcodes[OP_PlayerStateAdd] = &Client::Handle_OP_PlayerStateAdd;
@@ -12263,67 +12264,30 @@ void Client::Handle_OP_PetitionQue(const EQApplicationPacket *app)
 	return;
 }
 
-void Client::Handle_OP_SoulmarkInquiry(
-    const EQApplicationPacket *app)
+bool Client::ResolveSoulmarkTarget(
+    const std::string &target_name,
+    const std::string &target_pid,
+    uint32 &account_id,
+    uint32 &character_id,
+    std::string &character_name)
 {
-    if (ClientVersion() !=
-            EQ::versions::ClientVersion::RoF2 ||
-        Admin() < AccountStatus::QuestTroupe ||
-        app->size != sizeof(SoulmarkInquiry_Struct)) {
-        return;
-    }
-
-    constexpr uint32 inquiry_interval_ms = 2000;
-    const uint32 now = Timer::GetCurrentTime();
-
-    if (m_soulmark_inquiry_seen &&
-        static_cast<uint32>(
-            now - m_last_soulmark_inquiry
-        ) < inquiry_interval_ms) {
-        return;
-    }
-
-    m_soulmark_inquiry_seen = true;
-    m_last_soulmark_inquiry = now;
-
-    const auto *request =
-        reinterpret_cast<const SoulmarkInquiry_Struct *>(
-            app->pBuffer
-        );
-
-    if (!std::memchr(
-            request->target_name,
-            0,
-            sizeof(request->target_name)) ||
-        !std::memchr(
-            request->target_pid,
-            0,
-            sizeof(request->target_pid))) {
-        return;
-    }
-
-    const std::string target_name = request->target_name;
-    const std::string target_pid = request->target_pid;
+    account_id = 0;
+    character_id = 0;
+    character_name.clear();
 
     if (target_name.empty() || target_pid.empty()) {
-        return;
+        return false;
     }
 
-    // The character identifies the local account.
-    // An account name alone is not necessarily unique
-    // across different login servers.
-    uint32 character_id = 0;
-
-    const uint32 account_id =
-        database.GetAccountIDByChar(
-            target_name,
-            &character_id
-        );
+    account_id = database.GetAccountIDByChar(
+        target_name,
+        &character_id
+    );
 
     if (account_id == 0 || character_id == 0) {
         Message(Chat::Red,
-            "Soulmark inquiry: character not found.");
-        return;
+            "Soulmark: character not found.");
+        return false;
     }
 
     const auto character =
@@ -12337,8 +12301,8 @@ void Client::Handle_OP_SoulmarkInquiry(
         character.account_id !=
             static_cast<int32>(account_id)) {
         Message(Chat::Red,
-            "Soulmark inquiry: invalid character.");
-        return;
+            "Soulmark: invalid character.");
+        return false;
     }
 
     const auto account_name =
@@ -12347,12 +12311,31 @@ void Client::Handle_OP_SoulmarkInquiry(
     if (account_name.empty() ||
         account_name != target_pid) {
         Message(Chat::Red,
-            "Soulmark inquiry: character and PID do not match.");
+            "Soulmark: character and PID do not match.");
+        return false;
+    }
+
+    character_name = character.name;
+
+    return true;
+}
+
+void Client::SendSoulmarkList(uint32 account_id)
+{
+    if (ClientVersion() !=
+            EQ::versions::ClientVersion::RoF2 ||
+        Admin() < AccountStatus::QuestTroupe ||
+        account_id == 0) {
         return;
     }
 
-    // Soulmarks belong to the account, not just the
-    // character used to initiate the inquiry.
+    const auto account_name =
+        database.GetAccountName(account_id);
+
+    if (account_name.empty()) {
+        return;
+    }
+
     const auto records =
         AccountSoulmarksRepository::GetWhere(
             database,
@@ -12405,8 +12388,6 @@ void Client::Handle_OP_SoulmarkInquiry(
             break;
         }
 
-        // The native client uses a signed 32-bit
-        // timestamp when displaying record details.
         if (record.created_at <= 0 ||
             record.created_at > 0x7fffffff) {
             continue;
@@ -12447,6 +12428,214 @@ void Client::Handle_OP_SoulmarkInquiry(
     }
 
     QueuePacket(&outapp);
+}
+
+void Client::Handle_OP_SoulmarkInquiry(
+    const EQApplicationPacket *app)
+{
+    if (ClientVersion() !=
+            EQ::versions::ClientVersion::RoF2 ||
+        Admin() < AccountStatus::QuestTroupe ||
+        app->size != sizeof(SoulmarkInquiry_Struct)) {
+        return;
+    }
+
+    constexpr uint32 inquiry_interval_ms = 2000;
+    const uint32 now = Timer::GetCurrentTime();
+
+    if (m_soulmark_inquiry_seen &&
+        static_cast<uint32>(
+            now - m_last_soulmark_inquiry
+        ) < inquiry_interval_ms) {
+        return;
+    }
+
+    m_soulmark_inquiry_seen = true;
+    m_last_soulmark_inquiry = now;
+
+    const auto *request =
+        reinterpret_cast<const SoulmarkInquiry_Struct *>(
+            app->pBuffer
+        );
+
+    if (!std::memchr(
+            request->target_name,
+            0,
+            sizeof(request->target_name)) ||
+        !std::memchr(
+            request->target_pid,
+            0,
+            sizeof(request->target_pid))) {
+        return;
+    }
+
+    uint32 account_id = 0;
+    uint32 character_id = 0;
+    std::string character_name;
+
+    if (!ResolveSoulmarkTarget(
+            request->target_name,
+            request->target_pid,
+            account_id,
+            character_id,
+            character_name)) {
+        return;
+    }
+
+    SendSoulmarkList(account_id);
+}
+
+void Client::Handle_OP_SoulmarkAdd(
+    const EQApplicationPacket *app)
+{
+    if (ClientVersion() !=
+            EQ::versions::ClientVersion::RoF2 ||
+        Admin() < AccountStatus::QuestTroupe ||
+        app->size != sizeof(SoulmarkRecord_Struct)) {
+        return;
+    }
+
+    constexpr uint32 add_interval_ms = 2000;
+    const uint32 now = Timer::GetCurrentTime();
+
+    if (m_soulmark_add_seen &&
+        static_cast<uint32>(
+            now - m_last_soulmark_add
+        ) < add_interval_ms) {
+        Message(Chat::Red,
+            "Please wait before adding another soulmark.");
+        return;
+    }
+
+    m_soulmark_add_seen = true;
+    m_last_soulmark_add = now;
+
+    const auto *request =
+        reinterpret_cast<const SoulmarkRecord_Struct *>(
+            app->pBuffer
+        );
+
+    if (!std::memchr(
+            request->target_name,
+            0,
+            sizeof(request->target_name)) ||
+        !std::memchr(
+            request->target_pid,
+            0,
+            sizeof(request->target_pid)) ||
+        !std::memchr(
+            request->text,
+            0,
+            sizeof(request->text))) {
+        return;
+    }
+
+    if (request->type != 1 &&
+        request->type != 2) {
+        Message(Chat::Red,
+            "Invalid soulmark type.");
+        return;
+    }
+
+    const std::string text = request->text;
+
+    if (text.empty() ||
+        text.size() > 250 ||
+        text.find_first_not_of(" \t\r\n") ==
+            std::string::npos) {
+        Message(Chat::Red,
+            "Soulmark text must contain 1 to 250 bytes.");
+        return;
+    }
+
+    // The native client appends the text directly to
+    // an STML document. Reject markup until the
+    // client's escaping behavior has been verified.
+    if (text.find_first_of("<>&") !=
+            std::string::npos) {
+        Message(Chat::Red,
+            "Soulmark text must not contain STML markup characters.");
+        return;
+    }
+
+    for (const unsigned char c : text) {
+        if (c < 32 || c == 127) {
+            Message(Chat::Red,
+                "Soulmark text contains control characters.");
+            return;
+        }
+    }
+
+    uint32 account_id = 0;
+    uint32 character_id = 0;
+    std::string character_name;
+
+    if (!ResolveSoulmarkTarget(
+            request->target_name,
+            request->target_pid,
+            account_id,
+            character_id,
+            character_name)) {
+        return;
+    }
+
+    if (AccountID() == 0 || CharacterID() == 0) {
+        return;
+    }
+
+    const time_t created_at = std::time(nullptr);
+
+    if (created_at <= 0 ||
+        created_at > 0x7fffffff) {
+        Message(Chat::Red,
+            "Unable to create a valid soulmark timestamp.");
+        return;
+    }
+
+    auto record =
+        AccountSoulmarksRepository::NewEntity();
+
+    record.account_id =
+        static_cast<int32>(account_id);
+
+    record.character_id = character_id;
+    record.character_name = character_name;
+
+    // Never trust the GM identity or timestamp
+    // supplied in a client packet.
+    record.gm_account_id =
+        static_cast<int32>(AccountID());
+
+    record.gm_character_id = CharacterID();
+    record.gm_character_name = GetName();
+
+    record.type =
+        static_cast<uint8>(request->type);
+
+    record.text = text;
+    record.created_at = created_at;
+    record.revision = 1;
+
+    const auto inserted =
+        AccountSoulmarksRepository::InsertOne(
+            database,
+            record
+        );
+
+    if (inserted.id == 0) {
+        Message(Chat::Red,
+            "Failed to save soulmark.");
+        return;
+    }
+
+    Message(
+        Chat::White,
+        request->type == 1
+            ? "Praise saved successfully."
+            : "Warning saved successfully."
+    );
+
+    SendSoulmarkList(account_id);
 }
 
 void Client::Handle_OP_PetitionRefresh(

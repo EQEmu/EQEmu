@@ -2107,6 +2107,8 @@ private:
     bool m_petition_refresh_seen = false;
     bool m_soulmark_inquiry_seen = false;
     uint32 m_last_soulmark_inquiry = 0;
+    bool m_soulmark_add_seen = false;
+    uint32 m_last_soulmark_add = 0;
 
 	int32 environment_damage_modifier;
 	bool invulnerable_environment_damage;
