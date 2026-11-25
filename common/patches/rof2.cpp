@@ -158,6 +158,58 @@ namespace RoF2
 	// RoF2 Specific Encodes Begin
 
 
+        ENCODE(OP_SoulmarkInquiry)
+        {
+            ENCODE_LENGTH_EXACT(SoulmarkList_Struct);
+
+            SETUP_DIRECT_ENCODE(
+                SoulmarkList_Struct,
+                structs::SoulmarkList_Struct
+            );
+
+            std::memset(eq, 0, sizeof(*eq));
+
+            for (size_t i = 0; i < 12; ++i) {
+                const auto &src = emu->records[i];
+                auto &dst = eq->records[i];
+
+                if (src.type != 1 && src.type != 2) {
+                    continue;
+                }
+
+                dst.timestamp = src.timestamp;
+                dst.type = src.type;
+
+                std::memcpy(
+                    dst.target_name,
+                    src.target_name,
+                    sizeof(dst.target_name) - 1
+                );
+                std::memcpy(
+                    dst.target_pid,
+                    src.target_pid,
+                    sizeof(dst.target_pid) - 1
+                );
+                std::memcpy(
+                    dst.gm_name,
+                    src.gm_name,
+                    sizeof(dst.gm_name) - 1
+                );
+                std::memcpy(
+                    dst.gm_pid,
+                    src.gm_pid,
+                    sizeof(dst.gm_pid) - 1
+                );
+                std::memcpy(
+                    dst.text,
+                    src.text,
+                    sizeof(dst.text) - 1
+                );
+            }
+
+            FINISH_ENCODE();
+        }
+
         ENCODE(OP_PetitionCheckout)
         {
                 ENCODE_LENGTH_EXACT(Petition_Struct);
@@ -6319,6 +6371,169 @@ namespace RoF2
 		FINISH_DIRECT_DECODE();
 	}
 
+
+        DECODE(OP_SoulmarkInquiry)
+        {
+            DECODE_LENGTH_EXACT(structs::SoulmarkInquiry_Struct);
+
+            SETUP_DIRECT_DECODE(
+                SoulmarkInquiry_Struct,
+                structs::SoulmarkInquiry_Struct
+            );
+
+            const auto copy_string = [](
+                auto &dst,
+                const auto &src
+            ) {
+                static_assert(sizeof(dst) == sizeof(src));
+
+                const auto *end =
+                    static_cast<const char *>(
+                        std::memchr(src, 0, sizeof(src))
+                    );
+
+                if (!end) {
+                    return false;
+                }
+
+                std::memcpy(
+                    dst,
+                    src,
+                    static_cast<size_t>(end - src)
+                );
+
+                return true;
+            };
+
+            bool valid = true;
+
+            valid = copy_string(emu->target_name, eq->target_name) && valid;
+            valid = copy_string(emu->target_pid, eq->target_pid) && valid;
+
+            FINISH_DIRECT_DECODE();
+
+            if (!valid) {
+                LogNetcode(
+                    "Unterminated RoF2 SoulmarkInquiry string"
+                );
+                __packet->SetOpcode(OP_Unknown);
+            }
+        }
+
+        DECODE(OP_SoulmarkAdd)
+        {
+            DECODE_LENGTH_EXACT(structs::SoulmarkRecord_Struct);
+
+            SETUP_DIRECT_DECODE(
+                SoulmarkRecord_Struct,
+                structs::SoulmarkRecord_Struct
+            );
+
+            const auto copy_string = [](
+                auto &dst,
+                const auto &src
+            ) {
+                static_assert(sizeof(dst) == sizeof(src));
+
+                const auto *end =
+                    static_cast<const char *>(
+                        std::memchr(src, 0, sizeof(src))
+                    );
+
+                if (!end) {
+                    return false;
+                }
+
+                std::memcpy(
+                    dst,
+                    src,
+                    static_cast<size_t>(end - src)
+                );
+
+                return true;
+            };
+
+            bool valid = true;
+
+            emu->type = eq->type;
+            valid = copy_string(emu->target_name, eq->target_name) && valid;
+            valid = copy_string(emu->target_pid, eq->target_pid) && valid;
+            valid = copy_string(emu->text, eq->text) && valid;
+
+            FINISH_DIRECT_DECODE();
+
+            if (!valid) {
+                LogNetcode(
+                    "Unterminated RoF2 SoulmarkAdd string"
+                );
+                __packet->SetOpcode(OP_Unknown);
+            }
+        }
+
+        DECODE(OP_SoulmarkUpdate)
+        {
+            DECODE_LENGTH_EXACT(structs::SoulmarkUpdate_Struct);
+
+            SETUP_DIRECT_DECODE(
+                SoulmarkUpdate_Struct,
+                structs::SoulmarkUpdate_Struct
+            );
+
+            const auto copy_string = [](
+                auto &dst,
+                const auto &src
+            ) {
+                static_assert(sizeof(dst) == sizeof(src));
+
+                const auto *end =
+                    static_cast<const char *>(
+                        std::memchr(src, 0, sizeof(src))
+                    );
+
+                if (!end) {
+                    return false;
+                }
+
+                std::memcpy(
+                    dst,
+                    src,
+                    static_cast<size_t>(end - src)
+                );
+
+                return true;
+            };
+
+            bool valid = true;
+
+            for (size_t i = 0; i < 12; ++i) {
+                const auto &src = eq->records[i];
+                auto &dst = emu->records[i];
+
+                // Unused slots have a cleared leading DWORD.
+                // Removed records retain identity but use type zero.
+                if (src.target_name[0] == 0) {
+                    continue;
+                }
+
+                dst.timestamp = src.timestamp;
+                dst.type = src.type;
+
+                valid = copy_string(dst.target_name, src.target_name) && valid;
+                valid = copy_string(dst.target_pid, src.target_pid) && valid;
+                valid = copy_string(dst.gm_name, src.gm_name) && valid;
+                valid = copy_string(dst.gm_pid, src.gm_pid) && valid;
+                valid = copy_string(dst.text, src.text) && valid;
+            }
+
+            FINISH_DIRECT_DECODE();
+
+            if (!valid) {
+                LogNetcode(
+                    "Unterminated RoF2 SoulmarkUpdate string"
+                );
+                __packet->SetOpcode(OP_Unknown);
+            }
+        }
 
         DECODE(OP_PetitionCheckIn)
         {

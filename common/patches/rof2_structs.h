@@ -2756,6 +2756,51 @@ struct Petition_Struct {
 static_assert(sizeof(Petition_Struct) == 2220);
 
 
+// RoF2 native guide/GM soulmark wire formats.
+struct SoulmarkInquiry_Struct {
+    char gm_name[64];
+    uint8 unknown[32];
+    char target_name[64];
+    char target_pid[32];
+};
+
+struct SoulmarkRecord_Struct {
+    char target_name[64];
+    char target_pid[32];
+    char gm_name[64];
+    char gm_pid[32];
+    uint32 timestamp;
+    uint32 type;
+    char text[256];
+};
+
+struct SoulmarkList_Struct {
+    char unknown_header[64];
+    SoulmarkRecord_Struct records[12];
+};
+
+struct SoulmarkUpdate_Struct {
+    char gm_name[64];
+    SoulmarkRecord_Struct records[12];
+};
+
+static_assert(sizeof(SoulmarkInquiry_Struct) == 0xc0);
+static_assert(offsetof(SoulmarkInquiry_Struct, target_name) == 0x60);
+static_assert(offsetof(SoulmarkInquiry_Struct, target_pid) == 0xa0);
+
+static_assert(sizeof(SoulmarkRecord_Struct) == 0x1c8);
+static_assert(offsetof(SoulmarkRecord_Struct, target_pid) == 0x40);
+static_assert(offsetof(SoulmarkRecord_Struct, gm_name) == 0x60);
+static_assert(offsetof(SoulmarkRecord_Struct, gm_pid) == 0xa0);
+static_assert(offsetof(SoulmarkRecord_Struct, timestamp) == 0xc0);
+static_assert(offsetof(SoulmarkRecord_Struct, type) == 0xc4);
+static_assert(offsetof(SoulmarkRecord_Struct, text) == 0xc8);
+
+static_assert(sizeof(SoulmarkList_Struct) == 0x15a0);
+static_assert(sizeof(SoulmarkUpdate_Struct) == 0x15a0);
+static_assert(offsetof(SoulmarkList_Struct, records) == 0x40);
+static_assert(offsetof(SoulmarkUpdate_Struct, records) == 0x40);
+
 struct Who_All_Struct { // 156 length total
 /*000*/	char	whom[64];
 /*088*/	uint8	unknown088[64];

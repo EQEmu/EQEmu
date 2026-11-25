@@ -647,4 +647,7 @@ N(OP_ResetAA),
 N(OP_UnderWorld),
 N(OP_PetitionFeedback),
 N(OP_PetitionGuide),
+N(OP_SoulmarkInquiry),
+N(OP_SoulmarkAdd),
+N(OP_SoulmarkUpdate),
 // mail and chat opcodes located in ../mail_oplist.h

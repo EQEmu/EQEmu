@@ -2648,6 +2648,31 @@ struct Petition_Struct {
 };
 
 
+// Native guide/GM soulmark operations.
+// Client identity is not authoritative.
+struct SoulmarkInquiry_Struct {
+    char target_name[64];
+    char target_pid[32];
+};
+
+struct SoulmarkRecord_Struct {
+    char target_name[64];
+    char target_pid[32];
+    char gm_name[64];
+    char gm_pid[32];
+    uint32 timestamp;
+    uint32 type; // 0 = empty/deleted, 1 = praise, 2 = warning
+    char text[256];
+};
+
+struct SoulmarkList_Struct {
+    SoulmarkRecord_Struct records[12];
+};
+
+struct SoulmarkUpdate_Struct {
+    SoulmarkRecord_Struct records[12];
+};
+
 struct Who_All_Struct { // 76 length total
 /*000*/	char	whom[64];
 /*064*/	uint32	wrace;		// FF FF = no race

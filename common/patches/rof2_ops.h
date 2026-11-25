@@ -20,6 +20,7 @@
 
 E(OP_PetitionUpdate)
 E(OP_PetitionCheckout)
+E(OP_SoulmarkInquiry)
 E(OP_SendMembershipDetails)
 E(OP_TraderShop)
 E(OP_TraderDelItem)
@@ -32,6 +33,9 @@ D(OP_PetitionCheckIn)
 D(OP_PetitionBug)
 D(OP_PetitionFeedback)
 D(OP_PetitionGuide)
+D(OP_SoulmarkInquiry)
+D(OP_SoulmarkAdd)
+D(OP_SoulmarkUpdate)
 
 // End RoF2 Encodes/Decodes
 
