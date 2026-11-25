@@ -12803,7 +12803,18 @@ void Client::Handle_OP_SoulmarkUpdate(
             app->pBuffer
         );
 
-    const auto reject = [this]() {
+    const auto reject = [this](
+        const char *reason,
+        int slot = -1
+    ) {
+        LogError(
+            "Soulmark update rejected: [{}], "
+            "slot [{}], snapshot count [{}]",
+            reason,
+            slot,
+            m_soulmark_snapshot_count
+        );
+
         ResetSoulmarkSnapshot();
 
         Message(Chat::Red,
@@ -12830,36 +12841,124 @@ void Client::Handle_OP_SoulmarkUpdate(
     };
 
     int changed_index = -1;
+    int changed_slot = -1;
+
+    bool matched[12]{};
+    size_t matched_count = 0;
 
     for (size_t i = 0; i < 12; ++i) {
         const auto &incoming = request->records[i];
 
-        if (i >= m_soulmark_snapshot_count) {
-            if (incoming.target_name[0] != 0 ||
-                incoming.type != 0) {
-                reject();
+        // Unused slots are normalized by the decoder.
+        if (incoming.target_name[0] == 0) {
+            if (incoming.type != 0) {
+                reject(
+                    "invalid empty slot",
+                    static_cast<int>(i)
+                );
                 return;
             }
 
             continue;
         }
 
-        const auto &previous =
-            m_soulmark_snapshot[i].wire;
-
         if (!terminated(incoming.target_name) ||
             !terminated(incoming.target_pid) ||
             !terminated(incoming.gm_name) ||
             !terminated(incoming.gm_pid) ||
             !terminated(incoming.text)) {
-            reject();
+            reject(
+                "unterminated string",
+                static_cast<int>(i)
+            );
             return;
         }
 
-        if (!same_identity(incoming, previous)) {
-            reject();
+        if (incoming.type > 2) {
+            reject(
+                "invalid category",
+                static_cast<int>(i)
+            );
             return;
         }
+
+        // Match immutable identity fields instead of
+        // assuming that the client preserves list order.
+        int found = -1;
+
+        for (size_t j = 0;
+             j < m_soulmark_snapshot_count;
+             ++j) {
+            if (!same_identity(
+                    incoming,
+                    m_soulmark_snapshot[j].wire)) {
+                continue;
+            }
+
+            if (found != -1) {
+                reject(
+                    "ambiguous record identity",
+                    static_cast<int>(i)
+                );
+                return;
+            }
+
+            found = static_cast<int>(j);
+        }
+
+        if (found == -1) {
+            // Report field differences without exposing
+            // account names or moderation text.
+            if (i < m_soulmark_snapshot_count) {
+                const auto &expected =
+                    m_soulmark_snapshot[i].wire;
+
+                LogError(
+                    "Soulmark identity mismatch at slot [{}]: "
+                    "target_name [{}], target_pid [{}], "
+                    "gm_name [{}], gm_pid [{}], "
+                    "timestamp [{}]",
+                    i,
+                    std::strcmp(
+                        incoming.target_name,
+                        expected.target_name
+                    ) == 0,
+                    std::strcmp(
+                        incoming.target_pid,
+                        expected.target_pid
+                    ) == 0,
+                    std::strcmp(
+                        incoming.gm_name,
+                        expected.gm_name
+                    ) == 0,
+                    std::strcmp(
+                        incoming.gm_pid,
+                        expected.gm_pid
+                    ) == 0,
+                    incoming.timestamp == expected.timestamp
+                );
+            }
+
+            reject(
+                "record not found in snapshot",
+                static_cast<int>(i)
+            );
+            return;
+        }
+
+        if (matched[found]) {
+            reject(
+                "duplicate incoming record",
+                static_cast<int>(i)
+            );
+            return;
+        }
+
+        matched[found] = true;
+        ++matched_count;
+
+        const auto &previous =
+            m_soulmark_snapshot[found].wire;
 
         const bool text_changed =
             std::strcmp(
@@ -12874,28 +12973,51 @@ void Client::Handle_OP_SoulmarkUpdate(
             continue;
         }
 
-        // The native UI changes one record per action.
         if (changed_index != -1) {
-            reject();
+            reject(
+                "multiple changed records",
+                static_cast<int>(i)
+            );
             return;
         }
 
-        // A category change is allowed only for removal.
         if (type_changed && incoming.type != 0) {
-            reject();
+            reject(
+                "unsupported category change",
+                static_cast<int>(i)
+            );
             return;
         }
 
-        // Remove must not simultaneously change text.
         if (incoming.type == 0 && text_changed) {
-            reject();
+            reject(
+                "remove also changes text",
+                static_cast<int>(i)
+            );
             return;
         }
 
-        changed_index = static_cast<int>(i);
+        changed_index = found;
+        changed_slot = static_cast<int>(i);
+    }
+
+    // Missing records must never imply deletion.
+    if (matched_count != m_soulmark_snapshot_count) {
+        LogError(
+            "Soulmark snapshot coverage: matched [{}], "
+            "expected [{}]",
+            matched_count,
+            m_soulmark_snapshot_count
+        );
+
+        reject("incomplete snapshot");
+        return;
     }
 
     if (changed_index == -1) {
+        LogError(
+            "Soulmark update contains no changes"
+        );
         return;
     }
 
@@ -12903,23 +13025,9 @@ void Client::Handle_OP_SoulmarkUpdate(
         m_soulmark_snapshot[changed_index];
 
     const auto &incoming =
-        request->records[changed_index];
+        request->records[changed_slot];
 
     const bool remove = incoming.type == 0;
-
-    // Do not accept ambiguous record identities.
-    for (size_t i = 0;
-         i < m_soulmark_snapshot_count;
-         ++i) {
-        if (i != static_cast<size_t>(changed_index) &&
-            same_identity(
-                snapshot.wire,
-                m_soulmark_snapshot[i].wire
-            )) {
-            reject();
-            return;
-        }
-    }
 
     // Guides may modify their own records.
     // GM administrators may correct other guides' records.
@@ -12968,9 +13076,18 @@ void Client::Handle_OP_SoulmarkUpdate(
         )
     );
 
-    if (!result.Success() ||
-        result.RowsAffected() != 1) {
-        reject();
+    if (!result.Success()) {
+        LogError(
+            "Soulmark update database error [{}]",
+            result.ErrorNumber()
+        );
+
+        reject("database update failed", changed_slot);
+        return;
+    }
+
+    if (result.RowsAffected() != 1) {
+        reject("revision conflict", changed_slot);
         return;
     }
 
