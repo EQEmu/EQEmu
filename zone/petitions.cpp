@@ -202,10 +202,26 @@ void ZoneDatabase::DeletePetitionFromDB(Petition* wpet) {
 
 void ZoneDatabase::UpdatePetitionToDB(Petition* wpet) {
 
+        char escaped_gmtext[2049] = {};
+        char escaped_lastgm[129] = {};
+
+        DoEscapeString(
+                escaped_gmtext,
+                wpet->GetGMText(),
+                strlen(wpet->GetGMText())
+        );
+
+        DoEscapeString(
+                escaped_lastgm,
+                wpet->GetLastGM(),
+                strlen(wpet->GetLastGM())
+        );
+
+
 	std::string query = StringFormat("UPDATE petitions SET gmtext = '%s', lastgm = '%s', urgency = %i, "
                                     "checkouts = %i, unavailables = %i, ischeckedout = %i "
                                     "WHERE petid = %i",
-                                    wpet->GetGMText(), wpet->GetLastGM(), wpet->GetUrgency(),
+                                    escaped_gmtext, escaped_lastgm, wpet->GetUrgency(),
                                     wpet->GetCheckouts(), wpet->GetUnavails(),
                                     wpet->CheckedOut() ? 1: 0, wpet->GetID());
     auto results = QueryDatabase(query);

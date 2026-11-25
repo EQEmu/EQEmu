@@ -11872,25 +11872,61 @@ void Client::Handle_OP_PetitionBug(const EQApplicationPacket *app)
 	return;
 }
 
-void Client::Handle_OP_PetitionCheckIn(const EQApplicationPacket *app)
+void Client::Handle_OP_PetitionCheckIn(
+        const EQApplicationPacket *app)
 {
-	if (app->size != sizeof(Petition_Struct)) {
-		LogError("Wrong size: OP_PetitionCheckIn, size=[{}], expected [{}]", app->size, sizeof(Petition_Struct));
-		return;
-	}
-	Petition_Struct* inpet = (Petition_Struct*)app->pBuffer;
+        if (Admin() < AccountStatus::QuestTroupe) {
+                return;
+        }
 
-	Petition* pet = PetitionList::Instance()->GetPetitionByID(inpet->petnumber);
-	//if (inpet->urgency != pet->GetUrgency())
-	pet->SetUrgency(inpet->urgency);
-	pet->SetLastGM(GetName());
-	pet->SetGMText(inpet->gmtext);
+        if (app->size != sizeof(Petition_Struct)) {
+                LogError(
+                        "Wrong size: OP_PetitionCheckIn, size=[{}], expected=[{}]",
+                        app->size,
+                        sizeof(Petition_Struct)
+                );
+                return;
+        }
 
-	pet->SetCheckedOut(false);
-	PetitionList::Instance()->UpdatePetition(pet);
-	PetitionList::Instance()->UpdateGMQueue();
-	PetitionList::Instance()->UpdateZoneListQueue();
-	return;
+        if (!worldserver.Connected()) {
+                Message(Chat::Red, "Error: World server disconnected");
+                return;
+        }
+
+        const auto *inpet =
+                reinterpret_cast<const Petition_Struct *>(app->pBuffer);
+
+        if (inpet->urgency > 2 ||
+            inpet->unavail > 0x7fffffffU) {
+                return;
+        }
+
+        if (!memchr(inpet->gmtext, 0, sizeof(inpet->gmtext))) {
+                return;
+        }
+
+        auto *pet =
+                PetitionList::Instance()->GetPetitionByID(
+                        inpet->petnumber
+                );
+
+        if (!pet || !pet->CheckedOut()) {
+                return;
+        }
+
+        if (std::string(pet->GetLastGM()) != GetName()) {
+                return;
+        }
+
+        pet->SetUrgency(inpet->urgency);
+        pet->SetUnavails(inpet->unavail);
+        pet->SetLastGM(GetName());
+        pet->SetGMText(inpet->gmtext);
+        pet->SetCheckedOut(false);
+
+        PetitionList::Instance()->UpdatePetition(pet);
+        PetitionList::Instance()->UpdateGMQueue();
+        PetitionList::Instance()->UpdateZoneListQueue();
 }
 
 void Client::Handle_OP_PetitionCheckout(const EQApplicationPacket *app)

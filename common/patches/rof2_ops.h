@@ -28,6 +28,7 @@ E(OP_TraderDelItem)
 // Begin RoF2 Decodes
 
 D(OP_TraderShop)
+D(OP_PetitionCheckIn)
 
 // End RoF2 Encodes/Decodes
 
