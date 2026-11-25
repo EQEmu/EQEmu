@@ -2721,15 +2721,18 @@ struct CancelTrade_Struct {
 };
 
 struct PetitionUpdate_Struct {
-	uint32 petnumber;    // Petition Number
-	uint32 color;		// 0x00 = green, 0x01 = yellow, 0x02 = red
-	uint32 status;
-	time_t senttime;    // 4 has to be 0x1F
-	char accountid[32];
-	char gmsenttoo[64];
-	int32 quetotal;
-	char charname[64];
+    uint32 petnumber;
+    uint32 color;
+    uint32 status;
+    uint32 senttime;
+    char accountid[32];
+    char gmsenttoo[64];
+    int32 quetotal;
+    char charname[64];
+    uint32 sorttime;
 };
+
+static_assert(sizeof(PetitionUpdate_Struct) == 184);
 
 struct Petition_Struct {
 	uint32 petnumber;

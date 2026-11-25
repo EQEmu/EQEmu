@@ -34,6 +34,8 @@
 #include "common/strings.h"
 
 #include <cassert>
+#include <cstddef>
+#include <cstring>
 #include <cinttypes>
 #include <iostream>
 #include <numeric>
@@ -154,6 +156,50 @@ namespace RoF2
 
 
 	// RoF2 Specific Encodes Begin
+
+        ENCODE(OP_PetitionUpdate)
+        {
+                ENCODE_LENGTH_EXACT(PetitionUpdate_Struct);
+                SETUP_DIRECT_ENCODE(
+                        PetitionUpdate_Struct,
+                        structs::PetitionUpdate_Struct
+                );
+
+                static_assert(offsetof(
+                        structs::PetitionUpdate_Struct,
+                        accountid) == 0x10);
+
+                static_assert(offsetof(
+                        structs::PetitionUpdate_Struct,
+                        quetotal) == 0x70);
+
+                static_assert(offsetof(
+                        structs::PetitionUpdate_Struct,
+                        sorttime) == 0xb4);
+
+                OUT(petnumber);
+                OUT(color);
+                OUT(status);
+
+                eq->senttime =
+                        static_cast<uint32>(emu->senttime);
+
+                std::memcpy(eq->accountid, emu->accountid,
+                        sizeof(eq->accountid));
+                std::memcpy(eq->gmsenttoo, emu->gmsenttoo,
+                        sizeof(eq->gmsenttoo));
+
+                OUT(quetotal);
+
+                std::memcpy(eq->charname, emu->charname,
+                        sizeof(eq->charname));
+
+                eq->sorttime = eq->senttime;
+
+                FINISH_ENCODE();
+        }
+
+
 	ENCODE(OP_SendMembershipDetails)
 	{
 		ENCODE_LENGTH_EXACT(Membership_Details_Struct);
