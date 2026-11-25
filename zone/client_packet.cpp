@@ -25,6 +25,9 @@
 #include "common/raid.h"
 #include "common/rdtsc.h"
 #include "common/repositories/account_repository.h"
+#include "common/repositories/bug_reports_repository.h"
+#include "common/repositories/character_data_repository.h"
+#include "common/zone_store.h"
 #include "common/repositories/adventure_members_repository.h"
 #include "common/repositories/buyer_buy_lines_repository.h"
 #include "common/repositories/character_corpses_repository.h"
@@ -320,6 +323,8 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_PetCommands] = &Client::Handle_OP_PetCommands;
 	ConnectedOpcodes[OP_Petition] = &Client::Handle_OP_Petition;
 	ConnectedOpcodes[OP_PetitionBug] = &Client::Handle_OP_PetitionBug;
+    ConnectedOpcodes[OP_PetitionFeedback] = &Client::Handle_OP_PetitionFeedback;
+    ConnectedOpcodes[OP_PetitionGuide] = &Client::Handle_OP_PetitionGuide;
 	ConnectedOpcodes[OP_PetitionCheckIn] = &Client::Handle_OP_PetitionCheckIn;
 	ConnectedOpcodes[OP_PetitionCheckout] = &Client::Handle_OP_PetitionCheckout;
 	ConnectedOpcodes[OP_PetitionDelete] = &Client::Handle_OP_PetitionDelete;
@@ -11865,11 +11870,199 @@ void Client::Handle_OP_Petition(const EQApplicationPacket *app)
 	return;
 }
 
-void Client::Handle_OP_PetitionBug(const EQApplicationPacket *app)
+void Client::Handle_OP_PetitionBug(
+    const EQApplicationPacket *app)
 {
-	Message(Chat::White, "Petition Bugs are not supported, please use /bug.");
+    if (ClientVersion() != EQ::versions::ClientVersion::RoF2) {
+        Message(Chat::White,
+            "Petition Bugs are not supported, please use /bug.");
+        return;
+    }
 
-	return;
+    HandlePetitionLog(app);
+}
+
+void Client::Handle_OP_PetitionFeedback(
+    const EQApplicationPacket *app)
+{
+    HandlePetitionLog(app);
+}
+
+void Client::Handle_OP_PetitionGuide(
+    const EQApplicationPacket *app)
+{
+    HandlePetitionLog(app);
+}
+
+void Client::HandlePetitionLog(
+    const EQApplicationPacket *app)
+{
+    if (Admin() < AccountStatus::QuestTroupe) {
+        return;
+    }
+
+    if (app->size != sizeof(Petition_Struct)) {
+        LogError(
+            "Invalid PetitionLog packet size [{}]",
+            app->size
+        );
+        return;
+    }
+
+    if (!worldserver.Connected()) {
+        Message(Chat::Red,
+            "Error: World server disconnected");
+        return;
+    }
+
+    const auto *inpet =
+        reinterpret_cast<const Petition_Struct *>(
+            app->pBuffer
+        );
+
+    if (inpet->urgency > 2 ||
+        inpet->unavail > 0x7fffffffU ||
+        !memchr(inpet->gmtext, 0, sizeof(inpet->gmtext))) {
+        return;
+    }
+
+    auto *pet =
+        PetitionList::Instance()->GetPetitionByID(
+            inpet->petnumber
+        );
+
+    if (!pet || !pet->CheckedOut() ||
+        std::string(pet->GetLastGM()) != GetName()) {
+        return;
+    }
+
+    auto event = PlayerEvent::PetitionLogEvent{
+        .petition_id = pet->GetID(),
+        .petitioner_account = pet->GetAccountName(),
+        .petitioner_character = pet->GetCharName(),
+        .guide_name = GetName(),
+        .petition_zone_id = pet->GetZone(),
+        .petition_text = pet->GetPetitionText(),
+        .gm_text = inpet->gmtext,
+        .urgency = inpet->urgency,
+        .checkouts = pet->GetCheckouts(),
+        .unavailables = inpet->unavail,
+        .petition_timestamp =
+            static_cast<int64>(pet->GetSentTime())
+    };
+
+    switch (app->GetOpcode()) {
+
+        case OP_PetitionBug: {
+            if (!RuleB(Bugs, ReportingSystemActive)) {
+                Message(Chat::Red,
+                    "Bug reporting is disabled.");
+                return;
+            }
+
+            const auto character =
+                CharacterDataRepository::FindOne(
+                    database, pet->GetID()
+                );
+
+            if (!character.id ||
+                character.name != event.petitioner_character) {
+                Message(Chat::Red,
+                    "Unable to identify petition author.");
+                return;
+            }
+
+            auto bug = BugReportsRepository::NewEntity();
+
+            bug.account_id = character.account_id;
+            bug.character_id = character.id;
+            bug.character_name = character.name;
+            bug.reporter_name = GetName();
+            bug.reporter_spoof = 0;
+            bug.category_id = 0;
+            bug.category_name = "Other";
+            bug.ui_path = "GM Petition Queue";
+
+            const auto *zone_name =
+                ZoneStore::Instance()->GetZoneName(
+                    pet->GetZone(), false
+                );
+
+            if (zone_name) {
+                bug.zone = zone_name;
+            }
+
+            bug.bug_report = fmt::format(
+                "[Petition {}]\n"
+                "Petitioner: {} ({})\n"
+                "Guide: {}\n"
+                "Urgency: {}\n"
+                "Checkouts: {}\n"
+                "Unavailable: {}\n\n"
+                "{}\n\n"
+                "Guide notes:\n{}",
+                event.petition_id,
+                event.petitioner_character,
+                event.petitioner_account,
+                event.guide_name,
+                event.urgency,
+                event.checkouts,
+                event.unavailables,
+                event.petition_text,
+                event.gm_text
+            );
+
+            const auto result =
+                BugReportsRepository::InsertOne(
+                    database, bug
+                );
+
+            if (!result.id) {
+                Message(Chat::Red,
+                    "Failed to log petition as bug report.");
+                return;
+            }
+
+            Message(Chat::White,
+                "Petition saved as bug report %u.",
+                static_cast<unsigned>(result.id));
+
+            break;
+        }
+
+        case OP_PetitionFeedback: {
+            if (!PlayerEventLogs::Instance()->IsEventEnabled(
+                PlayerEvent::PETITION_FEEDBACK)) {
+                Message(Chat::Red,
+                    "Petition feedback logging is disabled.");
+                return;
+            }
+
+            RecordPlayerEventLog(
+                PlayerEvent::PETITION_FEEDBACK, event
+            );
+            break;
+        }
+
+        case OP_PetitionGuide: {
+            if (!PlayerEventLogs::Instance()->IsEventEnabled(
+                PlayerEvent::PETITION_GUIDE)) {
+                Message(Chat::Red,
+                    "Petition guide logging is disabled.");
+                return;
+            }
+
+            RecordPlayerEventLog(
+                PlayerEvent::PETITION_GUIDE, event
+            );
+            break;
+        }
+
+        default:
+            return;
+    }
+
+    // Logging never changes or releases the petition.
 }
 
 void Client::Handle_OP_PetitionCheckIn(

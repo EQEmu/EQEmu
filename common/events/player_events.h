@@ -94,6 +94,8 @@ namespace PlayerEvent {
 		GUILD_BANK_DEPOSIT,
 		GUILD_BANK_WITHDRAWAL,
 		GUILD_BANK_MOVE_TO_BANK_AREA,
+        PETITION_FEEDBACK,
+        PETITION_GUIDE,
 		MAX // dont remove
 	};
 
@@ -161,7 +163,9 @@ namespace PlayerEvent {
 		"Evolve Item Update",
 		"Guild Bank Item Deposit",
 		"Guild Bank Item Withdrawal",
-		"Guild Bank Move From Deposit Area to Bank Area"
+		"Guild Bank Move From Deposit Area to Bank Area",
+        "Petition Feedback",
+        "Petition Guide"
 	};
 
 	// Generic struct used by all events
@@ -443,7 +447,39 @@ namespace PlayerEvent {
 		}
 	};
 
-	struct GMCommandEvent {
+	struct PetitionLogEvent {
+        uint32 petition_id;
+        std::string petitioner_account;
+        std::string petitioner_character;
+        std::string guide_name;
+        uint32 petition_zone_id;
+        std::string petition_text;
+        std::string gm_text;
+        uint32 urgency;
+        uint32 checkouts;
+        uint32 unavailables;
+        int64 petition_timestamp;
+
+        template <class Archive>
+        void serialize(Archive& ar)
+        {
+            ar(
+                CEREAL_NVP(petition_id),
+                CEREAL_NVP(petitioner_account),
+                CEREAL_NVP(petitioner_character),
+                CEREAL_NVP(guide_name),
+                CEREAL_NVP(petition_zone_id),
+                CEREAL_NVP(petition_text),
+                CEREAL_NVP(gm_text),
+                CEREAL_NVP(urgency),
+                CEREAL_NVP(checkouts),
+                CEREAL_NVP(unavailables),
+                CEREAL_NVP(petition_timestamp)
+            );
+        }
+    };
+
+    struct GMCommandEvent {
 		std::string message;
 		std::string target;
 

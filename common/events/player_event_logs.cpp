@@ -1152,6 +1152,11 @@ void PlayerEventLogs::SetSettingsDefaults()
 	for (int i = PlayerEvent::GM_COMMAND; i != PlayerEvent::MAX; i++) {
 		m_settings[i].retention_days = RETENTION_DAYS_DEFAULT;
 	}
+
+    m_settings[PlayerEvent::PETITION_FEEDBACK].event_enabled = 1;
+    m_settings[PlayerEvent::PETITION_GUIDE].event_enabled = 1;
+    m_settings[PlayerEvent::PETITION_FEEDBACK].retention_days = 365;
+    m_settings[PlayerEvent::PETITION_GUIDE].retention_days = 365;
 }
 
 void PlayerEventLogs::LoadEtlIds()

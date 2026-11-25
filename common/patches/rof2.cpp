@@ -6385,6 +6385,201 @@ namespace RoF2
                 FINISH_DIRECT_DECODE();
         }
 
+        DECODE(OP_PetitionBug)
+        {
+                constexpr size_t gm_offset = offsetof(
+                        structs::Petition_Struct, gmtext);
+
+                constexpr size_t min_size = gm_offset + 4;
+
+                constexpr size_t max_size =
+                        sizeof(structs::Petition_Struct) + 3;
+
+                static_assert(gm_offset == 0x4ac);
+
+                if (__packet->size < min_size ||
+                    __packet->size > max_size) {
+                        LogNetcode(
+                                "Invalid RoF2 PetitionBug size [{}]",
+                                __packet->size
+                        );
+                        __packet->SetOpcode(OP_Unknown);
+                        return;
+                }
+
+                const size_t available =
+                        __packet->size - gm_offset;
+
+                const size_t gm_capacity =
+                        sizeof(((structs::Petition_Struct*)nullptr)->gmtext);
+
+                const size_t gm_bytes =
+                        available < gm_capacity
+                                ? available : gm_capacity;
+
+                const char *gm_text =
+                        reinterpret_cast<const char *>(
+                                __packet->pBuffer + gm_offset
+                        );
+
+                if (!std::memchr(gm_text, 0, gm_bytes)) {
+                        LogNetcode(
+                                "Unterminated RoF2 PetitionBug GM text"
+                        );
+                        __packet->SetOpcode(OP_Unknown);
+                        return;
+                }
+
+                SETUP_DIRECT_DECODE(
+                        Petition_Struct,
+                        structs::Petition_Struct
+                );
+
+                IN(petnumber);
+                IN(urgency);
+                IN(unavail);
+
+                std::memcpy(
+                        emu->gmtext,
+                        gm_text,
+                        gm_bytes
+                );
+
+                emu->gmtext[sizeof(emu->gmtext) - 1] = 0;
+
+                FINISH_DIRECT_DECODE();
+        }
+
+        DECODE(OP_PetitionFeedback)
+        {
+                constexpr size_t gm_offset = offsetof(
+                        structs::Petition_Struct, gmtext);
+
+                constexpr size_t min_size = gm_offset + 4;
+
+                constexpr size_t max_size =
+                        sizeof(structs::Petition_Struct) + 3;
+
+                static_assert(gm_offset == 0x4ac);
+
+                if (__packet->size < min_size ||
+                    __packet->size > max_size) {
+                        LogNetcode(
+                                "Invalid RoF2 PetitionFeedback size [{}]",
+                                __packet->size
+                        );
+                        __packet->SetOpcode(OP_Unknown);
+                        return;
+                }
+
+                const size_t available =
+                        __packet->size - gm_offset;
+
+                const size_t gm_capacity =
+                        sizeof(((structs::Petition_Struct*)nullptr)->gmtext);
+
+                const size_t gm_bytes =
+                        available < gm_capacity
+                                ? available : gm_capacity;
+
+                const char *gm_text =
+                        reinterpret_cast<const char *>(
+                                __packet->pBuffer + gm_offset
+                        );
+
+                if (!std::memchr(gm_text, 0, gm_bytes)) {
+                        LogNetcode(
+                                "Unterminated RoF2 PetitionFeedback GM text"
+                        );
+                        __packet->SetOpcode(OP_Unknown);
+                        return;
+                }
+
+                SETUP_DIRECT_DECODE(
+                        Petition_Struct,
+                        structs::Petition_Struct
+                );
+
+                IN(petnumber);
+                IN(urgency);
+                IN(unavail);
+
+                std::memcpy(
+                        emu->gmtext,
+                        gm_text,
+                        gm_bytes
+                );
+
+                emu->gmtext[sizeof(emu->gmtext) - 1] = 0;
+
+                FINISH_DIRECT_DECODE();
+        }
+
+        DECODE(OP_PetitionGuide)
+        {
+                constexpr size_t gm_offset = offsetof(
+                        structs::Petition_Struct, gmtext);
+
+                constexpr size_t min_size = gm_offset + 4;
+
+                constexpr size_t max_size =
+                        sizeof(structs::Petition_Struct) + 3;
+
+                static_assert(gm_offset == 0x4ac);
+
+                if (__packet->size < min_size ||
+                    __packet->size > max_size) {
+                        LogNetcode(
+                                "Invalid RoF2 PetitionGuide size [{}]",
+                                __packet->size
+                        );
+                        __packet->SetOpcode(OP_Unknown);
+                        return;
+                }
+
+                const size_t available =
+                        __packet->size - gm_offset;
+
+                const size_t gm_capacity =
+                        sizeof(((structs::Petition_Struct*)nullptr)->gmtext);
+
+                const size_t gm_bytes =
+                        available < gm_capacity
+                                ? available : gm_capacity;
+
+                const char *gm_text =
+                        reinterpret_cast<const char *>(
+                                __packet->pBuffer + gm_offset
+                        );
+
+                if (!std::memchr(gm_text, 0, gm_bytes)) {
+                        LogNetcode(
+                                "Unterminated RoF2 PetitionGuide GM text"
+                        );
+                        __packet->SetOpcode(OP_Unknown);
+                        return;
+                }
+
+                SETUP_DIRECT_DECODE(
+                        Petition_Struct,
+                        structs::Petition_Struct
+                );
+
+                IN(petnumber);
+                IN(urgency);
+                IN(unavail);
+
+                std::memcpy(
+                        emu->gmtext,
+                        gm_text,
+                        gm_bytes
+                );
+
+                emu->gmtext[sizeof(emu->gmtext) - 1] = 0;
+
+                FINISH_DIRECT_DECODE();
+        }
+
 	DECODE(OP_TraderShop)
 	{
 		uint32 action = *(uint32 *)__packet->pBuffer;

@@ -38,6 +38,7 @@
 
 #include "cereal/archives/json.hpp"
 #include <mutex>
+#include <type_traits>
 
 
 class PlayerEventLogs {
@@ -77,7 +78,7 @@ public:
 		}
 
 		n.event_type_name = PlayerEvent::EventName[t];
-		n.event_data      = Strings::Contains(ss.str(), "noop") ? "{}" : ss.str();
+		n.event_data      = std::is_same_v<T, PlayerEvent::EmptyEvent> ? "{}" : ss.str();
 		n.created_at      = std::time(nullptr);
 
 		auto c = PlayerEvent::PlayerEventContainer{
