@@ -2109,6 +2109,8 @@ private:
     uint32 m_last_soulmark_inquiry = 0;
     bool m_soulmark_add_seen = false;
     uint32 m_last_soulmark_add = 0;
+    bool m_feedback_seen = false;
+    uint32 m_last_feedback = 0;
 
     struct SoulmarkSnapshotEntry {
         uint64 id = 0;

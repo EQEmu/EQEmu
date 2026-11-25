@@ -2650,6 +2650,12 @@ struct Petition_Struct {
 
 // Native guide/GM soulmark operations.
 // Client identity is not authoritative.
+struct Feedback_Struct {
+    char feedback[1024];
+};
+
+static_assert(sizeof(Feedback_Struct) == 1024);
+
 struct SoulmarkInquiry_Struct {
     char target_name[64];
     char target_pid[32];

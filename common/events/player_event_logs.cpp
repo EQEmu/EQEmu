@@ -60,7 +60,35 @@ void PlayerEventLogs::Init()
 		if (e.id >= PlayerEvent::MAX) {
 			continue;
 		}
-		m_settings[e.id] = e;
+		// Event 59 now handles both direct and
+                // petition-derived player feedback.
+                if (e.id == PlayerEvent::PLAYER_FEEDBACK &&
+                    e.event_name == "Petition Feedback") {
+
+                    const auto result =
+                        m_database->QueryDatabase(
+                            fmt::format(
+                                "UPDATE `player_event_log_settings` "
+                                "SET `event_name` = 'Player Feedback' "
+                                "WHERE `id` = {} "
+                                "AND `event_name` = 'Petition Feedback'",
+                                static_cast<int>(
+                                    PlayerEvent::PLAYER_FEEDBACK
+                                )
+                            )
+                        );
+
+                    if (result.Success()) {
+                        e.event_name = "Player Feedback";
+                    }
+                    else {
+                        LogError(
+                            "Unable to rename player feedback settings"
+                        );
+                    }
+                }
+
+                m_settings[e.id] = e;
 		db.emplace_back(static_cast<int>(e.id));
 	}
 
@@ -1153,9 +1181,9 @@ void PlayerEventLogs::SetSettingsDefaults()
 		m_settings[i].retention_days = RETENTION_DAYS_DEFAULT;
 	}
 
-    m_settings[PlayerEvent::PETITION_FEEDBACK].event_enabled = 1;
+    m_settings[PlayerEvent::PLAYER_FEEDBACK].event_enabled = 1;
     m_settings[PlayerEvent::PETITION_GUIDE].event_enabled = 1;
-    m_settings[PlayerEvent::PETITION_FEEDBACK].retention_days = 365;
+    m_settings[PlayerEvent::PLAYER_FEEDBACK].retention_days = 365;
     m_settings[PlayerEvent::PETITION_GUIDE].retention_days = 365;
     m_settings[PlayerEvent::SOULMARK_CHANGE].event_enabled = 1;
     m_settings[PlayerEvent::SOULMARK_CHANGE].retention_days = 365;

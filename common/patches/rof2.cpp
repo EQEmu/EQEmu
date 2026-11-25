@@ -6372,7 +6372,56 @@ namespace RoF2
 	}
 
 
-        DECODE(OP_SoulmarkInquiry)
+        DECODE(OP_Feedback)
+    {
+        DECODE_LENGTH_EXACT(structs::Feedback_Struct);
+
+        SETUP_DIRECT_DECODE(
+            Feedback_Struct,
+            structs::Feedback_Struct
+        );
+
+        const auto *end =
+            static_cast<const char *>(
+                std::memchr(
+                    eq->feedback,
+                    0,
+                    sizeof(eq->feedback)
+                )
+            );
+
+        bool valid = false;
+
+        if (end) {
+            const size_t length =
+                static_cast<size_t>(
+                    end - eq->feedback
+                );
+
+            if (length < sizeof(emu->feedback)) {
+                std::memcpy(
+                    emu->feedback,
+                    eq->feedback,
+                    length + 1
+                );
+
+                valid = true;
+            }
+        }
+
+        FINISH_DIRECT_DECODE();
+
+        if (!valid) {
+            LogNetcode(
+                "Invalid RoF2 feedback text length "
+                "or termination"
+            );
+
+            __packet->SetOpcode(OP_Unknown);
+        }
+    }
+
+    DECODE(OP_SoulmarkInquiry)
         {
             DECODE_LENGTH_EXACT(structs::SoulmarkInquiry_Struct);
 

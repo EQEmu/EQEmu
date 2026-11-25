@@ -324,6 +324,7 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_PDeletePetition] = &Client::Handle_OP_PDeletePetition;
 	ConnectedOpcodes[OP_PetCommands] = &Client::Handle_OP_PetCommands;
 	ConnectedOpcodes[OP_Petition] = &Client::Handle_OP_Petition;
+    ConnectedOpcodes[OP_Feedback] = &Client::Handle_OP_Feedback;
 	ConnectedOpcodes[OP_PetitionBug] = &Client::Handle_OP_PetitionBug;
     ConnectedOpcodes[OP_PetitionFeedback] = &Client::Handle_OP_PetitionFeedback;
     ConnectedOpcodes[OP_PetitionGuide] = &Client::Handle_OP_PetitionGuide;
@@ -11833,6 +11834,130 @@ void Client::Handle_OP_PetCommands(const EQApplicationPacket *app)
 		break;
 	}
 }
+void Client::Handle_OP_Feedback(
+    const EQApplicationPacket *app)
+{
+    // Only the RoF2 packet format has been verified.
+    if (ClientVersion() !=
+            EQ::versions::ClientVersion::RoF2) {
+        return;
+    }
+
+    if (app->size != sizeof(Feedback_Struct)) {
+        LogError(
+            "Invalid feedback packet size [{}]",
+            app->size
+        );
+        return;
+    }
+
+    if (!PlayerEventLogs::Instance()->IsEventEnabled(
+            PlayerEvent::PLAYER_FEEDBACK)) {
+        Message(Chat::Red,
+            "Player feedback is disabled on this server.");
+        return;
+    }
+
+    if (AccountID() == 0 || CharacterID() == 0) {
+        return;
+    }
+
+    constexpr uint32 feedback_interval_ms = 10000;
+    const uint32 now = Timer::GetCurrentTime();
+
+    if (m_feedback_seen &&
+        static_cast<uint32>(
+            now - m_last_feedback
+        ) < feedback_interval_ms) {
+        Message(Chat::Red,
+            "Please wait before submitting more feedback.");
+        return;
+    }
+
+    const auto *request =
+        reinterpret_cast<const Feedback_Struct *>(
+            app->pBuffer
+        );
+
+    const auto *end =
+        static_cast<const char *>(
+            std::memchr(
+                request->feedback,
+                0,
+                sizeof(request->feedback)
+            )
+        );
+
+    if (!end) {
+        return;
+    }
+
+    const std::string text(
+        request->feedback,
+        static_cast<size_t>(
+            end - request->feedback
+        )
+    );
+
+    if (text.empty() ||
+        text.size() > 1023 ||
+        text.find_first_not_of(" \t\r\n") ==
+            std::string::npos) {
+        Message(Chat::Red,
+            "Feedback must contain 1 to 1023 bytes.");
+        return;
+    }
+
+    // Reject text already corrupted by client conversion.
+    if (text.find("\xEF\xBF\xBD") !=
+            std::string::npos) {
+        Message(Chat::Red,
+            "Feedback contains unsupported characters.");
+        return;
+    }
+
+    // Conservative encoding policy.
+    // Preserve multiline text and ordinary punctuation.
+    for (const unsigned char c : text) {
+        if (c == '\t' || c == '\r' || c == '\n') {
+            continue;
+        }
+
+        if (c < 32 || c > 126) {
+            Message(Chat::Red,
+                "Feedback contains unsupported characters.");
+            return;
+        }
+    }
+
+    const auto submitted_at = std::time(nullptr);
+
+    auto feedback =
+        PlayerEvent::PlayerFeedbackEvent{};
+
+    feedback.source = "direct";
+    feedback.petition_id = 0;
+    feedback.petitioner_account = AccountName();
+    feedback.petitioner_character = GetName();
+    feedback.petition_zone_id = zone->GetZoneID();
+    feedback.petition_text = text;
+
+    feedback.petition_timestamp =
+        static_cast<int64>(submitted_at);
+
+    // Only accepted feedback consumes the rate limit.
+    m_feedback_seen = true;
+    m_last_feedback = now;
+
+    RecordPlayerEventLog(
+        PlayerEvent::PLAYER_FEEDBACK,
+        feedback
+    );
+
+    Message(Chat::White,
+        "Thank you. Your feedback has been submitted.");
+}
+
 void Client::Handle_OP_Petition(const EQApplicationPacket *app)
 {
 	if (app->size <= 1)
@@ -12052,14 +12177,31 @@ void Client::HandlePetitionLog(
 
         case OP_PetitionFeedback: {
             if (!PlayerEventLogs::Instance()->IsEventEnabled(
-                PlayerEvent::PETITION_FEEDBACK)) {
+                PlayerEvent::PLAYER_FEEDBACK)) {
                 Message(Chat::Red,
                     "Petition feedback logging is disabled.");
                 return;
             }
 
+            auto feedback =
+                PlayerEvent::PlayerFeedbackEvent{};
+
+            feedback.source = "petition";
+            feedback.petition_id = event.petition_id;
+            feedback.petitioner_account = event.petitioner_account;
+            feedback.petitioner_character = event.petitioner_character;
+            feedback.guide_name = event.guide_name;
+            feedback.petition_zone_id = event.petition_zone_id;
+            feedback.petition_text = event.petition_text;
+            feedback.gm_text = event.gm_text;
+            feedback.urgency = event.urgency;
+            feedback.checkouts = event.checkouts;
+            feedback.unavailables = event.unavailables;
+            feedback.petition_timestamp = event.petition_timestamp;
+
             RecordPlayerEventLog(
-                PlayerEvent::PETITION_FEEDBACK, event
+                PlayerEvent::PLAYER_FEEDBACK,
+                feedback
             );
             break;
         }

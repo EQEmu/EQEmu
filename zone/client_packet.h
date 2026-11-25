@@ -251,6 +251,7 @@
 	void Handle_OP_PDeletePetition(const EQApplicationPacket *app);
 	void Handle_OP_PetCommands(const EQApplicationPacket *app);
 	void Handle_OP_Petition(const EQApplicationPacket *app);
+    void Handle_OP_Feedback(const EQApplicationPacket *app);
 	void Handle_OP_PetitionBug(const EQApplicationPacket *app);
     void Handle_OP_PetitionFeedback(const EQApplicationPacket *app);
     void Handle_OP_PetitionGuide(const EQApplicationPacket *app);

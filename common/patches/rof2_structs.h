@@ -2757,6 +2757,16 @@ static_assert(sizeof(Petition_Struct) == 2220);
 
 
 // RoF2 native guide/GM soulmark wire formats.
+// Native RoF2 FeedbackWindow submission.
+// All metadata is obtained from the server session.
+struct Feedback_Struct {
+    uint8 unknown000[120];
+    char feedback[1028];
+};
+
+static_assert(sizeof(Feedback_Struct) == 1148);
+static_assert(offsetof(Feedback_Struct, feedback) == 120);
+
 struct SoulmarkInquiry_Struct {
     char gm_name[64];
     uint8 unknown[32];

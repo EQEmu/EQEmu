@@ -36,6 +36,7 @@ D(OP_PetitionGuide)
 D(OP_SoulmarkInquiry)
 D(OP_SoulmarkAdd)
 D(OP_SoulmarkUpdate)
+D(OP_Feedback)
 
 // End RoF2 Encodes/Decodes
 
