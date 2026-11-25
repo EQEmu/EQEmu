@@ -11957,31 +11957,83 @@ void Client::Handle_OP_PetitionCheckout(const EQApplicationPacket *app)
 	return;
 }
 
-void Client::Handle_OP_PetitionDelete(const EQApplicationPacket *app)
+void Client::Handle_OP_PetitionDelete(
+        const EQApplicationPacket *app)
 {
-	if (app->size != sizeof(PetitionUpdate_Struct)) {
-		LogError("Wrong size: OP_PetitionDelete, size=[{}], expected [{}]", app->size, sizeof(PetitionUpdate_Struct));
-		return;
-	}
-	auto outapp = new EQApplicationPacket(OP_PetitionUpdate, sizeof(PetitionUpdate_Struct));
-	PetitionUpdate_Struct* pet = (PetitionUpdate_Struct*)outapp->pBuffer;
-	pet->petnumber = *((int*)app->pBuffer);
-	pet->color = 0x00;
-	pet->status = 0xFFFFFFFF;
-	pet->senttime = 0;
-	strcpy(pet->accountid, "");
-	strcpy(pet->gmsenttoo, "");
-	pet->quetotal = PetitionList::Instance()->GetTotalPetitions();
-	strcpy(pet->charname, "");
-	FastQueuePacket(&outapp);
+        if (Admin() < AccountStatus::QuestTroupe) {
+                return;
+        }
 
-	if (PetitionList::Instance()->DeletePetition(pet->petnumber) == -1)
-		std::cout << "Something is borked with: " << pet->petnumber << std::endl;
-	PetitionList::Instance()->ClearPetitions();
-	PetitionList::Instance()->UpdateGMQueue();
-	PetitionList::Instance()->ReadDatabase();
-	PetitionList::Instance()->UpdateZoneListQueue();
-	return;
+        // RoF2 sends only the petition ID.
+        // Retain compatibility with the legacy packet format.
+        if (app->size != sizeof(uint32) &&
+            app->size != sizeof(PetitionUpdate_Struct)) {
+                LogError(
+                        "Invalid petition delete/resolve size [{}]",
+                        app->size
+                );
+                return;
+        }
+
+        if (!worldserver.Connected()) {
+                Message(Chat::Red, "Error: World server disconnected");
+                return;
+        }
+
+        // Keep the ID independently of any packet buffer.
+        uint32 petition_id = 0;
+        memcpy(
+                &petition_id,
+                app->pBuffer,
+                sizeof(petition_id)
+        );
+
+        auto *petitions = PetitionList::Instance();
+        auto *existing =
+                petitions->GetPetitionByID(petition_id);
+
+        if (!existing || !existing->CheckedOut()) {
+                return;
+        }
+
+        // Only the current guide may finish the petition.
+        if (std::string(existing->GetLastGM()) != GetName()) {
+                return;
+        }
+
+        if (petitions->DeletePetition(petition_id) == -1) {
+                LogError(
+                        "Failed to delete petition [{}]",
+                        petition_id
+                );
+                return;
+        }
+
+        // Reload the authoritative database state.
+        petitions->ReadDatabase();
+
+        // Explicitly remove the completed petition from
+        // the requesting client's queue.
+        auto *outapp = new EQApplicationPacket(
+                OP_PetitionUpdate,
+                sizeof(PetitionUpdate_Struct)
+        );
+
+        auto *update =
+                reinterpret_cast<PetitionUpdate_Struct *>(
+                        outapp->pBuffer
+                );
+
+        memset(update, 0, sizeof(PetitionUpdate_Struct));
+
+        update->petnumber = petition_id;
+        update->status = 0xffffffffU;
+        update->quetotal = petitions->GetTotalPetitions();
+
+        FastQueuePacket(&outapp);
+
+        // Do not access the packet or its buffer after queuing.
+        petitions->UpdateZoneListQueue();
 }
 
 void Client::Handle_OP_PetitionQue(const EQApplicationPacket *app)
