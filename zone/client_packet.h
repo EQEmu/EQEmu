@@ -268,6 +268,7 @@
     void ResetSoulmarkSnapshot();
 	bool ResolveSoulmarkTarget(const std::string &target_name, const std::string &target_pid, uint32 &account_id, uint32 &character_id, std::string &character_name);
 	void SendSoulmarkList(uint32 account_id);
+    void ResendSoulmarkSnapshot();
 	void Handle_OP_PetitionResolve(const EQApplicationPacket *app);
 	void Handle_OP_PetitionUnCheckout(const EQApplicationPacket *app);
 	void Handle_OP_PlayerStateAdd(const EQApplicationPacket *app);

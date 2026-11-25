@@ -12514,7 +12514,10 @@ bool Client::ResolveSoulmarkTarget(
         database.GetAccountName(account_id);
 
     if (account_name.empty() ||
-        account_name != target_pid) {
+        strcasecmp(
+            account_name.c_str(),
+            target_pid.c_str()
+        ) != 0) {
         Message(Chat::Red,
             "Soulmark: character and PID do not match.");
         return false;
@@ -12692,6 +12695,41 @@ void Client::SendSoulmarkList(uint32 account_id)
     m_soulmark_snapshot_account_id = account_id;
     m_soulmark_snapshot_count = index;
 
+    QueuePacket(&outapp);
+}
+
+void Client::ResendSoulmarkSnapshot()
+{
+    if (ClientVersion() !=
+            EQ::versions::ClientVersion::RoF2 ||
+        Admin() < AccountStatus::QuestTroupe ||
+        m_soulmark_snapshot_account_id == 0 ||
+        m_soulmark_snapshot_count > 12) {
+        return;
+    }
+
+    EQApplicationPacket outapp(
+        OP_SoulmarkInquiry,
+        sizeof(SoulmarkList_Struct)
+    );
+
+    auto *response =
+        reinterpret_cast<SoulmarkList_Struct *>(
+            outapp.pBuffer
+        );
+
+    std::memset(response, 0, sizeof(*response));
+
+    for (size_t i = 0;
+         i < m_soulmark_snapshot_count;
+         ++i) {
+        response->records[i] =
+            m_soulmark_snapshot[i].wire;
+    }
+
+    // Restore the last authoritative list without
+    // querying the database for rate-limited requests.
+    // Keep snapshot identities and revisions unchanged.
     QueuePacket(&outapp);
 }
 
@@ -12935,12 +12973,7 @@ void Client::Handle_OP_SoulmarkUpdate(
         Message(Chat::Red,
             "Please wait before changing another soulmark.");
 
-        const uint32 account_id =
-            m_soulmark_snapshot_account_id;
-
-        if (account_id != 0) {
-            SendSoulmarkList(account_id);
-        }
+        ResendSoulmarkSnapshot();
 
         return;
     }
