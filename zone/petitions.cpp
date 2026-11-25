@@ -25,6 +25,7 @@
 #include "zone/worldserver.h"
 
 #include <cstring>
+#include <algorithm>
 
 extern WorldServer worldserver;
 
@@ -84,6 +85,21 @@ Petition* PetitionList::GetPetitionByID(uint32 id_in) {
 	}
 	return 0;
 }
+std::vector<uint32> PetitionList::GetPetitionIDs()
+{
+    std::vector<uint32> ids;
+    LinkedListIterator<Petition*> iterator(list);
+
+    iterator.Reset();
+
+    while (iterator.MoreElements()) {
+        ids.push_back(iterator.GetData()->GetID());
+        iterator.Advance();
+    }
+
+    return ids;
+}
+
 uint32 PetitionList::GetTotalPetitions(){
 	LinkedListIterator<Petition*> iterator(list);
 	iterator.Reset();
@@ -137,21 +153,40 @@ void PetitionList::AddPetition(Petition* pet) {
 //Return Values: 0 = Ok ; -1 = Error deleting petition.
 int PetitionList::DeletePetition(uint32 petnumber)
 {
-	LinkedListIterator<Petition*> iterator(list);
-	iterator.Reset();
-	std::scoped_lock lock(PList_Mutex);
-	while(iterator.MoreElements()) {
-		if (iterator.GetData()->GetID() == petnumber) {
-			database.DeletePetitionFromDB(iterator.GetData());
-			iterator.RemoveCurrent();
-			return 0;
-			break;
-		}
-		else {
-			iterator.Advance();
-		}
-	}
-	return -1;
+    bool deleted = false;
+
+    {
+        std::scoped_lock lock(PList_Mutex);
+
+        LinkedListIterator<Petition*> iterator(list);
+        iterator.Reset();
+
+        while (iterator.MoreElements()) {
+            if (iterator.GetData()->GetID() == petnumber) {
+                if (!database.DeletePetitionFromDB(
+                        iterator.GetData())) {
+                    return -1;
+                }
+
+                iterator.RemoveCurrent(true);
+                deleted = true;
+                break;
+            }
+
+            iterator.Advance();
+        }
+    }
+
+    if (!deleted) {
+        return -1;
+    }
+
+    entity_list.RemovePetitionFromAdmins(petnumber);
+
+    ReadDatabase();
+    UpdateZoneListQueue();
+
+    return 0;
 }
 
 void PetitionList::UpdateGMQueue() {
@@ -168,24 +203,40 @@ void PetitionList::UpdateGMQueue() {
 	return;
 }
 
-void PetitionList::ClearPetitions() {
-	//	entity_list.ClearClientPetitionQueue();
-	LinkedListIterator<Petition*> iterator(list);
-	iterator.Reset();
-	while(iterator.MoreElements())
-	{
-		iterator.RemoveCurrent(true);
-		iterator.Advance();
-	}
-	return;
+void PetitionList::ClearPetitions()
+{
+    LinkedListIterator<Petition*> iterator(list);
+    iterator.Reset();
+
+    while (iterator.MoreElements()) {
+        // RemoveCurrent already advances the iterator.
+        iterator.RemoveCurrent(true);
+    }
 }
 
 void PetitionList::ReadDatabase()
 {
-	std::scoped_lock lock(PList_Mutex);
-	ClearPetitions();
-	database.RefreshPetitionsFromDB();
-	UpdateGMQueue();
+    std::scoped_lock lock(PList_Mutex);
+
+    const auto old_ids = GetPetitionIDs();
+
+    // Preserve the existing cache if the query fails.
+    if (!database.RefreshPetitionsFromDB()) {
+        LogError("Failed to refresh petition cache");
+        return;
+    }
+
+    const auto new_ids = GetPetitionIDs();
+
+    for (const auto id : old_ids) {
+        if (std::find(
+                new_ids.begin(), new_ids.end(), id
+            ) == new_ids.end()) {
+            entity_list.RemovePetitionFromAdmins(id);
+        }
+    }
+
+    UpdateGMQueue();
 }
 
 void PetitionList::UpdatePetition(Petition* pet)
@@ -194,10 +245,24 @@ void PetitionList::UpdatePetition(Petition* pet)
 	database.UpdatePetitionToDB(pet);
 }
 
-void ZoneDatabase::DeletePetitionFromDB(Petition* wpet) {
+bool ZoneDatabase::DeletePetitionFromDB(Petition* wpet)
+{
+    auto results = QueryDatabase(
+        fmt::format(
+            "DELETE FROM petitions WHERE petid = {}",
+            wpet->GetID()
+        )
+    );
 
-    std::string query = StringFormat("DELETE FROM petitions WHERE petid = %i", wpet->GetID());
-    auto results = QueryDatabase(query);
+    if (!results.Success()) {
+        LogError(
+            "Failed to delete petition [{}]",
+            wpet->GetID()
+        );
+        return false;
+    }
+
+    return results.RowsAffected() == 1;
 }
 
 void ZoneDatabase::UpdatePetitionToDB(Petition* wpet) {
@@ -259,7 +324,7 @@ void ZoneDatabase::InsertPetitionToDB(Petition* wpet)
 
 }
 
-void ZoneDatabase::RefreshPetitionsFromDB()
+bool ZoneDatabase::RefreshPetitionsFromDB()
 {
 	Petition* newpet;
 	std::string query = "SELECT petid, charname, accountname, lastgm, petitiontext, "
@@ -268,8 +333,10 @@ void ZoneDatabase::RefreshPetitionsFromDB()
                         "FROM petitions ORDER BY petid";
     auto results = QueryDatabase(query);
 	if (!results.Success()) {
-		return;
-	}
+        return false;
+    }
+
+    PetitionList::Instance()->ClearPetitions();
 
     for (auto row = results.begin(); row != results.end(); ++row) {
         newpet = new Petition(Strings::ToInt(row[0]));
@@ -294,4 +361,5 @@ void ZoneDatabase::RefreshPetitionsFromDB()
         PetitionList::Instance()->AddPetition(newpet);
     }
 
+    return true;
 }

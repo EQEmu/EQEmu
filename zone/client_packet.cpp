@@ -12202,31 +12202,7 @@ void Client::Handle_OP_PetitionDelete(
                 return;
         }
 
-        // Reload the authoritative database state.
-        petitions->ReadDatabase();
-
-        // Explicitly remove the completed petition from
-        // the requesting client's queue.
-        auto *outapp = new EQApplicationPacket(
-                OP_PetitionUpdate,
-                sizeof(PetitionUpdate_Struct)
-        );
-
-        auto *update =
-                reinterpret_cast<PetitionUpdate_Struct *>(
-                        outapp->pBuffer
-                );
-
-        memset(update, 0, sizeof(PetitionUpdate_Struct));
-
-        update->petnumber = petition_id;
-        update->status = 0xffffffffU;
-        update->quetotal = petitions->GetTotalPetitions();
-
-        FastQueuePacket(&outapp);
-
-        // Do not access the packet or its buffer after queuing.
-        petitions->UpdateZoneListQueue();
+	// Deletion and synchronization are handled by PetitionList.
 }
 
 void Client::Handle_OP_PetitionQue(const EQApplicationPacket *app)

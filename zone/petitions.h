@@ -21,6 +21,7 @@
 #include "common/types.h"
 
 #include <mutex>
+#include <vector>
 
 class Client;
 
@@ -100,6 +101,7 @@ public:
 	void AddPetition(Petition* pet);
 	Petition* GetPetitionByID(uint32 id_in);
 	uint32	GetTotalPetitions();
+	std::vector<uint32> GetPetitionIDs();
 	void ClearPetitions();
 	void ReadDatabase();
 	void UpdatePetition(Petition* pet);

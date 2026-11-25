@@ -467,6 +467,7 @@ public:
 	void	RemoveEntity(uint16 id);
 	void	SendPetitionToAdmins(Petition* pet);
 	void	SendPetitionToAdmins();
+	void RemovePetitionFromAdmins(uint32 petition_id);
 	void	AddLootToNPCS(uint32 item_id, uint32 count);
 
 	void	ListNPCCorpses(Client* client);

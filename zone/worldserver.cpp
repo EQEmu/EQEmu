@@ -897,14 +897,28 @@ void WorldServer::HandleMessage(uint16 opcode, const EQ::Net::Packet &p)
 			).c_str()
 		);
 	}
-	case ServerOP_Petition: {
-		std::cout << "Got Server Requested Petition List Refresh" << std::endl;
-		ServerPetitionUpdate_Struct* sus = (ServerPetitionUpdate_Struct*)pack->pBuffer;
-		// this was typoed to = instead of ==, not that it acts any different now though..
-		if (sus->status == 0) PetitionList::Instance()->ReadDatabase();
-		else if (sus->status == 1) PetitionList::Instance()->ReadDatabase(); // Until I fix this to be better....
-		break;
-	}
+        case ServerOP_Petition: {
+            if (pack->size != sizeof(
+                    ServerPetitionUpdate_Struct)) {
+                LogError(
+                    "Invalid ServerOP_Petition size [{}]",
+                    pack->size
+                );
+                break;
+            }
+
+            const auto *update =
+                reinterpret_cast<
+                    const ServerPetitionUpdate_Struct *
+                >(pack->pBuffer);
+
+            if (update->status == 0 ||
+                update->status == 1) {
+                PetitionList::Instance()->ReadDatabase();
+            }
+
+            break;
+        }
 	case ServerOP_RezzPlayer: {
 		RezzPlayer_Struct* srs = (RezzPlayer_Struct*)pack->pBuffer;
 		if (srs->rezzopcode == OP_RezzRequest)
