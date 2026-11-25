@@ -465,8 +465,9 @@ public:
 	static char* RemoveNumbers(char* name);
 	void	SignalMobsByNPCID(uint32 npc_type, int signal_id);
 	void	RemoveEntity(uint16 id);
-	void	SendPetitionToAdmins(Petition* pet);
-	void	SendPetitionToAdmins();
+	void	SendPetitionToAdmins(Petition* pet, Client* recipient = nullptr);
+	void	SendPetitionToAdmins(Client* recipient = nullptr);
+	void RemovePetitionFromAdmins(uint32 petition_id);
 	void	AddLootToNPCS(uint32 item_id, uint32 count);
 
 	void	ListNPCCorpses(Client* client);

@@ -605,10 +605,12 @@ public:
 	bool DeleteMercenary(uint32 mercenary_id);
 
 	/* Petitions   */
-	void	DeletePetitionFromDB(Petition* wpet);
-	void	UpdatePetitionToDB(Petition* wpet);
+	bool DeletePetitionFromDB(Petition* wpet, const char* owner = nullptr);
+	bool UpdatePetitionToDB(Petition* previous, Petition* proposed);
+    bool OwnsPetition(Petition* pet, const char* owner);
+    uint32 GetUniquePetitionRow(uint32 petition_id);
 	void	InsertPetitionToDB(Petition* wpet);
-	void	RefreshPetitionsFromDB();
+	bool RefreshPetitionsFromDB();
 
 	/* Merchants  */
 	void	SaveMerchantTemp(uint32 npcid, uint32 slot, uint32 zone_id, uint32 instance_id, uint32 item, uint32 charges);

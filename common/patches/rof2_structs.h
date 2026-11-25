@@ -2721,38 +2721,95 @@ struct CancelTrade_Struct {
 };
 
 struct PetitionUpdate_Struct {
-	uint32 petnumber;    // Petition Number
-	uint32 color;		// 0x00 = green, 0x01 = yellow, 0x02 = red
-	uint32 status;
-	time_t senttime;    // 4 has to be 0x1F
-	char accountid[32];
-	char gmsenttoo[64];
-	int32 quetotal;
-	char charname[64];
+    uint32 petnumber;
+    uint32 color;
+    uint32 status;
+    uint32 senttime;
+    char accountid[32];
+    char gmsenttoo[64];
+    int32 quetotal;
+    char charname[64];
+    uint32 sorttime;
 };
+
+static_assert(sizeof(PetitionUpdate_Struct) == 184);
 
 struct Petition_Struct {
-	uint32 petnumber;
-	uint32 urgency;
-	char accountid[32];
-	char lastgm[32];
-	uint32	zone;
-	//char zone[32];
-	char charname[64];
-	uint32 charlevel;
-	uint32 charclass;
-	uint32 charrace;
-	uint32 unknown;
-	//time_t senttime; // Time?
-	uint32 checkouts;
-	uint32 unavail;
-	//uint8 unknown5[4];
-	time_t senttime;
-	uint32 unknown2;
-	char petitiontext[1024];
-	char gmtext[1024];
+    uint32 petnumber;
+    uint32 urgency;
+    char accountid[32];
+    char lastgm[32];
+    uint32 zone;
+    char charname[64];
+    uint32 charlevel;
+    uint32 charclass;
+    uint32 charrace;
+    uint32 unknown;
+    uint32 checkouts;
+    uint32 unavail;
+    uint32 senttime;
+    uint32 unknown2;
+    char petitiontext[1024];
+    char gmtext[1024];
 };
 
+static_assert(sizeof(Petition_Struct) == 2220);
+
+
+// RoF2 native guide/GM soulmark wire formats.
+// Native RoF2 FeedbackWindow submission.
+// All metadata is obtained from the server session.
+struct Feedback_Struct {
+    uint8 unknown000[120];
+    char feedback[1028];
+};
+
+static_assert(sizeof(Feedback_Struct) == 1148);
+static_assert(offsetof(Feedback_Struct, feedback) == 120);
+
+struct SoulmarkInquiry_Struct {
+    char gm_name[64];
+    uint8 unknown[32];
+    char target_name[64];
+    char target_pid[32];
+};
+
+struct SoulmarkRecord_Struct {
+    char target_name[64];
+    char target_pid[32];
+    char gm_name[64];
+    char gm_pid[32];
+    uint32 timestamp;
+    uint32 type;
+    char text[256];
+};
+
+struct SoulmarkList_Struct {
+    char unknown_header[64];
+    SoulmarkRecord_Struct records[12];
+};
+
+struct SoulmarkUpdate_Struct {
+    char gm_name[64];
+    SoulmarkRecord_Struct records[12];
+};
+
+static_assert(sizeof(SoulmarkInquiry_Struct) == 0xc0);
+static_assert(offsetof(SoulmarkInquiry_Struct, target_name) == 0x60);
+static_assert(offsetof(SoulmarkInquiry_Struct, target_pid) == 0xa0);
+
+static_assert(sizeof(SoulmarkRecord_Struct) == 0x1c8);
+static_assert(offsetof(SoulmarkRecord_Struct, target_pid) == 0x40);
+static_assert(offsetof(SoulmarkRecord_Struct, gm_name) == 0x60);
+static_assert(offsetof(SoulmarkRecord_Struct, gm_pid) == 0xa0);
+static_assert(offsetof(SoulmarkRecord_Struct, timestamp) == 0xc0);
+static_assert(offsetof(SoulmarkRecord_Struct, type) == 0xc4);
+static_assert(offsetof(SoulmarkRecord_Struct, text) == 0xc8);
+
+static_assert(sizeof(SoulmarkList_Struct) == 0x15a0);
+static_assert(sizeof(SoulmarkUpdate_Struct) == 0x15a0);
+static_assert(offsetof(SoulmarkList_Struct, records) == 0x40);
+static_assert(offsetof(SoulmarkUpdate_Struct, records) == 0x40);
 
 struct Who_All_Struct { // 156 length total
 /*000*/	char	whom[64];

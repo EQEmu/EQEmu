@@ -34,6 +34,8 @@
 #include "common/strings.h"
 
 #include <cassert>
+#include <cstddef>
+#include <cstring>
 #include <cinttypes>
 #include <iostream>
 #include <numeric>
@@ -154,6 +156,149 @@ namespace RoF2
 
 
 	// RoF2 Specific Encodes Begin
+
+
+        ENCODE(OP_SoulmarkInquiry)
+        {
+            ENCODE_LENGTH_EXACT(SoulmarkList_Struct);
+
+            SETUP_DIRECT_ENCODE(
+                SoulmarkList_Struct,
+                structs::SoulmarkList_Struct
+            );
+
+            std::memset(eq, 0, sizeof(*eq));
+
+            for (size_t i = 0; i < 12; ++i) {
+                const auto &src = emu->records[i];
+                auto &dst = eq->records[i];
+
+                if (src.type != 1 && src.type != 2) {
+                    continue;
+                }
+
+                dst.timestamp = src.timestamp;
+                dst.type = src.type;
+
+                std::memcpy(
+                    dst.target_name,
+                    src.target_name,
+                    sizeof(dst.target_name) - 1
+                );
+                std::memcpy(
+                    dst.target_pid,
+                    src.target_pid,
+                    sizeof(dst.target_pid) - 1
+                );
+                std::memcpy(
+                    dst.gm_name,
+                    src.gm_name,
+                    sizeof(dst.gm_name) - 1
+                );
+                std::memcpy(
+                    dst.gm_pid,
+                    src.gm_pid,
+                    sizeof(dst.gm_pid) - 1
+                );
+                std::memcpy(
+                    dst.text,
+                    src.text,
+                    sizeof(dst.text) - 1
+                );
+            }
+
+            FINISH_ENCODE();
+        }
+
+        ENCODE(OP_PetitionCheckout)
+        {
+                ENCODE_LENGTH_EXACT(Petition_Struct);
+                SETUP_DIRECT_ENCODE(
+                        Petition_Struct,
+                        structs::Petition_Struct
+                );
+
+                static_assert(offsetof(
+                        structs::Petition_Struct,
+                        senttime) == 0xa4);
+
+                static_assert(offsetof(
+                        structs::Petition_Struct,
+                        petitiontext) == 0xac);
+
+                static_assert(offsetof(
+                        structs::Petition_Struct,
+                        gmtext) == 0x4ac);
+
+                OUT(petnumber);
+                OUT(urgency);
+                OUT(zone);
+                OUT(charlevel);
+                OUT(charclass);
+                OUT(charrace);
+                OUT(checkouts);
+                OUT(unavail);
+
+                eq->senttime =
+                        static_cast<uint32>(emu->senttime);
+
+                std::memcpy(eq->accountid, emu->accountid,
+                        sizeof(eq->accountid) - 1);
+                std::memcpy(eq->lastgm, emu->lastgm,
+                        sizeof(eq->lastgm) - 1);
+                std::memcpy(eq->charname, emu->charname,
+                        sizeof(eq->charname) - 1);
+                std::memcpy(eq->petitiontext, emu->petitiontext,
+                        sizeof(eq->petitiontext) - 1);
+                std::memcpy(eq->gmtext, emu->gmtext,
+                        sizeof(eq->gmtext) - 1);
+
+                FINISH_ENCODE();
+        }
+
+        ENCODE(OP_PetitionUpdate)
+        {
+                ENCODE_LENGTH_EXACT(PetitionUpdate_Struct);
+                SETUP_DIRECT_ENCODE(
+                        PetitionUpdate_Struct,
+                        structs::PetitionUpdate_Struct
+                );
+
+                static_assert(offsetof(
+                        structs::PetitionUpdate_Struct,
+                        accountid) == 0x10);
+
+                static_assert(offsetof(
+                        structs::PetitionUpdate_Struct,
+                        quetotal) == 0x70);
+
+                static_assert(offsetof(
+                        structs::PetitionUpdate_Struct,
+                        sorttime) == 0xb4);
+
+                OUT(petnumber);
+                OUT(color);
+                OUT(status);
+
+                eq->senttime =
+                        static_cast<uint32>(emu->senttime);
+
+                std::memcpy(eq->accountid, emu->accountid,
+                        sizeof(eq->accountid));
+                std::memcpy(eq->gmsenttoo, emu->gmsenttoo,
+                        sizeof(eq->gmsenttoo));
+
+                OUT(quetotal);
+
+                std::memcpy(eq->charname, emu->charname,
+                        sizeof(eq->charname));
+
+                eq->sorttime = eq->senttime;
+
+                FINISH_ENCODE();
+        }
+
+
 	ENCODE(OP_SendMembershipDetails)
 	{
 		ENCODE_LENGTH_EXACT(Membership_Details_Struct);
@@ -6225,6 +6370,479 @@ namespace RoF2
 
 		FINISH_DIRECT_DECODE();
 	}
+
+
+        DECODE(OP_Feedback)
+    {
+        DECODE_LENGTH_EXACT(structs::Feedback_Struct);
+
+        SETUP_DIRECT_DECODE(
+            Feedback_Struct,
+            structs::Feedback_Struct
+        );
+
+        const auto *end =
+            static_cast<const char *>(
+                std::memchr(
+                    eq->feedback,
+                    0,
+                    sizeof(eq->feedback)
+                )
+            );
+
+        bool valid = false;
+
+        if (end) {
+            const size_t length =
+                static_cast<size_t>(
+                    end - eq->feedback
+                );
+
+            if (length < sizeof(emu->feedback)) {
+                std::memcpy(
+                    emu->feedback,
+                    eq->feedback,
+                    length + 1
+                );
+
+                valid = true;
+            }
+        }
+
+        FINISH_DIRECT_DECODE();
+
+        if (!valid) {
+            LogNetcode(
+                "Invalid RoF2 feedback text length "
+                "or termination"
+            );
+
+            __packet->SetOpcode(OP_Unknown);
+        }
+    }
+
+    DECODE(OP_SoulmarkInquiry)
+        {
+            DECODE_LENGTH_EXACT(structs::SoulmarkInquiry_Struct);
+
+            SETUP_DIRECT_DECODE(
+                SoulmarkInquiry_Struct,
+                structs::SoulmarkInquiry_Struct
+            );
+
+            const auto copy_string = [](
+                auto &dst,
+                const auto &src
+            ) {
+                static_assert(sizeof(dst) == sizeof(src));
+
+                const auto *end =
+                    static_cast<const char *>(
+                        std::memchr(src, 0, sizeof(src))
+                    );
+
+                if (!end) {
+                    return false;
+                }
+
+                std::memcpy(
+                    dst,
+                    src,
+                    static_cast<size_t>(end - src)
+                );
+
+                return true;
+            };
+
+            bool valid = true;
+
+            valid = copy_string(emu->target_name, eq->target_name) && valid;
+            valid = copy_string(emu->target_pid, eq->target_pid) && valid;
+
+            FINISH_DIRECT_DECODE();
+
+            if (!valid) {
+                LogNetcode(
+                    "Unterminated RoF2 SoulmarkInquiry string"
+                );
+                __packet->SetOpcode(OP_Unknown);
+            }
+        }
+
+        DECODE(OP_SoulmarkAdd)
+        {
+            DECODE_LENGTH_EXACT(structs::SoulmarkRecord_Struct);
+
+            SETUP_DIRECT_DECODE(
+                SoulmarkRecord_Struct,
+                structs::SoulmarkRecord_Struct
+            );
+
+            const auto copy_string = [](
+                auto &dst,
+                const auto &src
+            ) {
+                static_assert(sizeof(dst) == sizeof(src));
+
+                const auto *end =
+                    static_cast<const char *>(
+                        std::memchr(src, 0, sizeof(src))
+                    );
+
+                if (!end) {
+                    return false;
+                }
+
+                std::memcpy(
+                    dst,
+                    src,
+                    static_cast<size_t>(end - src)
+                );
+
+                return true;
+            };
+
+            bool valid = true;
+
+            emu->type = eq->type;
+            valid = copy_string(emu->target_name, eq->target_name) && valid;
+            valid = copy_string(emu->target_pid, eq->target_pid) && valid;
+            valid = copy_string(emu->text, eq->text) && valid;
+
+            FINISH_DIRECT_DECODE();
+
+            if (!valid) {
+                LogNetcode(
+                    "Unterminated RoF2 SoulmarkAdd string"
+                );
+                __packet->SetOpcode(OP_Unknown);
+            }
+        }
+
+        DECODE(OP_SoulmarkUpdate)
+        {
+            DECODE_LENGTH_EXACT(structs::SoulmarkUpdate_Struct);
+
+            SETUP_DIRECT_DECODE(
+                SoulmarkUpdate_Struct,
+                structs::SoulmarkUpdate_Struct
+            );
+
+            const auto copy_string = [](
+                auto &dst,
+                const auto &src
+            ) {
+                static_assert(sizeof(dst) == sizeof(src));
+
+                const auto *end =
+                    static_cast<const char *>(
+                        std::memchr(src, 0, sizeof(src))
+                    );
+
+                if (!end) {
+                    return false;
+                }
+
+                std::memcpy(
+                    dst,
+                    src,
+                    static_cast<size_t>(end - src)
+                );
+
+                return true;
+            };
+
+            bool valid = true;
+
+            for (size_t i = 0; i < 12; ++i) {
+                const auto &src = eq->records[i];
+                auto &dst = emu->records[i];
+
+                // Unused slots have a cleared leading DWORD.
+                // Removed records retain identity but use type zero.
+                if (src.target_name[0] == 0) {
+                    continue;
+                }
+
+                dst.timestamp = src.timestamp;
+                dst.type = src.type;
+
+                valid = copy_string(dst.target_name, src.target_name) && valid;
+                valid = copy_string(dst.target_pid, src.target_pid) && valid;
+                valid = copy_string(dst.gm_name, src.gm_name) && valid;
+                valid = copy_string(dst.gm_pid, src.gm_pid) && valid;
+                valid = copy_string(dst.text, src.text) && valid;
+            }
+
+            FINISH_DIRECT_DECODE();
+
+            if (!valid) {
+                LogNetcode(
+                    "Unterminated RoF2 SoulmarkUpdate string"
+                );
+                __packet->SetOpcode(OP_Unknown);
+            }
+        }
+
+        DECODE(OP_PetitionCheckIn)
+        {
+                constexpr size_t gm_offset = offsetof(
+                        structs::Petition_Struct, gmtext);
+
+                constexpr size_t min_size = gm_offset + 4;
+
+                constexpr size_t max_size =
+                        sizeof(structs::Petition_Struct) + 3;
+
+                static_assert(gm_offset == 0x4ac);
+
+                if (__packet->size < min_size ||
+                    __packet->size > max_size) {
+                        LogNetcode(
+                                "Invalid RoF2 PetitionCheckIn size [{}]",
+                                __packet->size
+                        );
+                        __packet->SetOpcode(OP_Unknown);
+                        return;
+                }
+
+                const size_t available =
+                        __packet->size - gm_offset;
+
+                const size_t gm_capacity =
+                        sizeof(((structs::Petition_Struct*)nullptr)->gmtext);
+
+                const size_t gm_bytes =
+                        available < gm_capacity
+                                ? available : gm_capacity;
+
+                const char *gm_text =
+                        reinterpret_cast<const char *>(
+                                __packet->pBuffer + gm_offset
+                        );
+
+                if (!std::memchr(gm_text, 0, gm_bytes)) {
+                        LogNetcode(
+                                "Unterminated RoF2 PetitionCheckIn GM text"
+                        );
+                        __packet->SetOpcode(OP_Unknown);
+                        return;
+                }
+
+                SETUP_DIRECT_DECODE(
+                        Petition_Struct,
+                        structs::Petition_Struct
+                );
+
+                IN(petnumber);
+                IN(urgency);
+                IN(unavail);
+
+                std::memcpy(
+                        emu->gmtext,
+                        gm_text,
+                        gm_bytes
+                );
+
+                emu->gmtext[sizeof(emu->gmtext) - 1] = 0;
+
+                FINISH_DIRECT_DECODE();
+        }
+
+        DECODE(OP_PetitionBug)
+        {
+                constexpr size_t gm_offset = offsetof(
+                        structs::Petition_Struct, gmtext);
+
+                constexpr size_t min_size = gm_offset + 4;
+
+                constexpr size_t max_size =
+                        sizeof(structs::Petition_Struct) + 3;
+
+                static_assert(gm_offset == 0x4ac);
+
+                if (__packet->size < min_size ||
+                    __packet->size > max_size) {
+                        LogNetcode(
+                                "Invalid RoF2 PetitionBug size [{}]",
+                                __packet->size
+                        );
+                        __packet->SetOpcode(OP_Unknown);
+                        return;
+                }
+
+                const size_t available =
+                        __packet->size - gm_offset;
+
+                const size_t gm_capacity =
+                        sizeof(((structs::Petition_Struct*)nullptr)->gmtext);
+
+                const size_t gm_bytes =
+                        available < gm_capacity
+                                ? available : gm_capacity;
+
+                const char *gm_text =
+                        reinterpret_cast<const char *>(
+                                __packet->pBuffer + gm_offset
+                        );
+
+                if (!std::memchr(gm_text, 0, gm_bytes)) {
+                        LogNetcode(
+                                "Unterminated RoF2 PetitionBug GM text"
+                        );
+                        __packet->SetOpcode(OP_Unknown);
+                        return;
+                }
+
+                SETUP_DIRECT_DECODE(
+                        Petition_Struct,
+                        structs::Petition_Struct
+                );
+
+                IN(petnumber);
+                IN(urgency);
+                IN(unavail);
+
+                std::memcpy(
+                        emu->gmtext,
+                        gm_text,
+                        gm_bytes
+                );
+
+                emu->gmtext[sizeof(emu->gmtext) - 1] = 0;
+
+                FINISH_DIRECT_DECODE();
+        }
+
+        DECODE(OP_PetitionFeedback)
+        {
+                constexpr size_t gm_offset = offsetof(
+                        structs::Petition_Struct, gmtext);
+
+                constexpr size_t min_size = gm_offset + 4;
+
+                constexpr size_t max_size =
+                        sizeof(structs::Petition_Struct) + 3;
+
+                static_assert(gm_offset == 0x4ac);
+
+                if (__packet->size < min_size ||
+                    __packet->size > max_size) {
+                        LogNetcode(
+                                "Invalid RoF2 PetitionFeedback size [{}]",
+                                __packet->size
+                        );
+                        __packet->SetOpcode(OP_Unknown);
+                        return;
+                }
+
+                const size_t available =
+                        __packet->size - gm_offset;
+
+                const size_t gm_capacity =
+                        sizeof(((structs::Petition_Struct*)nullptr)->gmtext);
+
+                const size_t gm_bytes =
+                        available < gm_capacity
+                                ? available : gm_capacity;
+
+                const char *gm_text =
+                        reinterpret_cast<const char *>(
+                                __packet->pBuffer + gm_offset
+                        );
+
+                if (!std::memchr(gm_text, 0, gm_bytes)) {
+                        LogNetcode(
+                                "Unterminated RoF2 PetitionFeedback GM text"
+                        );
+                        __packet->SetOpcode(OP_Unknown);
+                        return;
+                }
+
+                SETUP_DIRECT_DECODE(
+                        Petition_Struct,
+                        structs::Petition_Struct
+                );
+
+                IN(petnumber);
+                IN(urgency);
+                IN(unavail);
+
+                std::memcpy(
+                        emu->gmtext,
+                        gm_text,
+                        gm_bytes
+                );
+
+                emu->gmtext[sizeof(emu->gmtext) - 1] = 0;
+
+                FINISH_DIRECT_DECODE();
+        }
+
+        DECODE(OP_PetitionGuide)
+        {
+                constexpr size_t gm_offset = offsetof(
+                        structs::Petition_Struct, gmtext);
+
+                constexpr size_t min_size = gm_offset + 4;
+
+                constexpr size_t max_size =
+                        sizeof(structs::Petition_Struct) + 3;
+
+                static_assert(gm_offset == 0x4ac);
+
+                if (__packet->size < min_size ||
+                    __packet->size > max_size) {
+                        LogNetcode(
+                                "Invalid RoF2 PetitionGuide size [{}]",
+                                __packet->size
+                        );
+                        __packet->SetOpcode(OP_Unknown);
+                        return;
+                }
+
+                const size_t available =
+                        __packet->size - gm_offset;
+
+                const size_t gm_capacity =
+                        sizeof(((structs::Petition_Struct*)nullptr)->gmtext);
+
+                const size_t gm_bytes =
+                        available < gm_capacity
+                                ? available : gm_capacity;
+
+                const char *gm_text =
+                        reinterpret_cast<const char *>(
+                                __packet->pBuffer + gm_offset
+                        );
+
+                if (!std::memchr(gm_text, 0, gm_bytes)) {
+                        LogNetcode(
+                                "Unterminated RoF2 PetitionGuide GM text"
+                        );
+                        __packet->SetOpcode(OP_Unknown);
+                        return;
+                }
+
+                SETUP_DIRECT_DECODE(
+                        Petition_Struct,
+                        structs::Petition_Struct
+                );
+
+                IN(petnumber);
+                IN(urgency);
+                IN(unavail);
+
+                std::memcpy(
+                        emu->gmtext,
+                        gm_text,
+                        gm_bytes
+                );
+
+                emu->gmtext[sizeof(emu->gmtext) - 1] = 0;
+
+                FINISH_DIRECT_DECODE();
+        }
 
 	DECODE(OP_TraderShop)
 	{

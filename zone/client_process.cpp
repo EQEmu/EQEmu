@@ -691,6 +691,12 @@ bool Client::Process() {
 
 /* Just a set of actions preformed all over in Client::Process */
 void Client::OnDisconnect(bool hard_disconnect) {
+    if (Admin() >= AccountStatus::QuestTroupe) {
+        PetitionList::Instance()->ReleaseCheckouts(
+            GetName()
+        );
+    }
+
 	if (hard_disconnect) {
 		LeaveGroup();
 

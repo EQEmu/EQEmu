@@ -149,6 +149,7 @@ set(repositories
     repositories/base/base_account_ip_repository.h
     repositories/base/base_account_repository.h
     repositories/base/base_account_rewards_repository.h
+    repositories/base/base_account_soulmarks_repository.h
     repositories/base/base_adventure_details_repository.h
     repositories/base/base_adventure_members_repository.h
     repositories/base/base_adventure_stats_repository.h
@@ -347,6 +348,7 @@ set(repositories
     repositories/account_ip_repository.h
     repositories/account_repository.h
     repositories/account_rewards_repository.h
+    repositories/account_soulmarks_repository.h
     repositories/adventure_details_repository.h
     repositories/adventure_members_repository.h
     repositories/adventure_stats_repository.h

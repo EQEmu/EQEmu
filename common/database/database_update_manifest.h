@@ -7207,6 +7207,36 @@ ALTER TABLE `character_parcels_containers`
 )",
 		.content_schema_update = false
 	},
+        ManifestEntry{
+                .version = 9329,
+                .description = "2026_11_25_account_soulmarks.sql",
+                .check = "SHOW TABLES LIKE 'account_soulmarks'",
+                .condition = "empty",
+                .match = "",
+                .sql = R"(
+CREATE TABLE IF NOT EXISTS `account_soulmarks` (
+    `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+    `account_id` int NOT NULL,
+    `character_id` int unsigned NOT NULL,
+    `character_name` varchar(64) NOT NULL,
+    `gm_account_id` int NOT NULL,
+    `gm_character_id` int unsigned NOT NULL,
+    `gm_character_name` varchar(64) NOT NULL,
+    `type` tinyint unsigned NOT NULL,
+    `text` varchar(255) NOT NULL,
+    `created_at` datetime NOT NULL,
+    `updated_at` datetime DEFAULT NULL,
+    `deleted_at` datetime DEFAULT NULL,
+    `revision` int unsigned NOT NULL DEFAULT 1,
+    PRIMARY KEY (`id`),
+    KEY `idx_account_active` (`account_id`, `deleted_at`, `created_at`),
+    KEY `idx_character_id` (`character_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1
+  COLLATE=latin1_swedish_ci;
+ )",
+                .content_schema_update = false
+        },
+
 // -- template; copy/paste this when you need to create a new entry
 //	ManifestEntry{
 //		.version = 9228,

@@ -172,6 +172,25 @@ int main(int argc, char **argv)
 	server_opts.port        = Config->WorldTCPPort;
 	server_opts.ipv6        = false;
 	server_opts.credentials = Config->SharedKey;
+
+    // No active guide sessions exist on a fresh
+    // World startup. Recover abandoned checkouts.
+    auto petition_recovery = database.QueryDatabase(
+        "UPDATE petitions SET ischeckedout = 0 "
+        "WHERE ischeckedout = 1"
+    );
+
+    if (petition_recovery.Success()) {
+        LogInfo(
+            "Recovered [{}] abandoned petition checkouts",
+            petition_recovery.RowsAffected()
+        );
+    } else {
+        LogError(
+            "Failed to recover abandoned petition checkouts"
+        );
+    }
+
 	server_connection->Listen(server_opts);
 	LogInfo("Server (TCP) listener started on port [{}]", Config->WorldTCPPort);
 

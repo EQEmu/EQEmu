@@ -2103,6 +2103,30 @@ private:
 	std::map<uint32, CharacterParcelsRepository::CharacterParcels> m_parcels{};
 	int Haste; //precalced value
 	uint32 tmSitting; // time stamp started sitting, used for HP regen bonus added on MAY 5, 2004
+    uint32 m_last_petition_refresh = 0;
+    bool m_petition_refresh_seen = false;
+    bool m_soulmark_inquiry_seen = false;
+    uint32 m_last_soulmark_inquiry = 0;
+    bool m_soulmark_add_seen = false;
+    uint32 m_last_soulmark_add = 0;
+    bool m_feedback_seen = false;
+    uint32 m_last_feedback = 0;
+
+    struct SoulmarkSnapshotEntry {
+        uint64 id = 0;
+        uint32 revision = 0;
+        uint32 gm_account_id = 0;
+        SoulmarkRecord_Struct wire{};
+    };
+
+    SoulmarkSnapshotEntry m_soulmark_snapshot[12]{};
+
+    uint32 m_soulmark_snapshot_account_id = 0;
+    size_t m_soulmark_snapshot_count = 0;
+
+    bool m_soulmark_update_seen = false;
+    uint32 m_last_soulmark_update = 0;
+
 
 	int32 environment_damage_modifier;
 	bool invulnerable_environment_damage;

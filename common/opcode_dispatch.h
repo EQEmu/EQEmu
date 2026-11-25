@@ -233,6 +233,8 @@ IN(OP_InspectRequest, Inspect_Struct);
 IN(OP_InspectAnswer, Inspect_Struct);	//follows request
 IN(OP_DeleteSpell, DeleteSpell_Struct);
 IN(OP_PetitionBug, PetitionBug_Struct);
+INr(OP_PetitionFeedback);
+INr(OP_PetitionGuide);
 IN(OP_Bug, BugStruct);
 
 //all these petition opcodes need checking

@@ -3397,10 +3397,11 @@ uint32 EntityList::DeletePlayerCorpses()
 	return corpse_count;
 }
 
-void EntityList::SendPetitionToAdmins()
+void EntityList::SendPetitionToAdmins(Client* recipient)
 {
 	auto outapp = new EQApplicationPacket(OP_PetitionUpdate, sizeof(PetitionUpdate_Struct));
 	PetitionUpdate_Struct *pcus = (PetitionUpdate_Struct*) outapp->pBuffer;
+	memset(pcus, 0, sizeof(PetitionUpdate_Struct));
 	pcus->petnumber = 0;		// Petition Number
 	pcus->color = 0;
 	pcus->status = 0xFFFFFFFF;
@@ -3410,17 +3411,19 @@ void EntityList::SendPetitionToAdmins()
 	pcus->quetotal=0;
 	auto it = client_list.begin();
 	while (it != client_list.end()) {
-		if (it->second->CastToClient()->Admin() >= AccountStatus::QuestTroupe)
+		if ((!recipient || it->second->CastToClient() == recipient) &&
+            it->second->CastToClient()->Admin() >= AccountStatus::QuestTroupe)
 			it->second->CastToClient()->QueuePacket(outapp);
 		++it;
 	}
 	safe_delete(outapp);
 }
 
-void EntityList::SendPetitionToAdmins(Petition *pet)
+void EntityList::SendPetitionToAdmins(Petition *pet, Client* recipient)
 {
 	auto outapp = new EQApplicationPacket(OP_PetitionUpdate, sizeof(PetitionUpdate_Struct));
 	PetitionUpdate_Struct *pcus = (PetitionUpdate_Struct*) outapp->pBuffer;
+	memset(pcus, 0, sizeof(PetitionUpdate_Struct));
 	pcus->petnumber = pet->GetID();		// Petition Number
 	if (pet->CheckedOut()) {
 		pcus->color = 0x00;
@@ -3432,17 +3435,18 @@ void EntityList::SendPetitionToAdmins(Petition *pet)
 		pcus->color = pet->GetUrgency();	// 0x00 = green, 0x01 = yellow, 0x02 = red
 		pcus->status = pet->GetSentTime();
 		pcus->senttime = pet->GetSentTime();			// 4 has to be 0x1F
-		strcpy(pcus->accountid, pet->GetAccountName());
-		strcpy(pcus->charname, pet->GetCharName());
+		strn0cpy(pcus->accountid, pet->GetAccountName(), sizeof(pcus->accountid));
+		strn0cpy(pcus->charname, pet->GetCharName(), sizeof(pcus->charname));
 	}
 	pcus->quetotal = PetitionList::Instance()->GetTotalPetitions();
 	auto it = client_list.begin();
 	while (it != client_list.end()) {
-		if (it->second->CastToClient()->Admin() >= AccountStatus::QuestTroupe) {
+		if ((!recipient || it->second->CastToClient() == recipient) &&
+            it->second->CastToClient()->Admin() >= AccountStatus::QuestTroupe) {
 			if (pet->CheckedOut())
 				strcpy(pcus->gmsenttoo, "");
 			else
-				strcpy(pcus->gmsenttoo, it->second->CastToClient()->GetName());
+				strn0cpy(pcus->gmsenttoo, it->second->CastToClient()->GetName(), sizeof(pcus->gmsenttoo));
 			it->second->CastToClient()->QueuePacket(outapp);
 		}
 		++it;
@@ -3450,30 +3454,42 @@ void EntityList::SendPetitionToAdmins(Petition *pet)
 	safe_delete(outapp);
 }
 
+void EntityList::RemovePetitionFromAdmins(uint32 petition_id)
+{
+    auto outapp = new EQApplicationPacket(
+        OP_PetitionUpdate,
+        sizeof(PetitionUpdate_Struct)
+    );
+
+    auto *update =
+        reinterpret_cast<PetitionUpdate_Struct *>(
+            outapp->pBuffer
+        );
+
+    memset(update, 0, sizeof(PetitionUpdate_Struct));
+
+    update->petnumber = petition_id;
+    update->status = 0xffffffffU;
+    update->quetotal =
+        PetitionList::Instance()->GetTotalPetitions();
+
+    for (const auto &entry : client_list) {
+        auto *client = entry.second->CastToClient();
+
+        if (client->Admin() >= AccountStatus::QuestTroupe) {
+            client->QueuePacket(outapp);
+        }
+    }
+
+    safe_delete(outapp);
+}
+
 void EntityList::ClearClientPetitionQueue()
 {
-	auto outapp = new EQApplicationPacket(OP_PetitionUpdate, sizeof(PetitionUpdate_Struct));
-	PetitionUpdate_Struct *pet = (PetitionUpdate_Struct*) outapp->pBuffer;
-	pet->color = 0x00;
-	pet->status = 0xFFFFFFFF;
-	pet->senttime = 0;
-	strcpy(pet->accountid, "");
-	strcpy(pet->gmsenttoo, "");
-	strcpy(pet->charname, "");
-	pet->quetotal = PetitionList::Instance()->GetTotalPetitions();
-	auto it = client_list.begin();
-	while (it != client_list.end()) {
-		if (it->second->CastToClient()->Admin() >= AccountStatus::GMAdmin) {
-			int x = 0;
-			for (x = 0; x < 64; x++) {
-				pet->petnumber = x;
-				it->second->CastToClient()->QueuePacket(outapp);
-			}
-		}
-		++it;
-	}
-	safe_delete(outapp);
-	return;
+    for (const auto id :
+         PetitionList::Instance()->GetPetitionIDs()) {
+        RemovePetitionFromAdmins(id);
+    }
 }
 
 BulkZoneSpawnPacket::BulkZoneSpawnPacket(Client *iSendTo, uint32 iMaxSpawnsPerPacket)

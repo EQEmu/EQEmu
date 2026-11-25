@@ -100,6 +100,7 @@ namespace DatabaseSchema {
 			"account",
 			"account_ip",
 			"account_flags",
+                    "account_soulmarks",
 			"account_rewards",
 			"adventure_details",
 			"adventure_stats",

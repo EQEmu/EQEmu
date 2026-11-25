@@ -1,3 +1,4 @@
+#include <cstdlib>
 /*	EQEmu: EQEmulator
 
 	Copyright (C) 2001-2026 EQEmu Development Team
@@ -25,6 +26,10 @@
 #include "common/raid.h"
 #include "common/rdtsc.h"
 #include "common/repositories/account_repository.h"
+#include "common/repositories/account_soulmarks_repository.h"
+#include "common/repositories/bug_reports_repository.h"
+#include "common/repositories/character_data_repository.h"
+#include "common/zone_store.h"
 #include "common/repositories/adventure_members_repository.h"
 #include "common/repositories/buyer_buy_lines_repository.h"
 #include "common/repositories/character_corpses_repository.h"
@@ -319,12 +324,18 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_PDeletePetition] = &Client::Handle_OP_PDeletePetition;
 	ConnectedOpcodes[OP_PetCommands] = &Client::Handle_OP_PetCommands;
 	ConnectedOpcodes[OP_Petition] = &Client::Handle_OP_Petition;
+    ConnectedOpcodes[OP_Feedback] = &Client::Handle_OP_Feedback;
 	ConnectedOpcodes[OP_PetitionBug] = &Client::Handle_OP_PetitionBug;
+    ConnectedOpcodes[OP_PetitionFeedback] = &Client::Handle_OP_PetitionFeedback;
+    ConnectedOpcodes[OP_PetitionGuide] = &Client::Handle_OP_PetitionGuide;
 	ConnectedOpcodes[OP_PetitionCheckIn] = &Client::Handle_OP_PetitionCheckIn;
 	ConnectedOpcodes[OP_PetitionCheckout] = &Client::Handle_OP_PetitionCheckout;
 	ConnectedOpcodes[OP_PetitionDelete] = &Client::Handle_OP_PetitionDelete;
 	ConnectedOpcodes[OP_PetitionQue] = &Client::Handle_OP_PetitionQue;
 	ConnectedOpcodes[OP_PetitionRefresh] = &Client::Handle_OP_PetitionRefresh;
+	ConnectedOpcodes[OP_SoulmarkInquiry] = &Client::Handle_OP_SoulmarkInquiry;
+	ConnectedOpcodes[OP_SoulmarkAdd] = &Client::Handle_OP_SoulmarkAdd;
+    ConnectedOpcodes[OP_SoulmarkUpdate] = &Client::Handle_OP_SoulmarkUpdate;
 	ConnectedOpcodes[OP_PetitionResolve] = &Client::Handle_OP_PetitionResolve;
 	ConnectedOpcodes[OP_PetitionUnCheckout] = &Client::Handle_OP_PetitionUnCheckout;
 	ConnectedOpcodes[OP_PlayerStateAdd] = &Client::Handle_OP_PlayerStateAdd;
@@ -10264,6 +10275,12 @@ void Client::Handle_OP_LoadSpellSet(const EQApplicationPacket *app)
 
 void Client::Handle_OP_Logout(const EQApplicationPacket *app)
 {
+    if (Admin() >= AccountStatus::QuestTroupe) {
+        PetitionList::Instance()->ReleaseCheckouts(
+            GetName()
+        );
+    }
+
 	LogDebug("[{}] sent a logout packet", GetName());
 
 	SendLogoutPackets();
@@ -11817,6 +11834,130 @@ void Client::Handle_OP_PetCommands(const EQApplicationPacket *app)
 		break;
 	}
 }
+void Client::Handle_OP_Feedback(
+    const EQApplicationPacket *app)
+{
+    // Only the RoF2 packet format has been verified.
+    if (ClientVersion() !=
+            EQ::versions::ClientVersion::RoF2) {
+        return;
+    }
+
+    if (app->size != sizeof(Feedback_Struct)) {
+        LogError(
+            "Invalid feedback packet size [{}]",
+            app->size
+        );
+        return;
+    }
+
+    if (!PlayerEventLogs::Instance()->IsEventEnabled(
+            PlayerEvent::PLAYER_FEEDBACK)) {
+        Message(Chat::Red,
+            "Player feedback is disabled on this server.");
+        return;
+    }
+
+    if (AccountID() == 0 || CharacterID() == 0) {
+        return;
+    }
+
+    constexpr uint32 feedback_interval_ms = 10000;
+    const uint32 now = Timer::GetCurrentTime();
+
+    if (m_feedback_seen &&
+        static_cast<uint32>(
+            now - m_last_feedback
+        ) < feedback_interval_ms) {
+        Message(Chat::Red,
+            "Please wait before submitting more feedback.");
+        return;
+    }
+
+    const auto *request =
+        reinterpret_cast<const Feedback_Struct *>(
+            app->pBuffer
+        );
+
+    const auto *end =
+        static_cast<const char *>(
+            std::memchr(
+                request->feedback,
+                0,
+                sizeof(request->feedback)
+            )
+        );
+
+    if (!end) {
+        return;
+    }
+
+    const std::string text(
+        request->feedback,
+        static_cast<size_t>(
+            end - request->feedback
+        )
+    );
+
+    if (text.empty() ||
+        text.size() > 1023 ||
+        text.find_first_not_of(" \t\r\n") ==
+            std::string::npos) {
+        Message(Chat::Red,
+            "Feedback must contain 1 to 1023 bytes.");
+        return;
+    }
+
+    // Reject text already corrupted by client conversion.
+    if (text.find("\xEF\xBF\xBD") !=
+            std::string::npos) {
+        Message(Chat::Red,
+            "Feedback contains unsupported characters.");
+        return;
+    }
+
+    // Conservative encoding policy.
+    // Preserve multiline text and ordinary punctuation.
+    for (const unsigned char c : text) {
+        if (c == '\t' || c == '\r' || c == '\n') {
+            continue;
+        }
+
+        if (c < 32 || c > 126) {
+            Message(Chat::Red,
+                "Feedback contains unsupported characters.");
+            return;
+        }
+    }
+
+    const auto submitted_at = std::time(nullptr);
+
+    auto feedback =
+        PlayerEvent::PlayerFeedbackEvent{};
+
+    feedback.source = "direct";
+    feedback.petition_id = 0;
+    feedback.petitioner_account = AccountName();
+    feedback.petitioner_character = GetName();
+    feedback.petition_zone_id = zone->GetZoneID();
+    feedback.petition_text = text;
+
+    feedback.petition_timestamp =
+        static_cast<int64>(submitted_at);
+
+    // Only accepted feedback consumes the rate limit.
+    m_feedback_seen = true;
+    m_last_feedback = now;
+
+    RecordPlayerEventLog(
+        PlayerEvent::PLAYER_FEEDBACK,
+        feedback
+    );
+
+    Message(Chat::White,
+        "Thank you. Your feedback has been submitted.");
+}
+
 void Client::Handle_OP_Petition(const EQApplicationPacket *app)
 {
 	if (app->size <= 1)
@@ -11865,82 +12006,398 @@ void Client::Handle_OP_Petition(const EQApplicationPacket *app)
 	return;
 }
 
-void Client::Handle_OP_PetitionBug(const EQApplicationPacket *app)
+void Client::Handle_OP_PetitionBug(
+    const EQApplicationPacket *app)
 {
-	Message(Chat::White, "Petition Bugs are not supported, please use /bug.");
+    if (ClientVersion() != EQ::versions::ClientVersion::RoF2) {
+        Message(Chat::White,
+            "Petition Bugs are not supported, please use /bug.");
+        return;
+    }
 
-	return;
+    HandlePetitionLog(app);
 }
 
-void Client::Handle_OP_PetitionCheckIn(const EQApplicationPacket *app)
+void Client::Handle_OP_PetitionFeedback(
+    const EQApplicationPacket *app)
 {
-	if (app->size != sizeof(Petition_Struct)) {
-		LogError("Wrong size: OP_PetitionCheckIn, size=[{}], expected [{}]", app->size, sizeof(Petition_Struct));
-		return;
-	}
-	Petition_Struct* inpet = (Petition_Struct*)app->pBuffer;
-
-	Petition* pet = PetitionList::Instance()->GetPetitionByID(inpet->petnumber);
-	//if (inpet->urgency != pet->GetUrgency())
-	pet->SetUrgency(inpet->urgency);
-	pet->SetLastGM(GetName());
-	pet->SetGMText(inpet->gmtext);
-
-	pet->SetCheckedOut(false);
-	PetitionList::Instance()->UpdatePetition(pet);
-	PetitionList::Instance()->UpdateGMQueue();
-	PetitionList::Instance()->UpdateZoneListQueue();
-	return;
+    HandlePetitionLog(app);
 }
 
-void Client::Handle_OP_PetitionCheckout(const EQApplicationPacket *app)
+void Client::Handle_OP_PetitionGuide(
+    const EQApplicationPacket *app)
 {
-	if (app->size != sizeof(uint32)) {
-		std::cout << "Wrong size: OP_PetitionCheckout, size=" << app->size << ", expected " << sizeof(uint32) << std::endl;
-		return;
-	}
-	if (!worldserver.Connected())
-		Message(Chat::Red, "Error: World server disconnected");
-	else {
-		uint32 getpetnum = *((uint32*)app->pBuffer);
-		Petition* getpet = PetitionList::Instance()->GetPetitionByID(getpetnum);
-		if (getpet != 0) {
-			getpet->AddCheckout();
-			getpet->SetCheckedOut(true);
-			getpet->SendPetitionToPlayer(CastToClient());
-			PetitionList::Instance()->UpdatePetition(getpet);
-			PetitionList::Instance()->UpdateGMQueue();
-			PetitionList::Instance()->UpdateZoneListQueue();
-		}
-	}
-	return;
+    HandlePetitionLog(app);
 }
 
-void Client::Handle_OP_PetitionDelete(const EQApplicationPacket *app)
+void Client::HandlePetitionLog(
+    const EQApplicationPacket *app)
 {
-	if (app->size != sizeof(PetitionUpdate_Struct)) {
-		LogError("Wrong size: OP_PetitionDelete, size=[{}], expected [{}]", app->size, sizeof(PetitionUpdate_Struct));
-		return;
-	}
-	auto outapp = new EQApplicationPacket(OP_PetitionUpdate, sizeof(PetitionUpdate_Struct));
-	PetitionUpdate_Struct* pet = (PetitionUpdate_Struct*)outapp->pBuffer;
-	pet->petnumber = *((int*)app->pBuffer);
-	pet->color = 0x00;
-	pet->status = 0xFFFFFFFF;
-	pet->senttime = 0;
-	strcpy(pet->accountid, "");
-	strcpy(pet->gmsenttoo, "");
-	pet->quetotal = PetitionList::Instance()->GetTotalPetitions();
-	strcpy(pet->charname, "");
-	FastQueuePacket(&outapp);
+    if (Admin() < AccountStatus::QuestTroupe) {
+        return;
+    }
 
-	if (PetitionList::Instance()->DeletePetition(pet->petnumber) == -1)
-		std::cout << "Something is borked with: " << pet->petnumber << std::endl;
-	PetitionList::Instance()->ClearPetitions();
-	PetitionList::Instance()->UpdateGMQueue();
-	PetitionList::Instance()->ReadDatabase();
-	PetitionList::Instance()->UpdateZoneListQueue();
-	return;
+    if (app->size != sizeof(Petition_Struct)) {
+        LogError(
+            "Invalid PetitionLog packet size [{}]",
+            app->size
+        );
+        return;
+    }
+
+    if (!worldserver.Connected()) {
+        Message(Chat::Red,
+            "Error: World server disconnected");
+        return;
+    }
+
+    const auto *inpet =
+        reinterpret_cast<const Petition_Struct *>(
+            app->pBuffer
+        );
+
+    if (inpet->urgency > 2 ||
+        inpet->unavail > 0x7fffffffU ||
+        !memchr(inpet->gmtext, 0, sizeof(inpet->gmtext))) {
+        return;
+    }
+
+    auto *pet =
+        PetitionList::Instance()->GetPetitionByID(
+            inpet->petnumber
+        );
+
+    if (!pet || !pet->CheckedOut() ||
+        std::string(pet->GetLastGM()) != GetName()) {
+        return;
+    }
+
+    if (!database.OwnsPetition(pet, GetName())) {
+        Message(Chat::Red,
+            "Petition logging failed. "
+            "The checkout is no longer valid.");
+
+        PetitionList::Instance()->ReadDatabase();
+        return;
+    }
+
+    auto event = PlayerEvent::PetitionLogEvent{
+        .petition_id = pet->GetID(),
+        .petitioner_account = pet->GetAccountName(),
+        .petitioner_character = pet->GetCharName(),
+        .guide_name = GetName(),
+        .petition_zone_id = pet->GetZone(),
+        .petition_text = pet->GetPetitionText(),
+        .gm_text = inpet->gmtext,
+        .urgency = inpet->urgency,
+        .checkouts = pet->GetCheckouts(),
+        .unavailables = inpet->unavail,
+        .petition_timestamp =
+            static_cast<int64>(pet->GetSentTime())
+    };
+
+    switch (app->GetOpcode()) {
+
+        case OP_PetitionBug: {
+            if (!RuleB(Bugs, ReportingSystemActive)) {
+                Message(Chat::Red,
+                    "Bug reporting is disabled.");
+                return;
+            }
+
+            const auto character =
+                CharacterDataRepository::FindOne(
+                    database, pet->GetID()
+                );
+
+            if (!character.id ||
+                character.name != event.petitioner_character) {
+                Message(Chat::Red,
+                    "Unable to identify petition author.");
+                return;
+            }
+
+            auto bug = BugReportsRepository::NewEntity();
+
+            bug.account_id = character.account_id;
+            bug.character_id = character.id;
+            bug.character_name = character.name;
+            bug.reporter_name = GetName();
+            bug.reporter_spoof = 0;
+            bug.category_id = 0;
+            bug.category_name = "Other";
+            bug.ui_path = "GM Petition Queue";
+
+            const auto *zone_name =
+                ZoneStore::Instance()->GetZoneName(
+                    pet->GetZone(), false
+                );
+
+            if (zone_name) {
+                bug.zone = zone_name;
+            }
+
+            bug.bug_report = fmt::format(
+                "[Petition {}]\n"
+                "Petitioner: {} ({})\n"
+                "Guide: {}\n"
+                "Urgency: {}\n"
+                "Checkouts: {}\n"
+                "Unavailable: {}\n\n"
+                "{}\n\n"
+                "Guide notes:\n{}",
+                event.petition_id,
+                event.petitioner_character,
+                event.petitioner_account,
+                event.guide_name,
+                event.urgency,
+                event.checkouts,
+                event.unavailables,
+                event.petition_text,
+                event.gm_text
+            );
+
+            const auto result =
+                BugReportsRepository::InsertOne(
+                    database, bug
+                );
+
+            if (!result.id) {
+                Message(Chat::Red,
+                    "Failed to log petition as bug report.");
+                return;
+            }
+
+            Message(Chat::White,
+                "Petition saved as bug report %u.",
+                static_cast<unsigned>(result.id));
+
+            break;
+        }
+
+        case OP_PetitionFeedback: {
+            if (!PlayerEventLogs::Instance()->IsEventEnabled(
+                PlayerEvent::PLAYER_FEEDBACK)) {
+                Message(Chat::Red,
+                    "Petition feedback logging is disabled.");
+                return;
+            }
+
+            auto feedback =
+                PlayerEvent::PlayerFeedbackEvent{};
+
+            feedback.source = "petition";
+            feedback.petition_id = event.petition_id;
+            feedback.petitioner_account = event.petitioner_account;
+            feedback.petitioner_character = event.petitioner_character;
+            feedback.guide_name = event.guide_name;
+            feedback.petition_zone_id = event.petition_zone_id;
+            feedback.petition_text = event.petition_text;
+            feedback.gm_text = event.gm_text;
+            feedback.urgency = event.urgency;
+            feedback.checkouts = event.checkouts;
+            feedback.unavailables = event.unavailables;
+            feedback.petition_timestamp = event.petition_timestamp;
+
+            RecordPlayerEventLog(
+                PlayerEvent::PLAYER_FEEDBACK,
+                feedback
+            );
+            break;
+        }
+
+        case OP_PetitionGuide: {
+            if (!PlayerEventLogs::Instance()->IsEventEnabled(
+                PlayerEvent::PETITION_GUIDE)) {
+                Message(Chat::Red,
+                    "Petition guide logging is disabled.");
+                return;
+            }
+
+            RecordPlayerEventLog(
+                PlayerEvent::PETITION_GUIDE, event
+            );
+            break;
+        }
+
+        default:
+            return;
+    }
+
+    // Logging never changes or releases the petition.
+}
+
+void Client::Handle_OP_PetitionCheckIn(
+        const EQApplicationPacket *app)
+{
+        if (Admin() < AccountStatus::QuestTroupe) {
+                return;
+        }
+
+        if (app->size != sizeof(Petition_Struct)) {
+                LogError(
+                        "Wrong size: OP_PetitionCheckIn, size=[{}], expected=[{}]",
+                        app->size,
+                        sizeof(Petition_Struct)
+                );
+                return;
+        }
+
+        if (!worldserver.Connected()) {
+                Message(Chat::Red, "Error: World server disconnected");
+                return;
+        }
+
+        const auto *inpet =
+                reinterpret_cast<const Petition_Struct *>(app->pBuffer);
+
+        if (inpet->urgency > 2 ||
+            inpet->unavail > 0x7fffffffU) {
+                return;
+        }
+
+        if (!memchr(inpet->gmtext, 0, sizeof(inpet->gmtext))) {
+                return;
+        }
+
+        auto *pet =
+                PetitionList::Instance()->GetPetitionByID(
+                        inpet->petnumber
+                );
+
+        if (!pet || !pet->CheckedOut()) {
+                return;
+        }
+
+        if (std::string(pet->GetLastGM()) != GetName()) {
+                return;
+        }
+
+    Petition proposed = *pet;
+
+    proposed.SetUrgency(inpet->urgency);
+    proposed.SetUnavails(inpet->unavail);
+    proposed.SetLastGM(GetName());
+    proposed.SetGMText(inpet->gmtext);
+    proposed.SetCheckedOut(false);
+
+    if (!PetitionList::Instance()->UpdatePetition(
+            pet, proposed)) {
+        Message(Chat::Red,
+            "Petition check-in failed. "
+            "The petition may have changed.");
+
+        PetitionList::Instance()->ReadDatabase();
+        return;
+    }
+        PetitionList::Instance()->UpdateGMQueue();
+        PetitionList::Instance()->UpdateZoneListQueue();
+}
+
+void Client::Handle_OP_PetitionCheckout(
+    const EQApplicationPacket *app)
+{
+    if (Admin() < AccountStatus::QuestTroupe ||
+        app->size != sizeof(uint32)) {
+        return;
+    }
+
+    if (!worldserver.Connected()) {
+        Message(Chat::Red,
+            "Error: World server disconnected");
+        return;
+    }
+
+    uint32 id = 0;
+    memcpy(&id, app->pBuffer, sizeof(id));
+
+    auto* petitions = PetitionList::Instance();
+
+    // Refresh before attempting the atomic checkout.
+    petitions->ReadDatabase();
+
+    auto* pet = petitions->GetPetitionByID(id);
+
+    if (!pet || pet->CheckedOut()) {
+        Message(Chat::Red,
+            "Petition is no longer available.");
+        return;
+    }
+
+    Petition proposed = *pet;
+
+    proposed.AddCheckout();
+    proposed.SetCheckedOut(true);
+    proposed.SetLastGM(GetName());
+
+    if (!petitions->UpdatePetition(pet, proposed)) {
+        Message(Chat::Red,
+            "Petition checkout failed. "
+            "The petition may have changed.");
+
+        petitions->ReadDatabase();
+        return;
+    }
+
+    pet->SendPetitionToPlayer(this);
+
+    petitions->UpdateGMQueue();
+    petitions->UpdateZoneListQueue();
+}
+
+void Client::Handle_OP_PetitionDelete(
+        const EQApplicationPacket *app)
+{
+        if (Admin() < AccountStatus::QuestTroupe) {
+                return;
+        }
+
+        // RoF2 sends only the petition ID.
+        // Retain compatibility with the legacy packet format.
+        if (app->size != sizeof(uint32) &&
+            app->size != sizeof(PetitionUpdate_Struct)) {
+                LogError(
+                        "Invalid petition delete/resolve size [{}]",
+                        app->size
+                );
+                return;
+        }
+
+        if (!worldserver.Connected()) {
+                Message(Chat::Red, "Error: World server disconnected");
+                return;
+        }
+
+        // Keep the ID independently of any packet buffer.
+        uint32 petition_id = 0;
+        memcpy(
+                &petition_id,
+                app->pBuffer,
+                sizeof(petition_id)
+        );
+
+        auto *petitions = PetitionList::Instance();
+        auto *existing =
+                petitions->GetPetitionByID(petition_id);
+
+        if (!existing || !existing->CheckedOut()) {
+                return;
+        }
+
+        // Only the current guide may finish the petition.
+        if (std::string(existing->GetLastGM()) != GetName()) {
+                return;
+        }
+
+        if (petitions->DeletePetition(petition_id, GetName()) == -1) {
+                LogError(
+                        "Failed to delete petition [{}]",
+                        petition_id
+                );
+                return;
+        }
+
+	// Deletion and synchronization are handled by PetitionList.
 }
 
 void Client::Handle_OP_PetitionQue(const EQApplicationPacket *app)
@@ -11951,12 +12408,960 @@ void Client::Handle_OP_PetitionQue(const EQApplicationPacket *app)
 	return;
 }
 
-void Client::Handle_OP_PetitionRefresh(const EQApplicationPacket *app)
+bool Client::ValidateSoulmarkText(
+    const std::string &text)
 {
-	// This is When Client Asks for Petition Again and Again...
-	// break is here because it floods the zones and causes lag if it
-	// Were to actually do something:P We update on our own schedule now.
-	return;
+    // The native client can replace unsupported
+    // input characters with UTF-8 encoded U+FFFD.
+    // Reject the already corrupted text before SQL.
+    if (text.find("\xEF\xBF\xBD") !=
+            std::string::npos) {
+        Message(Chat::Red,
+            "Soulmark text contains unsupported characters.");
+        return false;
+    }
+
+    if (text.empty() ||
+        text.size() > 250 ||
+        text.find_first_not_of(" \t\r\n") ==
+            std::string::npos) {
+        Message(Chat::Red,
+            "Soulmark text must contain 1 to 250 bytes.");
+        return false;
+    }
+
+    // The native client appends the text directly to
+    // an STML document. Reject markup until the
+    // client's escaping behavior has been verified.
+    if (text.find_first_of("<>&") !=
+            std::string::npos) {
+        Message(Chat::Red,
+            "Soulmark text must not contain STML markup characters.");
+        return false;
+    }
+
+    for (const unsigned char c : text) {
+        if (c < 32 || c == 127) {
+            Message(Chat::Red,
+                "Soulmark text contains control characters.");
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void Client::ResetSoulmarkSnapshot()
+{
+    for (auto &entry : m_soulmark_snapshot) {
+        entry = SoulmarkSnapshotEntry{};
+    }
+
+    m_soulmark_snapshot_count = 0;
+    m_soulmark_snapshot_account_id = 0;
+}
+
+bool Client::ResolveSoulmarkTarget(
+    const std::string &target_name,
+    const std::string &target_pid,
+    uint32 &account_id,
+    uint32 &character_id,
+    std::string &character_name)
+{
+    account_id = 0;
+    character_id = 0;
+    character_name.clear();
+
+    if (target_name.empty() || target_pid.empty()) {
+        return false;
+    }
+
+    const auto characters =
+        CharacterDataRepository::GetWhere(
+            database,
+            fmt::format(
+                "`name` = '{}' "
+                "AND `deleted_at` IS NULL LIMIT 2",
+                Strings::Escape(target_name)
+            )
+        );
+
+    if (characters.size() != 1 ||
+        characters.front().id == 0 ||
+        characters.front().account_id <= 0) {
+        Message(Chat::Red,
+            "Soulmark: unable to identify character.");
+        return false;
+    }
+
+    const auto &character = characters.front();
+
+    character_id = character.id;
+    account_id = static_cast<uint32>(
+        character.account_id
+    );
+
+    if (character.id != character_id ||
+        character.deleted_at > 0 ||
+        character.account_id !=
+            static_cast<int32>(account_id)) {
+        Message(Chat::Red,
+            "Soulmark: invalid character.");
+        return false;
+    }
+
+    const auto account_name =
+        database.GetAccountName(account_id);
+
+    if (account_name.empty() ||
+        strcasecmp(
+            account_name.c_str(),
+            target_pid.c_str()
+        ) != 0) {
+        Message(Chat::Red,
+            "Soulmark: character and PID do not match.");
+        return false;
+    }
+
+    character_name = character.name;
+
+    return true;
+}
+
+void Client::SendSoulmarkList(uint32 account_id)
+{
+    ResetSoulmarkSnapshot();
+
+    if (ClientVersion() !=
+            EQ::versions::ClientVersion::RoF2 ||
+        Admin() < AccountStatus::QuestTroupe ||
+        account_id == 0) {
+        return;
+    }
+
+    const auto account_name =
+        database.GetAccountName(account_id);
+
+    if (account_name.empty()) {
+        return;
+    }
+
+    auto records = database.QueryDatabase(
+        fmt::format(
+            "SELECT `id`, `revision`, "
+            "`character_name`, `gm_account_id`, "
+            "`gm_character_name`, `type`, `text`, "
+            "UNIX_TIMESTAMP(`created_at`) "
+            "FROM `account_soulmarks` "
+            "WHERE `account_id` = {} "
+            "AND `deleted_at` IS NULL "
+            "AND `type` IN (1, 2) "
+            "ORDER BY `created_at` DESC, `id` DESC "
+            "LIMIT 12",
+            account_id
+        )
+    );
+
+    if (!records.Success()) {
+        Message(Chat::Red,
+            "Unable to retrieve soulmark records.");
+        LogError(
+            "Soulmark list query failed for account [{}]",
+            account_id
+        );
+        return;
+    }
+
+    EQApplicationPacket outapp(
+        OP_SoulmarkInquiry,
+        sizeof(SoulmarkList_Struct)
+    );
+
+    auto *response =
+        reinterpret_cast<SoulmarkList_Struct *>(
+            outapp.pBuffer
+        );
+
+    std::memset(response, 0, sizeof(*response));
+
+    const auto copy_string = [](
+        auto &destination,
+        const std::string &source
+    ) {
+        const size_t capacity =
+            sizeof(destination) - 1;
+
+        const size_t length =
+            source.size() < capacity
+                ? source.size() : capacity;
+
+        std::memcpy(
+            destination,
+            source.data(),
+            length
+        );
+
+        destination[length] = 0;
+    };
+
+    size_t index = 0;
+
+    for (auto row = records.begin();
+         row != records.end();
+         ++row) {
+        auto record =
+            AccountSoulmarksRepository::NewEntity();
+
+        record.id = row[0]
+            ? std::strtoull(row[0], nullptr, 10) : 0;
+
+        record.revision = row[1]
+            ? std::strtoul(row[1], nullptr, 10) : 0;
+
+        record.character_name = row[2] ? row[2] : "";
+
+        record.gm_account_id = row[3]
+            ? std::strtol(row[3], nullptr, 10) : 0;
+
+        record.gm_character_name = row[4] ? row[4] : "";
+
+        record.type = row[5]
+            ? std::strtoul(row[5], nullptr, 10) : 0;
+
+        record.text = row[6] ? row[6] : "";
+
+        record.created_at = row[7]
+            ? std::strtoll(row[7], nullptr, 10) : 0;
+
+        if (record.id == 0 ||
+            record.revision == 0) {
+            continue;
+        }
+
+        if (index >= 12) {
+            break;
+        }
+
+        if (record.created_at <= 0 ||
+            record.created_at > 0x7fffffff) {
+            continue;
+        }
+
+        auto &entry = response->records[index++];
+
+        copy_string(
+            entry.target_name,
+            record.character_name
+        );
+
+        copy_string(
+            entry.target_pid,
+            account_name
+        );
+
+        copy_string(
+            entry.gm_name,
+            record.gm_character_name
+        );
+
+        if (record.gm_account_id > 0) {
+            copy_string(
+                entry.gm_pid,
+                database.GetAccountName(
+                    record.gm_account_id
+                )
+            );
+        }
+
+        copy_string(entry.text, record.text);
+
+        entry.timestamp =
+            static_cast<uint32>(record.created_at);
+
+        entry.type = record.type;
+
+        auto &snapshot =
+            m_soulmark_snapshot[index - 1];
+
+        snapshot.id = record.id;
+        snapshot.revision = record.revision;
+
+        snapshot.gm_account_id =
+            static_cast<uint32>(record.gm_account_id);
+
+        snapshot.wire = entry;
+    }
+
+    m_soulmark_snapshot_account_id = account_id;
+    m_soulmark_snapshot_count = index;
+
+    QueuePacket(&outapp);
+}
+
+void Client::ResendSoulmarkSnapshot()
+{
+    if (ClientVersion() !=
+            EQ::versions::ClientVersion::RoF2 ||
+        Admin() < AccountStatus::QuestTroupe ||
+        m_soulmark_snapshot_account_id == 0 ||
+        m_soulmark_snapshot_count > 12) {
+        return;
+    }
+
+    EQApplicationPacket outapp(
+        OP_SoulmarkInquiry,
+        sizeof(SoulmarkList_Struct)
+    );
+
+    auto *response =
+        reinterpret_cast<SoulmarkList_Struct *>(
+            outapp.pBuffer
+        );
+
+    std::memset(response, 0, sizeof(*response));
+
+    for (size_t i = 0;
+         i < m_soulmark_snapshot_count;
+         ++i) {
+        response->records[i] =
+            m_soulmark_snapshot[i].wire;
+    }
+
+    // Restore the last authoritative list without
+    // querying the database for rate-limited requests.
+    // Keep snapshot identities and revisions unchanged.
+    QueuePacket(&outapp);
+}
+
+void Client::Handle_OP_SoulmarkInquiry(
+    const EQApplicationPacket *app)
+{
+    if (ClientVersion() !=
+            EQ::versions::ClientVersion::RoF2 ||
+        Admin() < AccountStatus::QuestTroupe ||
+        app->size != sizeof(SoulmarkInquiry_Struct)) {
+        return;
+    }
+
+    constexpr uint32 inquiry_interval_ms = 2000;
+    const uint32 now = Timer::GetCurrentTime();
+
+    if (m_soulmark_inquiry_seen &&
+        static_cast<uint32>(
+            now - m_last_soulmark_inquiry
+        ) < inquiry_interval_ms) {
+        return;
+    }
+
+    m_soulmark_inquiry_seen = true;
+    m_last_soulmark_inquiry = now;
+
+    ResetSoulmarkSnapshot();
+
+    const auto *request =
+        reinterpret_cast<const SoulmarkInquiry_Struct *>(
+            app->pBuffer
+        );
+
+    if (!std::memchr(
+            request->target_name,
+            0,
+            sizeof(request->target_name)) ||
+        !std::memchr(
+            request->target_pid,
+            0,
+            sizeof(request->target_pid))) {
+        return;
+    }
+
+    uint32 account_id = 0;
+    uint32 character_id = 0;
+    std::string character_name;
+
+    if (!ResolveSoulmarkTarget(
+            request->target_name,
+            request->target_pid,
+            account_id,
+            character_id,
+            character_name)) {
+        return;
+    }
+
+    SendSoulmarkList(account_id);
+}
+
+void Client::Handle_OP_SoulmarkAdd(
+    const EQApplicationPacket *app)
+{
+    if (ClientVersion() !=
+            EQ::versions::ClientVersion::RoF2 ||
+        Admin() < AccountStatus::QuestTroupe ||
+        app->size != sizeof(SoulmarkRecord_Struct)) {
+        return;
+    }
+
+    constexpr uint32 add_interval_ms = 2000;
+    const uint32 now = Timer::GetCurrentTime();
+
+    if (m_soulmark_add_seen &&
+        static_cast<uint32>(
+            now - m_last_soulmark_add
+        ) < add_interval_ms) {
+        Message(Chat::Red,
+            "Please wait before adding another soulmark.");
+        return;
+    }
+
+    m_soulmark_add_seen = true;
+    m_last_soulmark_add = now;
+
+    const auto *request =
+        reinterpret_cast<const SoulmarkRecord_Struct *>(
+            app->pBuffer
+        );
+
+    if (!std::memchr(
+            request->target_name,
+            0,
+            sizeof(request->target_name)) ||
+        !std::memchr(
+            request->target_pid,
+            0,
+            sizeof(request->target_pid)) ||
+        !std::memchr(
+            request->text,
+            0,
+            sizeof(request->text))) {
+        return;
+    }
+
+    if (request->type != 1 &&
+        request->type != 2) {
+        Message(Chat::Red,
+            "Invalid soulmark type.");
+        return;
+    }
+
+    const std::string text = request->text;
+
+    if (!ValidateSoulmarkText(text)) {
+        return;
+    }
+
+    uint32 account_id = 0;
+    uint32 character_id = 0;
+    std::string character_name;
+
+    if (!ResolveSoulmarkTarget(
+            request->target_name,
+            request->target_pid,
+            account_id,
+            character_id,
+            character_name)) {
+        return;
+    }
+
+    if (AccountID() == 0 || CharacterID() == 0) {
+        return;
+    }
+
+    const time_t created_at = std::time(nullptr);
+
+    if (created_at <= 0 ||
+        created_at > 0x7fffffff) {
+        Message(Chat::Red,
+            "Unable to create a valid soulmark timestamp.");
+        return;
+    }
+
+    auto record =
+        AccountSoulmarksRepository::NewEntity();
+
+    record.account_id =
+        static_cast<int32>(account_id);
+
+    record.character_id = character_id;
+    record.character_name = character_name;
+
+    // Never trust the GM identity or timestamp
+    // supplied in a client packet.
+    record.gm_account_id =
+        static_cast<int32>(AccountID());
+
+    record.gm_character_id = CharacterID();
+    record.gm_character_name = GetName();
+
+    record.type =
+        static_cast<uint8>(request->type);
+
+    record.text = text;
+    record.created_at = created_at;
+    record.revision = 1;
+
+    const auto inserted =
+        AccountSoulmarksRepository::InsertOne(
+            database,
+            record
+        );
+
+    if (inserted.id == 0) {
+        Message(Chat::Red,
+            "Failed to save soulmark.");
+        return;
+    }
+
+    if (PlayerEventLogs::Instance()->IsEventEnabled(
+            PlayerEvent::SOULMARK_CHANGE)) {
+        auto event = PlayerEvent::SoulmarkChangeEvent{
+            .soulmark_id = inserted.id,
+            .action = "add",
+
+            .target_account_id = account_id,
+            .target_account =
+                database.GetAccountName(account_id),
+            .target_character = character_name,
+
+            .original_gm_account_id = AccountID(),
+            .original_gm_name = GetName(),
+
+            .actor_account_id = AccountID(),
+            .actor_character_id = CharacterID(),
+            .actor_name = GetName(),
+
+            .soulmark_type = inserted.type,
+
+            .old_revision = 0,
+            .new_revision = inserted.revision,
+
+            .old_text = "",
+            .new_text = inserted.text
+        };
+
+        RecordPlayerEventLog(
+            PlayerEvent::SOULMARK_CHANGE,
+            event
+        );
+    }
+
+    Message(
+        Chat::White,
+        request->type == 1
+            ? "Praise saved successfully."
+            : "Warning saved successfully."
+    );
+
+    SendSoulmarkList(account_id);
+}
+
+void Client::Handle_OP_SoulmarkUpdate(
+    const EQApplicationPacket *app)
+{
+    if (ClientVersion() !=
+            EQ::versions::ClientVersion::RoF2 ||
+        Admin() < AccountStatus::QuestTroupe ||
+        app->size != sizeof(SoulmarkUpdate_Struct)) {
+        return;
+    }
+
+    constexpr uint32 update_interval_ms = 1000;
+    const uint32 now = Timer::GetCurrentTime();
+
+    if (m_soulmark_update_seen &&
+        static_cast<uint32>(
+            now - m_last_soulmark_update
+        ) < update_interval_ms) {
+        Message(Chat::Red,
+            "Please wait before changing another soulmark.");
+
+        ResendSoulmarkSnapshot();
+
+        return;
+    }
+
+    m_soulmark_update_seen = true;
+    m_last_soulmark_update = now;
+
+    if (m_soulmark_snapshot_account_id == 0 ||
+        m_soulmark_snapshot_count == 0) {
+        Message(Chat::Red,
+            "Please reopen the soulmark inquiry.");
+        return;
+    }
+
+    const uint32 account_id =
+        m_soulmark_snapshot_account_id;
+
+    const auto *request =
+        reinterpret_cast<const SoulmarkUpdate_Struct *>(
+            app->pBuffer
+        );
+
+    const auto reject = [this, account_id](
+        const char *reason,
+        int slot = -1
+    ) {
+        LogError(
+            "Soulmark update rejected: [{}], "
+            "slot [{}], snapshot count [{}]",
+            reason,
+            slot,
+            m_soulmark_snapshot_count
+        );
+
+        ResetSoulmarkSnapshot();
+
+        Message(Chat::Red,
+            "Soulmark update rejected. Refreshing list.");
+
+        // Restore the authoritative list after a
+        // rejected local client modification.
+        SendSoulmarkList(account_id);
+    };
+
+    const auto terminated = [](const auto &field) {
+        return std::memchr(
+            field, 0, sizeof(field)
+        ) != nullptr;
+    };
+
+    const auto same_identity = [](
+        const SoulmarkRecord_Struct &a,
+        const SoulmarkRecord_Struct &b
+    ) {
+        return
+            std::strcmp(a.target_name, b.target_name) == 0 &&
+            std::strcmp(a.target_pid, b.target_pid) == 0 &&
+            std::strcmp(a.gm_name, b.gm_name) == 0 &&
+            std::strcmp(a.gm_pid, b.gm_pid) == 0 &&
+            a.timestamp == b.timestamp;
+    };
+
+    int changed_index = -1;
+    int changed_slot = -1;
+
+    bool matched[12]{};
+    size_t matched_count = 0;
+
+    // RoF2 retains stale records beyond the active
+    // list length after compacting its internal array.
+    // Only records represented by the current server
+    // snapshot are eligible for modification.
+    for (size_t i = 0;
+         i < m_soulmark_snapshot_count;
+         ++i) {
+        const auto &incoming = request->records[i];
+
+        // Unused slots are normalized by the decoder.
+        if (incoming.target_name[0] == 0) {
+            if (incoming.type != 0) {
+                reject(
+                    "invalid empty slot",
+                    static_cast<int>(i)
+                );
+                return;
+            }
+
+            continue;
+        }
+
+        if (!terminated(incoming.target_name) ||
+            !terminated(incoming.target_pid) ||
+            !terminated(incoming.gm_name) ||
+            !terminated(incoming.gm_pid) ||
+            !terminated(incoming.text)) {
+            reject(
+                "unterminated string",
+                static_cast<int>(i)
+            );
+            return;
+        }
+
+        if (incoming.type > 2) {
+            reject(
+                "invalid category",
+                static_cast<int>(i)
+            );
+            return;
+        }
+
+        // Match immutable identity fields instead of
+        // assuming that the client preserves list order.
+        int found = -1;
+
+        for (size_t j = 0;
+             j < m_soulmark_snapshot_count;
+             ++j) {
+            if (!same_identity(
+                    incoming,
+                    m_soulmark_snapshot[j].wire)) {
+                continue;
+            }
+
+            if (found != -1) {
+                reject(
+                    "ambiguous record identity",
+                    static_cast<int>(i)
+                );
+                return;
+            }
+
+            found = static_cast<int>(j);
+        }
+
+        if (found == -1) {
+            // Report field differences without exposing
+            // account names or moderation text.
+            if (i < m_soulmark_snapshot_count) {
+                const auto &expected =
+                    m_soulmark_snapshot[i].wire;
+
+                LogError(
+                    "Soulmark identity mismatch at slot [{}]: "
+                    "target_name [{}], target_pid [{}], "
+                    "gm_name [{}], gm_pid [{}], "
+                    "timestamp [{}]",
+                    i,
+                    std::strcmp(
+                        incoming.target_name,
+                        expected.target_name
+                    ) == 0,
+                    std::strcmp(
+                        incoming.target_pid,
+                        expected.target_pid
+                    ) == 0,
+                    std::strcmp(
+                        incoming.gm_name,
+                        expected.gm_name
+                    ) == 0,
+                    std::strcmp(
+                        incoming.gm_pid,
+                        expected.gm_pid
+                    ) == 0,
+                    incoming.timestamp == expected.timestamp
+                );
+            }
+
+            reject(
+                "record not found in snapshot",
+                static_cast<int>(i)
+            );
+            return;
+        }
+
+        if (matched[found]) {
+            reject(
+                "duplicate incoming record",
+                static_cast<int>(i)
+            );
+            return;
+        }
+
+        matched[found] = true;
+        ++matched_count;
+
+        const auto &previous =
+            m_soulmark_snapshot[found].wire;
+
+        const bool text_changed =
+            std::strcmp(
+                incoming.text,
+                previous.text
+            ) != 0;
+
+        const bool type_changed =
+            incoming.type != previous.type;
+
+        if (!text_changed && !type_changed) {
+            continue;
+        }
+
+        if (changed_index != -1) {
+            reject(
+                "multiple changed records",
+                static_cast<int>(i)
+            );
+            return;
+        }
+
+        if (type_changed && incoming.type != 0) {
+            reject(
+                "unsupported category change",
+                static_cast<int>(i)
+            );
+            return;
+        }
+
+        if (incoming.type == 0 && text_changed) {
+            reject(
+                "remove also changes text",
+                static_cast<int>(i)
+            );
+            return;
+        }
+
+        changed_index = found;
+        changed_slot = static_cast<int>(i);
+    }
+
+    // Missing records must never imply deletion.
+    if (matched_count != m_soulmark_snapshot_count) {
+        LogError(
+            "Soulmark snapshot coverage: matched [{}], "
+            "expected [{}]",
+            matched_count,
+            m_soulmark_snapshot_count
+        );
+
+        reject("incomplete snapshot");
+        return;
+    }
+
+    if (changed_index == -1) {
+        LogError(
+            "Soulmark update contains no changes"
+        );
+        return;
+    }
+
+    const auto snapshot =
+        m_soulmark_snapshot[changed_index];
+
+    const auto &incoming =
+        request->records[changed_slot];
+
+    const bool remove = incoming.type == 0;
+
+    // Guides may modify their own records.
+    // GM administrators may correct other guides' records.
+    // The original author is never overwritten.
+    if (snapshot.gm_account_id != AccountID() &&
+        Admin() < AccountStatus::GMAdmin) {
+        Message(Chat::Red,
+            "You cannot modify another guide's soulmark.");
+
+        SendSoulmarkList(account_id);
+        return;
+    }
+
+    const std::string new_text = incoming.text;
+
+    if (!remove &&
+        !ValidateSoulmarkText(new_text)) {
+        SendSoulmarkList(account_id);
+        return;
+    }
+
+    const std::string assignment = remove
+        ? "`deleted_at` = NOW()"
+        : fmt::format(
+            "`text` = '{}'",
+            Strings::Escape(new_text)
+        );
+
+    // Update only the exact record and revision that
+    // were delivered to this authenticated client.
+    const auto result = database.QueryDatabase(
+        fmt::format(
+            "UPDATE `account_soulmarks` "
+            "SET {}, `updated_at` = NOW(), "
+            "`revision` = `revision` + 1 "
+            "WHERE `id` = {} "
+            "AND `account_id` = {} "
+            "AND `revision` = {} "
+            "AND `gm_account_id` = {} "
+            "AND `deleted_at` IS NULL",
+            assignment,
+            snapshot.id,
+            account_id,
+            snapshot.revision,
+            snapshot.gm_account_id
+        )
+    );
+
+    if (!result.Success()) {
+        LogError(
+            "Soulmark update database error [{}]",
+            result.ErrorNumber()
+        );
+
+        reject("database update failed", changed_slot);
+        return;
+    }
+
+    if (result.RowsAffected() != 1) {
+        reject("revision conflict", changed_slot);
+        return;
+    }
+
+    if (PlayerEventLogs::Instance()->IsEventEnabled(
+            PlayerEvent::SOULMARK_CHANGE)) {
+        auto event = PlayerEvent::SoulmarkChangeEvent{
+            .soulmark_id = snapshot.id,
+            .action = remove ? "remove" : "edit",
+
+            .target_account_id = account_id,
+            .target_account = snapshot.wire.target_pid,
+            .target_character = snapshot.wire.target_name,
+
+            .original_gm_account_id =
+                snapshot.gm_account_id,
+            .original_gm_name = snapshot.wire.gm_name,
+
+            .actor_account_id = AccountID(),
+            .actor_character_id = CharacterID(),
+            .actor_name = GetName(),
+
+            .soulmark_type = snapshot.wire.type,
+
+            .old_revision = snapshot.revision,
+            .new_revision = snapshot.revision + 1,
+
+            .old_text = snapshot.wire.text,
+            .new_text = remove ? "" : new_text
+        };
+
+        RecordPlayerEventLog(
+            PlayerEvent::SOULMARK_CHANGE,
+            event
+        );
+    }
+
+    Message(
+        Chat::White,
+        remove
+            ? "Soulmark removed successfully."
+            : "Soulmark updated successfully."
+    );
+
+    SendSoulmarkList(account_id);
+}
+
+void Client::Handle_OP_PetitionRefresh(
+    const EQApplicationPacket *app)
+{
+    if (ClientVersion() !=
+            EQ::versions::ClientVersion::RoF2 ||
+        Admin() < AccountStatus::QuestTroupe ||
+        app->size != 0) {
+        return;
+    }
+
+    constexpr uint32 refresh_interval_ms = 2000;
+    const uint32 now = Timer::GetCurrentTime();
+
+    if (m_petition_refresh_seen &&
+        static_cast<uint32>(
+            now - m_last_petition_refresh
+        ) < refresh_interval_ms) {
+        return;
+    }
+
+    m_petition_refresh_seen = true;
+    m_last_petition_refresh = now;
+
+    // Use the local cache and reply only to
+    // the requesting guide.
+    PetitionList::Instance()->UpdateGMQueue(this);
 }
 
 void Client::Handle_OP_PetitionResolve(const EQApplicationPacket *app)
@@ -11964,25 +13369,45 @@ void Client::Handle_OP_PetitionResolve(const EQApplicationPacket *app)
 	Handle_OP_PetitionDelete(app);
 }
 
-void Client::Handle_OP_PetitionUnCheckout(const EQApplicationPacket *app)
+void Client::Handle_OP_PetitionUnCheckout(
+    const EQApplicationPacket *app)
 {
-	if (app->size != sizeof(uint32)) {
-		std::cout << "Wrong size: OP_PetitionUnCheckout, size=" << app->size << ", expected " << sizeof(uint32) << std::endl;
-		return;
-	}
-	if (!worldserver.Connected())
-		Message(Chat::Red, "Error: World server disconnected");
-	else {
-		uint32 getpetnum = *((uint32*)app->pBuffer);
-		Petition* getpet = PetitionList::Instance()->GetPetitionByID(getpetnum);
-		if (getpet != 0) {
-			getpet->SetCheckedOut(false);
-			PetitionList::Instance()->UpdatePetition(getpet);
-			PetitionList::Instance()->UpdateGMQueue();
-			PetitionList::Instance()->UpdateZoneListQueue();
-		}
-	}
-	return;
+    if (Admin() < AccountStatus::QuestTroupe ||
+        app->size != sizeof(uint32)) {
+        return;
+    }
+
+    if (!worldserver.Connected()) {
+        Message(Chat::Red,
+            "Error: World server disconnected");
+        return;
+    }
+
+    uint32 id = 0;
+    memcpy(&id, app->pBuffer, sizeof(id));
+
+    auto* petitions = PetitionList::Instance();
+    auto* pet = petitions->GetPetitionByID(id);
+
+    if (!pet || !pet->CheckedOut() ||
+        std::string(pet->GetLastGM()) != GetName()) {
+        return;
+    }
+
+    Petition proposed = *pet;
+    proposed.SetCheckedOut(false);
+
+    if (!petitions->UpdatePetition(pet, proposed)) {
+        Message(Chat::Red,
+            "Petition uncheckout failed. "
+            "The petition may have changed.");
+
+        petitions->ReadDatabase();
+        return;
+    }
+
+    petitions->UpdateGMQueue();
+    petitions->UpdateZoneListQueue();
 }
 
 void Client::Handle_OP_PlayerStateAdd(const EQApplicationPacket *app)

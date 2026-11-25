@@ -21,6 +21,7 @@
 #include "common/types.h"
 
 #include <mutex>
+#include <vector>
 
 class Client;
 
@@ -93,16 +94,18 @@ protected:
 class PetitionList
 {
 public:
-	int DeletePetition(uint32 petnumber);
-	void UpdateGMQueue();
+	int DeletePetition(uint32 petnumber, const char* owner = nullptr);
+	void UpdateGMQueue(Client* recipient = nullptr);
 	PetitionList() {}
 	~PetitionList() {}
 	void AddPetition(Petition* pet);
 	Petition* GetPetitionByID(uint32 id_in);
 	uint32	GetTotalPetitions();
+	std::vector<uint32> GetPetitionIDs();
 	void ClearPetitions();
 	void ReadDatabase();
-	void UpdatePetition(Petition* pet);
+	bool UpdatePetition(Petition* pet, const Petition& proposed);
+	void ReleaseCheckouts(const char* owner);
 	void UpdateZoneListQueue();
 	bool FindPetitionByAccountName(const char* acctname);
 	bool DeletePetitionByCharName(const char* charname);

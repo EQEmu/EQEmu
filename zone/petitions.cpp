@@ -25,29 +25,31 @@
 #include "zone/worldserver.h"
 
 #include <cstring>
+#include <algorithm>
+#include <cstdlib>
 
 extern WorldServer worldserver;
 
 void Petition::SendPetitionToPlayer(Client* clientto) {
 	auto outapp = new EQApplicationPacket(OP_PetitionCheckout, sizeof(Petition_Struct));
 	Petition_Struct* pet = (Petition_Struct*) outapp->pBuffer;
-	strcpy(pet->accountid,GetAccountName());
-	strcpy(pet->lastgm,GetLastGM());
-	strcpy(pet->charname,GetCharName());
+	strn0cpy(pet->accountid, GetAccountName(), sizeof(pet->accountid));
+	strn0cpy(pet->lastgm, GetLastGM(), sizeof(pet->lastgm));
+	strn0cpy(pet->charname, GetCharName(), sizeof(pet->charname));
 	pet->petnumber = petid;
 	pet->charclass = GetCharClass();
 	pet->charlevel = GetCharLevel();
 	pet->charrace = GetCharRace();
 	pet->zone = GetZone();
 	//strcpy(pet->zone,GetZone());
-	strcpy(pet->petitiontext,GetPetitionText());
+	strn0cpy(pet->petitiontext, GetPetitionText(), sizeof(pet->petitiontext));
 	pet->checkouts = GetCheckouts();
 	pet->unavail = GetUnavails();
 	pet->senttime = GetSentTime();
 	//memset(pet->unknown5, 0, sizeof(pet->unknown5));
 	//pet->unknown5[3] = 0x1f;
 	pet->urgency = GetUrgency();
-	strcpy(pet->gmtext, GetGMText());
+	strn0cpy(pet->gmtext, GetGMText(), sizeof(pet->gmtext));
 	clientto->QueuePacket(outapp);
 	safe_delete(outapp);
 	return;
@@ -84,6 +86,21 @@ Petition* PetitionList::GetPetitionByID(uint32 id_in) {
 	}
 	return 0;
 }
+std::vector<uint32> PetitionList::GetPetitionIDs()
+{
+    std::vector<uint32> ids;
+    LinkedListIterator<Petition*> iterator(list);
+
+    iterator.Reset();
+
+    while (iterator.MoreElements()) {
+        ids.push_back(iterator.GetData()->GetID());
+        iterator.Advance();
+    }
+
+    return ids;
+}
+
 uint32 PetitionList::GetTotalPetitions(){
 	LinkedListIterator<Petition*> iterator(list);
 	iterator.Reset();
@@ -135,80 +152,388 @@ void PetitionList::AddPetition(Petition* pet) {
 }
 
 //Return Values: 0 = Ok ; -1 = Error deleting petition.
-int PetitionList::DeletePetition(uint32 petnumber)
+int PetitionList::DeletePetition(uint32 petnumber, const char* owner)
 {
-	LinkedListIterator<Petition*> iterator(list);
-	iterator.Reset();
-	std::scoped_lock lock(PList_Mutex);
-	while(iterator.MoreElements()) {
-		if (iterator.GetData()->GetID() == petnumber) {
-			database.DeletePetitionFromDB(iterator.GetData());
-			iterator.RemoveCurrent();
-			return 0;
-			break;
-		}
-		else {
-			iterator.Advance();
-		}
-	}
-	return -1;
+    bool deleted = false;
+
+    {
+        std::scoped_lock lock(PList_Mutex);
+
+        LinkedListIterator<Petition*> iterator(list);
+        iterator.Reset();
+
+        while (iterator.MoreElements()) {
+            if (iterator.GetData()->GetID() == petnumber) {
+                if (!database.DeletePetitionFromDB(iterator.GetData(), owner)) {
+                    return -1;
+                }
+
+                iterator.RemoveCurrent(true);
+                deleted = true;
+                break;
+            }
+
+            iterator.Advance();
+        }
+    }
+
+    if (!deleted) {
+        return -1;
+    }
+
+    entity_list.RemovePetitionFromAdmins(petnumber);
+
+    ReadDatabase();
+    UpdateZoneListQueue();
+
+    return 0;
 }
 
-void PetitionList::UpdateGMQueue() {
+void PetitionList::UpdateGMQueue(Client* recipient) {
 	LinkedListIterator<Petition*> iterator(list);
 	iterator.Reset();
 	uint32 total=0;
 	while(iterator.MoreElements()) {
 		total++;
-		entity_list.SendPetitionToAdmins(iterator.GetData());
+		entity_list.SendPetitionToAdmins(iterator.GetData(), recipient);
 		iterator.Advance();
 	}
 	if(total==0)
-		entity_list.SendPetitionToAdmins();
+		entity_list.SendPetitionToAdmins(recipient);
 	return;
 }
 
-void PetitionList::ClearPetitions() {
-	//	entity_list.ClearClientPetitionQueue();
-	LinkedListIterator<Petition*> iterator(list);
-	iterator.Reset();
-	while(iterator.MoreElements())
-	{
-		iterator.RemoveCurrent(true);
-		iterator.Advance();
-	}
-	return;
+void PetitionList::ClearPetitions()
+{
+    LinkedListIterator<Petition*> iterator(list);
+    iterator.Reset();
+
+    while (iterator.MoreElements()) {
+        // RemoveCurrent already advances the iterator.
+        iterator.RemoveCurrent(true);
+    }
 }
 
 void PetitionList::ReadDatabase()
 {
-	std::scoped_lock lock(PList_Mutex);
-	ClearPetitions();
-	database.RefreshPetitionsFromDB();
-	UpdateGMQueue();
+    std::scoped_lock lock(PList_Mutex);
+
+    const auto old_ids = GetPetitionIDs();
+
+    // Preserve the existing cache if the query fails.
+    if (!database.RefreshPetitionsFromDB()) {
+        LogError("Failed to refresh petition cache");
+        return;
+    }
+
+    const auto new_ids = GetPetitionIDs();
+
+    for (const auto id : old_ids) {
+        if (std::find(
+                new_ids.begin(), new_ids.end(), id
+            ) == new_ids.end()) {
+            entity_list.RemovePetitionFromAdmins(id);
+        }
+    }
+
+    UpdateGMQueue();
 }
 
-void PetitionList::UpdatePetition(Petition* pet)
+bool PetitionList::UpdatePetition(
+    Petition* pet, const Petition& proposed)
 {
-	std::scoped_lock lock(PList_Mutex);
-	database.UpdatePetitionToDB(pet);
+    std::scoped_lock lock(PList_Mutex);
+
+    Petition next = proposed;
+
+    if (!database.UpdatePetitionToDB(pet, &next)) {
+        return false;
+    }
+
+    *pet = next;
+    return true;
 }
 
-void ZoneDatabase::DeletePetitionFromDB(Petition* wpet) {
+bool ZoneDatabase::DeletePetitionFromDB(
+    Petition* wpet, const char* owner)
+{
+    if (!wpet) {
+        return false;
+    }
 
-    std::string query = StringFormat("DELETE FROM petitions WHERE petid = %i", wpet->GetID());
+    const auto dib =
+        GetUniquePetitionRow(wpet->GetID());
+
+    if (!dib) {
+        return false;
+    }
+
+    std::string query = fmt::format(
+        "DELETE FROM petitions "
+        "WHERE dib = {} AND petid = {}",
+        dib,
+        wpet->GetID()
+    );
+
+    if (owner) {
+        char escaped_owner[129] = {};
+
+        DoEscapeString(
+            escaped_owner, owner, strlen(owner)
+        );
+
+        query += fmt::format(
+            " AND ischeckedout = 1 "
+            "AND BINARY lastgm = BINARY '{}' "
+            "AND checkouts = {}",
+            escaped_owner,
+            wpet->GetCheckouts()
+        );
+    }
+
     auto results = QueryDatabase(query);
+
+    return results.Success() &&
+           results.RowsAffected() == 1;
 }
 
-void ZoneDatabase::UpdatePetitionToDB(Petition* wpet) {
+void PetitionList::ReleaseCheckouts(const char* owner)
+{
+    if (!owner || !*owner) {
+        return;
+    }
 
-	std::string query = StringFormat("UPDATE petitions SET gmtext = '%s', lastgm = '%s', urgency = %i, "
-                                    "checkouts = %i, unavailables = %i, ischeckedout = %i "
-                                    "WHERE petid = %i",
-                                    wpet->GetGMText(), wpet->GetLastGM(), wpet->GetUrgency(),
-                                    wpet->GetCheckouts(), wpet->GetUnavails(),
-                                    wpet->CheckedOut() ? 1: 0, wpet->GetID());
+    bool changed = false;
+
+    {
+        std::scoped_lock lock(PList_Mutex);
+
+        LinkedListIterator<Petition*> iterator(list);
+        iterator.Reset();
+
+        while (iterator.MoreElements()) {
+            auto* pet = iterator.GetData();
+
+            if (pet->CheckedOut() &&
+                std::strcmp(pet->GetLastGM(), owner) == 0) {
+
+                const auto dib =
+                    database.GetUniquePetitionRow(
+                        pet->GetID()
+                    );
+
+                if (dib) {
+                    char escaped_owner[129] = {};
+
+                    database.DoEscapeString(
+                        escaped_owner,
+                        owner,
+                        strlen(owner)
+                    );
+
+                    auto result = database.QueryDatabase(
+                        fmt::format(
+                            "UPDATE petitions "
+                            "SET ischeckedout = 0 "
+                            "WHERE dib = {} "
+                            "AND petid = {} "
+                            "AND ischeckedout = 1 "
+                            "AND BINARY lastgm = BINARY '{}' "
+                            "AND checkouts = {}",
+                            dib,
+                            pet->GetID(),
+                            escaped_owner,
+                            pet->GetCheckouts()
+                        )
+                    );
+
+                    if (result.Success() &&
+                        result.RowsAffected() == 1) {
+                        pet->SetCheckedOut(false);
+                        changed = true;
+
+                        LogInfo(
+                            "Released petition [{}] "
+                            "on guide disconnect [{}]",
+                            pet->GetID(),
+                            owner
+                        );
+                    }
+                }
+            }
+
+            iterator.Advance();
+        }
+    }
+
+    if (changed) {
+        UpdateGMQueue();
+        UpdateZoneListQueue();
+    }
+}
+
+uint32 ZoneDatabase::GetUniquePetitionRow(
+    uint32 petition_id)
+{
+    auto results = QueryDatabase(
+        fmt::format(
+            "SELECT dib FROM petitions "
+            "WHERE petid = {} LIMIT 2",
+            petition_id
+        )
+    );
+
+    if (!results.Success() ||
+        results.RowCount() != 1) {
+        return 0;
+    }
+
+    auto row = results.begin();
+
+    return static_cast<uint32>(
+        std::strtoul(row[0], nullptr, 10)
+    );
+}
+
+bool ZoneDatabase::OwnsPetition(
+    Petition* pet, const char* owner)
+{
+    if (!pet || !owner) {
+        return false;
+    }
+
+    const auto dib =
+        GetUniquePetitionRow(pet->GetID());
+
+    if (!dib) {
+        return false;
+    }
+
+    char escaped_owner[129] = {};
+
+    DoEscapeString(
+        escaped_owner, owner, strlen(owner)
+    );
+
+    auto results = QueryDatabase(
+        fmt::format(
+            "SELECT dib FROM petitions "
+            "WHERE dib = {} AND petid = {} "
+            "AND ischeckedout = 1 "
+            "AND BINARY lastgm = BINARY '{}' "
+            "AND checkouts = {}",
+            dib,
+            pet->GetID(),
+            escaped_owner,
+            pet->GetCheckouts()
+        )
+    );
+
+    return results.Success() &&
+           results.RowCount() == 1;
+}
+
+bool ZoneDatabase::UpdatePetitionToDB(
+    Petition* previous, Petition* proposed)
+{
+    if (!previous || !proposed ||
+        previous->GetID() != proposed->GetID()) {
+        return false;
+    }
+
+    const auto dib =
+        GetUniquePetitionRow(previous->GetID());
+
+    if (!dib) {
+        return false;
+    }
+
+    char escaped_gmtext[2049] = {};
+    char escaped_lastgm[129] = {};
+    char escaped_previous_owner[129] = {};
+
+    DoEscapeString(
+        escaped_gmtext,
+        proposed->GetGMText(),
+        strlen(proposed->GetGMText())
+    );
+
+    DoEscapeString(
+        escaped_lastgm,
+        proposed->GetLastGM(),
+        strlen(proposed->GetLastGM())
+    );
+
+    DoEscapeString(
+        escaped_previous_owner,
+        previous->GetLastGM(),
+        strlen(previous->GetLastGM())
+    );
+
+    std::string query;
+
+    if (!previous->CheckedOut() &&
+        proposed->CheckedOut()) {
+
+        // Atomic checkout. Never overwrite existing GM
+        // notes, urgency or unavailable counters.
+
+        query = fmt::format(
+            "UPDATE petitions "
+            "SET ischeckedout = 1, "
+            "lastgm = '{}', "
+            "checkouts = checkouts + 1 "
+            "WHERE dib = {} AND petid = {} "
+            "AND ischeckedout = 0 "
+            "AND checkouts = {}",
+            escaped_lastgm,
+            dib,
+            previous->GetID(),
+            previous->GetCheckouts()
+        );
+
+    } else if (previous->CheckedOut() &&
+               !proposed->CheckedOut()) {
+
+        // CheckIn or UnCheckout. Only the current
+        // checkout owner may release the petition.
+
+        query = fmt::format(
+            "UPDATE petitions "
+            "SET ischeckedout = 0, "
+            "gmtext = '{}', "
+            "lastgm = '{}', "
+            "urgency = {}, "
+            "unavailables = {} "
+            "WHERE dib = {} AND petid = {} "
+            "AND ischeckedout = 1 "
+            "AND BINARY lastgm = BINARY '{}' "
+            "AND checkouts = {}",
+            escaped_gmtext,
+            escaped_lastgm,
+            proposed->GetUrgency(),
+            proposed->GetUnavails(),
+            dib,
+            previous->GetID(),
+            escaped_previous_owner,
+            previous->GetCheckouts()
+        );
+
+    } else {
+        return false;
+    }
+
     auto results = QueryDatabase(query);
+
+    if (!results.Success()) {
+        LogError(
+            "Petition update failed for [{}]",
+            previous->GetID()
+        );
+        return false;
+    }
+
+    return results.RowsAffected() == 1;
 }
 
 void ZoneDatabase::InsertPetitionToDB(Petition* wpet)
@@ -243,7 +568,7 @@ void ZoneDatabase::InsertPetitionToDB(Petition* wpet)
 
 }
 
-void ZoneDatabase::RefreshPetitionsFromDB()
+bool ZoneDatabase::RefreshPetitionsFromDB()
 {
 	Petition* newpet;
 	std::string query = "SELECT petid, charname, accountname, lastgm, petitiontext, "
@@ -252,8 +577,10 @@ void ZoneDatabase::RefreshPetitionsFromDB()
                         "FROM petitions ORDER BY petid";
     auto results = QueryDatabase(query);
 	if (!results.Success()) {
-		return;
-	}
+        return false;
+    }
+
+    PetitionList::Instance()->ClearPetitions();
 
     for (auto row = results.begin(); row != results.end(); ++row) {
         newpet = new Petition(Strings::ToInt(row[0]));
@@ -278,4 +605,5 @@ void ZoneDatabase::RefreshPetitionsFromDB()
         PetitionList::Instance()->AddPetition(newpet);
     }
 
+    return true;
 }

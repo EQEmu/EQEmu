@@ -18,6 +18,9 @@
 // out-going packets that require an ENCODE translation:
 // Begin RoF2 Encodes
 
+E(OP_PetitionUpdate)
+E(OP_PetitionCheckout)
+E(OP_SoulmarkInquiry)
 E(OP_SendMembershipDetails)
 E(OP_TraderShop)
 E(OP_TraderDelItem)
@@ -26,6 +29,14 @@ E(OP_TraderDelItem)
 // Begin RoF2 Decodes
 
 D(OP_TraderShop)
+D(OP_PetitionCheckIn)
+D(OP_PetitionBug)
+D(OP_PetitionFeedback)
+D(OP_PetitionGuide)
+D(OP_SoulmarkInquiry)
+D(OP_SoulmarkAdd)
+D(OP_SoulmarkUpdate)
+D(OP_Feedback)
 
 // End RoF2 Encodes/Decodes
 

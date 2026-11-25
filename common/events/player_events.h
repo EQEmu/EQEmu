@@ -94,6 +94,9 @@ namespace PlayerEvent {
 		GUILD_BANK_DEPOSIT,
 		GUILD_BANK_WITHDRAWAL,
 		GUILD_BANK_MOVE_TO_BANK_AREA,
+        PLAYER_FEEDBACK,
+        PETITION_GUIDE,
+        SOULMARK_CHANGE,
 		MAX // dont remove
 	};
 
@@ -161,7 +164,10 @@ namespace PlayerEvent {
 		"Evolve Item Update",
 		"Guild Bank Item Deposit",
 		"Guild Bank Item Withdrawal",
-		"Guild Bank Move From Deposit Area to Bank Area"
+		"Guild Bank Move From Deposit Area to Bank Area",
+        "Player Feedback",
+        "Petition Guide",
+        "Soulmark Change"
 	};
 
 	// Generic struct used by all events
@@ -443,7 +449,119 @@ namespace PlayerEvent {
 		}
 	};
 
-	struct GMCommandEvent {
+	struct SoulmarkChangeEvent {
+        uint64 soulmark_id;
+        std::string action;
+
+        uint32 target_account_id;
+        std::string target_account;
+        std::string target_character;
+
+        uint32 original_gm_account_id;
+        std::string original_gm_name;
+
+        uint32 actor_account_id;
+        uint32 actor_character_id;
+        std::string actor_name;
+
+        uint32 soulmark_type;
+
+        uint32 old_revision;
+        uint32 new_revision;
+
+        std::string old_text;
+        std::string new_text;
+
+        template <class Archive>
+        void serialize(Archive& ar)
+        {
+            ar(
+                CEREAL_NVP(soulmark_id),
+                CEREAL_NVP(action),
+                CEREAL_NVP(target_account_id),
+                CEREAL_NVP(target_account),
+                CEREAL_NVP(target_character),
+                CEREAL_NVP(original_gm_account_id),
+                CEREAL_NVP(original_gm_name),
+                CEREAL_NVP(actor_account_id),
+                CEREAL_NVP(actor_character_id),
+                CEREAL_NVP(actor_name),
+                CEREAL_NVP(soulmark_type),
+                CEREAL_NVP(old_revision),
+                CEREAL_NVP(new_revision),
+                CEREAL_NVP(old_text),
+                CEREAL_NVP(new_text)
+            );
+        }
+    };
+
+    struct PetitionLogEvent {
+        uint32 petition_id;
+        std::string petitioner_account;
+        std::string petitioner_character;
+        std::string guide_name;
+        uint32 petition_zone_id;
+        std::string petition_text;
+        std::string gm_text;
+        uint32 urgency;
+        uint32 checkouts;
+        uint32 unavailables;
+        int64 petition_timestamp;
+
+        template <class Archive>
+        void serialize(Archive& ar)
+        {
+            ar(
+                CEREAL_NVP(petition_id),
+                CEREAL_NVP(petitioner_account),
+                CEREAL_NVP(petitioner_character),
+                CEREAL_NVP(guide_name),
+                CEREAL_NVP(petition_zone_id),
+                CEREAL_NVP(petition_text),
+                CEREAL_NVP(gm_text),
+                CEREAL_NVP(urgency),
+                CEREAL_NVP(checkouts),
+                CEREAL_NVP(unavailables),
+                CEREAL_NVP(petition_timestamp)
+            );
+        }
+    };
+
+    struct PlayerFeedbackEvent {
+        std::string source;
+        uint32 petition_id;
+        std::string petitioner_account;
+        std::string petitioner_character;
+        std::string guide_name;
+        uint32 petition_zone_id;
+        std::string petition_text;
+        std::string gm_text;
+        uint32 urgency;
+        uint32 checkouts;
+        uint32 unavailables;
+        int64 petition_timestamp;
+
+        template <class Archive>
+        void serialize(Archive& ar)
+        {
+            ar(
+                CEREAL_NVP(source),
+                CEREAL_NVP(petition_id),
+                CEREAL_NVP(petitioner_account),
+                CEREAL_NVP(petitioner_character),
+                CEREAL_NVP(guide_name),
+                CEREAL_NVP(petition_zone_id),
+                CEREAL_NVP(petition_text),
+                CEREAL_NVP(gm_text),
+                CEREAL_NVP(urgency),
+                CEREAL_NVP(checkouts),
+                CEREAL_NVP(unavailables),
+                CEREAL_NVP(petition_timestamp)
+            );
+        }
+    };
+
+    struct GMCommandEvent {
 		std::string message;
 		std::string target;
 
