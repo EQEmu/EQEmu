@@ -2105,6 +2105,8 @@ private:
 	uint32 tmSitting; // time stamp started sitting, used for HP regen bonus added on MAY 5, 2004
     uint32 m_last_petition_refresh = 0;
     bool m_petition_refresh_seen = false;
+    bool m_soulmark_inquiry_seen = false;
+    uint32 m_last_soulmark_inquiry = 0;
 
 	int32 environment_damage_modifier;
 	bool invulnerable_environment_damage;

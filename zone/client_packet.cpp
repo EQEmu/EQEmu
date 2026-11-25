@@ -25,6 +25,7 @@
 #include "common/raid.h"
 #include "common/rdtsc.h"
 #include "common/repositories/account_repository.h"
+#include "common/repositories/account_soulmarks_repository.h"
 #include "common/repositories/bug_reports_repository.h"
 #include "common/repositories/character_data_repository.h"
 #include "common/zone_store.h"
@@ -330,6 +331,7 @@ void MapOpcodes()
 	ConnectedOpcodes[OP_PetitionDelete] = &Client::Handle_OP_PetitionDelete;
 	ConnectedOpcodes[OP_PetitionQue] = &Client::Handle_OP_PetitionQue;
 	ConnectedOpcodes[OP_PetitionRefresh] = &Client::Handle_OP_PetitionRefresh;
+	ConnectedOpcodes[OP_SoulmarkInquiry] = &Client::Handle_OP_SoulmarkInquiry;
 	ConnectedOpcodes[OP_PetitionResolve] = &Client::Handle_OP_PetitionResolve;
 	ConnectedOpcodes[OP_PetitionUnCheckout] = &Client::Handle_OP_PetitionUnCheckout;
 	ConnectedOpcodes[OP_PlayerStateAdd] = &Client::Handle_OP_PlayerStateAdd;
@@ -12259,6 +12261,192 @@ void Client::Handle_OP_PetitionQue(const EQApplicationPacket *app)
 	printf("%s looking at petitions..\n", GetName());
 #endif
 	return;
+}
+
+void Client::Handle_OP_SoulmarkInquiry(
+    const EQApplicationPacket *app)
+{
+    if (ClientVersion() !=
+            EQ::versions::ClientVersion::RoF2 ||
+        Admin() < AccountStatus::QuestTroupe ||
+        app->size != sizeof(SoulmarkInquiry_Struct)) {
+        return;
+    }
+
+    constexpr uint32 inquiry_interval_ms = 2000;
+    const uint32 now = Timer::GetCurrentTime();
+
+    if (m_soulmark_inquiry_seen &&
+        static_cast<uint32>(
+            now - m_last_soulmark_inquiry
+        ) < inquiry_interval_ms) {
+        return;
+    }
+
+    m_soulmark_inquiry_seen = true;
+    m_last_soulmark_inquiry = now;
+
+    const auto *request =
+        reinterpret_cast<const SoulmarkInquiry_Struct *>(
+            app->pBuffer
+        );
+
+    if (!std::memchr(
+            request->target_name,
+            0,
+            sizeof(request->target_name)) ||
+        !std::memchr(
+            request->target_pid,
+            0,
+            sizeof(request->target_pid))) {
+        return;
+    }
+
+    const std::string target_name = request->target_name;
+    const std::string target_pid = request->target_pid;
+
+    if (target_name.empty() || target_pid.empty()) {
+        return;
+    }
+
+    // The character identifies the local account.
+    // An account name alone is not necessarily unique
+    // across different login servers.
+    uint32 character_id = 0;
+
+    const uint32 account_id =
+        database.GetAccountIDByChar(
+            target_name,
+            &character_id
+        );
+
+    if (account_id == 0 || character_id == 0) {
+        Message(Chat::Red,
+            "Soulmark inquiry: character not found.");
+        return;
+    }
+
+    const auto character =
+        CharacterDataRepository::FindOne(
+            database,
+            character_id
+        );
+
+    if (character.id != character_id ||
+        character.deleted_at > 0 ||
+        character.account_id !=
+            static_cast<int32>(account_id)) {
+        Message(Chat::Red,
+            "Soulmark inquiry: invalid character.");
+        return;
+    }
+
+    const auto account_name =
+        database.GetAccountName(account_id);
+
+    if (account_name.empty() ||
+        account_name != target_pid) {
+        Message(Chat::Red,
+            "Soulmark inquiry: character and PID do not match.");
+        return;
+    }
+
+    // Soulmarks belong to the account, not just the
+    // character used to initiate the inquiry.
+    const auto records =
+        AccountSoulmarksRepository::GetWhere(
+            database,
+            fmt::format(
+                "account_id = {} "
+                "AND deleted_at IS NULL "
+                "AND type IN (1, 2) "
+                "ORDER BY created_at DESC, id DESC "
+                "LIMIT 12",
+                account_id
+            )
+        );
+
+    EQApplicationPacket outapp(
+        OP_SoulmarkInquiry,
+        sizeof(SoulmarkList_Struct)
+    );
+
+    auto *response =
+        reinterpret_cast<SoulmarkList_Struct *>(
+            outapp.pBuffer
+        );
+
+    std::memset(response, 0, sizeof(*response));
+
+    const auto copy_string = [](
+        auto &destination,
+        const std::string &source
+    ) {
+        const size_t capacity =
+            sizeof(destination) - 1;
+
+        const size_t length =
+            source.size() < capacity
+                ? source.size() : capacity;
+
+        std::memcpy(
+            destination,
+            source.data(),
+            length
+        );
+
+        destination[length] = 0;
+    };
+
+    size_t index = 0;
+
+    for (const auto &record : records) {
+        if (index >= 12) {
+            break;
+        }
+
+        // The native client uses a signed 32-bit
+        // timestamp when displaying record details.
+        if (record.created_at <= 0 ||
+            record.created_at > 0x7fffffff) {
+            continue;
+        }
+
+        auto &entry = response->records[index++];
+
+        copy_string(
+            entry.target_name,
+            record.character_name
+        );
+
+        copy_string(
+            entry.target_pid,
+            account_name
+        );
+
+        copy_string(
+            entry.gm_name,
+            record.gm_character_name
+        );
+
+        if (record.gm_account_id > 0) {
+            copy_string(
+                entry.gm_pid,
+                database.GetAccountName(
+                    record.gm_account_id
+                )
+            );
+        }
+
+        copy_string(entry.text, record.text);
+
+        entry.timestamp =
+            static_cast<uint32>(record.created_at);
+
+        entry.type = record.type;
+    }
+
+    QueuePacket(&outapp);
 }
 
 void Client::Handle_OP_PetitionRefresh(

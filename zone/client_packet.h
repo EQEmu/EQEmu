@@ -260,6 +260,7 @@
 	void Handle_OP_PetitionDelete(const EQApplicationPacket *app);
 	void Handle_OP_PetitionQue(const EQApplicationPacket *app);
 	void Handle_OP_PetitionRefresh(const EQApplicationPacket *app);
+	void Handle_OP_SoulmarkInquiry(const EQApplicationPacket *app);
 	void Handle_OP_PetitionResolve(const EQApplicationPacket *app);
 	void Handle_OP_PetitionUnCheckout(const EQApplicationPacket *app);
 	void Handle_OP_PlayerStateAdd(const EQApplicationPacket *app);
