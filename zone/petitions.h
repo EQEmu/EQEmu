@@ -95,7 +95,7 @@ class PetitionList
 {
 public:
 	int DeletePetition(uint32 petnumber, const char* owner = nullptr);
-	void UpdateGMQueue();
+	void UpdateGMQueue(Client* recipient = nullptr);
 	PetitionList() {}
 	~PetitionList() {}
 	void AddPetition(Petition* pet);

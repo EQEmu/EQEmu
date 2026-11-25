@@ -2103,6 +2103,8 @@ private:
 	std::map<uint32, CharacterParcelsRepository::CharacterParcels> m_parcels{};
 	int Haste; //precalced value
 	uint32 tmSitting; // time stamp started sitting, used for HP regen bonus added on MAY 5, 2004
+    uint32 m_last_petition_refresh = 0;
+    bool m_petition_refresh_seen = false;
 
 	int32 environment_damage_modifier;
 	bool invulnerable_environment_damage;

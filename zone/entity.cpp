@@ -3397,7 +3397,7 @@ uint32 EntityList::DeletePlayerCorpses()
 	return corpse_count;
 }
 
-void EntityList::SendPetitionToAdmins()
+void EntityList::SendPetitionToAdmins(Client* recipient)
 {
 	auto outapp = new EQApplicationPacket(OP_PetitionUpdate, sizeof(PetitionUpdate_Struct));
 	PetitionUpdate_Struct *pcus = (PetitionUpdate_Struct*) outapp->pBuffer;
@@ -3411,14 +3411,15 @@ void EntityList::SendPetitionToAdmins()
 	pcus->quetotal=0;
 	auto it = client_list.begin();
 	while (it != client_list.end()) {
-		if (it->second->CastToClient()->Admin() >= AccountStatus::QuestTroupe)
+		if ((!recipient || it->second->CastToClient() == recipient) &&
+            it->second->CastToClient()->Admin() >= AccountStatus::QuestTroupe)
 			it->second->CastToClient()->QueuePacket(outapp);
 		++it;
 	}
 	safe_delete(outapp);
 }
 
-void EntityList::SendPetitionToAdmins(Petition *pet)
+void EntityList::SendPetitionToAdmins(Petition *pet, Client* recipient)
 {
 	auto outapp = new EQApplicationPacket(OP_PetitionUpdate, sizeof(PetitionUpdate_Struct));
 	PetitionUpdate_Struct *pcus = (PetitionUpdate_Struct*) outapp->pBuffer;
@@ -3440,7 +3441,8 @@ void EntityList::SendPetitionToAdmins(Petition *pet)
 	pcus->quetotal = PetitionList::Instance()->GetTotalPetitions();
 	auto it = client_list.begin();
 	while (it != client_list.end()) {
-		if (it->second->CastToClient()->Admin() >= AccountStatus::QuestTroupe) {
+		if ((!recipient || it->second->CastToClient() == recipient) &&
+            it->second->CastToClient()->Admin() >= AccountStatus::QuestTroupe) {
 			if (pet->CheckedOut())
 				strcpy(pcus->gmsenttoo, "");
 			else

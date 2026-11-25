@@ -189,17 +189,17 @@ int PetitionList::DeletePetition(uint32 petnumber, const char* owner)
     return 0;
 }
 
-void PetitionList::UpdateGMQueue() {
+void PetitionList::UpdateGMQueue(Client* recipient) {
 	LinkedListIterator<Petition*> iterator(list);
 	iterator.Reset();
 	uint32 total=0;
 	while(iterator.MoreElements()) {
 		total++;
-		entity_list.SendPetitionToAdmins(iterator.GetData());
+		entity_list.SendPetitionToAdmins(iterator.GetData(), recipient);
 		iterator.Advance();
 	}
 	if(total==0)
-		entity_list.SendPetitionToAdmins();
+		entity_list.SendPetitionToAdmins(recipient);
 	return;
 }
 

@@ -12261,12 +12261,32 @@ void Client::Handle_OP_PetitionQue(const EQApplicationPacket *app)
 	return;
 }
 
-void Client::Handle_OP_PetitionRefresh(const EQApplicationPacket *app)
+void Client::Handle_OP_PetitionRefresh(
+    const EQApplicationPacket *app)
 {
-	// This is When Client Asks for Petition Again and Again...
-	// break is here because it floods the zones and causes lag if it
-	// Were to actually do something:P We update on our own schedule now.
-	return;
+    if (ClientVersion() !=
+            EQ::versions::ClientVersion::RoF2 ||
+        Admin() < AccountStatus::QuestTroupe ||
+        app->size != 0) {
+        return;
+    }
+
+    constexpr uint32 refresh_interval_ms = 2000;
+    const uint32 now = Timer::GetCurrentTime();
+
+    if (m_petition_refresh_seen &&
+        static_cast<uint32>(
+            now - m_last_petition_refresh
+        ) < refresh_interval_ms) {
+        return;
+    }
+
+    m_petition_refresh_seen = true;
+    m_last_petition_refresh = now;
+
+    // Use the local cache and reply only to
+    // the requesting guide.
+    PetitionList::Instance()->UpdateGMQueue(this);
 }
 
 void Client::Handle_OP_PetitionResolve(const EQApplicationPacket *app)
